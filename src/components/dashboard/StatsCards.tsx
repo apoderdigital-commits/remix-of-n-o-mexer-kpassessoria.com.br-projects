@@ -11,6 +11,7 @@ interface StatsCardsProps {
 export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: StatsCardsProps) {
   const qualified = cpfApproved + sales;
   const qualificationRate = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) : "0";
+  const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
   const costPerQualified = qualified > 0 ? (totalSpent / qualified).toFixed(2) : "—";
   const costPerSale = sales > 0 ? (totalSpent / sales).toFixed(2) : "—";
 
@@ -26,6 +27,12 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: Stats
       value: `R$ ${totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
       color: "text-yellow-400",
+    },
+    {
+      title: "Custo / Lead",
+      value: costPerLead === "—" ? "—" : `R$ ${costPerLead}`,
+      icon: TrendingDown,
+      color: "text-pink-400",
     },
     {
       title: "CPFs Aprovados",
