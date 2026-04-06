@@ -8,19 +8,16 @@ const supabase = createClient(
 
 const META_API_BASE = "https://graph.facebook.com/v21.0";
 
-// Action types that count as "leads" — covers multiple campaign objectives
-const LEAD_ACTION_TYPES = [
+// Priority list: use the FIRST match found (avoid double-counting)
+// messaging_conversation_started_7d = "Conversas por mensagem" in Meta
+const LEAD_ACTION_PRIORITY = [
+  "onsite_conversion.messaging_conversation_started_7d",
+  "messaging_conversation_started_7d",
   "lead",
   "onsite_conversion.lead_grouped",
-  "offsite_conversion.fb_pixel_lead",
   "onsite_web_lead",
-  "onsite_web_app_lead",
-  // Messaging / WhatsApp conversations
-  "onsite_conversion.messaging_conversation_started_7d",
+  "offsite_conversion.fb_pixel_lead",
   "onsite_conversion.messaging_first_reply",
-  "offsite_conversion.messaging_conversation_started_7d",
-  // Generic results (covers "Conversas por mensagem" objective)
-  "messaging_conversation_started_7d",
   "messaging_first_reply",
 ];
 
@@ -63,7 +60,6 @@ Deno.serve(async (req) => {
       ? `&time_range={"since":"${since}","until":"${until}"}`
       : "";
 
-    // Fetch ads insights — include action_breakdowns to see all action types
     const url = `${META_API_BASE}/act_${client.meta_account_id}/insights?fields=campaign_name,ad_name,spend,actions&level=ad&time_increment=1${timeRange}&access_token=${client.meta_access_token}&limit=500`;
 
     const metaRes = await fetch(url);
@@ -77,7 +73,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log all action types found for debugging
+    // Log all action types for debugging
     const allActionTypes = new Set<string>();
     (metaData.data || []).forEach((item: any) => {
       (item.actions || []).forEach((a: any) => {
@@ -87,27 +83,23 @@ Deno.serve(async (req) => {
     console.log("Action types found:", [...allActionTypes]);
 
     const rows = (metaData.data || []).map((item: any) => {
-      // Sum all matching lead/conversation action types
+      // Use PRIORITY: pick the first matching action type only (no double-count)
       let totalLeads = 0;
-      const matchedTypes: string[] = [];
-      for (const action of item.actions || []) {
-        if (LEAD_ACTION_TYPES.includes(action.action_type)) {
-          totalLeads += parseInt(action.value, 10);
-          matchedTypes.push(action.action_type);
+      let matchedType = "none";
+
+      for (const priorityType of LEAD_ACTION_PRIORITY) {
+        const action = (item.actions || []).find(
+          (a: any) => a.action_type === priorityType
+        );
+        if (action) {
+          totalLeads = parseInt(action.value, 10);
+          matchedType = priorityType;
+          break; // Use only the highest-priority match
         }
       }
 
-      // Fallback: if no specific lead type matched, use the campaign result count
-      // by looking for any "result" type or the first action
-      if (totalLeads === 0 && (item.actions || []).length > 0) {
-        // Use the first action as fallback (Meta puts the optimization result first)
-        const firstAction = item.actions[0];
-        totalLeads = parseInt(firstAction.value, 10) || 0;
-        matchedTypes.push(`fallback:${firstAction.action_type}`);
-      }
-
-      if (matchedTypes.length > 0) {
-        console.log(`Ad "${item.ad_name}" → ${totalLeads} leads via: ${matchedTypes.join(", ")}`);
+      if (totalLeads > 0) {
+        console.log(`Ad "${item.ad_name}" [${item.date_start}] → ${totalLeads} leads via: ${matchedType}`);
       }
 
       return {
@@ -121,7 +113,6 @@ Deno.serve(async (req) => {
     });
 
     if (rows.length > 0) {
-      // Delete old data for this client in the period, then insert fresh
       if (since && until) {
         await supabase
           .from("meta_campaigns")
@@ -130,7 +121,6 @@ Deno.serve(async (req) => {
           .gte("date", since)
           .lte("date", until);
       } else {
-        // If no period specified, delete all for this client to avoid duplicates
         const dates = rows.map((r: any) => r.date);
         const minDate = dates.sort()[0];
         const maxDate = dates.sort().reverse()[0];
