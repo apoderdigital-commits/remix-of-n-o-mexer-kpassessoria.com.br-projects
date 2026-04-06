@@ -62,7 +62,7 @@
 }
 
 .glass-card {
-  background: hsl(222 40% 10% / 0.6);
+  background: hsl(263 70% 58% / 0.06);
   backdrop-filter: blur(12px);
-  border: 1px solid hsl(222 30% 20% / 0.5);
+  border: 1px solid hsl(263 70% 58% / 0.15);
 }
