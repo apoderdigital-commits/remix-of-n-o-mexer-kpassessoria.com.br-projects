@@ -142,6 +142,16 @@ export default function Index() {
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
             Sync Meta
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSyncSheet}
+            disabled={!selectedClient || syncingSheet}
+            className="gap-2"
+          >
+            <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+            Sync Planilha
+          </Button>
           <Link to="/clients">
             <Button size="sm" variant="ghost" className="gap-2">
               <Settings className="h-4 w-4" /> Clientes
