@@ -50,6 +50,20 @@ export default function Index() {
     setSyncing(false);
   };
 
+  const handleSyncSheet = async () => {
+    if (!selectedClient) return;
+    setSyncingSheet(true);
+    try {
+      await syncSheet(since, until);
+      queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
+      toast.success("Leads qualificados sincronizados da planilha!");
+    } catch {
+      toast.error("Erro ao sincronizar planilha. Verifique se ela está compartilhada publicamente.");
+    }
+    setSyncingSheet(false);
+  };
+  };
+
   // Compute stats
   const totalLeads = useMemo(
     () => (campaigns || []).reduce((sum, c) => sum + c.leads_total, 0),
