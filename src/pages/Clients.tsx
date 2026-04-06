@@ -1,68 +1,103 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useClients } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+const DEFAULT_TOKEN_KEY = "default_meta_token";
+
+interface ClientForm {
+  name: string;
+  metaAccountId: string;
+  metaToken: string;
+  googleSheetId: string;
+}
+
+const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "" };
+
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [metaAccountId, setMetaAccountId] = useState("");
-  const [metaToken, setMetaToken] = useState("");
-  const [googleSheetId, setGoogleSheetId] = useState("");
 
-  const handleCreate = async () => {
-    if (!name.trim()) return;
-    const { error } = await supabase.from("clients").insert({
-      name: name.trim(),
-      meta_account_id: metaAccountId.trim() || null,
-      meta_access_token: metaToken.trim() || null,
-      google_sheet_id: googleSheetId.trim() || null,
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<ClientForm>(emptyForm);
+  const [defaultToken, setDefaultToken] = useState(() => localStorage.getItem(DEFAULT_TOKEN_KEY) || "");
+
+  const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm, metaToken: defaultToken });
+    setOpen(true);
+  };
+
+  const openEdit = (c: any) => {
+    setEditingId(c.id);
+    setForm({
+      name: c.name,
+      metaAccountId: c.meta_account_id || "",
+      metaToken: c.meta_access_token || "",
+      googleSheetId: c.google_sheet_id || "",
     });
-    if (error) {
-      toast.error("Erro ao criar cliente: " + error.message);
-      return;
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+
+    const payload = {
+      name: form.name.trim(),
+      meta_account_id: form.metaAccountId.trim() || null,
+      meta_access_token: form.metaToken.trim() || null,
+      google_sheet_id: form.googleSheetId.trim() || null,
+    };
+
+    // Save token as default
+    if (form.metaToken.trim()) {
+      localStorage.setItem(DEFAULT_TOKEN_KEY, form.metaToken.trim());
+      setDefaultToken(form.metaToken.trim());
     }
-    toast.success("Cliente criado com sucesso!");
+
+    if (editingId) {
+      const { error } = await supabase.from("clients").update(payload).eq("id", editingId);
+      if (error) { toast.error("Erro ao atualizar: " + error.message); return; }
+      toast.success("Cliente atualizado!");
+    } else {
+      const { error } = await supabase.from("clients").insert(payload);
+      if (error) { toast.error("Erro ao criar: " + error.message); return; }
+      toast.success("Cliente criado!");
+    }
+
     queryClient.invalidateQueries({ queryKey: ["clients"] });
-    setName("");
-    setMetaAccountId("");
-    setMetaToken("");
-    setGoogleSheetId("");
+    setForm(emptyForm);
+    setEditingId(null);
     setOpen(false);
   };
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("clients").delete().eq("id", id);
-    if (error) {
-      toast.error("Erro ao excluir: " + error.message);
-      return;
-    }
+    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
     toast.success("Cliente excluído");
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+  };
+
+  const handleSaveDefaultToken = () => {
+    localStorage.setItem(DEFAULT_TOKEN_KEY, defaultToken.trim());
+    toast.success("Token padrão salvo!");
   };
 
   return (
@@ -70,67 +105,72 @@ export default function Clients() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <h1 className="text-2xl font-bold">Gestão de Clientes</h1>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" /> Novo Cliente
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border/50">
-            <DialogHeader>
-              <DialogTitle>Adicionar Cliente</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div className="space-y-2">
-                <Label>Nome do Cliente</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Moto Honda Recife"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Meta Account ID</Label>
-                <Input
-                  value={metaAccountId}
-                  onChange={(e) => setMetaAccountId(e.target.value)}
-                  placeholder="Ex: 123456789"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Meta Access Token</Label>
-                <Input
-                  type="password"
-                  value={metaToken}
-                  onChange={(e) => setMetaToken(e.target.value)}
-                  placeholder="Token de longa duração"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
-                <Input
-                  value={googleSheetId}
-                  onChange={(e) => setGoogleSheetId(e.target.value)}
-                  placeholder="Ex: 1OHtGzE2C3QzkM-kNVJ6xOhB9blAmFdMFJXha_bRUN4w"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O ID da planilha está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
-                </p>
-              </div>
-              <Button onClick={handleCreate} className="w-full">
-                Criar Cliente
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button className="gap-2" onClick={openCreate}>
+          <Plus className="h-4 w-4" /> Novo Cliente
+        </Button>
       </div>
 
+      {/* Default Token */}
+      <Card className="glass-card border-border/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Token Padrão da Meta</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Esse token será pré-preenchido ao criar novos clientes
+              </Label>
+              <Input
+                type="password"
+                value={defaultToken}
+                onChange={(e) => setDefaultToken(e.target.value)}
+                placeholder="Token de longa duração da Meta"
+              />
+            </div>
+            <Button variant="outline" onClick={handleSaveDefaultToken}>Salvar</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Client Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Editar Cliente" : "Adicionar Cliente"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Nome do Cliente</Label>
+              <Input value={form.name} onChange={set("name")} placeholder="Ex: Moto Honda Recife" />
+            </div>
+            <div className="space-y-2">
+              <Label>Meta Account ID</Label>
+              <Input value={form.metaAccountId} onChange={set("metaAccountId")} placeholder="Ex: 123456789" />
+            </div>
+            <div className="space-y-2">
+              <Label>Meta Access Token</Label>
+              <Input type="password" value={form.metaToken} onChange={set("metaToken")} placeholder="Token de longa duração" />
+            </div>
+            <div className="space-y-2">
+              <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
+              <Input value={form.googleSheetId} onChange={set("googleSheetId")} placeholder="Ex: 1OHtGzE2C3QzkM-kNVJ6xOhB9blAmFdMFJXha_bRUN4w" />
+              <p className="text-xs text-muted-foreground">
+                O ID está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
+              </p>
+            </div>
+            <Button onClick={handleSave} className="w-full">
+              {editingId ? "Salvar Alterações" : "Criar Cliente"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clients Table */}
       <Card className="glass-card border-border/50">
         <CardHeader>
           <CardTitle className="text-base">Clientes Cadastrados</CardTitle>
@@ -139,15 +179,14 @@ export default function Clients() {
           {isLoading ? (
             <p className="text-muted-foreground text-center py-8">Carregando...</p>
           ) : !clients?.length ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhum cliente cadastrado
-            </p>
+            <p className="text-muted-foreground text-center py-8">Nenhum cliente cadastrado</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow className="border-border/30">
                   <TableHead className="text-muted-foreground">Nome</TableHead>
                   <TableHead className="text-muted-foreground">Meta Account ID</TableHead>
+                  <TableHead className="text-muted-foreground">Google Sheet</TableHead>
                   <TableHead className="text-muted-foreground">Criado em</TableHead>
                   <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
@@ -156,19 +195,18 @@ export default function Clients() {
                 {clients.map((c) => (
                   <TableRow key={c.id} className="border-border/20">
                     <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.meta_account_id || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.meta_account_id || "—"}
+                      {c.google_sheet_id ? "✅ Configurado" : "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(c.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(c.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
