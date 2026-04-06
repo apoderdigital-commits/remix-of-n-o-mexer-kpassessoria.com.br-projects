@@ -51,6 +51,7 @@ export default function Clients() {
     setName("");
     setMetaAccountId("");
     setMetaToken("");
+    setGoogleSheetId("");
     setOpen(false);
   };
 
