@@ -62,7 +62,6 @@ export default function Index() {
     }
     setSyncingSheet(false);
   };
-  };
 
   // Compute stats
   const totalLeads = useMemo(
