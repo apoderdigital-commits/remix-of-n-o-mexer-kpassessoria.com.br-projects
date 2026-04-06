@@ -125,19 +125,7 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">Preview não disponível</p>
-                    <a
-                      href={previewUrl || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline flex items-center justify-center gap-1 mt-1"
-                    >
-                      Abrir link <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
+                ) : null}
               </div>
             )}
 
