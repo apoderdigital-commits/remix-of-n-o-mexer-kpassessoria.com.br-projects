@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
@@ -13,6 +13,7 @@ import {
   useMetaCampaigns,
   useQualifiedLeads,
   useSyncMeta,
+  useSyncGoogleSheet,
 } from "@/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,11 +23,13 @@ export default function Index() {
   const [since, setSince] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
+  const [syncingSheet, setSyncingSheet] = useState(false);
 
   const { data: clients } = useClients();
   const { data: campaigns } = useMetaCampaigns(selectedClient, since, until);
   const { data: leads } = useQualifiedLeads(selectedClient, since, until);
   const { sync } = useSyncMeta(selectedClient);
+  const { sync: syncSheet } = useSyncGoogleSheet(selectedClient);
   const queryClient = useQueryClient();
 
   const handleFilterChange = (s: string, u: string) => {
@@ -45,6 +48,19 @@ export default function Index() {
       toast.error("Erro ao sincronizar dados da Meta");
     }
     setSyncing(false);
+  };
+
+  const handleSyncSheet = async () => {
+    if (!selectedClient) return;
+    setSyncingSheet(true);
+    try {
+      await syncSheet(since, until);
+      queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
+      toast.success("Leads qualificados sincronizados da planilha!");
+    } catch {
+      toast.error("Erro ao sincronizar planilha. Verifique se ela está compartilhada publicamente.");
+    }
+    setSyncingSheet(false);
   };
 
   // Compute stats
@@ -124,6 +140,16 @@ export default function Index() {
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
             Sync Meta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSyncSheet}
+            disabled={!selectedClient || syncingSheet}
+            className="gap-2"
+          >
+            <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+            Sync Planilha
           </Button>
           <Link to="/clients">
             <Button size="sm" variant="ghost" className="gap-2">

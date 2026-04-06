@@ -32,6 +32,7 @@ export default function Clients() {
   const [name, setName] = useState("");
   const [metaAccountId, setMetaAccountId] = useState("");
   const [metaToken, setMetaToken] = useState("");
+  const [googleSheetId, setGoogleSheetId] = useState("");
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -39,6 +40,7 @@ export default function Clients() {
       name: name.trim(),
       meta_account_id: metaAccountId.trim() || null,
       meta_access_token: metaToken.trim() || null,
+      google_sheet_id: googleSheetId.trim() || null,
     });
     if (error) {
       toast.error("Erro ao criar cliente: " + error.message);
@@ -49,6 +51,7 @@ export default function Clients() {
     setName("");
     setMetaAccountId("");
     setMetaToken("");
+    setGoogleSheetId("");
     setOpen(false);
   };
 
@@ -108,6 +111,17 @@ export default function Clients() {
                   onChange={(e) => setMetaToken(e.target.value)}
                   placeholder="Token de longa duração"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
+                <Input
+                  value={googleSheetId}
+                  onChange={(e) => setGoogleSheetId(e.target.value)}
+                  placeholder="Ex: 1OHtGzE2C3QzkM-kNVJ6xOhB9blAmFdMFJXha_bRUN4w"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O ID da planilha está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
+                </p>
               </div>
               <Button onClick={handleCreate} className="w-full">
                 Criar Cliente

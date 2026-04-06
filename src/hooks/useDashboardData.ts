@@ -64,3 +64,15 @@ export function useSyncMeta(clientId: string | null) {
   };
   return { sync };
 }
+
+export function useSyncGoogleSheet(clientId: string | null) {
+  const sync = async (since: string, until: string) => {
+    if (!clientId) return;
+    const { data, error } = await supabase.functions.invoke("sync-google-sheet", {
+      body: { client_id: clientId, since, until },
+    });
+    if (error) throw error;
+    return data;
+  };
+  return { sync };
+}
