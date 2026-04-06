@@ -3,7 +3,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, X, Image as ImageIcon } from "lucide-react";
+
+function decodeHtmlEntities(text: string) {
+  const doc = new DOMParser().parseFromString(text, "text/html");
+  return doc.documentElement.textContent || text;
+}
 
 interface CreativeData {
   name: string;
