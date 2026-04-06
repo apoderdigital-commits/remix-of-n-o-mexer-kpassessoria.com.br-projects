@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
