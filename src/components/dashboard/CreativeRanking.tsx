@@ -3,7 +3,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, X, Image as ImageIcon } from "lucide-react";
+
+function decodeHtmlEntities(text: string) {
+  const doc = new DOMParser().parseFromString(text, "text/html");
+  return doc.documentElement.textContent || text;
+}
 
 interface CreativeData {
   name: string;
@@ -86,40 +91,41 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
                     <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <span className="ml-2 text-sm text-muted-foreground">Carregando preview...</span>
                   </div>
-                ) : preview?.image ? (
-                  <div className="flex gap-3 items-start">
-                    <img
-                      src={preview.image}
-                      alt={preview.title || "Preview"}
-                      className="w-32 h-32 object-cover rounded-md flex-shrink-0"
-                    />
-                    <div className="space-y-1 min-w-0">
-                      {preview.title && (
-                        <p className="text-sm font-medium line-clamp-2">{preview.title}</p>
+                ) : preview ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-3 items-start">
+                      {preview.image && (
+                        <img
+                          src={preview.image}
+                          alt=""
+                          className="w-28 h-28 object-cover rounded-md flex-shrink-0"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                        />
                       )}
-                      <a
-                        href={preview.finalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                      >
-                        Abrir link <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        {preview.title && (
+                          <p className="text-sm font-medium line-clamp-3">
+                            {decodeHtmlEntities(preview.title)}
+                          </p>
+                        )}
+                        {!preview.title && !preview.image && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <ImageIcon className="h-4 w-4" />
+                            <span className="text-sm">Preview não disponível</span>
+                          </div>
+                        )}
+                        <a
+                          href={preview.finalUrl || previewUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Abrir criativo <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">Preview não disponível</p>
-                    <a
-                      href={previewUrl || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline flex items-center justify-center gap-1 mt-1"
-                    >
-                      Abrir link <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
+                ) : null}
               </div>
             )}
 
