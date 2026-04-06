@@ -9,7 +9,6 @@ const supabase = createClient(
 const META_API_BASE = "https://graph.facebook.com/v21.0";
 
 // Priority list: use the FIRST match found (avoid double-counting)
-// messaging_conversation_started_7d = "Conversas por mensagem" in Meta
 const LEAD_ACTION_PRIORITY = [
   "onsite_conversion.messaging_conversation_started_7d",
   "messaging_conversation_started_7d",
@@ -20,6 +19,37 @@ const LEAD_ACTION_PRIORITY = [
   "onsite_conversion.messaging_first_reply",
   "messaging_first_reply",
 ];
+
+async function fetchAllPages(initialUrl: string): Promise<any[]> {
+  const allData: any[] = [];
+  let url: string | null = initialUrl;
+  let page = 0;
+
+  while (url) {
+    page++;
+    console.log(`Fetching page ${page}...`);
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (json.error) {
+      throw new Error(json.error.message);
+    }
+
+    allData.push(...(json.data || []));
+
+    // Check for next page
+    url = json.paging?.next || null;
+    
+    // Safety limit to prevent infinite loops
+    if (page >= 20) {
+      console.log("Reached page limit (20), stopping pagination");
+      break;
+    }
+  }
+
+  console.log(`Total records fetched: ${allData.length} across ${page} page(s)`);
+  return allData;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -60,29 +90,30 @@ Deno.serve(async (req) => {
       ? `&time_range={"since":"${since}","until":"${until}"}`
       : "";
 
-    const url = `${META_API_BASE}/act_${client.meta_account_id}/insights?fields=campaign_name,ad_name,spend,actions&level=ad&time_increment=1${timeRange}&access_token=${client.meta_access_token}&limit=500`;
+    const initialUrl = `${META_API_BASE}/act_${client.meta_account_id}/insights?fields=campaign_name,ad_name,spend,actions&level=ad&time_increment=1${timeRange}&access_token=${client.meta_access_token}&limit=500`;
 
-    const metaRes = await fetch(url);
-    const metaData = await metaRes.json();
-
-    if (metaData.error) {
-      console.error("Meta API error:", metaData.error);
+    // Fetch ALL pages
+    let allItems: any[];
+    try {
+      allItems = await fetchAllPages(initialUrl);
+    } catch (err: any) {
+      console.error("Meta API error:", err.message);
       return new Response(
-        JSON.stringify({ error: metaData.error.message }),
+        JSON.stringify({ error: err.message }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Log all action types for debugging
     const allActionTypes = new Set<string>();
-    (metaData.data || []).forEach((item: any) => {
+    allItems.forEach((item: any) => {
       (item.actions || []).forEach((a: any) => {
         allActionTypes.add(a.action_type);
       });
     });
     console.log("Action types found:", [...allActionTypes]);
 
-    const rows = (metaData.data || []).map((item: any) => {
+    const rows = allItems.map((item: any) => {
       // Use PRIORITY: pick the first matching action type only (no double-count)
       let totalLeads = 0;
       let matchedType = "none";
@@ -94,12 +125,8 @@ Deno.serve(async (req) => {
         if (action) {
           totalLeads = parseInt(action.value, 10);
           matchedType = priorityType;
-          break; // Use only the highest-priority match
+          break;
         }
-      }
-
-      if (totalLeads > 0) {
-        console.log(`Ad "${item.ad_name}" [${item.date_start}] → ${totalLeads} leads via: ${matchedType}`);
       }
 
       return {
@@ -111,6 +138,10 @@ Deno.serve(async (req) => {
         date: item.date_start || new Date().toISOString().split("T")[0],
       };
     });
+
+    const grandTotalLeads = rows.reduce((sum: number, r: any) => sum + r.leads_total, 0);
+    const grandTotalSpent = rows.reduce((sum: number, r: any) => sum + r.amount_spent, 0);
+    console.log(`Grand total: ${grandTotalLeads} leads, R$ ${grandTotalSpent.toFixed(2)} spent`);
 
     if (rows.length > 0) {
       if (since && until) {
@@ -132,12 +163,16 @@ Deno.serve(async (req) => {
           .lte("date", maxDate);
       }
 
-      const { error: insertError } = await supabase
-        .from("meta_campaigns")
-        .insert(rows);
+      // Insert in batches of 500 to avoid payload limits
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500);
+        const { error: insertError } = await supabase
+          .from("meta_campaigns")
+          .insert(batch);
 
-      if (insertError) {
-        console.error("Insert error:", insertError);
+        if (insertError) {
+          console.error(`Insert error (batch ${i / 500 + 1}):`, insertError);
+        }
       }
     }
 
@@ -145,9 +180,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         synced: rows.length,
-        action_types_found: [...allActionTypes],
-        total_leads: rows.reduce((sum: number, r: any) => sum + r.leads_total, 0),
-        total_spent: rows.reduce((sum: number, r: any) => sum + r.amount_spent, 0),
+        total_leads: grandTotalLeads,
+        total_spent: grandTotalSpent,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
