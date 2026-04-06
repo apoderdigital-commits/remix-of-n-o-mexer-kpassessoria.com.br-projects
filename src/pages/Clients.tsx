@@ -40,6 +40,7 @@ export default function Clients() {
       name: name.trim(),
       meta_account_id: metaAccountId.trim() || null,
       meta_access_token: metaToken.trim() || null,
+      google_sheet_id: googleSheetId.trim() || null,
     });
     if (error) {
       toast.error("Erro ao criar cliente: " + error.message);
