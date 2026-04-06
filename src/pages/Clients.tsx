@@ -112,6 +112,17 @@ export default function Clients() {
                   placeholder="Token de longa duração"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
+                <Input
+                  value={googleSheetId}
+                  onChange={(e) => setGoogleSheetId(e.target.value)}
+                  placeholder="Ex: 1OHtGzE2C3QzkM-kNVJ6xOhB9blAmFdMFJXha_bRUN4w"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O ID da planilha está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
+                </p>
+              </div>
               <Button onClick={handleCreate} className="w-full">
                 Criar Cliente
               </Button>
