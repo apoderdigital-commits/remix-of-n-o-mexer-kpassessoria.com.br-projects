@@ -23,6 +23,7 @@ export default function Index() {
   const [since, setSince] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
+  const [syncingSheet, setSyncingSheet] = useState(false);
 
   const { data: clients } = useClients();
   const { data: campaigns } = useMetaCampaigns(selectedClient, since, until);
