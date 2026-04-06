@@ -13,6 +13,7 @@ import {
   useMetaCampaigns,
   useQualifiedLeads,
   useSyncMeta,
+  useSyncGoogleSheet,
 } from "@/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
