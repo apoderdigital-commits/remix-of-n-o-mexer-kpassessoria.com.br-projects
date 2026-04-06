@@ -32,6 +32,7 @@ export default function Clients() {
   const [name, setName] = useState("");
   const [metaAccountId, setMetaAccountId] = useState("");
   const [metaToken, setMetaToken] = useState("");
+  const [googleSheetId, setGoogleSheetId] = useState("");
 
   const handleCreate = async () => {
     if (!name.trim()) return;
