@@ -29,6 +29,7 @@ export default function Index() {
   const { data: campaigns } = useMetaCampaigns(selectedClient, since, until);
   const { data: leads } = useQualifiedLeads(selectedClient, since, until);
   const { sync } = useSyncMeta(selectedClient);
+  const { sync: syncSheet } = useSyncGoogleSheet(selectedClient);
   const queryClient = useQueryClient();
 
   const handleFilterChange = (s: string, u: string) => {
