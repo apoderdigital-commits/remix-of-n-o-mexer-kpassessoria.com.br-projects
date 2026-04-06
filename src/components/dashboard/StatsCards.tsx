@@ -20,19 +20,19 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: Stats
       title: "Total de Leads",
       value: totalLeads.toLocaleString("pt-BR"),
       icon: Users,
-      color: "text-blue-400",
+      color: "text-violet-400",
     },
     {
       title: "Investimento",
       value: `R$ ${totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
-      color: "text-yellow-400",
+      color: "text-purple-300",
     },
     {
       title: "Custo / Lead",
       value: costPerLead === "—" ? "—" : `R$ ${costPerLead}`,
       icon: TrendingDown,
-      color: "text-pink-400",
+      color: "text-fuchsia-400",
     },
     {
       title: "CPFs Aprovados",
@@ -47,17 +47,17 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: Stats
       color: "text-primary",
     },
     {
-      title: "Custo / Lead Qualificado",
+      title: "Custo / Qualificado",
       value: costPerQualified === "—" ? "—" : `R$ ${costPerQualified}`,
       icon: TrendingDown,
       subtitle: `Taxa: ${qualificationRate}%`,
-      color: "text-cyan-400",
+      color: "text-violet-300",
     },
     {
       title: "Custo / Venda",
       value: costPerSale === "—" ? "—" : `R$ ${costPerSale}`,
       icon: TrendingDown,
-      color: "text-orange-400",
+      color: "text-purple-400",
     },
   ];
 
