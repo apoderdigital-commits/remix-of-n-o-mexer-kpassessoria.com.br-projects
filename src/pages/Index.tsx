@@ -136,41 +136,50 @@ export default function Index() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <ClientSelector
-            clients={clients || []}
-            selectedId={selectedClient}
-            onSelect={setSelectedClient}
-          />
+          {isAdmin && (
+            <ClientSelector
+              clients={clients || []}
+              selectedId={selectedClient}
+              onSelect={setSelectedClient}
+            />
+          )}
           <DateFilter onFilterChange={handleFilterChange} />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSync}
-            disabled={!selectedClient || syncing}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            Sync Meta
+          {isAdmin && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSync}
+                disabled={!activeClient || syncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                Sync Meta
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSyncSheet}
+                disabled={!activeClient || syncingSheet}
+                className="gap-2"
+              >
+                <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+                Sync Planilha
+              </Button>
+              <Link to="/clients">
+                <Button size="sm" variant="ghost" className="gap-2">
+                  <Settings className="h-4 w-4" /> Clientes
+                </Button>
+              </Link>
+            </>
+          )}
+          <Button size="sm" variant="ghost" onClick={signOut} className="gap-2">
+            <LogOut className="h-4 w-4" /> Sair
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSyncSheet}
-            disabled={!selectedClient || syncingSheet}
-            className="gap-2"
-          >
-            <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
-            Sync Planilha
-          </Button>
-          <Link to="/clients">
-            <Button size="sm" variant="ghost" className="gap-2">
-              <Settings className="h-4 w-4" /> Clientes
-            </Button>
-          </Link>
         </div>
       </div>
 
-      {!selectedClient ? (
+      {!activeClient ? (
         <div className="flex items-center justify-center h-[60vh]">
           <p className="text-muted-foreground text-lg">
             Selecione um cliente para visualizar o dashboard
