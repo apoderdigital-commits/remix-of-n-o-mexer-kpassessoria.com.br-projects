@@ -3,8 +3,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X, Image as ImageIcon, Copy, Check } from "lucide-react";
+import { ExternalLink, X, Image as ImageIcon, Copy } from "lucide-react";
 import { toast } from "sonner";
+
+const PREVIEW_TIMEOUT_MS = 10000;
+
+function supportsUrlPreview(url: string) {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return ![
+      "fb.me",
+      "wa.me",
+      "api.whatsapp.com",
+    ].includes(hostname);
+  } catch {
+    return false;
+  }
+}
 
 function decodeHtmlEntities(text: string) {
   const doc = new DOMParser().parseFromString(text, "text/html");
@@ -41,18 +56,33 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
       setPreviewUrl(null);
       return;
     }
+
+    if (!supportsUrlPreview(url)) {
+      setPreviewUrl(url);
+      setPreview({ image: null, title: null, finalUrl: url });
+      return;
+    }
+
     setPreviewLoading(true);
     setPreviewUrl(url);
+
     try {
-      const { data, error } = await supabase.functions.invoke("unfurl-url", {
+      const invokePromise = supabase.functions.invoke("unfurl-url", {
         body: { url },
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error("preview-timeout")), PREVIEW_TIMEOUT_MS);
+      });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
       if (error) throw error;
       setPreview(data as PreviewData);
     } catch {
       setPreview({ image: null, title: null, finalUrl: url });
+    } finally {
+      setPreviewLoading(false);
     }
-    setPreviewLoading(false);
   };
 
   const isUrl = (name: string) => name.startsWith("http");
@@ -112,7 +142,7 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
                         {!preview.title && !preview.image && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <ImageIcon className="h-4 w-4" />
-                            <span className="text-sm">Preview não disponível</span>
+                            <span className="text-sm">Preview não disponível para esse link</span>
                           </div>
                         )}
                         <a
