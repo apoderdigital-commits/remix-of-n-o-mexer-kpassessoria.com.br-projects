@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Settings, RefreshCw, FileSpreadsheet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
@@ -126,15 +127,26 @@ export default function Index() {
   }, [campaigns, leads]);
 
   return (
-    <div className="min-h-screen p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard de Criativos</h1>
-          <p className="text-sm text-muted-foreground">
-            Performance de criativos e leads qualificados
-          </p>
+    <div className="min-h-screen max-w-[1400px] mx-auto">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-b-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-b border-primary/20 px-6 py-8 mb-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+        <div className="relative flex flex-col md:flex-row items-center gap-6">
+          <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-xl" />
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              A única análise de métricas reais que te traz previsibilidade nas decisões
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Dashboard de performance de criativos e leads qualificados
+            </p>
+          </div>
         </div>
+      </div>
+
+      <div className="px-4 md:px-6 space-y-6">
+      {/* Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && (
             <ClientSelector
@@ -198,7 +210,7 @@ export default function Index() {
             <CreativeRanking
               title="🏆 Criativos por CPF Aprovado"
               data={cpfRanking}
-              color="hsl(142, 71%, 45%)"
+              color="hsl(263, 50%, 68%)"
             />
             <CreativeRanking
               title="💰 Criativos por Venda"
@@ -210,6 +222,7 @@ export default function Index() {
           <EvolutionChart data={evolutionData} />
         </>
       )}
+      </div>
     </div>
   );
 }
