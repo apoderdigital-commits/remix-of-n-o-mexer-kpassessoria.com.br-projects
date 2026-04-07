@@ -175,19 +175,33 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
                   <TableRow key={item.name} className="border-border/20">
                     <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                     <TableCell className="font-medium max-w-[200px]">
-                      {isUrl(item.name) ? (
-                        <button
-                          onClick={() => handlePreview(item.name)}
-                          className={`text-left text-primary hover:underline truncate block max-w-full ${
-                            previewUrl === item.name ? "underline" : ""
-                          }`}
-                          title={item.name}
-                        >
-                          {shortenUrl(item.name)}
-                        </button>
-                      ) : (
-                        <span className="truncate block">{item.name}</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isUrl(item.name) ? (
+                          <>
+                            <button
+                              onClick={() => handlePreview(item.name)}
+                              className={`text-left text-primary hover:underline truncate flex-1 ${
+                                previewUrl === item.name ? "underline" : ""
+                              }`}
+                              title={item.name}
+                            >
+                              {shortenUrl(item.name)}
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(item.name);
+                                toast.success("Link copiado!");
+                              }}
+                              className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+                              title="Copiar link"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="truncate block">{item.name}</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">{item.count}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
