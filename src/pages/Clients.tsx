@@ -30,6 +30,8 @@ const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", goog
 
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
+  const { signOut } = useAuth();
+  const queryClient = useQueryClient();
   const queryClient = useQueryClient();
 
   const [open, setOpen] = useState(false);
