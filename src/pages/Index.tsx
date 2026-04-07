@@ -20,17 +20,27 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function Index() {
+  const { isAdmin, clientId: authClientId, signOut } = useAuth();
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [since, setSince] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
 
+  // If client user, auto-select their client
+  const activeClient = isAdmin ? selectedClient : authClientId;
+
+  useEffect(() => {
+    if (!isAdmin && authClientId) {
+      setSelectedClient(authClientId);
+    }
+  }, [isAdmin, authClientId]);
+
   const { data: clients } = useClients();
-  const { data: campaigns } = useMetaCampaigns(selectedClient, since, until);
-  const { data: leads } = useQualifiedLeads(selectedClient, since, until);
-  const { sync } = useSyncMeta(selectedClient);
-  const { sync: syncSheet } = useSyncGoogleSheet(selectedClient);
+  const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
+  const { data: leads } = useQualifiedLeads(activeClient, since, until);
+  const { sync } = useSyncMeta(activeClient);
+  const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
 
   const handleFilterChange = (s: string, u: string) => {
