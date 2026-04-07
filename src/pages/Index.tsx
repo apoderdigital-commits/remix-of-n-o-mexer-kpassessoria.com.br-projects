@@ -222,6 +222,7 @@ export default function Index() {
           <EvolutionChart data={evolutionData} />
         </>
       )}
+      </div>
     </div>
   );
 }
