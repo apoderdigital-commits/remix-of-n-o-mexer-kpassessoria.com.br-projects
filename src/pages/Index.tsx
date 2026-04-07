@@ -210,7 +210,7 @@ export default function Index() {
             <CreativeRanking
               title="🏆 Criativos por CPF Aprovado"
               data={cpfRanking}
-              color="hsl(142, 71%, 45%)"
+              color="hsl(263, 50%, 68%)"
             />
             <CreativeRanking
               title="💰 Criativos por Venda"
