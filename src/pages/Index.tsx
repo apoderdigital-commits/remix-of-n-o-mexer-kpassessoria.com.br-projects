@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Settings, RefreshCw, FileSpreadsheet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
