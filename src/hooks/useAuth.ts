@@ -18,42 +18,59 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          // Check role
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id);
+    let isMounted = true;
 
-          const isAdmin = roles?.some((r) => r.role === "admin") ?? false;
+    const applyAuthState = async (user: User | null) => {
+      if (!isMounted) return;
 
-          // Check if linked to a client
-          let clientId: string | null = null;
-          if (!isAdmin) {
-            const { data: client } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
-            clientId = client?.id ?? null;
-          }
+      if (!user) {
+        setState({ user: null, loading: false, isAdmin: false, clientId: null });
+        return;
+      }
 
-          setState({ user: session.user, loading: false, isAdmin, clientId });
-        } else {
-          setState({ user: null, loading: false, isAdmin: false, clientId: null });
+      try {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+
+        const isAdmin = roles?.some((role) => role.role === "admin") ?? false;
+
+        let clientId: string | null = null;
+        if (!isAdmin) {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          clientId = client?.id ?? null;
         }
+
+        if (!isMounted) return;
+        setState({ user, loading: false, isAdmin, clientId });
+      } catch (error) {
+        console.error("Erro ao carregar autenticação:", error);
+
+        if (!isMounted) return;
+        setState({ user, loading: false, isAdmin: false, clientId: null });
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        void applyAuthState(session?.user ?? null);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null });
-      }
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      void applyAuthState(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
