@@ -49,7 +49,7 @@ export default function Index() {
   };
 
   const handleSync = async () => {
-    if (!selectedClient) return;
+    if (!activeClient) return;
     setSyncing(true);
     try {
       await sync(since, until);
