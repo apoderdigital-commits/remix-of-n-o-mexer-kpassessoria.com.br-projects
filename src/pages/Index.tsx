@@ -62,7 +62,7 @@ export default function Index() {
   };
 
   const handleSyncSheet = async () => {
-    if (!selectedClient) return;
+    if (!activeClient) return;
     setSyncingSheet(true);
     try {
       await syncSheet(since, until);
