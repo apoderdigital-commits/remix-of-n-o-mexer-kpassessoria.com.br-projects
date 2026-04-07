@@ -115,7 +115,7 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
                           </div>
                         )}
                         <a
-                          href={preview.finalUrl || previewUrl || "#"}
+                          href={previewUrl || preview.finalUrl || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline inline-flex items-center gap-1"
