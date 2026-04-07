@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useClients } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, UserPlus, LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const DEFAULT_TOKEN_KEY = "default_meta_token";
 
@@ -29,6 +30,7 @@ const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", goog
 
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
+  const { signOut } = useAuth();
   const queryClient = useQueryClient();
 
   const [open, setOpen] = useState(false);
@@ -100,6 +102,41 @@ export default function Clients() {
     toast.success("Token padrão salvo!");
   };
 
+  // Create login for client
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginClientId, setLoginClientId] = useState<string | null>(null);
+  const [loginForm, setLoginForm] = useState({ email: "", password: "", fullName: "" });
+  const [creatingLogin, setCreatingLogin] = useState(false);
+
+  const openLoginDialog = (clientId: string) => {
+    setLoginClientId(clientId);
+    setLoginForm({ email: "", password: "", fullName: "" });
+    setLoginOpen(true);
+  };
+
+  const handleCreateLogin = async () => {
+    if (!loginForm.email || !loginForm.password || !loginClientId) return;
+    setCreatingLogin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-client-user", {
+        body: {
+          email: loginForm.email,
+          password: loginForm.password,
+          client_id: loginClientId,
+          full_name: loginForm.fullName,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Login criado com sucesso!");
+      setLoginOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar login");
+    }
+    setCreatingLogin(false);
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -109,9 +146,14 @@ export default function Clients() {
           </Link>
           <h1 className="text-2xl font-bold">Gestão de Clientes</h1>
         </div>
-        <Button className="gap-2" onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Novo Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button className="gap-2" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Novo Cliente
+          </Button>
+          <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Default Token */}
@@ -170,6 +212,50 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Login Dialog */}
+      <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+        <DialogContent className="bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> Criar Login do Cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Nome Completo</Label>
+              <Input
+                value={loginForm.fullName}
+                onChange={(e) => setLoginForm((f) => ({ ...f, fullName: e.target.value }))}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={loginForm.email}
+                onChange={(e) => setLoginForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="cliente@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input
+                type="password"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
+                required
+              />
+            </div>
+            <Button onClick={handleCreateLogin} className="w-full" disabled={creatingLogin}>
+              {creatingLogin ? "Criando..." : "Criar Login"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Clients Table */}
       <Card className="glass-card border-border/50">
         <CardHeader>
@@ -187,17 +273,32 @@ export default function Clients() {
                   <TableHead className="text-muted-foreground">Nome</TableHead>
                   <TableHead className="text-muted-foreground">Meta Account ID</TableHead>
                   <TableHead className="text-muted-foreground">Google Sheet</TableHead>
+                  <TableHead className="text-muted-foreground">Login</TableHead>
                   <TableHead className="text-muted-foreground">Criado em</TableHead>
                   <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((c) => (
+                {clients.map((c: any) => (
                   <TableRow key={c.id} className="border-border/20">
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground">{c.meta_account_id || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.google_sheet_id ? "✅ Configurado" : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {c.user_id ? (
+                        <span className="text-xs text-green-400">✅ Ativo</span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs"
+                          onClick={() => openLoginDialog(c.id)}
+                        >
+                          <UserPlus className="h-3 w-3" /> Criar Login
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(c.created_at).toLocaleDateString("pt-BR")}

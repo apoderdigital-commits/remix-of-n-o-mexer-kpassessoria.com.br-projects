@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
@@ -15,21 +15,32 @@ import {
   useSyncMeta,
   useSyncGoogleSheet,
 } from "@/hooks/useDashboardData";
+import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function Index() {
+  const { isAdmin, clientId: authClientId, signOut } = useAuth();
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [since, setSince] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
 
+  // If client user, auto-select their client
+  const activeClient = isAdmin ? selectedClient : authClientId;
+
+  useEffect(() => {
+    if (!isAdmin && authClientId) {
+      setSelectedClient(authClientId);
+    }
+  }, [isAdmin, authClientId]);
+
   const { data: clients } = useClients();
-  const { data: campaigns } = useMetaCampaigns(selectedClient, since, until);
-  const { data: leads } = useQualifiedLeads(selectedClient, since, until);
-  const { sync } = useSyncMeta(selectedClient);
-  const { sync: syncSheet } = useSyncGoogleSheet(selectedClient);
+  const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
+  const { data: leads } = useQualifiedLeads(activeClient, since, until);
+  const { sync } = useSyncMeta(activeClient);
+  const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
 
   const handleFilterChange = (s: string, u: string) => {
@@ -38,7 +49,7 @@ export default function Index() {
   };
 
   const handleSync = async () => {
-    if (!selectedClient) return;
+    if (!activeClient) return;
     setSyncing(true);
     try {
       await sync(since, until);
@@ -51,7 +62,7 @@ export default function Index() {
   };
 
   const handleSyncSheet = async () => {
-    if (!selectedClient) return;
+    if (!activeClient) return;
     setSyncingSheet(true);
     try {
       await syncSheet(since, until);
@@ -125,41 +136,50 @@ export default function Index() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <ClientSelector
-            clients={clients || []}
-            selectedId={selectedClient}
-            onSelect={setSelectedClient}
-          />
+          {isAdmin && (
+            <ClientSelector
+              clients={clients || []}
+              selectedId={selectedClient}
+              onSelect={setSelectedClient}
+            />
+          )}
           <DateFilter onFilterChange={handleFilterChange} />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSync}
-            disabled={!selectedClient || syncing}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            Sync Meta
+          {isAdmin && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSync}
+                disabled={!activeClient || syncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                Sync Meta
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSyncSheet}
+                disabled={!activeClient || syncingSheet}
+                className="gap-2"
+              >
+                <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+                Sync Planilha
+              </Button>
+              <Link to="/clients">
+                <Button size="sm" variant="ghost" className="gap-2">
+                  <Settings className="h-4 w-4" /> Clientes
+                </Button>
+              </Link>
+            </>
+          )}
+          <Button size="sm" variant="ghost" onClick={signOut} className="gap-2">
+            <LogOut className="h-4 w-4" /> Sair
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSyncSheet}
-            disabled={!selectedClient || syncingSheet}
-            className="gap-2"
-          >
-            <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
-            Sync Planilha
-          </Button>
-          <Link to="/clients">
-            <Button size="sm" variant="ghost" className="gap-2">
-              <Settings className="h-4 w-4" /> Clientes
-            </Button>
-          </Link>
         </div>
       </div>
 
-      {!selectedClient ? (
+      {!activeClient ? (
         <div className="flex items-center justify-center h-[60vh]">
           <p className="text-muted-foreground text-lg">
             Selecione um cliente para visualizar o dashboard
