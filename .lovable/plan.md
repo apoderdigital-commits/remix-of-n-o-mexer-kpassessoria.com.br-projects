@@ -1,60 +1,75 @@
 
 
-## Portal Multi-Projetos no Mesmo Domínio
+## Integrar o Dashboard "Funil de Projeção de Vendas" do projeto PARA OPERACIONAL
 
-### Contexto
-Você quer usar seu domínio próprio como um "hub" central — o usuário faz login e depois escolhe qual dashboard/projeto acessar.
+### O que será feito
 
-### Limitação importante
-No Lovable, **cada domínio personalizado só pode apontar para um projeto**. Isso significa que não dá para servir múltiplos projetos Lovable diferentes no mesmo domínio diretamente.
+Vou copiar todos os componentes e assets do projeto [PARA OPERACIONAL](/projects/d0d436f9-7ea9-4bfb-822a-c2589d798e02) para dentro deste projeto, criando uma nova rota `/projecao` e adicionando o card no Portal.
 
-### Opções viáveis
+### Etapas
 
-**Opção A — Portal com subdomínios (recomendada)**
-- Este projeto vira o **portal central** no domínio principal (ex: `app.kpassessoria.com.br`)
-- Cada outro projeto Lovable fica em um subdomínio (ex: `criativos.kpassessoria.com.br`, `financeiro.kpassessoria.com.br`)
-- Após login no portal, o usuário vê cards dos projetos disponíveis e clica para ir ao subdomínio
-- **Problema:** cada projeto teria login separado (sessão não compartilha entre subdomínios automaticamente)
+**1. Copiar assets do outro projeto**
+- `src/assets/wallpaper-kp.png` (fundo do dashboard de projeção)
+- A `logo-kp.jpg` já temos equivalente (`kp-logo.png`)
 
-**Opção B — Tudo dentro deste projeto (recomendada)**
-- Em vez de ter projetos Lovable separados, você **adiciona todas as páginas/dashboards dentro deste mesmo projeto**
-- Após login → tela de seleção → cada "projeto" é uma rota diferente (`/criativos`, `/financeiro`, `/relatorios`)
-- **Vantagem:** login único, mesmo banco de dados, mesma sessão, mesmo domínio
-- **Desvantagem:** o projeto fica maior e mais complexo
+**2. Copiar os 5 componentes para `src/components/projecao/`**
+- `FunnelAnalysis.tsx` — Análise & Histórico (simulador de funil)
+- `ClientManager.tsx` — Gestão de clientes (do contexto de projeção)
+- `FunnelComparison.tsx` — Comparativo (Atual vs Desejado vs Projetado)
+- `ScaleScenarios.tsx` — Cenários de escala (1x, 1.5x, 2x, 3x)
+- `ReverseFunnel.tsx` — Funil reverso (meta → investimento)
 
-**Opção C — Portal com iframes**
-- Este projeto é o portal com login
-- Outros projetos Lovable são publicados como públicos
-- Após login, o portal carrega o projeto escolhido dentro de um iframe
-- **Problema:** segurança limitada, os outros projetos ficam acessíveis publicamente
+**3. Adaptar os componentes**
+- Atualizar imports para usar o `useAuth` deste projeto (mesma interface)
+- Os componentes usam tabelas `simulations`, `clients` e `comparison_notes` — precisamos criar essas tabelas neste banco
+- A tabela `clients` deste projeto já existe mas tem schema diferente. Vou:
+  - Criar tabela `simulations` (nova)
+  - Criar tabela `comparison_notes` (nova)
+  - Adicionar colunas `ticket_medio` e `share_token` na tabela `clients` existente
+  - O `ClientManager` do projeto de projeção será adaptado para usar a tabela `clients` existente
 
-### Recomendação
+**4. Criar a página `src/pages/Projecao.tsx`**
+- Layout com tabs (igual ao Index.tsx do outro projeto): Análise & Histórico, Clientes, Comparativo, Cenários, Funil Reverso
+- Header simplificado com botão de voltar ao Portal
+- Background com wallpaper + overlay
 
-A **Opção B** é a mais sólida — manter tudo neste projeto com rotas diferentes. Funciona assim:
+**5. Adicionar ao Portal e rotas**
+- Novo card no array `projects` do Portal: "Funil de Projeção de Vendas"
+- Nova rota protegida `/projecao` no `App.tsx`
 
-1. **Página de Login** — já existe
-2. **Nova página "Portal"** (`/`) — após login, mostra cards visuais dos dashboards disponíveis (com ícones, descrições)
-3. **Cada dashboard é uma rota** — ex: `/criativos` (o que já temos), `/novo-dashboard`, etc.
-4. **Controle de acesso por role** — cada usuário pode ter acesso a dashboards específicos
-5. **Menu lateral ou header** — para navegar entre dashboards sem voltar ao portal
+**6. Migrations do banco de dados**
+```sql
+-- Tabela simulations
+CREATE TABLE public.simulations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  client_name TEXT NOT NULL,
+  investimento DECIMAL(12,2) NOT NULL,
+  cpl DECIMAL(10,2) NOT NULL,
+  leads INTEGER NOT NULL,
+  taxa_simulacoes DECIMAL(5,2) DEFAULT 30,
+  simulacoes INTEGER NOT NULL,
+  taxa_qualificados DECIMAL(5,2) DEFAULT 50,
+  qualificados INTEGER NOT NULL,
+  taxa_vendas DECIMAL(5,2) DEFAULT 20,
+  vendas INTEGER NOT NULL,
+  reference_month INTEGER,
+  reference_year INTEGER,
+  reference_week INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-### O que seria implementado
+-- Adicionar ticket_medio e share_token na clients existente
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS ticket_medio DECIMAL(12,2);
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex');
 
-1. Criar página **Portal/Home** com cards dos projetos disponíveis
-2. Mover o dashboard atual para a rota `/criativos`
-3. Adicionar navegação global (sidebar ou header) para trocar entre dashboards
-4. Quando você criar novos dashboards, basta adicionar novas rotas e cards no portal
+-- Tabela comparison_notes
+CREATE TABLE public.comparison_notes (...);
 
-### Estrutura de rotas
-
-```text
-/login          → Tela de login
-/               → Portal (seletor de dashboards)
-/criativos      → Dashboard atual de criativos
-/[futuro-1]     → Novo dashboard que você criar
-/[futuro-2]     → Outro dashboard
-/clients        → Gestão de clientes (admin)
+-- RLS em todas as novas tabelas
 ```
 
-Qual opção você prefere? Se for a B, posso implementar direto.
+### Resultado final
+- No Portal, aparecerá um segundo card "Funil de Projeção de Vendas" ao lado do "Dashboard de Criativos"
+- Ao clicar, abre o dashboard completo com as 5 abas, tudo funcionando com o mesmo login e mesmo banco de dados
 
