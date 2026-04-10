@@ -153,6 +153,7 @@ export default function Index() {
               <ArrowLeft className="h-4 w-4" /> Portal
             </Button>
           </Link>
+          {isAdmin && (
             <ClientSelector
               clients={clients || []}
               selectedId={selectedClient}
