@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Portal from "./pages/Portal.tsx";
 import Criativos from "./pages/Criativos.tsx";
+import Projecao from "./pages/Projecao.tsx";
 import Clients from "./pages/Clients.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -49,6 +50,7 @@ const AppRoutes = () => (
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
     <Route path="/" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
     <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
+    <Route path="/projecao" element={<ProtectedRoute><Projecao /></ProtectedRoute>} />
     <Route path="/clients" element={<ProtectedRoute adminOnly><Clients /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
