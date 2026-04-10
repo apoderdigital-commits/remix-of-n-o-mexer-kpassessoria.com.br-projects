@@ -22,6 +22,8 @@ export type Database = {
           meta_access_token: string | null
           meta_account_id: string | null
           name: string
+          share_token: string | null
+          ticket_medio: number | null
           updated_at: string
           user_id: string | null
         }
@@ -32,6 +34,8 @@ export type Database = {
           meta_access_token?: string | null
           meta_account_id?: string | null
           name: string
+          share_token?: string | null
+          ticket_medio?: number | null
           updated_at?: string
           user_id?: string | null
         }
@@ -42,10 +46,112 @@ export type Database = {
           meta_access_token?: string | null
           meta_account_id?: string | null
           name?: string
+          share_token?: string | null
+          ticket_medio?: number | null
           updated_at?: string
           user_id?: string | null
         }
         Relationships: []
+      }
+      comparison_notes: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          notes: string
+          reference_month: number
+          reference_year: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string
+          reference_month: number
+          reference_year: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string
+          reference_month?: number
+          reference_year?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparison_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comparisons: {
+        Row: {
+          client_id: string
+          cpl: number
+          created_at: string | null
+          id: string
+          investimento: number
+          leads: number
+          pre_atendimento: number
+          qualificados: number
+          reference_month: number
+          reference_year: number
+          ticket_medio: number
+          tipo: string
+          user_id: string
+          vendas: number
+        }
+        Insert: {
+          client_id: string
+          cpl?: number
+          created_at?: string | null
+          id?: string
+          investimento?: number
+          leads?: number
+          pre_atendimento?: number
+          qualificados?: number
+          reference_month: number
+          reference_year: number
+          ticket_medio?: number
+          tipo: string
+          user_id: string
+          vendas?: number
+        }
+        Update: {
+          client_id?: string
+          cpl?: number
+          created_at?: string | null
+          id?: string
+          investimento?: number
+          leads?: number
+          pre_atendimento?: number
+          qualificados?: number
+          reference_month?: number
+          reference_year?: number
+          ticket_medio?: number
+          tipo?: string
+          user_id?: string
+          vendas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparisons_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meta_campaigns: {
         Row: {
@@ -149,6 +255,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      simulations: {
+        Row: {
+          client_name: string
+          cpl: number
+          created_at: string | null
+          id: string
+          investimento: number
+          leads: number
+          qualificados: number
+          reference_month: number | null
+          reference_week: number | null
+          reference_year: number | null
+          simulacoes: number
+          taxa_qualificados: number | null
+          taxa_simulacoes: number | null
+          taxa_vendas: number | null
+          user_id: string
+          vendas: number
+        }
+        Insert: {
+          client_name: string
+          cpl: number
+          created_at?: string | null
+          id?: string
+          investimento: number
+          leads: number
+          qualificados: number
+          reference_month?: number | null
+          reference_week?: number | null
+          reference_year?: number | null
+          simulacoes: number
+          taxa_qualificados?: number | null
+          taxa_simulacoes?: number | null
+          taxa_vendas?: number | null
+          user_id: string
+          vendas: number
+        }
+        Update: {
+          client_name?: string
+          cpl?: number
+          created_at?: string | null
+          id?: string
+          investimento?: number
+          leads?: number
+          qualificados?: number
+          reference_month?: number | null
+          reference_week?: number | null
+          reference_year?: number | null
+          simulacoes?: number
+          taxa_qualificados?: number | null
+          taxa_simulacoes?: number | null
+          taxa_vendas?: number | null
+          user_id?: string
+          vendas?: number
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

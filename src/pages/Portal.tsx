@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BarChart3, Plus, Settings, LogOut } from "lucide-react";
+import { BarChart3, TrendingUp, Plus, Settings, LogOut } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,14 +13,13 @@ const projects = [
     href: "/criativos",
     color: "from-primary to-purple-400",
   },
-  // Adicione novos dashboards aqui:
-  // {
-  //   title: "Dashboard Financeiro",
-  //   description: "Controle financeiro e faturamento",
-  //   icon: DollarSign,
-  //   href: "/financeiro",
-  //   color: "from-emerald-500 to-teal-400",
-  // },
+  {
+    title: "Funil de Projeção de Vendas",
+    description: "Simule, compare e otimize suas estratégias de conversão",
+    icon: TrendingUp,
+    href: "/projecao",
+    color: "from-fuchsia-500 to-pink-500",
+  },
 ];
 
 export default function Portal() {
