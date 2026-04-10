@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -148,6 +148,11 @@ export default function Index() {
       {/* Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap">
+          <Link to="/">
+            <Button size="sm" variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Portal
+            </Button>
+          </Link>
           {isAdmin && (
             <ClientSelector
               clients={clients || []}

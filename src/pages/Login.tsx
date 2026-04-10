@@ -33,7 +33,7 @@ export default function Login() {
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
             <LogIn className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Dashboard de Criativos</CardTitle>
+          <CardTitle className="text-2xl">KP Assessoria</CardTitle>
           <p className="text-sm text-muted-foreground">
             Faça login para acessar o painel
           </p>
