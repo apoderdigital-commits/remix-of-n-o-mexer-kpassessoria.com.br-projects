@@ -148,7 +148,11 @@ export default function Index() {
       {/* Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap">
-          {isAdmin && (
+          <Link to="/">
+            <Button size="sm" variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Portal
+            </Button>
+          </Link>
             <ClientSelector
               clients={clients || []}
               selectedId={selectedClient}
