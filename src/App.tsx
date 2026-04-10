@@ -47,7 +47,8 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+    <Route path="/" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+    <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
     <Route path="/clients" element={<ProtectedRoute adminOnly><Clients /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
