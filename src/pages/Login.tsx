@@ -15,20 +15,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [animating, setAnimating] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (step === "password") {
       setTimeout(() => passwordRef.current?.focus(), 350);
     }
-    if (step === "email") {
-      setTimeout(() => emailRef.current?.focus(), 350);
+    if (step === "username") {
+      setTimeout(() => usernameRef.current?.focus(), 350);
     }
   }, [step]);
 
   const goToPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!username.trim()) return;
     setAnimating(true);
     setTimeout(() => {
       setStep("password");
@@ -36,10 +36,10 @@ export default function Login() {
     }, 200);
   };
 
-  const goBackToEmail = () => {
+  const goBackToUsername = () => {
     setAnimating(true);
     setTimeout(() => {
-      setStep("email");
+      setStep("username");
       setPassword("");
       setAnimating(false);
     }, 200);
@@ -48,13 +48,14 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const email = username.trim().toLowerCase() + EMAIL_DOMAIN;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error(
         error.message === "Invalid login credentials"
-          ? "Email ou senha incorretos"
+          ? "Usuário ou senha incorretos"
           : error.message === "Email not confirmed"
-          ? "Confirme seu email antes de acessar"
+          ? "Conta não confirmada"
           : error.message
       );
     }
@@ -104,20 +105,20 @@ export default function Login() {
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              {step === "email" ? "Acessar plataforma" : "Digite sua senha"}
+              {step === "username" ? "Acessar plataforma" : "Digite sua senha"}
             </h1>
             <p className="text-muted-foreground text-sm mt-1.5">
-              {step === "email"
-                ? "Insira seu email para continuar"
+              {step === "username"
+                ? "Insira seu usuário para continuar"
                 : (
                   <span className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={goBackToEmail}
+                      onClick={goBackToUsername}
                       className="text-primary hover:underline inline-flex items-center gap-1"
                     >
                       <ArrowLeft className="h-3 w-3" />
-                      {email}
+                      {username}
                     </button>
                   </span>
                 )}
@@ -127,16 +128,16 @@ export default function Login() {
           <div
             className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}
           >
-            {step === "email" ? (
+            {step === "username" ? (
               <form onSubmit={goToPassword} className="space-y-5">
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    ref={emailRef}
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
+                    ref={usernameRef}
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="seu.usuario"
                     required
                     autoFocus
                     className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
