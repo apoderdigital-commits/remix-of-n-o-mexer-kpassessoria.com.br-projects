@@ -102,11 +102,10 @@ export default function Clients() {
     if (!token) return;
     localStorage.setItem(DEFAULT_TOKEN_KEY, token);
 
-    const { error, count } = await supabase
+    const { count, error } = await supabase
       .from("clients")
       .update({ meta_access_token: token })
-      .not("id", "is", null)
-      .select("id", { count: "exact", head: true });
+      .not("id", "is", null);
 
     if (error) {
       toast.error("Erro ao atualizar clientes: " + error.message);
