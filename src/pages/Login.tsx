@@ -77,19 +77,21 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden">
-      {/* Full-screen image background */}
-      <img
-        src={teamBg}
-        alt="Equipe KP Assessoria"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      {/* Subtle gradient overlay — keeps image sharp */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
+    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden flex flex-col">
+      {/* Team image — on mobile: top portion, fits full width showing everyone; on desktop: full background */}
+      <div className="lg:absolute lg:inset-0 shrink-0">
+        <img
+          src={teamBg}
+          alt="Equipe KP Assessoria"
+          className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
+          style={{ aspectRatio: '16/9' }}
+        />
+        {/* Desktop overlay */}
+        <div className="hidden lg:block absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
+      </div>
 
-
-      {/* Bottom bar — full width */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-background/90 backdrop-blur-md border-t border-border/30">
+      {/* Bottom bar — full width, on mobile it fills remaining space */}
+      <div className="flex-1 lg:flex-none lg:absolute lg:bottom-0 lg:left-0 lg:right-0 z-10 bg-background border-t border-border/30 lg:bg-background/90 lg:backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 py-6 lg:py-8">
           {/* Mobile branding */}
           <div className="lg:hidden flex items-center gap-3 mb-5">
