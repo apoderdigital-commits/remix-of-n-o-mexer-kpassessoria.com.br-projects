@@ -77,7 +77,7 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
 
   return (
-    <div className="min-h-screen flex relative">
+    <div className="min-h-[100dvh] h-[100dvh] flex relative overflow-hidden">
       {/* Video background — visible on ALL screens */}
       <AutoPlayVideo
         className="fixed inset-0 w-full h-full object-cover scale-[1.2] lg:hidden"
