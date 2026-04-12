@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const rows: Array<{
       client_id: string;
       creative_name: string;
-      status: "cpf_approved" | "sale";
+      status: "cpf_approved" | "sale" | "sale_consortium" | "sale_financing";
       lead_date: string;
     }> = [];
 
