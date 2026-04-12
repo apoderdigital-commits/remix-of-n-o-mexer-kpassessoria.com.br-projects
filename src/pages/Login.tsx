@@ -201,16 +201,16 @@ export default function Login() {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
 
       {/* Left side — video (desktop only) */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
         <AutoPlayVideo
           className="absolute inset-0 w-full h-full object-cover scale-110"
           src="/videos/login-bg.mp4"
         />
         <div className="absolute inset-0 bg-background/30" />
-        <div className="relative z-10 text-center px-8">
-          <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-2xl shadow-2xl mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
-          <p className="text-sm text-foreground/70 mt-1">Aceleradora de vendas para lojas automotivas!</p>
+        <div className="relative z-10 text-center px-8 pt-10">
+          <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl shadow-2xl mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
+          <p className="text-base text-foreground/70 mt-1">Aceleradora de vendas para lojas automotivas!</p>
           <div className="flex items-center justify-center gap-3 mt-6">
             <div className="h-1 w-8 rounded-full bg-primary/40" />
             <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
