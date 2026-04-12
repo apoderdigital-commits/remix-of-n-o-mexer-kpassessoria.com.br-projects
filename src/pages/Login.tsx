@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase } from "lucide-react";
 import kpLogo from "@/assets/kp-logo.png";
+import teamBg from "@/assets/team-bg.jpg";
 
 const EMAIL_DOMAIN = "@kp.local";
 
@@ -78,33 +78,36 @@ export default function Login() {
 
   return (
     <div className="min-h-[100dvh] h-[100dvh] flex relative overflow-hidden">
-      {/* Video background — visible on ALL screens */}
-      <AutoPlayVideo
-        className="fixed inset-0 w-full h-full object-cover scale-[1.2] lg:hidden"
-        src="/videos/login-bg.mp4"
+      {/* Image background — mobile */}
+      <img
+        src={teamBg}
+        alt=""
+        className="fixed inset-0 w-full h-full object-cover scale-[1.15] lg:hidden"
       />
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
+      <div className="fixed inset-0 bg-background/85 backdrop-blur-md lg:hidden" />
 
-      {/* Left side — branding (desktop only) */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6">
-        <AutoPlayVideo
-          className="absolute inset-0 w-full h-full object-cover scale-[1.2]"
-          src="/videos/login-bg.mp4"
+      {/* Left side — image (desktop only) */}
+      <div className="hidden lg:flex lg:w-[48%] relative overflow-hidden items-end">
+        <img
+          src={teamBg}
+          alt="Equipe KP Assessoria"
+          className="absolute inset-0 w-full h-full object-cover scale-[1.05]"
         />
-        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/30" />
 
-        <div className="relative z-10 text-center px-12 max-w-md">
-          <div className="mb-3">
-            <img src={kpLogo} alt="KP Assessoria" className="h-[76px] w-[76px] rounded-2xl mx-auto shadow-2xl" />
+        <div className="relative z-10 p-10 pb-12 w-full">
+          <div className="flex items-center gap-4 mb-4">
+            <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl" />
+            <div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
+              <p className="text-sm text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-foreground mb-1 tracking-tight">KP Assessoria</h2>
-          <p className="leading-relaxed text-primary-foreground font-normal text-sm rounded-lg shadow-md">
-            Aceleradora de vendas para lojas automotivas!
-          </p>
-          <div className="mt-10 flex items-center gap-3 justify-center">
-            <div className={`h-1 w-8 rounded-full ${step === "type" ? "bg-primary/60" : "bg-primary/20"}`} />
-            <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary/60" : "bg-primary/20"}`} />
-            <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary/60" : "bg-primary/20"}`} />
+          <div className="flex items-center gap-3 mt-6">
+            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
+            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
+            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
           </div>
         </div>
       </div>
@@ -112,17 +115,17 @@ export default function Login() {
       {/* Right side — form */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <div className="w-full max-w-sm">
-          {/* Mobile branding with logo + video background */}
+          {/* Mobile branding */}
           <div className="lg:hidden flex flex-col items-center mb-10">
             <div className="mb-4">
               <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-2xl shadow-2xl" />
             </div>
             <h2 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
-            <p className="text-xs mt-1 text-primary-foreground">Aceleradora de vendas para lojas automotivas!</p>
+            <p className="text-xs mt-1 text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
             <div className="mt-4 flex items-center gap-2 justify-center">
-              <div className={`h-1 w-6 rounded-full ${step === "type" ? "bg-primary/60" : "bg-primary/20"}`} />
-              <div className={`h-1 w-6 rounded-full ${step === "username" ? "bg-primary/60" : "bg-primary/20"}`} />
-              <div className={`h-1 w-6 rounded-full ${step === "password" ? "bg-primary/60" : "bg-primary/20"}`} />
+              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
+              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
+              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
             </div>
           </div>
 
