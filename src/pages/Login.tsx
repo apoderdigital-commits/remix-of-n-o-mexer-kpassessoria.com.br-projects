@@ -121,7 +121,7 @@ export default function Login() {
               </p>
               <p className="text-lg mt-1">🇧🇷</p>
 
-              <p className="text-xs text-muted-foreground/70 mt-4 max-w-[280px] leading-relaxed">
+              <p className="mt-4 max-w-[280px] leading-relaxed text-muted-foreground text-base">
                 Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
               </p>
               <img src={kpLogo} alt="KP" className="h-8 w-8 rounded-lg opacity-40 mt-3" />
