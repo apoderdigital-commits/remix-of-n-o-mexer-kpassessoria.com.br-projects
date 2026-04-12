@@ -96,7 +96,7 @@ export default function Login() {
             <img src={kpLogo} alt="KP Assessoria" className="h-24 w-24 rounded-2xl mx-auto shadow-2xl" />
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-1 tracking-tight">KP Assessoria</h2>
-          <p className="text-muted-foreground leading-relaxed">
+          <p className="leading-relaxed text-primary-foreground font-normal text-sm rounded-lg shadow-md">
             Aceleradora de vendas para lojas automotivas!
           </p>
           <div className="mt-10 flex items-center gap-3 justify-center">
