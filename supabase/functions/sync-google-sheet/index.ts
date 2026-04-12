@@ -170,14 +170,18 @@ Deno.serve(async (req) => {
     }
 
     const cpfCount = rows.filter((r) => r.status === "cpf_approved").length;
-    const saleCount = rows.filter((r) => r.status === "sale").length;
+    const consortiumCount = rows.filter((r) => r.status === "sale_consortium").length;
+    const financingCount = rows.filter((r) => r.status === "sale_financing").length;
+    const legacySaleCount = rows.filter((r) => r.status === "sale").length;
 
     return new Response(
       JSON.stringify({
         success: true,
         total: rows.length,
         cpf_approved: cpfCount,
-        sales: saleCount,
+        sale_consortium: consortiumCount,
+        sale_financing: financingCount,
+        sale_legacy: legacySaleCount,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
