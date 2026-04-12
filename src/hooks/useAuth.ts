@@ -7,6 +7,8 @@ interface AuthState {
   loading: boolean;
   isAdmin: boolean;
   clientId: string | null;
+  dashboards: string[];
+  accessibleClientIds: string[];
 }
 
 export function useAuth() {
@@ -15,6 +17,8 @@ export function useAuth() {
     loading: true,
     isAdmin: false,
     clientId: null,
+    dashboards: [],
+    accessibleClientIds: [],
   });
 
   useEffect(() => {
@@ -24,7 +28,7 @@ export function useAuth() {
       if (!isMounted) return;
 
       if (!user) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null });
+        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
         return;
       }
 
@@ -36,24 +40,44 @@ export function useAuth() {
 
         const isAdmin = roles?.some((role) => role.role === "admin") ?? false;
 
+        // Get dashboard access
+        let dashboards: string[] = [];
+        if (!isAdmin) {
+          const { data: dashAccess } = await supabase
+            .from("user_dashboard_access")
+            .select("dashboard_key")
+            .eq("user_id", user.id);
+          dashboards = (dashAccess || []).map((d) => d.dashboard_key);
+        }
+
+        // Get client access
+        let accessibleClientIds: string[] = [];
         let clientId: string | null = null;
         if (!isAdmin) {
+          const { data: clientAccess } = await supabase
+            .from("user_client_access")
+            .select("client_id")
+            .eq("user_id", user.id);
+          accessibleClientIds = (clientAccess || []).map((ca) => ca.client_id);
+
+          // Legacy: check clients table for user_id link
           const { data: client } = await supabase
             .from("clients")
             .select("id")
             .eq("user_id", user.id)
             .maybeSingle();
-
           clientId = client?.id ?? null;
+          if (clientId && !accessibleClientIds.includes(clientId)) {
+            accessibleClientIds.push(clientId);
+          }
         }
 
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin, clientId });
+        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds });
       } catch (error) {
         console.error("Erro ao carregar autenticação:", error);
-
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin: false, clientId: null });
+        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
       }
     };
 
