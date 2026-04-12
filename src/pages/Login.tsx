@@ -152,7 +152,7 @@ export default function Login() {
                   É obrigação!
                 </p>
 
-                <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium animate-[glow-text_3s_ease-in-out_infinite] mx-auto">
+                <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium mx-auto">
                   Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
                 </p>
               </div>
