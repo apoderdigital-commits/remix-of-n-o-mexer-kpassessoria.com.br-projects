@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-
+import { CreativeGuideButton } from "./CreativeGuideButton";
 const PREVIEW_TIMEOUT_MS = 10000;
 
 function supportsUrlPreview(url: string) {
