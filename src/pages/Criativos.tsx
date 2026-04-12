@@ -180,7 +180,7 @@ export default function Index() {
               <ArrowLeft className="h-4 w-4" /> Portal
             </Button>
           </Link>
-          {isAdmin && (
+          {(isAdmin || (clients && clients.length > 1)) && (
             <ClientSelector
               clients={clients || []}
               selectedId={selectedClient}
