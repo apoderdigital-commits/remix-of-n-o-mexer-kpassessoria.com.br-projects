@@ -8,18 +8,24 @@ const allProjects = [
   {
     key: "criativos",
     title: "Dashboard de Criativos",
-    description: "Performance de criativos, leads qualificados e métricas da Meta Ads",
+    description: "Descubra qual criativo está trazendo vendas para escalar ainda mais!",
     icon: BarChart3,
     href: "/criativos",
-    iconBg: "bg-primary/15",
+    gradient: "from-primary/20 to-primary/5",
+    borderColor: "border-primary/30 hover:border-primary/50",
+    iconGradient: "from-primary to-primary/70",
+    tag: "Performance",
   },
   {
     key: "projecao",
     title: "Funil de Projeção de Vendas",
-    description: "Simule, compare e otimize suas estratégias de conversão",
+    description: "Saiba o que fazer para conseguir mais vendas — analise o mês e projete o próximo!",
     icon: TrendingUp,
     href: "/projecao",
-    iconBg: "bg-fuchsia-500/15",
+    gradient: "from-fuchsia-500/20 to-fuchsia-500/5",
+    borderColor: "border-fuchsia-500/30 hover:border-fuchsia-500/50",
+    iconGradient: "from-fuchsia-500 to-purple-600",
+    tag: "Estratégia",
   },
 ];
 
@@ -134,15 +140,19 @@ export default function Portal() {
                 ) : (
                   visibleProjects.map((project) => (
                     <Link key={project.href} to={project.href} className="group">
-                      <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200">
-                        <div className={`shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${project.iconBg} flex items-center justify-center`}>
-                          <project.icon className="h-5 w-5 text-foreground/80" />
+                      <div className={`relative overflow-hidden rounded-2xl border ${project.borderColor} bg-gradient-to-r ${project.gradient} p-5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`}>
+                        <div className="flex items-start gap-4">
+                          <div className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${project.iconGradient} flex items-center justify-center shadow-lg`}>
+                            <project.icon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h2 className="text-base sm:text-lg font-bold text-foreground leading-tight">{project.title}</h2>
+                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{project.description}</p>
+                            <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary group-hover:gap-2.5 transition-all">
+                              Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-sm font-semibold text-foreground leading-tight">{project.title}</h2>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 sm:truncate">{project.description}</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
                     </Link>
                   ))
