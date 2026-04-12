@@ -11,9 +11,11 @@ const supabase = createClient(
 );
 
 // Map spreadsheet event types to our lead_status enum
-function mapStatus(tipo: string): "cpf_approved" | "sale" | null {
+function mapStatus(tipo: string): "cpf_approved" | "sale" | "sale_consortium" | "sale_financing" | null {
   const lower = tipo.toLowerCase();
   if (lower.includes("cpf aprovado")) return "cpf_approved";
+  if (lower.includes("consórcio") || lower.includes("consorcio")) return "sale_consortium";
+  if (lower.includes("financiamento") || lower.includes("cartão") || lower.includes("cartao") || lower.includes("à vista") || lower.includes("a vista")) return "sale_financing";
   if (lower.includes("venda") || lower.includes("vendas")) return "sale";
   return null;
 }
