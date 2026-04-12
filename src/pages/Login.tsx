@@ -153,7 +153,7 @@ export default function Login() {
               <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium animate-[glow-text_3s_ease-in-out_infinite]">
                 Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
               </p>
-              <img src={kpLogo} alt="KP" className="h-8 w-8 rounded-lg opacity-40 mt-3" />
+              
             </div>
 
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
