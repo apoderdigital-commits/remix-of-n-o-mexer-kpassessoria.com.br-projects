@@ -228,6 +228,7 @@ export type Database = {
           id: string
           lead_date: string
           received_at: string
+          seller_name: string | null
           status: Database["public"]["Enums"]["lead_status"]
         }
         Insert: {
@@ -236,6 +237,7 @@ export type Database = {
           id?: string
           lead_date?: string
           received_at?: string
+          seller_name?: string | null
           status: Database["public"]["Enums"]["lead_status"]
         }
         Update: {
@@ -244,6 +246,7 @@ export type Database = {
           id?: string
           lead_date?: string
           received_at?: string
+          seller_name?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
         }
         Relationships: [

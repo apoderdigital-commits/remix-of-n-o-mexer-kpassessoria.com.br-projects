@@ -90,7 +90,8 @@ Deno.serve(async (req) => {
 
     // Find column indices from header
     const header = lines[0].map((h) => h.toLowerCase().replace(/[^a-z_]/g, ""));
-    const colNome = header.findIndex((h) => h.includes("nome_do_cliente") || h.includes("nomedocliente") || h.includes("nome") || h.includes("cliente"));
+    const colNome = header.findIndex((h) => h.includes("nome_do_cliente") || h.includes("nomedocliente") || h.includes("cliente"));
+    const colVendedor = header.findIndex((h) => h.includes("vendedor") || h.includes("nome_do_vendedor") || h.includes("nomedovendedor"));
     const colTipo = header.findIndex((h) => h.includes("tipo"));
     const colUrl = header.findIndex((h) => h.includes("url_criativo") || h.includes("urlcriativo") || h.includes("url"));
     const colData = header.findIndex((h) => h.includes("data") || h.includes("hora"));
@@ -110,6 +111,7 @@ Deno.serve(async (req) => {
       creative_name: string;
       status: "cpf_approved" | "sale" | "sale_consortium" | "sale_financing";
       lead_date: string;
+      seller_name: string | null;
     }> = [];
 
     // Deduplicate: same person + same event type = count only once
@@ -120,6 +122,7 @@ Deno.serve(async (req) => {
       if (!cols || cols.length < 3) continue;
 
       const nome = colNome !== -1 ? (cols[colNome] || "").trim().toLowerCase() : "";
+      const vendedor = colVendedor !== -1 ? (cols[colVendedor] || "").trim() : null;
       const tipo = cols[colTipo] || "";
       const url = cols[colUrl] || "";
       const dataStr = cols[colData] || "";
@@ -152,6 +155,7 @@ Deno.serve(async (req) => {
         creative_name: url,
         status,
         lead_date: leadDate,
+        seller_name: vendedor || null,
       });
     }
 

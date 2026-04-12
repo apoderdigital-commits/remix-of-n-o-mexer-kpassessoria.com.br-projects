@@ -7,6 +7,7 @@ import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
+import { SellerRanking } from "@/components/dashboard/SellerRanking";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import {
@@ -116,7 +117,21 @@ export default function Index() {
   const consortiumRanking = useMemo(() => buildRanking(["sale_consortium"]), [leads]);
   const financingRanking = useMemo(() => buildRanking(["sale_financing"]), [leads]);
 
-  // Evolution chart data
+  // Seller rankings
+  const buildSellerRanking = (statuses: string[]) => {
+    const filtered = (leads || []).filter((l) => statuses.includes(l.status) && l.seller_name);
+    const map = new Map<string, number>();
+    filtered.forEach((l) => map.set(l.seller_name!, (map.get(l.seller_name!) || 0) + 1));
+    const total = filtered.length;
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  const sellerCpfRanking = useMemo(() => buildSellerRanking(["cpf_approved"]), [leads]);
+  const sellerConsortiumRanking = useMemo(() => buildSellerRanking(["sale_consortium"]), [leads]);
+  const sellerFinancingRanking = useMemo(() => buildSellerRanking(["sale_financing"]), [leads]);
+
   const evolutionData = useMemo(() => {
     const dateMap = new Map<string, { leads: number; cpf: number; sales: number }>();
     (campaigns || []).forEach((c) => {
@@ -241,6 +256,27 @@ export default function Index() {
           </div>
 
           <EvolutionChart data={evolutionData} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <SellerRanking
+              title="CPFs Aprovados por Vendedor"
+              data={sellerCpfRanking}
+              color="hsl(142, 60%, 45%)"
+              icon="✅"
+            />
+            <SellerRanking
+              title="Vendas Consórcio por Vendedor"
+              data={sellerConsortiumRanking}
+              color="hsl(210, 70%, 58%)"
+              icon="🤝"
+            />
+            <SellerRanking
+              title="Vendas Financiamento por Vendedor"
+              data={sellerFinancingRanking}
+              color="hsl(35, 80%, 55%)"
+              icon="💳"
+            />
+          </div>
         </>
       )}
       </div>
