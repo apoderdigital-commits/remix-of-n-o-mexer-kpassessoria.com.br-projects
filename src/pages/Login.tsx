@@ -103,7 +103,7 @@ export default function Login() {
         <div className="flex-1 lg:flex-none lg:absolute lg:bottom-0 lg:left-0 lg:right-0 z-10 bg-background border-t border-border/30 lg:bg-background/90 lg:backdrop-blur-md">
           <div className="max-w-5xl mx-auto px-6 py-5 lg:py-8 flex flex-col h-full lg:h-auto">
             {/* Mobile branding */}
-            <div className="lg:hidden flex items-center gap-3 mb-4">
+            <div className="lg:hidden flex items-center gap-3 mb-3">
               <img src={kpLogo} alt="KP Assessoria" className="h-10 w-10 rounded-xl shadow-lg" />
               <div>
                 <h2 className="text-sm font-bold text-foreground tracking-tight">KP Assessoria</h2>
@@ -111,7 +111,7 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Motivational phrase — mobile */}
+            {/* Motivational phrase + description — mobile */}
             <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4">
               <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
                 Resultado não é opção
@@ -120,6 +120,11 @@ export default function Login() {
                 É obrigação!
               </p>
               <p className="text-lg mt-1">🇧🇷</p>
+
+              <p className="text-xs text-muted-foreground/70 mt-4 max-w-[280px] leading-relaxed">
+                Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
+              </p>
+              <img src={kpLogo} alt="KP" className="h-8 w-8 rounded-lg opacity-40 mt-3" />
             </div>
 
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
