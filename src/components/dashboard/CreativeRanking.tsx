@@ -227,12 +227,33 @@ function FullRankingContent({
   );
 }
 
-export function CreativeRanking({ title, data, color, category }: CreativeRankingProps) {
+export function CreativeRanking({ title, data, color, category, clientId }: CreativeRankingProps) {
   const top10 = data.slice(0, 10);
   const isMobile = useIsMobile();
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [sendingUrl, setSendingUrl] = useState<string | null>(null);
+
+  const handleSendWhatsApp = async (creativeUrl: string) => {
+    if (!clientId) return;
+    setSendingUrl(creativeUrl);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-creative-whatsapp", {
+        body: { client_id: clientId, creative_url: creativeUrl },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success("Link enviado no WhatsApp! 📲");
+      }
+    } catch {
+      toast.error("Erro ao enviar para o WhatsApp");
+    } finally {
+      setSendingUrl(null);
+    }
+  };
 
   const handlePreview = async (url: string) => {
     if (previewUrl === url) {
@@ -347,6 +368,9 @@ export function CreativeRanking({ title, data, color, category }: CreativeRankin
                   handlePreview={handlePreview}
                   isUrl={isUrl}
                   shortenUrl={shortenUrl}
+                  clientId={clientId}
+                  sendingUrl={sendingUrl}
+                  handleSendWhatsApp={handleSendWhatsApp}
                 />
               </DialogContent>
             </Dialog>
