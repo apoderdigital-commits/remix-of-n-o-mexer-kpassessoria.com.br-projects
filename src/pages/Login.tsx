@@ -78,7 +78,7 @@ export default function Login() {
 
   return (
     <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden flex flex-col">
-      {/* Team image — on mobile: top portion, fits full width showing everyone; on desktop: full background */}
+      {/* Team image */}
       <div className="lg:absolute lg:inset-0 shrink-0">
         <img
           src={teamBg}
@@ -86,20 +86,30 @@ export default function Login() {
           className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
           style={{ aspectRatio: '16/9' }}
         />
-        {/* Desktop overlay */}
         <div className="hidden lg:block absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
       </div>
 
-      {/* Bottom bar — full width, on mobile it fills remaining space */}
+      {/* Bottom bar */}
       <div className="flex-1 lg:flex-none lg:absolute lg:bottom-0 lg:left-0 lg:right-0 z-10 bg-background border-t border-border/30 lg:bg-background/90 lg:backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 py-6 lg:py-8">
+        <div className="max-w-5xl mx-auto px-6 py-5 lg:py-8 flex flex-col h-full lg:h-auto">
           {/* Mobile branding */}
-          <div className="lg:hidden flex items-center gap-3 mb-5">
+          <div className="lg:hidden flex items-center gap-3 mb-4">
             <img src={kpLogo} alt="KP Assessoria" className="h-10 w-10 rounded-xl shadow-lg" />
             <div>
               <h2 className="text-sm font-bold text-foreground tracking-tight">KP Assessoria</h2>
               <p className="text-xs text-foreground/60">Aceleradora de vendas</p>
             </div>
+          </div>
+
+          {/* Motivational phrase — mobile (fills empty space) */}
+          <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4">
+            <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
+              Resultado não é opção
+            </p>
+            <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight">
+              É obrigação!
+            </p>
+            <p className="text-lg mt-1">🇧🇷</p>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
@@ -115,6 +125,19 @@ export default function Login() {
             {/* Divider desktop */}
             <div className="hidden lg:block w-px h-12 bg-border/40" />
 
+            {/* Motivational phrase — desktop */}
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
+              <div className="text-xs font-bold uppercase tracking-wider text-foreground/70 leading-tight">
+                <span>Resultado não é opção.</span>
+                <br />
+                <span className="text-primary">É obrigação!</span>
+                <span className="ml-1">🇧🇷</span>
+              </div>
+            </div>
+
+            {/* Divider desktop */}
+            <div className="hidden lg:block w-px h-12 bg-border/40" />
+
             {/* Form area */}
             <div className="flex-1">
               <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
@@ -124,30 +147,30 @@ export default function Login() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         onClick={() => selectType("collaborator")}
-                        className="flex-1 flex items-center gap-3 px-5 py-4 rounded-xl border border-primary/30 bg-card hover:border-primary/50 hover:shadow-[0_0_20px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
+                        className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-lg border border-border/60 bg-secondary/80 hover:bg-secondary hover:border-primary/40 transition-all duration-200 text-left group"
                       >
-                        <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
                           <Shield className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-foreground">Colaborador</p>
-                          <p className="text-xs text-muted-foreground">Equipe interna</p>
+                          <p className="text-[11px] text-muted-foreground">Equipe interna</p>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                       </button>
 
                       <button
                         onClick={() => selectType("client")}
-                        className="flex-1 flex items-center gap-3 px-5 py-4 rounded-xl border border-primary/30 bg-card hover:border-primary/50 hover:shadow-[0_0_20px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
+                        className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-lg border border-border/60 bg-secondary/80 hover:bg-secondary hover:border-primary/40 transition-all duration-200 text-left group"
                       >
-                        <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
                           <Briefcase className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-foreground">Cliente</p>
-                          <p className="text-xs text-muted-foreground">Seus dashboards</p>
+                          <p className="text-[11px] text-muted-foreground">Seus dashboards</p>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                       </button>
                     </div>
                   </div>
