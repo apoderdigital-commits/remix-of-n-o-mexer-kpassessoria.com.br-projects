@@ -11,6 +11,13 @@ interface AuthState {
   accessibleClientIds: string[];
 }
 
+const INACTIVITY_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours in ms
+const LAST_ACTIVITY_KEY = "last_activity_ts";
+
+function trackActivity() {
+  localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+}
+
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -32,6 +39,14 @@ export function useAuth() {
         return;
       }
 
+      // Check inactivity on load
+      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+      if (lastActivity && Date.now() - Number(lastActivity) > INACTIVITY_TIMEOUT) {
+        await supabase.auth.signOut();
+        return;
+      }
+      trackActivity();
+
       try {
         const { data: roles } = await supabase
           .from("user_roles")
@@ -40,7 +55,6 @@ export function useAuth() {
 
         const isAdmin = roles?.some((role) => role.role === "admin") ?? false;
 
-        // Get dashboard access
         let dashboards: string[] = [];
         if (!isAdmin) {
           const { data: dashAccess } = await supabase
@@ -50,7 +64,6 @@ export function useAuth() {
           dashboards = (dashAccess || []).map((d) => d.dashboard_key);
         }
 
-        // Get client access
         let accessibleClientIds: string[] = [];
         let clientId: string | null = null;
         if (!isAdmin) {
@@ -60,7 +73,6 @@ export function useAuth() {
             .eq("user_id", user.id);
           accessibleClientIds = (clientAccess || []).map((ca) => ca.client_id);
 
-          // Legacy: check clients table for user_id link
           const { data: client } = await supabase
             .from("clients")
             .select("id")
@@ -83,6 +95,7 @@ export function useAuth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        if (_event === "SIGNED_IN") trackActivity();
         void applyAuthState(session?.user ?? null);
       }
     );
@@ -91,9 +104,24 @@ export function useAuth() {
       void applyAuthState(session?.user ?? null);
     });
 
+    // Track user activity
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    const onActivity = () => trackActivity();
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+
+    // Check inactivity every 5 minutes
+    const interval = setInterval(async () => {
+      const last = localStorage.getItem(LAST_ACTIVITY_KEY);
+      if (last && Date.now() - Number(last) > INACTIVITY_TIMEOUT) {
+        await supabase.auth.signOut();
+      }
+    }, 5 * 60 * 1000);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+      clearInterval(interval);
     };
   }, []);
 
