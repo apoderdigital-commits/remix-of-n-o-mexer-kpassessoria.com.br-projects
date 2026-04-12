@@ -11,9 +11,11 @@ const supabase = createClient(
 );
 
 // Map spreadsheet event types to our lead_status enum
-function mapStatus(tipo: string): "cpf_approved" | "sale" | null {
+function mapStatus(tipo: string): "cpf_approved" | "sale" | "sale_consortium" | "sale_financing" | null {
   const lower = tipo.toLowerCase();
   if (lower.includes("cpf aprovado")) return "cpf_approved";
+  if (lower.includes("consórcio") || lower.includes("consorcio")) return "sale_consortium";
+  if (lower.includes("financiamento") || lower.includes("cartão") || lower.includes("cartao") || lower.includes("à vista") || lower.includes("a vista")) return "sale_financing";
   if (lower.includes("venda") || lower.includes("vendas")) return "sale";
   return null;
 }
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
     const rows: Array<{
       client_id: string;
       creative_name: string;
-      status: "cpf_approved" | "sale";
+      status: "cpf_approved" | "sale" | "sale_consortium" | "sale_financing";
       lead_date: string;
     }> = [];
 
@@ -168,14 +170,18 @@ Deno.serve(async (req) => {
     }
 
     const cpfCount = rows.filter((r) => r.status === "cpf_approved").length;
-    const saleCount = rows.filter((r) => r.status === "sale").length;
+    const consortiumCount = rows.filter((r) => r.status === "sale_consortium").length;
+    const financingCount = rows.filter((r) => r.status === "sale_financing").length;
+    const legacySaleCount = rows.filter((r) => r.status === "sale").length;
 
     return new Response(
       JSON.stringify({
         success: true,
         total: rows.length,
         cpf_approved: cpfCount,
-        sales: saleCount,
+        sale_consortium: consortiumCount,
+        sale_financing: financingCount,
+        sale_legacy: legacySaleCount,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

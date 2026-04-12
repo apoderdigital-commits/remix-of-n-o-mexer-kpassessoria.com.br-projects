@@ -1,19 +1,22 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, ShoppingCart, TrendingDown } from "lucide-react";
+import { Users, DollarSign, CheckCircle, ShoppingCart, TrendingDown, CreditCard, Handshake } from "lucide-react";
 
 interface StatsCardsProps {
   totalLeads: number;
   totalSpent: number;
   cpfApproved: number;
-  sales: number;
+  salesConsortium: number;
+  salesFinancing: number;
+  salesLegacy: number;
 }
 
-export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: StatsCardsProps) {
-  const qualified = cpfApproved + sales;
+export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortium, salesFinancing, salesLegacy }: StatsCardsProps) {
+  const totalSales = salesConsortium + salesFinancing + salesLegacy;
+  const qualified = cpfApproved + totalSales;
   const qualificationRate = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) : "0";
   const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
   const costPerQualified = qualified > 0 ? (totalSpent / qualified).toFixed(2) : "—";
-  const costPerSale = sales > 0 ? (totalSpent / sales).toFixed(2) : "—";
+  const costPerSale = totalSales > 0 ? (totalSpent / totalSales).toFixed(2) : "—";
 
   const cards = [
     {
@@ -41,10 +44,16 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: Stats
       color: "text-green-400",
     },
     {
-      title: "Vendas",
-      value: sales.toLocaleString("pt-BR"),
-      icon: ShoppingCart,
-      color: "text-primary",
+      title: "Vendas Consórcio",
+      value: salesConsortium.toLocaleString("pt-BR"),
+      icon: Handshake,
+      color: "text-blue-400",
+    },
+    {
+      title: "Vendas Financiamento",
+      value: salesFinancing.toLocaleString("pt-BR"),
+      icon: CreditCard,
+      color: "text-amber-400",
     },
     {
       title: "Custo / Qualificado",
@@ -57,12 +66,13 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, sales }: Stats
       title: "Custo / Venda",
       value: costPerSale === "—" ? "—" : `R$ ${costPerSale}`,
       icon: TrendingDown,
+      subtitle: `Total: ${totalSales}`,
       color: "text-purple-400",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
       {cards.map((card) => (
         <Card key={card.title} className="glass-card border-border/50">
           <CardContent className="p-4">
