@@ -22,6 +22,7 @@ export type Database = {
           meta_access_token: string | null
           meta_account_id: string | null
           name: string
+          phone: string | null
           share_token: string | null
           ticket_medio: number | null
           updated_at: string
@@ -34,6 +35,7 @@ export type Database = {
           meta_access_token?: string | null
           meta_account_id?: string | null
           name: string
+          phone?: string | null
           share_token?: string | null
           ticket_medio?: number | null
           updated_at?: string
@@ -46,6 +48,7 @@ export type Database = {
           meta_access_token?: string | null
           meta_account_id?: string | null
           name?: string
+          phone?: string | null
           share_token?: string | null
           ticket_medio?: number | null
           updated_at?: string
