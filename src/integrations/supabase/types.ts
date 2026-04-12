@@ -261,6 +261,7 @@ export type Database = {
       }
       simulations: {
         Row: {
+          client_id: string | null
           client_name: string
           cpl: number
           created_at: string | null
@@ -279,6 +280,7 @@ export type Database = {
           vendas: number
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           cpl: number
           created_at?: string | null
@@ -297,6 +299,7 @@ export type Database = {
           vendas: number
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           cpl?: number
           created_at?: string | null
@@ -314,7 +317,15 @@ export type Database = {
           user_id?: string
           vendas?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "simulations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_client_access: {
         Row: {
