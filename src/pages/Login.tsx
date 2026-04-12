@@ -87,19 +87,6 @@ export default function Login() {
       {/* Subtle gradient overlay — keeps image sharp */}
       <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
 
-      {/* Desktop branding — bottom left */}
-      <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12 items-end gap-4">
-        <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl" />
-        <div>
-          <h2 className="text-2xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
-          <p className="text-sm text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
-          <div className="flex items-center gap-3 mt-3">
-            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
-            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
-            <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
-          </div>
-        </div>
-      </div>
 
       {/* Bottom bar — full width */}
       <div className="absolute bottom-0 left-0 right-0 z-10 bg-background/90 backdrop-blur-md border-t border-border/30">
