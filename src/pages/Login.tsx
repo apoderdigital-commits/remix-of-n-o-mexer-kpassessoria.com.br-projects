@@ -146,7 +146,7 @@ export default function Login() {
                 <div className="space-y-4">
                   <button
                     onClick={() => selectType("collaborator")}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:from-primary/20 hover:via-primary/10 hover:border-primary/40 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.3)] transition-all duration-300 text-left group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/30 bg-card/90 hover:bg-card hover:border-primary/50 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
                   >
                     <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
                       <Shield className="h-5 w-5 text-primary" />
