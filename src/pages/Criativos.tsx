@@ -238,7 +238,6 @@ export default function Index() {
               data={financingRanking}
               color="hsl(35, 80%, 55%)"
             />
-            />
           </div>
 
           <EvolutionChart data={evolutionData} />
