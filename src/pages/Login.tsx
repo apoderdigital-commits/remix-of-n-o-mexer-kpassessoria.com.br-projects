@@ -3,12 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Lock, Mail } from "lucide-react";
+import { ArrowRight, ArrowLeft, Lock, User } from "lucide-react";
 import kpLogo from "@/assets/kp-logo.png";
 
+const EMAIL_DOMAIN = "@kp.local";
+
 export default function Login() {
-  const [step, setStep] = useState<"email" | "password">("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"username" | "password">("username");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [animating, setAnimating] = useState(false);
