@@ -8,13 +8,14 @@ import Portal from "./pages/Portal.tsx";
 import Criativos from "./pages/Criativos.tsx";
 import Projecao from "./pages/Projecao.tsx";
 import Clients from "./pages/Clients.tsx";
+import UsersPage from "./pages/UsersPage.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
-  const { user, loading, isAdmin } = useAuth();
+function ProtectedRoute({ children, adminOnly = false, dashboardKey }: { children: React.ReactNode; adminOnly?: boolean; dashboardKey?: string }) {
+  const { user, loading, isAdmin, dashboards } = useAuth();
 
   if (loading) {
     return (
@@ -26,6 +27,9 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+  if (dashboardKey && !isAdmin && !dashboards.includes(dashboardKey)) {
+    return <Navigate to="/" replace />;
+  }
 
   return <>{children}</>;
 }
@@ -49,9 +53,10 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
     <Route path="/" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
-    <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
-    <Route path="/projecao" element={<ProtectedRoute><Projecao /></ProtectedRoute>} />
+    <Route path="/criativos" element={<ProtectedRoute dashboardKey="criativos"><Criativos /></ProtectedRoute>} />
+    <Route path="/projecao" element={<ProtectedRoute dashboardKey="projecao"><Projecao /></ProtectedRoute>} />
     <Route path="/clients" element={<ProtectedRoute adminOnly><Clients /></ProtectedRoute>} />
+    <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
