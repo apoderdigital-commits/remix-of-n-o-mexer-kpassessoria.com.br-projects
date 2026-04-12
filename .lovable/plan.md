@@ -1,41 +1,39 @@
 
 
-## Enviar Link do Criativo via Webhook para WhatsApp
+## Enviar dados adicionais no webhook WhatsApp
 
 ### Resumo
-Ao clicar em "Ver Criativo" no ranking, além de abrir o preview, o sistema envia automaticamente o telefone do cliente e o link do criativo para o webhook do n8n, que disparará a mensagem no WhatsApp.
+Ao clicar no botão WhatsApp, enviar junto com o link e telefone: o período selecionado (de/até), a quantidade e a porcentagem do criativo, e a categoria (CPF/Consórcio/Financiamento).
 
 ### Etapas
 
-**1. Adicionar coluna `phone` na tabela `clients`**
-- Migration: `ALTER TABLE clients ADD COLUMN phone text;`
+**1. Passar `since` e `until` para `CreativeRanking`**
+- Adicionar props `since` e `until` no componente
+- No `Criativos.tsx`, passar os valores atuais do filtro de data
 
-**2. Atualizar formulário de cadastro de clientes (`Clients.tsx`)**
-- Adicionar campo "Telefone (WhatsApp)" no formulário de criação/edição
-- Salvar no campo `phone` do banco
-- Exibir na tabela de clientes
+**2. Passar dados do criativo na chamada `handleSendWhatsApp`**
+- Alterar para enviar também `count`, `percentage`, `category`, `since`, `until`
+- Atualizar a invocação da edge function para incluir esses campos no body
 
-**3. Passar `clientId` para o `CreativeRanking`**
-- No `Criativos.tsx`, passar `activeClient` como prop para cada `CreativeRanking`
-- O componente recebe `clientId` e usa para buscar o telefone
+**3. Atualizar edge function `send-creative-whatsapp`**
+- Receber os novos campos: `period_since`, `period_until`, `count`, `percentage`, `category`
+- Repassar tudo no POST para o webhook do n8n
 
-**4. Adicionar botão "Enviar no WhatsApp" nos criativos**
-- Ao clicar, busca o telefone do cliente via `supabase.from("clients").select("phone").eq("id", clientId)`
-- Se não tiver telefone cadastrado, exibe toast de erro
-- Se tiver, faz `fetch` POST para o webhook do n8n com `{ phone, creative_url }`
-- Exibe toast de sucesso "Link enviado no WhatsApp!"
-- Botão com ícone de WhatsApp (MessageCircle ou similar) ao lado do link do criativo na tabela
-
-**5. URL do webhook**
-- Será salva como secret no backend para não ficar exposta no frontend
-- Edge function `send-creative-whatsapp` recebe `{ client_id, creative_url }`, busca o telefone do cliente no banco, e faz o POST para o n8n
-
-### Segurança
-- O webhook URL fica no backend (edge function), nunca no frontend
-- A edge function valida que o usuário está autenticado antes de enviar
-- Validação de input com Zod
+### Payload final enviado ao n8n
+```json
+{
+  "phone": "5581999999999",
+  "user_name": "João Silva",
+  "creative_url": "https://...",
+  "period_since": "2026-03-13",
+  "period_until": "2026-04-12",
+  "category": "cpf",
+  "count": 15,
+  "percentage": 42.5
+}
+```
 
 ### O que NÃO muda
-- Rankings, cálculos e dados existentes
-- Preview de criativos continua funcionando normalmente
+- Rankings, filtros e dados existentes
+- Fluxo de autenticação e busca de telefone do usuário
 
