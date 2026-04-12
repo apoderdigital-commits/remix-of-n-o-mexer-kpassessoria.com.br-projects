@@ -125,7 +125,7 @@ export default function Login() {
               <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-2xl shadow-2xl" />
             </div>
             <h2 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
-            <p className="text-xs text-muted-foreground mt-1">Aceleradora de vendas para lojas automotivas!</p>
+            <p className="text-xs mt-1 text-primary-foreground">Aceleradora de vendas para lojas automotivas!</p>
             <div className="mt-4 flex items-center gap-2 justify-center">
               <div className={`h-1 w-6 rounded-full ${step === "type" ? "bg-primary/60" : "bg-primary/20"}`} />
               <div className={`h-1 w-6 rounded-full ${step === "username" ? "bg-primary/60" : "bg-primary/20"}`} />
