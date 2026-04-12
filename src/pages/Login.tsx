@@ -148,7 +148,7 @@ export default function Login() {
               <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight">
                 É obrigação!
               </p>
-              <p className="text-lg mt-1">🇧🇷</p>
+              <p className="mt-1 text-3xl">🇧🇷</p>
 
               <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium animate-[glow-text_3s_ease-in-out_infinite]">
                 Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
