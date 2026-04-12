@@ -311,27 +311,25 @@ export function CreativeRanking({ title, data, color, category }: CreativeRankin
                   Ver todos <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </DialogTrigger>
-                Ver todos os criativos <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-base">{title}</DialogTitle>
-              </DialogHeader>
-              <FullRankingContent
-                top10={top10}
-                color={color}
-                preview={preview}
-                previewLoading={previewLoading}
-                previewUrl={previewUrl}
-                setPreview={setPreview}
-                setPreviewUrl={setPreviewUrl}
-                handlePreview={handlePreview}
-                isUrl={isUrl}
-                shortenUrl={shortenUrl}
-              />
-            </DialogContent>
-          </Dialog>
+              <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-base">{title}</DialogTitle>
+                </DialogHeader>
+                <FullRankingContent
+                  top10={top10}
+                  color={color}
+                  preview={preview}
+                  previewLoading={previewLoading}
+                  previewUrl={previewUrl}
+                  setPreview={setPreview}
+                  setPreviewUrl={setPreviewUrl}
+                  handlePreview={handlePreview}
+                  isUrl={isUrl}
+                  shortenUrl={shortenUrl}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardContent>
       </Card>
     );
