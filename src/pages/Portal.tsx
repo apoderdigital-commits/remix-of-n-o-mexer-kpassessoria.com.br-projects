@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,8 +47,7 @@ export default function Portal() {
   return (
     <div className="min-h-screen flex relative">
       {/* Video background — mobile */}
-      <video
-        autoPlay loop muted playsInline
+      <AutoPlayVideo
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
         src="/videos/portal-bg.mp4"
       />
@@ -55,8 +55,7 @@ export default function Portal() {
 
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
-        <video
-          autoPlay loop muted playsInline
+        <AutoPlayVideo
           className="absolute inset-0 w-full h-full object-cover"
           src="/videos/portal-bg.mp4"
         />

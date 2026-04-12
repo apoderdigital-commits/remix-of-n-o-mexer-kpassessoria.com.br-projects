@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,11 +79,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex relative">
       {/* Video background — visible on ALL screens */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
+      <AutoPlayVideo
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
         src="/videos/login-bg.mp4"
       />
@@ -90,11 +87,7 @@ export default function Login() {
 
       {/* Left side — branding (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
+        <AutoPlayVideo
           className="absolute inset-0 w-full h-full object-cover"
           src="/videos/login-bg.mp4"
         />
