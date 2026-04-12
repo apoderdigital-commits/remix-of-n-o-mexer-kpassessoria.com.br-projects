@@ -46,8 +46,12 @@ export default function Portal() {
   return (
     <div className="min-h-screen flex relative">
       {/* Video background — mobile */}
+      {/* @ts-ignore webkit-playsinline */}
       <video
         autoPlay loop muted playsInline
+        preload="auto"
+        // @ts-ignore
+        webkit-playsinline=""
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
         src="/videos/portal-bg.mp4"
       />
@@ -55,8 +59,12 @@ export default function Portal() {
 
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
+        {/* @ts-ignore webkit-playsinline */}
         <video
           autoPlay loop muted playsInline
+          preload="auto"
+          // @ts-ignore
+          webkit-playsinline=""
           className="absolute inset-0 w-full h-full object-cover"
           src="/videos/portal-bg.mp4"
         />

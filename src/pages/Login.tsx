@@ -78,11 +78,15 @@ export default function Login() {
   return (
     <div className="min-h-screen flex relative">
       {/* Video background — visible on ALL screens */}
+      {/* @ts-ignore webkit-playsinline */}
       <video
         autoPlay
         loop
         muted
         playsInline
+        preload="auto"
+        // @ts-ignore
+        webkit-playsinline=""
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
         src="/videos/login-bg.mp4"
       />
@@ -90,11 +94,15 @@ export default function Login() {
 
       {/* Left side — branding (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6">
+        {/* @ts-ignore webkit-playsinline */}
         <video
           autoPlay
           loop
           muted
           playsInline
+          preload="auto"
+          // @ts-ignore
+          webkit-playsinline=""
           className="absolute inset-0 w-full h-full object-cover"
           src="/videos/login-bg.mp4"
         />
