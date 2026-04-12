@@ -94,10 +94,29 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
   const isCredentialStep = step === "username" || step === "password";
 
-  // Screen 1: Type selection with team photo
-  if (!isCredentialStep) {
-    return (
-      <div className={`min-h-[100dvh] h-[100dvh] relative overflow-hidden flex flex-col transition-all duration-500 ${screenTransition ? "opacity-0 scale-105" : "opacity-100 scale-100"}`}>
+  // Both screens rendered together — video always mounted for preloading
+  return (
+    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden">
+      {/* Preloaded video — always in DOM, hidden on screen 1 */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        src="/videos/login-bg.mp4"
+        className={`fixed inset-0 w-full h-full object-cover scale-110 transition-opacity duration-500 ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        style={{ zIndex: 0 }}
+      />
+
+      {/* Screen 1: Type selection with team photo */}
+      <div
+        className={`absolute inset-0 flex flex-col transition-all duration-500 ${
+          isCredentialStep ? "opacity-0 pointer-events-none scale-105" : "opacity-100 scale-100"
+        } ${screenTransition ? "opacity-0 scale-105" : ""}`}
+        style={{ zIndex: isCredentialStep ? 0 : 10 }}
+      >
         {/* Team image */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
@@ -207,103 +226,98 @@ export default function Login() {
           </div>
         </div>
       </div>
-    );
-  }
 
-  // Screen 2: Credentials — split layout with video
-  return (
-    <div className="min-h-[100dvh] h-[100dvh] flex relative overflow-hidden">
-      {/* Video background — mobile */}
-      <AutoPlayVideo
-        className="fixed inset-0 w-full h-full object-cover lg:hidden scale-110"
-        src="/videos/login-bg.mp4"
-      />
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
+      {/* Screen 2: Credentials — overlaid on video */}
+      <div
+        className={`absolute inset-0 flex transition-all duration-500 ${
+          isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        style={{ zIndex: isCredentialStep ? 10 : 0 }}
+      >
+        {/* Video overlay — mobile */}
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" style={{ zIndex: 1 }} />
 
-      {/* Left side — video (desktop only) */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
-        <AutoPlayVideo
-          className="absolute inset-0 w-full h-full object-cover scale-110"
-          src="/videos/login-bg.mp4"
-        />
-        <div className="absolute inset-0 bg-background/30" />
-        <div className="relative z-10 text-center px-8 pt-10">
-          <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl shadow-2xl mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
-          <p className="text-base text-foreground/70 mt-1">Aceleradora de vendas para lojas automotivas!</p>
-          <div className="flex items-center justify-center gap-3 mt-6">
-            <div className="h-1 w-8 rounded-full bg-primary/40" />
-            <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
-            <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
-          </div>
-        </div>
-      </div>
-
-      {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center relative z-10 lg:bg-background">
-        <div className="w-full max-w-md px-8">
-          {/* Mobile branding */}
-          <div className="lg:hidden text-center mb-8">
-            <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl mx-auto mb-3" />
-            <h1 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
-          </div>
-
-          <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-            <h2 className="text-2xl font-bold text-foreground mb-1">
-              Entrar como {typeLabel}
-            </h2>
-            <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1 text-sm mb-8">
-              <ArrowLeft className="h-3 w-3" /> Voltar
-            </button>
-
-            {step === "username" && (
-              <form onSubmit={goToPassword} className="space-y-5">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    ref={usernameRef}
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="seu.usuario"
-                    required
-                    autoFocus
-                    className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl">
-                  Continuar <ArrowRight className="h-4 w-4" />
-                </Button>
-              </form>
-            )}
-
-            {step === "password" && (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    ref={passwordRef}
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-14 text-sm font-semibold rounded-xl" disabled={loading}>
-                  {loading ? "Entrando..." : "Entrar"}
-                </Button>
-              </form>
-            )}
-
-            <p className="text-xs text-muted-foreground/50 text-center mt-6">Acesso restrito a usuários autorizados</p>
-
-            {/* Mobile step indicators */}
-            <div className="lg:hidden flex items-center justify-center gap-3 mt-4">
+        {/* Left side — video (desktop only) */}
+        <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
+          <div className="absolute inset-0 bg-background/30" />
+          <div className="relative z-10 text-center px-8 pt-10">
+            <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl shadow-2xl mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
+            <p className="text-base text-foreground/70 mt-1">Aceleradora de vendas para lojas automotivas!</p>
+            <div className="flex items-center justify-center gap-3 mt-6">
               <div className="h-1 w-8 rounded-full bg-primary/40" />
               <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
               <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+            </div>
+          </div>
+        </div>
+
+        {/* Right side — form */}
+        <div className="flex-1 flex items-center justify-center relative z-10 lg:bg-background">
+          <div className="w-full max-w-md px-8">
+            {/* Mobile branding */}
+            <div className="lg:hidden text-center mb-8">
+              <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl mx-auto mb-3" />
+              <h1 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
+            </div>
+
+            <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
+              <h2 className="text-2xl font-bold text-foreground mb-1">
+                Entrar como {typeLabel}
+              </h2>
+              <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1 text-sm mb-8">
+                <ArrowLeft className="h-3 w-3" /> Voltar
+              </button>
+
+              {step === "username" && (
+                <form onSubmit={goToPassword} className="space-y-5">
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={usernameRef}
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="seu.usuario"
+                      required
+                      autoFocus
+                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl">
+                    Continuar <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </form>
+              )}
+
+              {step === "password" && (
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={passwordRef}
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-14 text-sm font-semibold rounded-xl" disabled={loading}>
+                    {loading ? "Entrando..." : "Entrar"}
+                  </Button>
+                </form>
+              )}
+
+              <p className="text-xs text-muted-foreground/50 text-center mt-6">Acesso restrito a usuários autorizados</p>
+
+              {/* Mobile step indicators */}
+              <div className="lg:hidden flex items-center justify-center gap-3 mt-4">
+                <div className="h-1 w-8 rounded-full bg-primary/40" />
+                <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
+                <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+              </div>
             </div>
           </div>
         </div>
