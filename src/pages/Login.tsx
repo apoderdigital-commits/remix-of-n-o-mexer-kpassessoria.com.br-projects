@@ -101,8 +101,8 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Form — centered */}
-      <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6 sm:p-12">
+      {/* Form — pushed to bottom */}
+      <div className="relative z-10 min-h-[100dvh] flex items-end justify-center p-6 sm:p-12 pb-20 lg:pb-16">
         <div className="w-full max-w-sm">
           {/* Mobile branding */}
           <div className="lg:hidden flex flex-col items-center mb-10">
