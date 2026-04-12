@@ -227,6 +227,14 @@ export default function Index() {
         </div>
       </div>
 
+      {/* WhatsApp info banner */}
+      <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+        <span className="text-lg">📲</span>
+        <p>
+          Ao clicar no <strong className="text-primary">📲</strong> ao lado do criativo, o link será enviado diretamente para o seu WhatsApp.
+        </p>
+      </div>
+
       {!activeClient ? (
         <div className="flex items-center justify-center h-[60vh]">
           <p className="text-muted-foreground text-lg">
