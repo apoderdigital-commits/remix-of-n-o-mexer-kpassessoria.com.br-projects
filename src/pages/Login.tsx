@@ -88,15 +88,12 @@ export default function Login() {
       <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
 
       {/* Desktop branding — bottom left */}
-      <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12">
-          <div className="flex items-center gap-4 mb-4">
-            <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl" />
-            <div>
-              <h2 className="text-2xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
-              <p className="text-sm text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 mt-6">
+      <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12 items-end gap-4">
+        <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl" />
+        <div>
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
+          <p className="text-sm text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
+          <div className="flex items-center gap-3 mt-3">
             <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
             <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
             <div className={`h-1 w-10 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
@@ -104,8 +101,8 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
+      {/* Form — centered */}
+      <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
           {/* Mobile branding */}
           <div className="lg:hidden flex flex-col items-center mb-10">
