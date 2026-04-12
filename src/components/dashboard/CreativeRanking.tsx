@@ -297,9 +297,20 @@ export function CreativeRanking({ title, data, color, category }: CreativeRankin
             </div>
           </div>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full gap-2 text-xs border-border/40">
+          <div className="flex gap-2">
+            <CreativeGuideButton
+              creativeName={winner.name}
+              category={category}
+              count={winner.count}
+              percentage={winner.percentage}
+              compact
+            />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 gap-2 text-xs border-border/40">
+                  Ver todos <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
                 Ver todos os criativos <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </DialogTrigger>
@@ -330,7 +341,15 @@ export function CreativeRanking({ title, data, color, category }: CreativeRankin
   return (
     <Card className="glass-card border-border/50">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <CreativeGuideButton
+            creativeName={winner.name}
+            category={category}
+            count={winner.count}
+            percentage={winner.percentage}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <FullRankingContent
