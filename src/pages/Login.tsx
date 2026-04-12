@@ -26,13 +26,38 @@ export default function Login() {
   const usernameRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Preload video on mount
+  // Force autoplay on mobile
   useEffect(() => {
     const video = videoRef.current;
-    if (video) {
-      video.load();
+    if (!video) return;
+
+    const tryPlay = () => {
       video.play().catch(() => {});
-    }
+    };
+
+    video.load();
+    tryPlay();
+
+    // Retry on visibility change (e.g. tab focus)
+    const onVisibility = () => {
+      if (!document.hidden) tryPlay();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Retry on user interaction (some mobile browsers require it)
+    const onInteraction = () => {
+      tryPlay();
+      window.removeEventListener("touchstart", onInteraction);
+      window.removeEventListener("click", onInteraction);
+    };
+    window.addEventListener("touchstart", onInteraction, { once: true });
+    window.addEventListener("click", onInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("touchstart", onInteraction);
+      window.removeEventListener("click", onInteraction);
+    };
   }, []);
 
   useEffect(() => {
