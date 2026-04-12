@@ -316,6 +316,56 @@ export type Database = {
         }
         Relationships: []
       }
+      user_client_access: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_client_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_dashboard_access: {
+        Row: {
+          created_at: string
+          dashboard_key: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_key: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_key?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -351,7 +401,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "manager"
+      app_role: "admin" | "manager" | "client"
       lead_status:
         | "cpf_approved"
         | "sale"
@@ -484,7 +534,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager"],
+      app_role: ["admin", "manager", "client"],
       lead_status: [
         "cpf_approved",
         "sale",
