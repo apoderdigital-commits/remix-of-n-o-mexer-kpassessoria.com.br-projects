@@ -22,23 +22,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function Index() {
-  const { isAdmin, clientId: authClientId, signOut } = useAuth();
+  const { isAdmin, clientId: authClientId, signOut, accessibleClientIds } = useAuth();
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [since, setSince] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
 
-  // If client user, auto-select their client
-  const activeClient = isAdmin ? selectedClient : authClientId;
+  // Determine active client
+  const activeClient = isAdmin ? selectedClient : (selectedClient || accessibleClientIds[0] || authClientId);
 
   useEffect(() => {
-    if (!isAdmin && authClientId) {
-      setSelectedClient(authClientId);
+    if (!isAdmin && !selectedClient) {
+      const firstClient = accessibleClientIds[0] || authClientId;
+      if (firstClient) setSelectedClient(firstClient);
     }
-  }, [isAdmin, authClientId]);
+  }, [isAdmin, authClientId, accessibleClientIds]);
 
-  const { data: clients } = useClients();
+  const { data: allClients } = useClients();
+  // Filter clients by access
+  const clients = isAdmin ? allClients : allClients?.filter((c: any) => accessibleClientIds.includes(c.id));
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { sync } = useSyncMeta(activeClient);
