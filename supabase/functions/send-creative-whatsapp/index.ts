@@ -34,14 +34,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { client_id, creative_url } = body;
+    const { creative_url } = body;
 
-    if (!client_id || typeof client_id !== "string") {
-      return new Response(JSON.stringify({ error: "client_id obrigatório" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     if (!creative_url || typeof creative_url !== "string") {
       return new Response(JSON.stringify({ error: "creative_url obrigatório" }), {
         status: 400,
@@ -49,22 +43,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch client phone
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("phone, name")
-      .eq("id", client_id)
-      .single();
+    // Fetch logged-in user's phone from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("phone, full_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (clientError || !client) {
-      return new Response(JSON.stringify({ error: "Cliente não encontrado" }), {
-        status: 404,
+    if (profileError) {
+      return new Response(JSON.stringify({ error: "Erro ao buscar perfil" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!client.phone) {
-      return new Response(JSON.stringify({ error: "Telefone não cadastrado para este cliente" }), {
+    if (!profile?.phone) {
+      return new Response(JSON.stringify({ error: "Telefone não cadastrado no seu perfil. Peça ao admin para cadastrar seu número em Gestão de Usuários." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -75,8 +69,8 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        phone: client.phone,
-        client_name: client.name,
+        phone: profile.phone,
+        user_name: profile.full_name || user.email,
         creative_url,
       }),
     });
