@@ -84,8 +84,8 @@ export default function Login() {
         alt="Equipe KP Assessoria"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
+      {/* Subtle gradient overlay — keeps image sharp */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
 
       {/* Desktop branding — bottom left */}
       <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12 items-end gap-4">
@@ -101,8 +101,8 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Form — centered */}
-      <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6 sm:p-12">
+      {/* Form — pushed to bottom */}
+      <div className="relative z-10 min-h-[100dvh] flex items-end justify-center p-6 sm:p-12 pb-20 lg:pb-16">
         <div className="w-full max-w-sm">
           {/* Mobile branding */}
           <div className="lg:hidden flex flex-col items-center mb-10">
@@ -119,7 +119,7 @@ export default function Login() {
           </div>
 
           {/* Glass card wrapper for mobile */}
-          <div className="lg:bg-transparent lg:backdrop-blur-none lg:border-0 lg:shadow-none lg:p-0 bg-card/40 backdrop-blur-xl border border-border/30 rounded-2xl p-6 shadow-2xl">
+          <div className="bg-background/80 backdrop-blur-xl border border-border/40 rounded-2xl p-6 shadow-2xl">
             <div className="mb-6 lg:mb-8">
               <h1 className="text-xl lg:text-2xl font-bold text-foreground tracking-tight">
                 {step === "type" && "Acessar plataforma"}
@@ -146,7 +146,7 @@ export default function Login() {
                 <div className="space-y-4">
                   <button
                     onClick={() => selectType("collaborator")}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:from-primary/20 hover:via-primary/10 hover:border-primary/40 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.3)] transition-all duration-300 text-left group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/30 bg-card/90 hover:bg-card hover:border-primary/50 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
                   >
                     <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
                       <Shield className="h-5 w-5 text-primary" />
@@ -162,7 +162,7 @@ export default function Login() {
 
                   <button
                     onClick={() => selectType("client")}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:from-primary/20 hover:via-primary/10 hover:border-primary/40 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.3)] transition-all duration-300 text-left group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/30 bg-card/90 hover:bg-card hover:border-primary/50 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
                   >
                     <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
                       <Briefcase className="h-5 w-5 text-primary" />
