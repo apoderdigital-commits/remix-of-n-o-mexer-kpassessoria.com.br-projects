@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase } from "lucide-react";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import kpLogo from "@/assets/kp-logo.png";
+import brazilFlag from "@/assets/brazil-flag.png";
 import teamBg from "@/assets/team-bg.jpg";
 
 const EMAIL_DOMAIN = "@kp.local";
