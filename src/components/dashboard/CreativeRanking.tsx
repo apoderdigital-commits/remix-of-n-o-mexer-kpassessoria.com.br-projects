@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-
+import { CreativeGuideButton } from "./CreativeGuideButton";
 const PREVIEW_TIMEOUT_MS = 10000;
 
 function supportsUrlPreview(url: string) {
@@ -35,6 +35,7 @@ interface CreativeRankingProps {
   title: string;
   data: CreativeData[];
   color: string;
+  category: "cpf" | "consortium" | "financing";
 }
 
 interface PreviewData {
@@ -205,7 +206,7 @@ function FullRankingContent({
   );
 }
 
-export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
+export function CreativeRanking({ title, data, color, category }: CreativeRankingProps) {
   const top10 = data.slice(0, 10);
   const isMobile = useIsMobile();
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -296,30 +297,39 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
             </div>
           </div>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full gap-2 text-xs border-border/40">
-                Ver todos os criativos <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-base">{title}</DialogTitle>
-              </DialogHeader>
-              <FullRankingContent
-                top10={top10}
-                color={color}
-                preview={preview}
-                previewLoading={previewLoading}
-                previewUrl={previewUrl}
-                setPreview={setPreview}
-                setPreviewUrl={setPreviewUrl}
-                handlePreview={handlePreview}
-                isUrl={isUrl}
-                shortenUrl={shortenUrl}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <CreativeGuideButton
+              creativeName={winner.name}
+              category={category}
+              count={winner.count}
+              percentage={winner.percentage}
+              compact
+            />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 gap-2 text-xs border-border/40">
+                  Ver todos <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-base">{title}</DialogTitle>
+                </DialogHeader>
+                <FullRankingContent
+                  top10={top10}
+                  color={color}
+                  preview={preview}
+                  previewLoading={previewLoading}
+                  previewUrl={previewUrl}
+                  setPreview={setPreview}
+                  setPreviewUrl={setPreviewUrl}
+                  handlePreview={handlePreview}
+                  isUrl={isUrl}
+                  shortenUrl={shortenUrl}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardContent>
       </Card>
     );
@@ -329,7 +339,15 @@ export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
   return (
     <Card className="glass-card border-border/50">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <CreativeGuideButton
+            creativeName={winner.name}
+            category={category}
+            count={winner.count}
+            percentage={winner.percentage}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <FullRankingContent
