@@ -206,7 +206,7 @@ function FullRankingContent({
   );
 }
 
-export function CreativeRanking({ title, data, color }: CreativeRankingProps) {
+export function CreativeRanking({ title, data, color, category }: CreativeRankingProps) {
   const top10 = data.slice(0, 10);
   const isMobile = useIsMobile();
   const [preview, setPreview] = useState<PreviewData | null>(null);
