@@ -236,11 +236,10 @@ export function CreativeRanking({ title, data, color, category, clientId }: Crea
   const [sendingUrl, setSendingUrl] = useState<string | null>(null);
 
   const handleSendWhatsApp = async (creativeUrl: string) => {
-    if (!clientId) return;
     setSendingUrl(creativeUrl);
     try {
       const { data, error } = await supabase.functions.invoke("send-creative-whatsapp", {
-        body: { client_id: clientId, creative_url: creativeUrl },
+        body: { creative_url: creativeUrl },
       });
       if (error) throw error;
       if (data?.error) {
