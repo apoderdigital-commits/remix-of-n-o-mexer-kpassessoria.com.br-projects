@@ -157,9 +157,12 @@ export default function UsersPage() {
         await supabase.from("user_roles").delete().eq("user_id", editingUserId);
         await supabase.from("user_roles").insert({ user_id: editingUserId, role: form.role as any });
 
-        // Update profile name
-        if (form.fullName) {
-          await supabase.from("profiles").update({ full_name: form.fullName }).eq("user_id", editingUserId);
+        // Update profile name and phone
+        if (form.fullName || form.phone) {
+          const profileUpdate: any = {};
+          if (form.fullName) profileUpdate.full_name = form.fullName;
+          profileUpdate.phone = form.phone.trim() || null;
+          await supabase.from("profiles").update(profileUpdate).eq("user_id", editingUserId);
         }
 
         toast.success("Usuário atualizado!");
@@ -173,6 +176,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
+            phone: form.phone.trim() || null,
           },
         });
         if (error) throw error;
