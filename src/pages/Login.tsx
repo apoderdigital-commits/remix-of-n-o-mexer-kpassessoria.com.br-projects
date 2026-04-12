@@ -20,6 +20,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [screenTransition, setScreenTransition] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
 
@@ -38,7 +39,11 @@ export default function Login() {
 
   const selectType = (type: LoginType) => {
     setLoginType(type);
-    goTo("username");
+    setScreenTransition(true);
+    setTimeout(() => {
+      goTo("username");
+      setScreenTransition(false);
+    }, 500);
   };
 
   const goToPassword = (e: React.FormEvent) => {
@@ -82,7 +87,7 @@ export default function Login() {
   // Screen 1: Type selection with team photo
   if (!isCredentialStep) {
     return (
-      <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden flex flex-col">
+      <div className={`min-h-[100dvh] h-[100dvh] relative overflow-hidden flex flex-col transition-all duration-500 ${screenTransition ? "opacity-0 scale-105" : "opacity-100 scale-100"}`}>
         {/* Team image */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
