@@ -79,7 +79,7 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left side — branding */}
       <div
-        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center"
+        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-12"
       >
         <video
           autoPlay
@@ -91,7 +91,7 @@ export default function Login() {
         />
         <div className="absolute inset-0 bg-background/60" />
 
-        <div className="relative z-10 text-center px-12 max-w-md" style={{ marginTop: "-40%" }}>
+        <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-8">
             <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl mx-auto shadow-2xl" />
           </div>
