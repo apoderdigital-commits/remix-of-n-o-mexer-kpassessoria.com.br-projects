@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify JWT
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
@@ -34,7 +33,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { creative_url } = body;
+    const { creative_url, period_since, period_until, category, count, percentage } = body;
 
     if (!creative_url || typeof creative_url !== "string") {
       return new Response(JSON.stringify({ error: "creative_url obrigatório" }), {
@@ -43,7 +42,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch logged-in user's phone from profiles
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("phone, full_name")
@@ -64,7 +62,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Send to n8n webhook
     const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,6 +69,11 @@ Deno.serve(async (req) => {
         phone: profile.phone,
         user_name: profile.full_name || user.email,
         creative_url,
+        period_since: period_since || null,
+        period_until: period_until || null,
+        category: category || null,
+        count: count ?? null,
+        percentage: percentage ?? null,
       }),
     });
 

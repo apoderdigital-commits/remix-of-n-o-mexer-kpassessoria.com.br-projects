@@ -251,6 +251,8 @@ export default function Index() {
               color="hsl(263, 50%, 68%)"
               category="cpf"
               clientId={activeClient}
+              since={since}
+              until={until}
             />
             <CreativeRanking
               title="🤝 Criativos por Venda Consórcio"
@@ -258,6 +260,8 @@ export default function Index() {
               color="hsl(210, 70%, 58%)"
               category="consortium"
               clientId={activeClient}
+              since={since}
+              until={until}
             />
             <CreativeRanking
               title="💳 Criativos por Venda Financiamento"
@@ -265,6 +269,8 @@ export default function Index() {
               color="hsl(35, 80%, 55%)"
               category="financing"
               clientId={activeClient}
+              since={since}
+              until={until}
             />
           </div>
 
