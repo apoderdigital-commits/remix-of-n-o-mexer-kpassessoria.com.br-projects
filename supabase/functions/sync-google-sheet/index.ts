@@ -90,12 +90,13 @@ Deno.serve(async (req) => {
 
     // Find column indices from header
     const header = lines[0].map((h) => h.toLowerCase().replace(/[^a-z_]/g, ""));
+    const colNome = header.findIndex((h) => h.includes("nome_do_cliente") || h.includes("nomedocliente") || h.includes("nome") || h.includes("cliente"));
     const colTipo = header.findIndex((h) => h.includes("tipo"));
     const colUrl = header.findIndex((h) => h.includes("url_criativo") || h.includes("urlcriativo") || h.includes("url"));
     const colData = header.findIndex((h) => h.includes("data") || h.includes("hora"));
 
     console.log("Header:", header);
-    console.log("Columns found - tipo:", colTipo, "url:", colUrl, "data:", colData);
+    console.log("Columns found - nome:", colNome, "tipo:", colTipo, "url:", colUrl, "data:", colData);
 
     if (colTipo === -1 || colUrl === -1) {
       return new Response(
@@ -111,16 +112,27 @@ Deno.serve(async (req) => {
       lead_date: string;
     }> = [];
 
+    // Deduplicate: same person + same event type = count only once
+    const seen = new Set<string>();
+
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i];
       if (!cols || cols.length < 3) continue;
 
+      const nome = colNome !== -1 ? (cols[colNome] || "").trim().toLowerCase() : "";
       const tipo = cols[colTipo] || "";
       const url = cols[colUrl] || "";
       const dataStr = cols[colData] || "";
 
       const status = mapStatus(tipo);
       if (!status || !url) continue;
+
+      // Dedup key: person name + event type (one person = one event per type)
+      if (nome) {
+        const dedupKey = `${nome}::${status}`;
+        if (seen.has(dedupKey)) continue;
+        seen.add(dedupKey);
+      }
 
       // Parse date (format: DD/MM/YYYY, HH:MM:SS)
       let leadDate = new Date().toISOString().split("T")[0];
