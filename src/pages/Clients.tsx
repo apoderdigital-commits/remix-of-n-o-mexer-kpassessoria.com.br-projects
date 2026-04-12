@@ -24,9 +24,10 @@ interface ClientForm {
   metaAccountId: string;
   metaToken: string;
   googleSheetId: string;
+  ticketMedio: string;
 }
 
-const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "" };
+const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "", ticketMedio: "" };
 
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
@@ -54,6 +55,7 @@ export default function Clients() {
       metaAccountId: c.meta_account_id || "",
       metaToken: c.meta_access_token || "",
       googleSheetId: c.google_sheet_id || "",
+      ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
     });
     setOpen(true);
   };
@@ -66,6 +68,7 @@ export default function Clients() {
       meta_account_id: form.metaAccountId.trim() || null,
       meta_access_token: form.metaToken.trim() || null,
       google_sheet_id: form.googleSheetId.trim() || null,
+      ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
     };
 
     // Save token as default
@@ -184,6 +187,11 @@ export default function Clients() {
                 O ID está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
               </p>
             </div>
+            <div className="space-y-2">
+              <Label>Ticket Médio (R$)</Label>
+              <Input type="number" value={form.ticketMedio} onChange={set("ticketMedio")} placeholder="Ex: 15000" />
+              <p className="text-xs text-muted-foreground">Usado no Funil de Projeção de Vendas</p>
+            </div>
             <Button onClick={handleSave} className="w-full">
               {editingId ? "Salvar Alterações" : "Criar Cliente"}
             </Button>
@@ -209,6 +217,7 @@ export default function Clients() {
                   <TableHead className="text-muted-foreground">Nome</TableHead>
                   <TableHead className="text-muted-foreground">Meta Account ID</TableHead>
                   <TableHead className="text-muted-foreground">Google Sheet</TableHead>
+                  <TableHead className="text-muted-foreground">Ticket Médio</TableHead>
                   <TableHead className="text-muted-foreground">Criado em</TableHead>
                   <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
@@ -220,6 +229,9 @@ export default function Clients() {
                     <TableCell className="text-muted-foreground">{c.meta_account_id || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.google_sheet_id ? "✅ Configurado" : "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {c.ticket_medio ? `R$ ${Number(c.ticket_medio).toLocaleString('pt-BR')}` : "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(c.created_at).toLocaleDateString("pt-BR")}
