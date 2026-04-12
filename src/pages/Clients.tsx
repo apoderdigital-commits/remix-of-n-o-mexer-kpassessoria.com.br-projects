@@ -97,9 +97,23 @@ export default function Clients() {
     queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
-  const handleSaveDefaultToken = () => {
-    localStorage.setItem(DEFAULT_TOKEN_KEY, defaultToken.trim());
-    toast.success("Token padrão salvo!");
+  const handleSaveDefaultToken = async () => {
+    const token = defaultToken.trim();
+    if (!token) return;
+    localStorage.setItem(DEFAULT_TOKEN_KEY, token);
+
+    const { error, count } = await supabase
+      .from("clients")
+      .update({ meta_access_token: token })
+      .not("id", "is", null)
+      .select("id", { count: "exact", head: true });
+
+    if (error) {
+      toast.error("Erro ao atualizar clientes: " + error.message);
+      return;
+    }
+    toast.success(`Token atualizado em ${count ?? 0} cliente(s)!`);
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
 
