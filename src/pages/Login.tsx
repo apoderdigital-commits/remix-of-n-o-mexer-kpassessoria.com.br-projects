@@ -80,14 +80,16 @@ export default function Login() {
       {/* Left side — branding */}
       <div
         className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center"
-        style={{ background: "linear-gradient(135deg, hsl(263 70% 20%) 0%, hsl(222 47% 6%) 50%, hsl(263 50% 12%) 100%)" }}
       >
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, hsl(263 70% 58%) 0%, transparent 70%)" }} />
-        <div className="absolute -bottom-48 -right-24 w-[500px] h-[500px] rounded-full opacity-[0.07]"
-          style={{ background: "radial-gradient(circle, hsl(263 70% 58%) 0%, transparent 70%)" }} />
-        <div className="absolute top-1/3 right-0 w-64 h-64 rounded-full opacity-[0.05]"
-          style={{ background: "radial-gradient(circle, hsl(199 89% 48%) 0%, transparent 70%)" }} />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          src="/videos/login-bg.mp4"
+        />
+        <div className="absolute inset-0 bg-background/60" />
 
         <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-8">
