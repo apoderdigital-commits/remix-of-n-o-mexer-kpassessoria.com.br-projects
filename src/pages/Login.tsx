@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Lock, User, Shield, Users, Briefcase } from "lucide-react";
+import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase } from "lucide-react";
 import kpLogo from "@/assets/kp-logo.png";
 
 const EMAIL_DOMAIN = "@kp.local";
@@ -76,11 +76,20 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side — branding */}
-      <div
-        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6"
-      >
+    <div className="min-h-screen flex relative">
+      {/* Video background — visible on ALL screens */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover lg:hidden"
+        src="/videos/login-bg.mp4"
+      />
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
+
+      {/* Left side — branding (desktop only) */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6">
         <video
           autoPlay
           loop
@@ -108,111 +117,122 @@ export default function Login() {
       </div>
 
       {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <img src={kpLogo} alt="KP Assessoria" className="h-10 w-10 rounded-xl" />
-            <span className="text-lg font-semibold text-foreground">KP Assessoria</span>
+          {/* Mobile branding with logo + video background */}
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <div className="mb-4">
+              <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-2xl shadow-2xl" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
+            <p className="text-xs text-muted-foreground mt-1">Aceleradora de vendas para lojas automotivas!</p>
+            <div className="mt-4 flex items-center gap-2 justify-center">
+              <div className={`h-1 w-6 rounded-full ${step === "type" ? "bg-primary/60" : "bg-primary/20"}`} />
+              <div className={`h-1 w-6 rounded-full ${step === "username" ? "bg-primary/60" : "bg-primary/20"}`} />
+              <div className={`h-1 w-6 rounded-full ${step === "password" ? "bg-primary/60" : "bg-primary/20"}`} />
+            </div>
           </div>
 
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              {step === "type" && "Acessar plataforma"}
-              {step === "username" && `Entrar como ${typeLabel}`}
-              {step === "password" && "Digite sua senha"}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1.5">
-              {step === "type" && "Como você deseja acessar?"}
+          {/* Glass card wrapper for mobile */}
+          <div className="lg:bg-transparent lg:backdrop-blur-none lg:border-0 lg:shadow-none lg:p-0 bg-card/40 backdrop-blur-xl border border-border/30 rounded-2xl p-6 shadow-2xl">
+            <div className="mb-6 lg:mb-8">
+              <h1 className="text-xl lg:text-2xl font-bold text-foreground tracking-tight">
+                {step === "type" && "Acessar plataforma"}
+                {step === "username" && `Entrar como ${typeLabel}`}
+                {step === "password" && "Digite sua senha"}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1.5">
+                {step === "type" && "Como você deseja acessar?"}
+                {step === "username" && (
+                  <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
+                    <ArrowLeft className="h-3 w-3" /> Voltar
+                  </button>
+                )}
+                {step === "password" && (
+                  <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
+                    <ArrowLeft className="h-3 w-3" /> {username}
+                  </button>
+                )}
+              </p>
+            </div>
+
+            <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
+              {step === "type" && (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => selectType("collaborator")}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
+                  >
+                    <div className="shrink-0 w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center">
+                      <Shield className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">Colaborador KP Assessoria</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Equipe interna — admin ou usuário</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  </button>
+
+                  <button
+                    onClick={() => selectType("client")}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
+                  >
+                    <div className="shrink-0 w-11 h-11 rounded-xl bg-accent/15 flex items-center justify-center">
+                      <Briefcase className="h-5 w-5 text-accent-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">Entrar como Cliente</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Acesse os dashboards da sua operação</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-accent-foreground group-hover:translate-x-0.5 transition-all" />
+                  </button>
+                </div>
+              )}
+
               {step === "username" && (
-                <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
-                  <ArrowLeft className="h-3 w-3" /> Voltar
-                </button>
+                <form onSubmit={goToPassword} className="space-y-5">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={usernameRef}
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="seu.usuario"
+                      required
+                      autoFocus
+                      className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-12 text-sm font-medium gap-2">
+                    Continuar <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </form>
               )}
+
               {step === "password" && (
-                <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
-                  <ArrowLeft className="h-3 w-3" /> {username}
-                </button>
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={passwordRef}
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-12 text-sm font-medium" disabled={loading}>
+                    {loading ? "Entrando..." : "Entrar"}
+                  </Button>
+                </form>
               )}
-            </p>
+            </div>
           </div>
 
-          <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-            {step === "type" && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => selectType("collaborator")}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
-                >
-                  <div className="shrink-0 w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">Colaborador KP Assessoria</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Equipe interna — admin ou usuário</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </button>
-
-                <button
-                  onClick={() => selectType("client")}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
-                >
-                  <div className="shrink-0 w-11 h-11 rounded-xl bg-fuchsia-500/15 flex items-center justify-center">
-                    <Briefcase className="h-5 w-5 text-fuchsia-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">Entrar como Cliente</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Acesse os dashboards da sua operação</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-fuchsia-400 group-hover:translate-x-0.5 transition-all" />
-                </button>
-              </div>
-            )}
-
-            {step === "username" && (
-              <form onSubmit={goToPassword} className="space-y-5">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    ref={usernameRef}
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="seu.usuario"
-                    required
-                    autoFocus
-                    className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 text-sm font-medium gap-2">
-                  Continuar <ArrowRight className="h-4 w-4" />
-                </Button>
-              </form>
-            )}
-
-            {step === "password" && (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    ref={passwordRef}
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 text-sm font-medium" disabled={loading}>
-                  {loading ? "Entrando..." : "Entrar"}
-                </Button>
-              </form>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground/60 text-center mt-8">
+          <p className="text-xs text-muted-foreground/60 text-center mt-6">
             Acesso restrito a usuários autorizados
           </p>
         </div>
