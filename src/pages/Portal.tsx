@@ -1,5 +1,5 @@
-import { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
