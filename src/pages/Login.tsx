@@ -93,7 +93,7 @@ export default function Login() {
 
         <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-3">
-            <img src={kpLogo} alt="KP Assessoria" className="h-24 w-24 rounded-2xl mx-auto shadow-2xl" />
+            <img src={kpLogo} alt="KP Assessoria" className="h-[76px] w-[76px] rounded-2xl mx-auto shadow-2xl" />
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-1 tracking-tight">KP Assessoria</h2>
           <p className="leading-relaxed text-primary-foreground font-normal text-sm rounded-lg shadow-md">
