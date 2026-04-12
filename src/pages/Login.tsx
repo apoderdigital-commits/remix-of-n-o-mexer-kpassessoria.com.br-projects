@@ -151,33 +151,37 @@ export default function Login() {
 
             <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
               {step === "type" && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <button
                     onClick={() => selectType("collaborator")}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:from-primary/20 hover:via-primary/10 hover:border-primary/40 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.3)] transition-all duration-300 text-left group"
                   >
-                    <div className="shrink-0 w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
                       <Shield className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">Colaborador KP Assessoria</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground tracking-tight">Colaborador KP Assessoria</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Equipe interna — admin ou usuário</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300">
+                      <ArrowRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
+                    </div>
                   </button>
 
                   <button
                     onClick={() => selectType("client")}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-card hover:border-primary/40 transition-all duration-200 text-left group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:from-primary/20 hover:via-primary/10 hover:border-primary/40 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.3)] transition-all duration-300 text-left group"
                   >
-                    <div className="shrink-0 w-11 h-11 rounded-xl bg-accent/15 flex items-center justify-center">
-                      <Briefcase className="h-5 w-5 text-accent-foreground" />
+                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
+                      <Briefcase className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">Entrar como Cliente</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground tracking-tight">Entrar como Cliente</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Acesse os dashboards da sua operação</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-accent-foreground group-hover:translate-x-0.5 transition-all" />
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300">
+                      <ArrowRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
+                    </div>
                   </button>
                 </div>
               )}
