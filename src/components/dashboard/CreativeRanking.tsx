@@ -37,6 +37,8 @@ interface CreativeRankingProps {
   color: string;
   category: "cpf" | "consortium" | "financing";
   clientId?: string | null;
+  since?: string;
+  until?: string;
 }
 
 interface PreviewData {
@@ -227,7 +229,7 @@ function FullRankingContent({
   );
 }
 
-export function CreativeRanking({ title, data, color, category, clientId }: CreativeRankingProps) {
+export function CreativeRanking({ title, data, color, category, clientId, since, until }: CreativeRankingProps) {
   const top10 = data.slice(0, 10);
   const isMobile = useIsMobile();
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -236,10 +238,18 @@ export function CreativeRanking({ title, data, color, category, clientId }: Crea
   const [sendingUrl, setSendingUrl] = useState<string | null>(null);
 
   const handleSendWhatsApp = async (creativeUrl: string) => {
+    const item = top10.find(d => d.name === creativeUrl);
     setSendingUrl(creativeUrl);
     try {
       const { data, error } = await supabase.functions.invoke("send-creative-whatsapp", {
-        body: { creative_url: creativeUrl },
+        body: {
+          creative_url: creativeUrl,
+          period_since: since,
+          period_until: until,
+          category,
+          count: item?.count ?? 0,
+          percentage: item?.percentage ?? 0,
+        },
       });
       if (error) throw error;
       if (data?.error) {
