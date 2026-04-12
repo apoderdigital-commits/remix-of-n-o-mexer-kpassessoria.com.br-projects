@@ -101,129 +101,135 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Form — pushed to bottom */}
-      <div className="relative z-10 min-h-[100dvh] flex items-end justify-center p-6 sm:p-12 pb-20 lg:pb-16">
-        <div className="w-full max-w-sm">
+      {/* Bottom bar — full width */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-background/90 backdrop-blur-md border-t border-border/30">
+        <div className="max-w-5xl mx-auto px-6 py-6 lg:py-8">
           {/* Mobile branding */}
-          <div className="lg:hidden flex flex-col items-center mb-10">
-            <div className="mb-4">
-              <img src={kpLogo} alt="KP Assessoria" className="h-16 w-16 rounded-2xl shadow-2xl" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h2>
-            <p className="text-xs mt-1 text-foreground/70">Aceleradora de vendas para lojas automotivas</p>
-            <div className="mt-4 flex items-center gap-2 justify-center">
-              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
-              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
-              <div className={`h-1 w-6 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+          <div className="lg:hidden flex items-center gap-3 mb-5">
+            <img src={kpLogo} alt="KP Assessoria" className="h-10 w-10 rounded-xl shadow-lg" />
+            <div>
+              <h2 className="text-sm font-bold text-foreground tracking-tight">KP Assessoria</h2>
+              <p className="text-xs text-foreground/60">Aceleradora de vendas</p>
             </div>
           </div>
 
-          {/* Glass card wrapper for mobile */}
-          <div className="bg-background/80 backdrop-blur-xl border border-border/40 rounded-2xl p-6 shadow-2xl">
-            <div className="mb-6 lg:mb-8">
-              <h1 className="text-xl lg:text-2xl font-bold text-foreground tracking-tight">
-                {step === "type" && "Acessar plataforma"}
-                {step === "username" && `Entrar como ${typeLabel}`}
-                {step === "password" && "Digite sua senha"}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1.5">
-                {step === "type" && "Como você deseja acessar?"}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+            {/* Desktop branding */}
+            <div className="hidden lg:flex items-center gap-4 shrink-0">
+              <img src={kpLogo} alt="KP Assessoria" className="h-12 w-12 rounded-xl shadow-lg" />
+              <div>
+                <h2 className="text-lg font-bold text-foreground tracking-tight">KP Assessoria</h2>
+                <p className="text-xs text-foreground/60">Aceleradora de vendas para lojas automotivas</p>
+              </div>
+            </div>
+
+            {/* Divider desktop */}
+            <div className="hidden lg:block w-px h-12 bg-border/40" />
+
+            {/* Form area */}
+            <div className="flex-1">
+              <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
+                {step === "type" && (
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-3">Como você deseja acessar?</p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => selectType("collaborator")}
+                        className="flex-1 flex items-center gap-3 px-5 py-4 rounded-xl border border-primary/30 bg-card hover:border-primary/50 hover:shadow-[0_0_20px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
+                      >
+                        <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Shield className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">Colaborador</p>
+                          <p className="text-xs text-muted-foreground">Equipe interna</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      </button>
+
+                      <button
+                        onClick={() => selectType("client")}
+                        className="flex-1 flex items-center gap-3 px-5 py-4 rounded-xl border border-primary/30 bg-card hover:border-primary/50 hover:shadow-[0_0_20px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
+                      >
+                        <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Briefcase className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">Cliente</p>
+                          <p className="text-xs text-muted-foreground">Seus dashboards</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {step === "username" && (
-                  <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
-                    <ArrowLeft className="h-3 w-3" /> Voltar
-                  </button>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1 text-sm">
+                        <ArrowLeft className="h-3 w-3" /> Voltar
+                      </button>
+                      <span className="text-muted-foreground text-sm">· Entrar como {typeLabel}</span>
+                    </div>
+                    <form onSubmit={goToPassword} className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          ref={usernameRef}
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="seu.usuario"
+                          required
+                          autoFocus
+                          className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
+                        />
+                      </div>
+                      <Button type="submit" className="h-12 px-8 text-sm font-medium gap-2 shrink-0">
+                        Continuar <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </form>
+                  </div>
                 )}
+
                 {step === "password" && (
-                  <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1">
-                    <ArrowLeft className="h-3 w-3" /> {username}
-                  </button>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1 text-sm">
+                        <ArrowLeft className="h-3 w-3" /> {username}
+                      </button>
+                      <span className="text-muted-foreground text-sm">· Digite sua senha</span>
+                    </div>
+                    <form onSubmit={handleLogin} className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          ref={passwordRef}
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
+                        />
+                      </div>
+                      <Button type="submit" className="h-12 px-8 text-sm font-medium shrink-0" disabled={loading}>
+                        {loading ? "Entrando..." : "Entrar"}
+                      </Button>
+                    </form>
+                  </div>
                 )}
-              </p>
-            </div>
-
-            <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-              {step === "type" && (
-                <div className="space-y-4">
-                  <button
-                    onClick={() => selectType("collaborator")}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/30 bg-card/90 hover:bg-card hover:border-primary/50 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
-                  >
-                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
-                      <Shield className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground tracking-tight">Colaborador KP Assessoria</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Equipe interna — admin ou usuário</p>
-                    </div>
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300">
-                      <ArrowRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => selectType("client")}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-primary/30 bg-card/90 hover:bg-card hover:border-primary/50 hover:shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] transition-all duration-300 text-left group"
-                  >
-                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 group-hover:shadow-primary/20 group-hover:scale-105 transition-all duration-300">
-                      <Briefcase className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground tracking-tight">Entrar como Cliente</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Acesse os dashboards da sua operação</p>
-                    </div>
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300">
-                      <ArrowRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {step === "username" && (
-                <form onSubmit={goToPassword} className="space-y-5">
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={usernameRef}
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="seu.usuario"
-                      required
-                      autoFocus
-                      className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full h-12 text-sm font-medium gap-2">
-                    Continuar <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </form>
-              )}
-
-              {step === "password" && (
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={passwordRef}
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="pl-10 h-12 text-sm bg-secondary/50 border-border/60 focus:border-primary/50"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full h-12 text-sm font-medium" disabled={loading}>
-                    {loading ? "Entrando..." : "Entrar"}
-                  </Button>
-                </form>
-              )}
+              </div>
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground/60 text-center mt-6">
-            Acesso restrito a usuários autorizados
-          </p>
+          <div className="flex items-center gap-3 mt-4 lg:mt-3">
+            <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "type" ? "bg-primary" : "bg-foreground/20"}`} />
+            <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
+            <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+            <span className="text-xs text-muted-foreground/50 ml-auto">Acesso restrito</span>
+          </div>
         </div>
       </div>
     </div>
