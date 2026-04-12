@@ -26,6 +26,7 @@ interface UserRow {
   user_id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
   role: string;
   dashboards: string[];
   clients: { id: string; name: string }[];
@@ -63,6 +64,7 @@ export default function UsersPage() {
           user_id: p.user_id,
           email: p.email || "",
           full_name: p.full_name,
+          phone: (p as any).phone || null,
           role,
           dashboards: userDash,
           clients: userClients,
