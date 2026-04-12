@@ -84,8 +84,8 @@ export default function Login() {
         alt="Equipe KP Assessoria"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
+      {/* Subtle gradient overlay — keeps image sharp */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
 
       {/* Desktop branding — bottom left */}
       <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12 items-end gap-4">
