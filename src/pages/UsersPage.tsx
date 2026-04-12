@@ -26,6 +26,7 @@ interface UserRow {
   user_id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
   role: string;
   dashboards: string[];
   clients: { id: string; name: string }[];
@@ -63,6 +64,7 @@ export default function UsersPage() {
           user_id: p.user_id,
           email: p.email || "",
           full_name: p.full_name,
+          phone: (p as any).phone || null,
           role,
           dashboards: userDash,
           clients: userClients,
@@ -81,11 +83,12 @@ export default function UsersPage() {
     role: "manager" as string,
     dashboards: [] as string[],
     clientIds: [] as string[],
+    phone: "",
   });
   const [saving, setSaving] = useState(false);
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [] });
+    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
   };
 
@@ -101,6 +104,7 @@ export default function UsersPage() {
       role: u.role,
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
+      phone: u.phone || "",
     });
     setOpen(true);
   };
@@ -153,9 +157,12 @@ export default function UsersPage() {
         await supabase.from("user_roles").delete().eq("user_id", editingUserId);
         await supabase.from("user_roles").insert({ user_id: editingUserId, role: form.role as any });
 
-        // Update profile name
-        if (form.fullName) {
-          await supabase.from("profiles").update({ full_name: form.fullName }).eq("user_id", editingUserId);
+        // Update profile name and phone
+        if (form.fullName || form.phone) {
+          const profileUpdate: any = {};
+          if (form.fullName) profileUpdate.full_name = form.fullName;
+          profileUpdate.phone = form.phone.trim() || null;
+          await supabase.from("profiles").update(profileUpdate).eq("user_id", editingUserId);
         }
 
         toast.success("Usuário atualizado!");
@@ -169,6 +176,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
+            phone: form.phone.trim() || null,
           },
         });
         if (error) throw error;
@@ -270,6 +278,18 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Telefone (WhatsApp)</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="Ex: 5581999999999"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número com código do país (55) + DDD + número. Usado para enviar links de criativos via WhatsApp.
+              </p>
             </div>
 
             {/* Dashboard access */}
