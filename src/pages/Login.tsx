@@ -119,7 +119,7 @@ export default function Login() {
           </div>
 
           {/* Glass card wrapper for mobile */}
-          <div className="lg:bg-transparent lg:backdrop-blur-none lg:border-0 lg:shadow-none lg:p-0 bg-card/40 backdrop-blur-xl border border-border/30 rounded-2xl p-6 shadow-2xl">
+          <div className="bg-background/80 backdrop-blur-xl border border-border/40 rounded-2xl p-6 shadow-2xl">
             <div className="mb-6 lg:mb-8">
               <h1 className="text-xl lg:text-2xl font-bold text-foreground tracking-tight">
                 {step === "type" && "Acessar plataforma"}
