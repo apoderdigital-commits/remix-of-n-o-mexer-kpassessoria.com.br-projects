@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
