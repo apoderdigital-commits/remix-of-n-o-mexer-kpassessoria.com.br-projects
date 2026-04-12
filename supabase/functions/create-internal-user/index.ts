@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     }
 
     // CREATE action
-    const { username, password, full_name, role, dashboard_keys, client_ids } = body;
+    const { username, password, full_name, role, dashboard_keys, client_ids, phone } = body;
     if (!username || !password) {
       return new Response(JSON.stringify({ error: "username e password obrigatórios" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,6 +98,11 @@ Deno.serve(async (req) => {
       await adminClient.from("user_client_access").insert(
         client_ids.map((cid: string) => ({ user_id: userId, client_id: cid }))
       );
+    }
+
+    // Save phone to profile
+    if (phone) {
+      await adminClient.from("profiles").update({ phone }).eq("user_id", userId);
     }
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
