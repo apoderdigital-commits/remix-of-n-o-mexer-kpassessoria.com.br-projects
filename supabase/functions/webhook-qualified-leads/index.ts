@@ -35,9 +35,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!status || !["cpf_approved", "sale"].includes(status)) {
+    const validStatuses = ["cpf_approved", "sale", "sale_consortium", "sale_financing"];
+    if (!status || !validStatuses.includes(status)) {
       return new Response(
-        JSON.stringify({ error: "status must be 'cpf_approved' or 'sale'" }),
+        JSON.stringify({ error: `status must be one of: ${validStatuses.join(", ")}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

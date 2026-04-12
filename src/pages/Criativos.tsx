@@ -88,14 +88,22 @@ export default function Index() {
     () => (leads || []).filter((l) => l.status === "cpf_approved").length,
     [leads]
   );
-  const sales = useMemo(
+  const salesConsortium = useMemo(
+    () => (leads || []).filter((l) => l.status === "sale_consortium").length,
+    [leads]
+  );
+  const salesFinancing = useMemo(
+    () => (leads || []).filter((l) => l.status === "sale_financing").length,
+    [leads]
+  );
+  const salesLegacy = useMemo(
     () => (leads || []).filter((l) => l.status === "sale").length,
     [leads]
   );
 
   // Creative rankings
-  const buildRanking = (status: "cpf_approved" | "sale") => {
-    const filtered = (leads || []).filter((l) => l.status === status);
+  const buildRanking = (statuses: string[]) => {
+    const filtered = (leads || []).filter((l) => statuses.includes(l.status));
     const map = new Map<string, number>();
     filtered.forEach((l) => map.set(l.creative_name, (map.get(l.creative_name) || 0) + 1));
     const total = filtered.length;
@@ -104,8 +112,9 @@ export default function Index() {
       .sort((a, b) => b.count - a.count);
   };
 
-  const cpfRanking = useMemo(() => buildRanking("cpf_approved"), [leads]);
-  const salesRanking = useMemo(() => buildRanking("sale"), [leads]);
+  const cpfRanking = useMemo(() => buildRanking(["cpf_approved"]), [leads]);
+  const consortiumRanking = useMemo(() => buildRanking(["sale_consortium"]), [leads]);
+  const financingRanking = useMemo(() => buildRanking(["sale_financing"]), [leads]);
 
   // Evolution chart data
   const evolutionData = useMemo(() => {
