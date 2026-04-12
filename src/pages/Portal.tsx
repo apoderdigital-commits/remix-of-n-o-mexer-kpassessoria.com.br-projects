@@ -8,18 +8,24 @@ const allProjects = [
   {
     key: "criativos",
     title: "Dashboard de Criativos",
-    description: "Performance de criativos, leads qualificados e métricas da Meta Ads",
+    description: "Descubra qual criativo está trazendo vendas para escalar ainda mais!",
     icon: BarChart3,
     href: "/criativos",
-    iconBg: "bg-primary/15",
+    gradient: "from-primary/20 to-primary/5",
+    borderColor: "border-primary/30 hover:border-primary/50",
+    iconGradient: "from-primary to-primary/70",
+    tag: "Performance",
   },
   {
     key: "projecao",
     title: "Funil de Projeção de Vendas",
-    description: "Simule, compare e otimize suas estratégias de conversão",
+    description: "Saiba o que fazer para conseguir mais vendas — analise o mês e projete o próximo!",
     icon: TrendingUp,
     href: "/projecao",
-    iconBg: "bg-fuchsia-500/15",
+    gradient: "from-fuchsia-500/20 to-fuchsia-500/5",
+    borderColor: "border-fuchsia-500/30 hover:border-fuchsia-500/50",
+    iconGradient: "from-fuchsia-500 to-purple-600",
+    tag: "Estratégia",
   },
 ];
 
