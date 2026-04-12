@@ -35,6 +35,7 @@ interface CreativeRankingProps {
   title: string;
   data: CreativeData[];
   color: string;
+  category: "cpf" | "consortium" | "financing";
 }
 
 interface PreviewData {
