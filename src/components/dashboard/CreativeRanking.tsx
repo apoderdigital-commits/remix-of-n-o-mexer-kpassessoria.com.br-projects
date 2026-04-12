@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight } from "lucide-react";
+import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight, MessageCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreativeGuideButton } from "./CreativeGuideButton";
@@ -36,6 +36,7 @@ interface CreativeRankingProps {
   data: CreativeData[];
   color: string;
   category: "cpf" | "consortium" | "financing";
+  clientId?: string | null;
 }
 
 interface PreviewData {
@@ -55,6 +56,9 @@ function FullRankingContent({
   handlePreview,
   isUrl,
   shortenUrl,
+  clientId,
+  sendingUrl,
+  handleSendWhatsApp,
 }: {
   top10: CreativeData[];
   color: string;
@@ -66,6 +70,9 @@ function FullRankingContent({
   handlePreview: (url: string) => void;
   isUrl: (name: string) => boolean;
   shortenUrl: (url: string) => string;
+  clientId?: string | null;
+  sendingUrl: string | null;
+  handleSendWhatsApp: (url: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -188,6 +195,20 @@ function FullRankingContent({
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
+                      {clientId && (
+                        <button
+                          onClick={() => handleSendWhatsApp(item.name)}
+                          disabled={sendingUrl === item.name}
+                          className="flex-shrink-0 p-1 rounded hover:bg-green-500/20 text-green-500 hover:text-green-400 transition-colors disabled:opacity-50"
+                          title="Enviar no WhatsApp"
+                        >
+                          {sendingUrl === item.name ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
                     </>
                   ) : (
                     <span className="truncate block">{item.name}</span>
