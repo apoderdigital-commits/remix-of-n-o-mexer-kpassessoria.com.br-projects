@@ -87,12 +87,11 @@ export function FunnelAnalysis() {
       }
       
       setLoading(true);
-      const clientName = clients.find(c => c.id === selectedClient)?.name;
       
       const { data, error } = await supabase
         .from('simulations')
         .select('*')
-        .eq('client_name', clientName)
+        .eq('client_id', selectedClient)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -104,7 +103,7 @@ export function FunnelAnalysis() {
     };
 
     fetchSimulations();
-  }, [user, selectedClient, clients]);
+  }, [user, selectedClient]);
 
   useEffect(() => {
     if (selectedClient && selectedClient !== 'custom') {
@@ -149,6 +148,7 @@ export function FunnelAnalysis() {
     const { error, data } = await supabase.from('simulations').insert({
       user_id: user?.id,
       client_name: clientName,
+      client_id: selectedClient !== 'custom' ? selectedClient : null,
       investimento: investimentoNum,
       cpl: cplNum,
       leads,
