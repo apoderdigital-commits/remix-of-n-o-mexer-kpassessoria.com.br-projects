@@ -156,21 +156,19 @@ export default function Index() {
   return (
     <div className="min-h-screen max-w-[1400px] mx-auto">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-b-3xl border-b border-primary/20 px-5 sm:px-8 pt-6 pb-7 sm:pt-8 sm:pb-9 mb-6">
-        {/* Layered gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/8 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-purple-500/10" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      <div className="relative overflow-hidden rounded-b-2xl px-5 sm:px-8 pt-8 pb-8 sm:pt-10 sm:pb-10 mb-6">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary)/0.12)] via-background to-background" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[hsl(263,50%,50%,0.06)] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-border/30" />
 
-        <div className="relative flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-          <div className="shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-card/80 backdrop-blur-sm border border-border/30 flex items-center justify-center shadow-lg shadow-primary/10">
-            <img src={kpLogo} alt="KP Assessoria" className="h-9 w-9 sm:h-10 sm:h-10 rounded-lg" />
-          </div>
+        <div className="relative flex flex-col sm:flex-row items-center gap-5">
+          <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-xl shrink-0" />
           <div className="text-center sm:text-left flex-1 min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-primary via-purple-400 to-primary bg-clip-text text-transparent leading-snug">
+            <h1 className="text-xl sm:text-2xl md:text-[1.65rem] font-semibold text-foreground leading-tight tracking-tight">
               A única análise de métricas reais que te traz previsibilidade nas decisões
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Dashboard de performance de criativos e leads qualificados
             </p>
           </div>
