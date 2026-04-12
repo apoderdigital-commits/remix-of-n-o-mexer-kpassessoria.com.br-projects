@@ -196,7 +196,6 @@ export default function Clients() {
                   <TableHead className="text-muted-foreground">Nome</TableHead>
                   <TableHead className="text-muted-foreground">Meta Account ID</TableHead>
                   <TableHead className="text-muted-foreground">Google Sheet</TableHead>
-                  <TableHead className="text-muted-foreground">Login</TableHead>
                   <TableHead className="text-muted-foreground">Criado em</TableHead>
                   <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
@@ -208,20 +207,6 @@ export default function Clients() {
                     <TableCell className="text-muted-foreground">{c.meta_account_id || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.google_sheet_id ? "✅ Configurado" : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {c.user_id ? (
-                        <span className="text-xs text-green-400">✅ Ativo</span>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs"
-                          onClick={() => openLoginDialog(c.id)}
-                        >
-                          <UserPlus className="h-3 w-3" /> Criar Login
-                        </Button>
-                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(c.created_at).toLocaleDateString("pt-BR")}
