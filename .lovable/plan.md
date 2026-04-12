@@ -1,27 +1,41 @@
 
 
-## Desativar Guia IA — Manter botão "Em Construção"
+## Enviar Link do Criativo via Webhook para WhatsApp
 
 ### Resumo
-Manter o botão "Guia IA" visível nos rankings mas desativá-lo funcionalmente. Ao clicar, exibe um toast "Em construção — estamos trabalhando nisso!" em vez de chamar a IA. Remove a edge function e a dependência `react-markdown`.
+Ao clicar em "Ver Criativo" no ranking, além de abrir o preview, o sistema envia automaticamente o telefone do cliente e o link do criativo para o webhook do n8n, que disparará a mensagem no WhatsApp.
 
 ### Etapas
 
-**1. Simplificar `CreativeGuideButton.tsx`**
-- Remover toda lógica de chamada à edge function, Dialog, loading, markdown
-- Manter apenas o botão com ícone Sparkles
-- Ao clicar: `toast.info("🚧 Em construção — estamos trabalhando para trazer essa funcionalidade em breve!")`
-- Adicionar badge/tooltip "Em breve" ou visual que indique construção
+**1. Adicionar coluna `phone` na tabela `clients`**
+- Migration: `ALTER TABLE clients ADD COLUMN phone text;`
 
-**2. Deletar edge function `generate-creative-guide`**
-- Remover `supabase/functions/generate-creative-guide/index.ts`
-- Deletar a função deployada
+**2. Atualizar formulário de cadastro de clientes (`Clients.tsx`)**
+- Adicionar campo "Telefone (WhatsApp)" no formulário de criação/edição
+- Salvar no campo `phone` do banco
+- Exibir na tabela de clientes
 
-**3. Remover `react-markdown`**
-- Desinstalar do `package.json`
+**3. Passar `clientId` para o `CreativeRanking`**
+- No `Criativos.tsx`, passar `activeClient` como prop para cada `CreativeRanking`
+- O componente recebe `clientId` e usa para buscar o telefone
+
+**4. Adicionar botão "Enviar no WhatsApp" nos criativos**
+- Ao clicar, busca o telefone do cliente via `supabase.from("clients").select("phone").eq("id", clientId)`
+- Se não tiver telefone cadastrado, exibe toast de erro
+- Se tiver, faz `fetch` POST para o webhook do n8n com `{ phone, creative_url }`
+- Exibe toast de sucesso "Link enviado no WhatsApp!"
+- Botão com ícone de WhatsApp (MessageCircle ou similar) ao lado do link do criativo na tabela
+
+**5. URL do webhook**
+- Será salva como secret no backend para não ficar exposta no frontend
+- Edge function `send-creative-whatsapp` recebe `{ client_id, creative_url }`, busca o telefone do cliente no banco, e faz o POST para o n8n
+
+### Segurança
+- O webhook URL fica no backend (edge function), nunca no frontend
+- A edge function valida que o usuário está autenticado antes de enviar
+- Validação de input com Zod
 
 ### O que NÃO muda
-- O botão continua aparecendo nos rankings
-- Rankings e dados permanecem intactos
-- `CreativeRanking.tsx` não precisa de alteração (já importa o botão)
+- Rankings, cálculos e dados existentes
+- Preview de criativos continua funcionando normalmente
 
