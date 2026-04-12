@@ -127,7 +127,7 @@ export default function Index() {
     (leads || []).forEach((l) => {
       const entry = dateMap.get(l.lead_date) || { leads: 0, cpf: 0, sales: 0 };
       if (l.status === "cpf_approved") entry.cpf += 1;
-      else entry.sales += 1;
+      else if (l.status === "sale_consortium" || l.status === "sale_financing" || l.status === "sale") entry.sales += 1;
       dateMap.set(l.lead_date, entry);
     });
     return Array.from(dateMap.entries())
