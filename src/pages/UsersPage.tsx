@@ -295,6 +295,18 @@ export default function UsersPage() {
                 <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado</p>
               ) : (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 cursor-pointer transition-colors">
+                    <Checkbox
+                      checked={clients.length > 0 && form.clientIds.length === clients.length}
+                      onCheckedChange={(checked) => {
+                        setForm((f) => ({
+                          ...f,
+                          clientIds: checked ? clients.map((c: any) => c.id) : [],
+                        }));
+                      }}
+                    />
+                    <span className="text-sm font-medium">Selecionar Todos</span>
+                  </label>
                   {clients.map((c: any) => (
                     <label key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/30 hover:bg-secondary/30 cursor-pointer transition-colors">
                       <Checkbox
