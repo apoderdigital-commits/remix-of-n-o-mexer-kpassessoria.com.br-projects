@@ -250,18 +250,21 @@ export default function Index() {
               data={cpfRanking}
               color="hsl(263, 50%, 68%)"
               category="cpf"
+              clientId={activeClient}
             />
             <CreativeRanking
               title="🤝 Criativos por Venda Consórcio"
               data={consortiumRanking}
               color="hsl(210, 70%, 58%)"
               category="consortium"
+              clientId={activeClient}
             />
             <CreativeRanking
               title="💳 Criativos por Venda Financiamento"
               data={financingRanking}
               color="hsl(35, 80%, 55%)"
               category="financing"
+              clientId={activeClient}
             />
           </div>
 
