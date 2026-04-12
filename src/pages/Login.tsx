@@ -80,7 +80,7 @@ export default function Login() {
     <div className="min-h-screen flex relative">
       {/* Video background — visible on ALL screens */}
       <AutoPlayVideo
-        className="fixed inset-0 w-full h-full object-cover lg:hidden"
+        className="fixed inset-0 w-full h-full object-cover scale-[1.2] lg:hidden"
         src="/videos/login-bg.mp4"
       />
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
@@ -88,7 +88,7 @@ export default function Login() {
       {/* Left side — branding (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6">
         <AutoPlayVideo
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover scale-[1.2]"
           src="/videos/login-bg.mp4"
         />
         <div className="absolute inset-0 bg-background/60" />
