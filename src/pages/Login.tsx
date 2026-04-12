@@ -143,7 +143,7 @@ export default function Login() {
 
             {/* Motivational phrase + description — mobile */}
             <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4 relative">
-              <img src={brazilFlag} alt="Brasil" className="absolute inset-0 w-full h-auto max-h-full object-contain opacity-10 pointer-events-none z-0 top-1/2 -translate-y-1/2" />
+              <img src={brazilFlag} alt="Brasil" className="absolute inset-0 w-[150%] h-auto object-contain opacity-15 pointer-events-none z-0 top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[15deg]" />
               <div className="relative z-10">
                 <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
                   Resultado não é opção
