@@ -142,19 +142,20 @@ export default function Login() {
             </div>
 
             {/* Motivational phrase + description — mobile */}
-            <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4">
-              <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
-                Resultado não é opção
-              </p>
-              <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight">
-                É obrigação!
-              </p>
-              <p className="mt-1 text-3xl">🇧🇷</p>
+            <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4 relative">
+              <img src={brazilFlag} alt="Brasil" className="absolute inset-0 w-full h-auto max-h-full object-contain opacity-10 pointer-events-none z-0 top-1/2 -translate-y-1/2" />
+              <div className="relative z-10">
+                <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
+                  Resultado não é opção
+                </p>
+                <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight">
+                  É obrigação!
+                </p>
 
-              <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium animate-[glow-text_3s_ease-in-out_infinite]">
-                Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
-              </p>
-              
+                <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium animate-[glow-text_3s_ease-in-out_infinite] mx-auto">
+                  Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
