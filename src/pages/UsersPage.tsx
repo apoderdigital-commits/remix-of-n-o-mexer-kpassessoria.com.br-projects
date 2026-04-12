@@ -81,11 +81,12 @@ export default function UsersPage() {
     role: "manager" as string,
     dashboards: [] as string[],
     clientIds: [] as string[],
+    phone: "",
   });
   const [saving, setSaving] = useState(false);
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [] });
+    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
   };
 
@@ -101,6 +102,7 @@ export default function UsersPage() {
       role: u.role,
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
+      phone: u.phone || "",
     });
     setOpen(true);
   };
