@@ -280,6 +280,18 @@ export default function UsersPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Telefone (WhatsApp)</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="Ex: 5581999999999"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número com código do país (55) + DDD + número. Usado para enviar links de criativos via WhatsApp.
+              </p>
+            </div>
+
             {/* Dashboard access */}
             <div className="space-y-3">
               <Label>Acesso a Dashboards</Label>
