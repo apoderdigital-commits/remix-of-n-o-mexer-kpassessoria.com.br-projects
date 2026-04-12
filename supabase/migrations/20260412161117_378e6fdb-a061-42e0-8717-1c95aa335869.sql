@@ -1,0 +1,1 @@
+ALTER TABLE public.qualified_leads ADD COLUMN seller_name TEXT;
