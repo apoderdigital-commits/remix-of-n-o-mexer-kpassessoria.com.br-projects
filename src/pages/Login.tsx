@@ -23,6 +23,16 @@ export default function Login() {
   const [screenTransition, setScreenTransition] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Preload video on mount
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.load();
+      video.play().catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (step === "password") setTimeout(() => passwordRef.current?.focus(), 350);
