@@ -77,26 +77,18 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] flex relative overflow-hidden">
-      {/* Image background — mobile */}
+    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden">
+      {/* Full-screen image background */}
       <img
         src={teamBg}
-        alt=""
-        className="fixed inset-0 w-full h-full object-cover scale-[1.15] lg:hidden"
+        alt="Equipe KP Assessoria"
+        className="absolute inset-0 w-full h-full object-cover"
       />
-      <div className="fixed inset-0 bg-background/85 backdrop-blur-md lg:hidden" />
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
 
-      {/* Left side — image (desktop only) */}
-      <div className="hidden lg:flex lg:w-[48%] relative overflow-hidden items-end">
-        <img
-          src={teamBg}
-          alt="Equipe KP Assessoria"
-          className="absolute inset-0 w-full h-full object-cover scale-[1.05]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/30" />
-
-        <div className="relative z-10 p-10 pb-12 w-full">
+      {/* Desktop branding — bottom left */}
+      <div className="hidden lg:flex absolute bottom-0 left-0 z-20 p-10 pb-12">
           <div className="flex items-center gap-4 mb-4">
             <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl" />
             <div>
