@@ -140,17 +140,18 @@ export default function Portal() {
                 ) : (
                   visibleProjects.map((project) => (
                     <Link key={project.href} to={project.href} className="group">
-                      <div className={`relative overflow-hidden rounded-2xl border ${project.borderColor} bg-gradient-to-r ${project.gradient} p-5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`}>
-                        <div className="flex items-start gap-4">
-                          <div className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${project.iconGradient} flex items-center justify-center shadow-lg`}>
-                            <project.icon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                      <div className={`relative overflow-hidden rounded-xl sm:rounded-2xl border ${project.borderColor} bg-gradient-to-r ${project.gradient} p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`}>
+                        <div className="flex items-center sm:items-start gap-3 sm:gap-4">
+                          <div className={`shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${project.iconGradient} flex items-center justify-center shadow-lg`}>
+                            <project.icon className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h2 className="text-base sm:text-lg font-bold text-foreground leading-tight">{project.title}</h2>
-                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{project.description}</p>
-                            <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary group-hover:gap-2.5 transition-all">
-                              Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                            </div>
+                            <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">{project.title}</h2>
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">{project.description}</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                          <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-primary group-hover:gap-2.5 transition-all">
+                            Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                           </div>
                         </div>
                       </div>
