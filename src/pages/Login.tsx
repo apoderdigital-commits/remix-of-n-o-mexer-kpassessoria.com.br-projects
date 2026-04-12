@@ -79,7 +79,7 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left side — branding */}
       <div
-        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-12"
+        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center pt-6"
       >
         <video
           autoPlay
@@ -92,12 +92,12 @@ export default function Login() {
         <div className="absolute inset-0 bg-background/60" />
 
         <div className="relative z-10 text-center px-12 max-w-md">
-          <div className="mb-8">
-            <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl mx-auto shadow-2xl" />
+          <div className="mb-3">
+            <img src={kpLogo} alt="KP Assessoria" className="h-24 w-24 rounded-2xl mx-auto shadow-2xl" />
           </div>
-          <h2 className="text-3xl font-bold text-foreground mb-3 tracking-tight">KP Assessoria</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-1 tracking-tight">KP Assessoria</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Plataforma integrada de performance, projeções e inteligência de dados para sua operação.
+            Aceleradora de vendas para lojas automotivas!
           </p>
           <div className="mt-10 flex items-center gap-3 justify-center">
             <div className={`h-1 w-8 rounded-full ${step === "type" ? "bg-primary/60" : "bg-primary/20"}`} />
