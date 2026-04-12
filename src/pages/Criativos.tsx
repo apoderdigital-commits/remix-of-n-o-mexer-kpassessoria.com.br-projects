@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -228,10 +228,10 @@ export default function Index() {
       </div>
 
       {/* WhatsApp info banner */}
-      <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-        <span className="text-lg">📲</span>
+      <div className="flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-3 text-sm text-muted-foreground">
+        <MessageCircle className="h-5 w-5 text-green-500 shrink-0" />
         <p>
-          Ao clicar no <strong className="text-primary">📲</strong> ao lado do criativo, o link será enviado diretamente para o seu WhatsApp.
+          Ao clicar no <MessageCircle className="inline h-4 w-4 text-green-500 mx-0.5 -mt-0.5" /> ao lado do criativo, o link será enviado diretamente para o seu WhatsApp.
         </p>
       </div>
 
