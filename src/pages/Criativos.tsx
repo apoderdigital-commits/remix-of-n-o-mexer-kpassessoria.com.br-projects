@@ -217,19 +217,27 @@ export default function Index() {
             totalLeads={totalLeads}
             totalSpent={totalSpent}
             cpfApproved={cpfApproved}
-            sales={sales}
+            salesConsortium={salesConsortium}
+            salesFinancing={salesFinancing}
+            salesLegacy={salesLegacy}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <CreativeRanking
               title="🏆 Criativos por CPF Aprovado"
               data={cpfRanking}
               color="hsl(263, 50%, 68%)"
             />
             <CreativeRanking
-              title="💰 Criativos por Venda"
-              data={salesRanking}
-              color="hsl(263, 70%, 58%)"
+              title="🤝 Criativos por Venda Consórcio"
+              data={consortiumRanking}
+              color="hsl(210, 70%, 58%)"
+            />
+            <CreativeRanking
+              title="💳 Criativos por Venda Financiamento"
+              data={financingRanking}
+              color="hsl(35, 80%, 55%)"
+            />
             />
           </div>
 
