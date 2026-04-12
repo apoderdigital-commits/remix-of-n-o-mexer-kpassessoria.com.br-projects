@@ -406,6 +406,9 @@ export function CreativeRanking({ title, data, color, category, clientId }: Crea
           handlePreview={handlePreview}
           isUrl={isUrl}
           shortenUrl={shortenUrl}
+          clientId={clientId}
+          sendingUrl={sendingUrl}
+          handleSendWhatsApp={handleSendWhatsApp}
         />
       </CardContent>
     </Card>
