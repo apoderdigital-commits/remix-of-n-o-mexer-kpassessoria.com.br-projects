@@ -45,7 +45,7 @@ export default function Portal() {
     : allProjects.filter((p) => dashboards.includes(p.key));
 
   return (
-    <div className="min-h-screen flex relative">
+    <div className="min-h-[100dvh] flex relative overflow-hidden">
       {/* Video background — mobile */}
       <AutoPlayVideo
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
@@ -112,7 +112,7 @@ export default function Portal() {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-6">
           <div className="w-full max-w-md">
             {/* Mobile branding */}
             <div className="lg:hidden flex flex-col items-center mb-8">
