@@ -362,7 +362,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
                   Ver todos <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
+              <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[85vh] overflow-y-auto p-4">
                 <DialogHeader>
                   <DialogTitle className="text-base">{title}</DialogTitle>
                 </DialogHeader>
