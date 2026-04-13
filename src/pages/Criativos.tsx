@@ -234,34 +234,54 @@ export default function Index() {
             <>
               <Button
                 size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={!activeClient || syncing}
+                onClick={handleSyncAll}
+                disabled={!activeClient || syncing || syncingSheet || syncingGhl}
                 className="gap-2"
               >
-                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                Sync Meta
+                <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
+                Sincronizar Tudo
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSyncSheet}
-                disabled={!activeClient || syncingSheet}
-                className="gap-2"
-              >
-                <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
-                Sync Planilha
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSyncGhl}
-                disabled={!activeClient || syncingGhl}
-                className="gap-2"
-              >
-                <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
-                Sync GHL
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    Sync Específico <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2 bg-card border-border/50" align="end">
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSync}
+                      disabled={!activeClient || syncing}
+                      className="justify-start gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                      Meta Ads
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSyncSheet}
+                      disabled={!activeClient || syncingSheet}
+                      className="justify-start gap-2"
+                    >
+                      <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+                      Planilha
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSyncGhl}
+                      disabled={!activeClient || syncingGhl}
+                      className="justify-start gap-2"
+                    >
+                      <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
+                      GHL Pipeline
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Link to="/clients">
                 <Button size="sm" variant="ghost" className="gap-2">
                   <Settings className="h-4 w-4" /> Clientes
