@@ -326,6 +326,7 @@ export default function Index() {
             salesFinancing={salesFinancing}
             uniqueCreativesCpf={uniqueCreativesCpf}
             uniqueCreativesSales={uniqueCreativesSales}
+            planilhaCpfApproved={planilhaCpfApproved}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
           />
