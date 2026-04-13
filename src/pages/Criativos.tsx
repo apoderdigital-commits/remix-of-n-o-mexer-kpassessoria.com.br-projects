@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
@@ -56,6 +57,28 @@ export default function Index() {
     setUntil(u);
   };
 
+  const handleSyncAll = async () => {
+    if (!activeClient) return;
+    setSyncing(true);
+    setSyncingSheet(true);
+    setSyncingGhl(true);
+    try {
+      await Promise.allSettled([
+        sync(since, until),
+        syncSheet(since, until),
+        queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] }),
+      ]);
+      queryClient.invalidateQueries({ queryKey: ["meta_campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
+      toast.success("Todos os dados sincronizados!");
+    } catch {
+      toast.error("Erro ao sincronizar");
+    }
+    setSyncing(false);
+    setSyncingSheet(false);
+    setSyncingGhl(false);
+  };
+
   const handleSync = async () => {
     if (!activeClient) return;
     setSyncing(true);
@@ -77,7 +100,7 @@ export default function Index() {
       queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
       toast.success("Leads qualificados sincronizados da planilha!");
     } catch {
-      toast.error("Erro ao sincronizar planilha. Verifique se ela está compartilhada publicamente.");
+      toast.error("Erro ao sincronizar planilha.");
     }
     setSyncingSheet(false);
   };
@@ -211,34 +234,54 @@ export default function Index() {
             <>
               <Button
                 size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={!activeClient || syncing}
+                onClick={handleSyncAll}
+                disabled={!activeClient || syncing || syncingSheet || syncingGhl}
                 className="gap-2"
               >
-                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                Sync Meta
+                <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
+                Sincronizar Tudo
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSyncSheet}
-                disabled={!activeClient || syncingSheet}
-                className="gap-2"
-              >
-                <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
-                Sync Planilha
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSyncGhl}
-                disabled={!activeClient || syncingGhl}
-                className="gap-2"
-              >
-                <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
-                Sync GHL
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    Sync Específico <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2 bg-card border-border/50" align="end">
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSync}
+                      disabled={!activeClient || syncing}
+                      className="justify-start gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                      Meta Ads
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSyncSheet}
+                      disabled={!activeClient || syncingSheet}
+                      className="justify-start gap-2"
+                    >
+                      <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
+                      Planilha
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSyncGhl}
+                      disabled={!activeClient || syncingGhl}
+                      className="justify-start gap-2"
+                    >
+                      <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
+                      GHL Pipeline
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Link to="/clients">
                 <Button size="sm" variant="ghost" className="gap-2">
                   <Settings className="h-4 w-4" /> Clientes
