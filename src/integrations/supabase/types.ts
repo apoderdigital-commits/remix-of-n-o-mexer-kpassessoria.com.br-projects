@@ -17,6 +17,8 @@ export type Database = {
       clients: {
         Row: {
           created_at: string
+          ghl_api_key: string | null
+          ghl_location_id: string | null
           google_sheet_id: string | null
           id: string
           meta_access_token: string | null
@@ -30,6 +32,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          ghl_api_key?: string | null
+          ghl_location_id?: string | null
           google_sheet_id?: string | null
           id?: string
           meta_access_token?: string | null
@@ -43,6 +47,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          ghl_api_key?: string | null
+          ghl_location_id?: string | null
           google_sheet_id?: string | null
           id?: string
           meta_access_token?: string | null
