@@ -65,15 +65,14 @@ export function useSyncMeta(clientId: string | null) {
   return { sync };
 }
 
-export function useGhlPipeline(clientId: string | null) {
+export function useGhlPipeline(clientId: string | null, since?: string, until?: string) {
   return useQuery({
-    queryKey: ["ghl_pipeline", clientId],
+    queryKey: ["ghl_pipeline", clientId, since, until],
     queryFn: async () => {
       if (!clientId) return null;
       const { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline", {
-        body: { client_id: clientId },
+        body: { client_id: clientId, since, until },
       });
-      // If GHL is not configured for this client, return null gracefully
       if (error) {
         const msg = typeof data === "object" && data?.error ? data.error : "";
         if (msg === "GHL not configured for this client") return null;
