@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { client_id } = await req.json();
+    const { client_id, since, until } = await req.json();
     if (!client_id) {
       return new Response(JSON.stringify({ error: "client_id is required" }), {
         status: 400,
@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Fetch client GHL credentials
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("ghl_api_key, ghl_location_id")
@@ -48,7 +47,7 @@ Deno.serve(async (req) => {
       Version: "2021-07-28",
     };
 
-    // 1. Get pipelines to find stage IDs
+    // 1. Get pipelines
     const pipelinesRes = await fetch(
       `${GHL_BASE}/opportunities/pipelines?locationId=${client.ghl_location_id}`,
       { headers: ghlHeaders }
@@ -73,26 +72,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use first pipeline
     const pipeline = pipelines[0];
     const stages = pipeline.stages || [];
 
     console.log("Pipeline:", pipeline.name, "Stages:", stages.map((s: any) => s.name));
 
-    // Map stages by name patterns
-    const stageMap: Record<string, string[]> = {};
-    for (const stage of stages) {
-      stageMap[stage.id] = [stage.name.toLowerCase()];
-    }
-
     // Categorize stages
-    const simulacaoStageIds: string[] = [];
     const cpfAprovadoStageIds: string[] = [];
     const cpfNaoAprovadoStageIds: string[] = [];
 
     for (const stage of stages) {
       const name = stage.name.toLowerCase();
-      // Check "não aprovado"/"desqualificado" BEFORE "aprovado"/"qualificado"
       if (
         name.includes("desqualificado") ||
         name.includes("não aprovado") ||
@@ -100,19 +90,20 @@ Deno.serve(async (req) => {
         name.includes("reprovado")
       ) {
         cpfNaoAprovadoStageIds.push(stage.id);
-        simulacaoStageIds.push(stage.id);
       } else if (
         name.includes("qualificado") ||
         name.includes("aprovado")
       ) {
         cpfAprovadoStageIds.push(stage.id);
-        simulacaoStageIds.push(stage.id);
       }
     }
 
-    console.log("Mapped stages - Aprovado:", cpfAprovadoStageIds, "NaoAprovado:", cpfNaoAprovadoStageIds);
+    const simulacaoStageIds = [...cpfAprovadoStageIds, ...cpfNaoAprovadoStageIds];
 
-    // 2. Count opportunities per stage using search endpoint with query params
+    console.log("Mapped stages - Aprovado:", cpfAprovadoStageIds, "NaoAprovado:", cpfNaoAprovadoStageIds);
+    console.log("Date filter:", since, "to", until);
+
+    // 2. Count opportunities per stage, with optional date filtering
     const countForStages = async (stageIds: string[]): Promise<number> => {
       let total = 0;
       for (const stageId of stageIds) {
@@ -122,6 +113,17 @@ Deno.serve(async (req) => {
           pipeline_stage_id: stageId,
           limit: "1",
         });
+
+        // GHL uses "date" for start and "endDate" for end, format: mm-dd-yyyy
+        if (since) {
+          const [y, m, d] = since.split("-");
+          params.set("date", `${m}-${d}-${y}`);
+        }
+        if (until) {
+          const [y, m, d] = until.split("-");
+          params.set("endDate", `${m}-${d}-${y}`);
+        }
+
         const searchRes = await fetch(
           `${GHL_BASE}/opportunities/search?${params.toString()}`,
           { method: "GET", headers: ghlHeaders }

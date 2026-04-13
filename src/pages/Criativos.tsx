@@ -47,7 +47,7 @@ export default function Index() {
   const clients = isAdmin ? allClients : allClients?.filter((c: any) => accessibleClientIds.includes(c.id));
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
-  const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient);
+  const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
   const { sync } = useSyncMeta(activeClient);
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
@@ -125,6 +125,10 @@ export default function Index() {
   const totalSpent = useMemo(
     () => (campaigns || []).reduce((sum, c) => sum + Number(c.amount_spent), 0),
     [campaigns]
+  );
+  const planilhaCpfApproved = useMemo(
+    () => (leads || []).filter((l) => l.status === "cpf_approved").length,
+    [leads]
   );
   const salesConsortium = useMemo(
     () => (leads || []).filter((l) => l.status === "sale_consortium").length,
@@ -322,6 +326,7 @@ export default function Index() {
             salesFinancing={salesFinancing}
             uniqueCreativesCpf={uniqueCreativesCpf}
             uniqueCreativesSales={uniqueCreativesSales}
+            planilhaCpfApproved={planilhaCpfApproved}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
           />
