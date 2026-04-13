@@ -126,10 +126,6 @@ export default function Index() {
     () => (campaigns || []).reduce((sum, c) => sum + Number(c.amount_spent), 0),
     [campaigns]
   );
-  const cpfApproved = useMemo(
-    () => (leads || []).filter((l) => l.status === "cpf_approved").length,
-    [leads]
-  );
   const salesConsortium = useMemo(
     () => (leads || []).filter((l) => l.status === "sale_consortium").length,
     [leads]
@@ -140,6 +136,14 @@ export default function Index() {
   );
   const salesLegacy = useMemo(
     () => (leads || []).filter((l) => l.status === "sale").length,
+    [leads]
+  );
+  const uniqueCreativesCpf = useMemo(
+    () => new Set((leads || []).filter((l) => l.status === "cpf_approved").map((l) => l.creative_name)).size,
+    [leads]
+  );
+  const uniqueCreativesSales = useMemo(
+    () => new Set((leads || []).filter((l) => l.status === "sale_financing" || l.status === "sale_consortium").map((l) => l.creative_name)).size,
     [leads]
   );
 
@@ -314,10 +318,10 @@ export default function Index() {
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
-            cpfApproved={cpfApproved}
             salesConsortium={salesConsortium}
             salesFinancing={salesFinancing}
-            salesLegacy={salesLegacy}
+            uniqueCreativesCpf={uniqueCreativesCpf}
+            uniqueCreativesSales={uniqueCreativesSales}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
           />

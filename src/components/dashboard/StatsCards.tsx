@@ -1,13 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3 } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus } from "lucide-react";
 
 interface StatsCardsProps {
   totalLeads: number;
   totalSpent: number;
-  cpfApproved: number;
   salesConsortium: number;
   salesFinancing: number;
-  salesLegacy: number;
+  uniqueCreativesCpf: number;
+  uniqueCreativesSales: number;
   ghlData?: {
     simulacoes: number;
     cpf_aprovado: number;
@@ -25,36 +25,30 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortium, salesFinancing, salesLegacy, ghlData, ghlLoading }: StatsCardsProps) {
-  const totalSales = salesConsortium + salesFinancing + salesLegacy;
-  const qualified = cpfApproved + totalSales;
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, ghlData, ghlLoading }: StatsCardsProps) {
   const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
-  const costPerQualified = qualified > 0 ? (totalSpent / qualified).toFixed(2) : "—";
-  const costPerSale = totalSales > 0 ? (totalSpent / totalSales).toFixed(2) : "—";
 
-  // GHL metrics
   const simulacoes = ghlData?.simulacoes ?? 0;
   const ghlAprovado = ghlData?.cpf_aprovado ?? 0;
   const ghlNaoAprovado = ghlData?.cpf_nao_aprovado ?? 0;
 
-  // Conversion rates — corrected flow:
-  // Leads → Simulações (60%), Simulações → CPF Aprovado (15%), CPF Aprovado → Vendas Financiamento (20%)
   const simRate = totalLeads > 0 ? (simulacoes / totalLeads) * 100 : 0;
   const aprovRate = simulacoes > 0 ? (ghlAprovado / simulacoes) * 100 : 0;
   const vendasFinancRate = ghlAprovado > 0 ? (salesFinancing / ghlAprovado) * 100 : 0;
 
   const cards = [
-    {
-      title: "Total de Leads",
-      value: totalLeads.toLocaleString("pt-BR"),
-      icon: Users,
-      color: "text-violet-400",
-    },
+    // Row 1 - Funnel
     {
       title: "Investimento",
       value: `R$ ${totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
       color: "text-purple-300",
+    },
+    {
+      title: "Total de Leads",
+      value: totalLeads.toLocaleString("pt-BR"),
+      icon: Users,
+      color: "text-violet-400",
     },
     {
       title: "Custo / Lead",
@@ -67,6 +61,7 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       value: ghlLoading ? "..." : simulacoes.toLocaleString("pt-BR"),
       icon: BarChart3,
       color: "text-cyan-400",
+      subtitle: "GHL",
       indicator: ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
     },
     {
@@ -74,39 +69,45 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       value: ghlLoading ? "..." : ghlAprovado.toLocaleString("pt-BR"),
       icon: CheckCircle,
       color: "text-green-400",
+      subtitle: "GHL",
       indicator: ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
     },
+    // Row 2 - Results
     {
       title: "CPF Não Aprovado",
       value: ghlLoading ? "..." : ghlNaoAprovado.toLocaleString("pt-BR"),
       icon: XCircle,
       color: "text-red-400",
-    },
-    {
-      title: "Vendas Consórcio",
-      value: salesConsortium.toLocaleString("pt-BR"),
-      icon: Handshake,
-      color: "text-blue-400",
+      subtitle: "GHL",
     },
     {
       title: "Vendas Financiamento",
       value: salesFinancing.toLocaleString("pt-BR"),
       icon: CreditCard,
       color: "text-amber-400",
+      subtitle: "Planilha",
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
     },
     {
-      title: "Custo / Qualificado",
-      value: costPerQualified === "—" ? "—" : `R$ ${costPerQualified}`,
-      icon: TrendingDown,
-      color: "text-violet-300",
+      title: "Vendas Consórcio",
+      value: salesConsortium.toLocaleString("pt-BR"),
+      icon: Handshake,
+      color: "text-blue-400",
+      subtitle: "Planilha",
     },
     {
-      title: "Custo / Venda",
-      value: costPerSale === "—" ? "—" : `R$ ${costPerSale}`,
-      icon: TrendingDown,
-      subtitle: `Total: ${totalSales}`,
-      color: "text-purple-400",
+      title: "Criativos c/ CPF Aprov.",
+      value: uniqueCreativesCpf.toLocaleString("pt-BR"),
+      icon: Image,
+      color: "text-emerald-400",
+      subtitle: "Planilha",
+    },
+    {
+      title: "Criativos c/ Vendas",
+      value: uniqueCreativesSales.toLocaleString("pt-BR"),
+      icon: ImagePlus,
+      color: "text-orange-400",
+      subtitle: "Planilha",
     },
   ];
 
@@ -121,7 +122,7 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
             </div>
             <p className="text-xl font-bold">{card.value}</p>
             {card.subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{card.subtitle}</p>
             )}
             {card.indicator && (
               <MetaIndicator {...card.indicator} />
