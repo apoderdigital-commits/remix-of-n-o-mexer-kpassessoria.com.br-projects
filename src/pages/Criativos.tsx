@@ -52,6 +52,11 @@ export default function Index() {
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
 
+  const handleFilterChange = (s: string, u: string) => {
+    setSince(s);
+    setUntil(u);
+  };
+
   const handleSyncAll = async () => {
     if (!activeClient) return;
     setSyncing(true);
