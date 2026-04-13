@@ -92,20 +92,20 @@ Deno.serve(async (req) => {
 
     for (const stage of stages) {
       const name = stage.name.toLowerCase();
+      // Check "não aprovado"/"desqualificado" BEFORE "aprovado"/"qualificado"
       if (
-        name.includes("qualificado") ||
-        name.includes("aprovado") ||
-        name.includes("cpf aprovado")
-      ) {
-        cpfAprovadoStageIds.push(stage.id);
-        simulacaoStageIds.push(stage.id);
-      } else if (
         name.includes("desqualificado") ||
         name.includes("não aprovado") ||
         name.includes("nao aprovado") ||
         name.includes("reprovado")
       ) {
         cpfNaoAprovadoStageIds.push(stage.id);
+        simulacaoStageIds.push(stage.id);
+      } else if (
+        name.includes("qualificado") ||
+        name.includes("aprovado")
+      ) {
+        cpfAprovadoStageIds.push(stage.id);
         simulacaoStageIds.push(stage.id);
       }
     }
