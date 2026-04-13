@@ -112,26 +112,28 @@ Deno.serve(async (req) => {
 
     console.log("Mapped stages - Aprovado:", cpfAprovadoStageIds, "NaoAprovado:", cpfNaoAprovadoStageIds);
 
-    // 2. Count opportunities per stage using search
+    // 2. Count opportunities per stage using search endpoint with query params
     const countForStages = async (stageIds: string[]): Promise<number> => {
       let total = 0;
       for (const stageId of stageIds) {
-        const searchRes = await fetch(`${GHL_BASE}/opportunities/search`, {
-          method: "POST",
-          headers: ghlHeaders,
-          body: JSON.stringify({
-            locationId: client.ghl_location_id,
-            pipelineId: pipeline.id,
-            pipelineStageId: stageId,
-            limit: 1,
-          }),
+        const params = new URLSearchParams({
+          location_id: client.ghl_location_id,
+          pipeline_id: pipeline.id,
+          pipeline_stage_id: stageId,
+          limit: "1",
         });
+        const searchRes = await fetch(
+          `${GHL_BASE}/opportunities/search?${params.toString()}`,
+          { method: "GET", headers: ghlHeaders }
+        );
 
         if (searchRes.ok) {
           const searchData = await searchRes.json();
-          total += searchData.meta?.total || searchData.total || 0;
+          console.log("Search result for stage", stageId, ":", JSON.stringify(searchData.meta || {}));
+          total += searchData.meta?.total ?? searchData.count ?? 0;
         } else {
-          console.error("Search failed for stage", stageId, await searchRes.text());
+          const errText = await searchRes.text();
+          console.error("Search failed for stage", stageId, errText);
         }
       }
       return total;
