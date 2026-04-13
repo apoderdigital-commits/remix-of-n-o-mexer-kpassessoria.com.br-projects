@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
@@ -51,9 +52,26 @@ export default function Index() {
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
 
-  const handleFilterChange = (s: string, u: string) => {
-    setSince(s);
-    setUntil(u);
+  const handleSyncAll = async () => {
+    if (!activeClient) return;
+    setSyncing(true);
+    setSyncingSheet(true);
+    setSyncingGhl(true);
+    try {
+      await Promise.allSettled([
+        sync(since, until),
+        syncSheet(since, until),
+        queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] }),
+      ]);
+      queryClient.invalidateQueries({ queryKey: ["meta_campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
+      toast.success("Todos os dados sincronizados!");
+    } catch {
+      toast.error("Erro ao sincronizar");
+    }
+    setSyncing(false);
+    setSyncingSheet(false);
+    setSyncingGhl(false);
   };
 
   const handleSync = async () => {
@@ -77,7 +95,7 @@ export default function Index() {
       queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
       toast.success("Leads qualificados sincronizados da planilha!");
     } catch {
-      toast.error("Erro ao sincronizar planilha. Verifique se ela está compartilhada publicamente.");
+      toast.error("Erro ao sincronizar planilha.");
     }
     setSyncingSheet(false);
   };

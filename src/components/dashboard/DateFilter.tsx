@@ -21,9 +21,7 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
   const presets = [
     { label: "7d", days: 7 },
     { label: "15d", days: 15 },
-    { label: "30d", days: 30 },
     { label: "60d", days: 60 },
-    { label: "90d", days: 90 },
   ];
 
   const handlePreset = (label: string, days: number) => {
