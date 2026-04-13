@@ -73,7 +73,12 @@ export function useGhlPipeline(clientId: string | null) {
       const { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline", {
         body: { client_id: clientId },
       });
-      if (error) throw error;
+      // If GHL is not configured for this client, return null gracefully
+      if (error) {
+        const msg = typeof data === "object" && data?.error ? data.error : "";
+        if (msg === "GHL not configured for this client") return null;
+        throw error;
+      }
       return data as {
         simulacoes: number;
         cpf_aprovado: number;
