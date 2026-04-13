@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -29,6 +29,7 @@ export default function Index() {
   const [until, setUntil] = useState(format(new Date(), "yyyy-MM-dd"));
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
+  const [syncingGhl, setSyncingGhl] = useState(false);
 
   // Determine active client
   const activeClient = isAdmin ? selectedClient : (selectedClient || accessibleClientIds[0] || authClientId);
@@ -79,6 +80,18 @@ export default function Index() {
       toast.error("Erro ao sincronizar planilha. Verifique se ela está compartilhada publicamente.");
     }
     setSyncingSheet(false);
+  };
+
+  const handleSyncGhl = async () => {
+    if (!activeClient) return;
+    setSyncingGhl(true);
+    try {
+      queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] });
+      toast.success("Dados do GHL sincronizados!");
+    } catch {
+      toast.error("Erro ao sincronizar GHL");
+    }
+    setSyncingGhl(false);
   };
 
   // Compute stats
@@ -215,6 +228,16 @@ export default function Index() {
               >
                 <FileSpreadsheet className={`h-4 w-4 ${syncingSheet ? "animate-spin" : ""}`} />
                 Sync Planilha
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSyncGhl}
+                disabled={!activeClient || syncingGhl}
+                className="gap-2"
+              >
+                <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
+                Sync GHL
               </Button>
               <Link to="/clients">
                 <Button size="sm" variant="ghost" className="gap-2">

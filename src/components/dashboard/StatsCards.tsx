@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, ShoppingCart, TrendingDown, CreditCard, Handshake, ClipboardCheck, XCircle, BarChart3 } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3 } from "lucide-react";
 
 interface StatsCardsProps {
   totalLeads: number;
@@ -16,11 +16,11 @@ interface StatsCardsProps {
   ghlLoading?: boolean;
 }
 
-function MetaIndicator({ label, value, target, suffix = "%" }: { label: string; value: number; target: number; suffix?: string }) {
+function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
   const met = value >= target;
   return (
     <div className={`text-xs mt-1 font-medium ${met ? "text-green-400" : "text-red-400"}`}>
-      {label}: {value.toFixed(1)}{suffix} {met ? "✅" : "⚠️"} (meta: {target}{suffix})
+      {label}: {value.toFixed(1)}% {met ? "✅" : "⚠️"} (meta: {target}%)
     </div>
   );
 }
@@ -37,10 +37,11 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
   const ghlAprovado = ghlData?.cpf_aprovado ?? 0;
   const ghlNaoAprovado = ghlData?.cpf_nao_aprovado ?? 0;
 
-  // Conversion rates
+  // Conversion rates — corrected flow:
+  // Leads → Simulações (60%), Simulações → CPF Aprovado (15%), CPF Aprovado → Vendas Financiamento (20%)
   const simRate = totalLeads > 0 ? (simulacoes / totalLeads) * 100 : 0;
   const aprovRate = simulacoes > 0 ? (ghlAprovado / simulacoes) * 100 : 0;
-  const vendasRate = ghlAprovado > 0 ? (totalSales / ghlAprovado) * 100 : 0;
+  const vendasFinancRate = ghlAprovado > 0 ? (salesFinancing / ghlAprovado) * 100 : 0;
 
   const cards = [
     {
@@ -92,6 +93,7 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       value: salesFinancing.toLocaleString("pt-BR"),
       icon: CreditCard,
       color: "text-amber-400",
+      indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
     },
     {
       title: "Custo / Qualificado",
@@ -105,7 +107,6 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       icon: TrendingDown,
       subtitle: `Total: ${totalSales}`,
       color: "text-purple-400",
-      indicator: ghlData ? { label: "Vendas/Aprov", value: vendasRate, target: 20 } : undefined,
     },
   ];
 
