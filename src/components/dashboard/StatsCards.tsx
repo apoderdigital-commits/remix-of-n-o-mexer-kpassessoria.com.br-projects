@@ -34,7 +34,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
       className="flex items-center gap-1 text-[10px] text-muted-foreground/60 mt-0.5 hover:text-muted-foreground transition-colors cursor-pointer"
       title="Alternar entre GHL e Planilha"
     >
-      <ArrowLeftRight className="h-3 w-3" />
+      <ArrowLeftRight className="w-[16px] h-[16px]" />
       <span className={source === "ghl" ? "text-cyan-400/80 text-sm" : "text-emerald-400/80 text-sm"}>
         {source === "ghl" ? "GHL" : "Planilha"}
       </span>
