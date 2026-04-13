@@ -138,6 +138,14 @@ export default function Index() {
     () => (leads || []).filter((l) => l.status === "sale").length,
     [leads]
   );
+  const uniqueCreativesCpf = useMemo(
+    () => new Set((leads || []).filter((l) => l.status === "cpf_approved").map((l) => l.creative_name)).size,
+    [leads]
+  );
+  const uniqueCreativesSales = useMemo(
+    () => new Set((leads || []).filter((l) => l.status === "sale_financing" || l.status === "sale_consortium").map((l) => l.creative_name)).size,
+    [leads]
+  );
 
   // Creative rankings
   const buildRanking = (statuses: string[]) => {
@@ -310,10 +318,10 @@ export default function Index() {
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
-            cpfApproved={cpfApproved}
             salesConsortium={salesConsortium}
             salesFinancing={salesFinancing}
-            salesLegacy={salesLegacy}
+            uniqueCreativesCpf={uniqueCreativesCpf}
+            uniqueCreativesSales={uniqueCreativesSales}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
           />
