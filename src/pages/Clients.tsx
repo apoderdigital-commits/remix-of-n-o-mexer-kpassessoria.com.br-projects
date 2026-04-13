@@ -25,9 +25,11 @@ interface ClientForm {
   metaToken: string;
   googleSheetId: string;
   ticketMedio: string;
+  ghlApiKey: string;
+  ghlLocationId: string;
 }
 
-const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "", ticketMedio: "" };
+const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "", ticketMedio: "", ghlApiKey: "", ghlLocationId: "" };
 
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
@@ -56,6 +58,8 @@ export default function Clients() {
       metaToken: c.meta_access_token || "",
       googleSheetId: c.google_sheet_id || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
+      ghlApiKey: c.ghl_api_key || "",
+      ghlLocationId: c.ghl_location_id || "",
     });
     setOpen(true);
   };
@@ -69,6 +73,8 @@ export default function Clients() {
       meta_access_token: form.metaToken.trim() || null,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
+      ghl_api_key: form.ghlApiKey.trim() || null,
+      ghl_location_id: form.ghlLocationId.trim() || null,
     };
 
     // Save token as default
@@ -191,6 +197,16 @@ export default function Clients() {
               <Label>Ticket Médio (R$)</Label>
               <Input type="number" value={form.ticketMedio} onChange={set("ticketMedio")} placeholder="Ex: 15000" />
               <p className="text-xs text-muted-foreground">Usado no Funil de Projeção de Vendas</p>
+            </div>
+            <div className="space-y-2">
+              <Label>GHL API Key</Label>
+              <Input type="password" value={form.ghlApiKey} onChange={set("ghlApiKey")} placeholder="Ex: pit-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              <p className="text-xs text-muted-foreground">API Key do GoHighLevel para integração com pipeline</p>
+            </div>
+            <div className="space-y-2">
+              <Label>GHL Location ID (Subconta)</Label>
+              <Input value={form.ghlLocationId} onChange={set("ghlLocationId")} placeholder="Ex: T6S5cO1s72adtbDovjdX" />
+              <p className="text-xs text-muted-foreground">ID da subconta no GoHighLevel</p>
             </div>
             <Button onClick={handleSave} className="w-full">
               {editingId ? "Salvar Alterações" : "Criar Cliente"}

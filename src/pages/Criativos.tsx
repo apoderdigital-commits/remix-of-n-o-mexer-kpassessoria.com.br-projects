@@ -45,6 +45,7 @@ export default function Index() {
   const clients = isAdmin ? allClients : allClients?.filter((c: any) => accessibleClientIds.includes(c.id));
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
+  const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient);
   const { sync } = useSyncMeta(activeClient);
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
@@ -251,6 +252,8 @@ export default function Index() {
             salesConsortium={salesConsortium}
             salesFinancing={salesFinancing}
             salesLegacy={salesLegacy}
+            ghlData={ghlData}
+            ghlLoading={ghlLoading}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
