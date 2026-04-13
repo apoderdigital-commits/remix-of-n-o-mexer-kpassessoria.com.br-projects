@@ -114,9 +114,15 @@ Deno.serve(async (req) => {
           limit: "1",
         });
 
-        // Add date filters if provided
-        if (since) params.set("startDate", since);
-        if (until) params.set("endDate", until);
+        // GHL uses "date" for start and "endDate" for end, format: mm-dd-yyyy
+        if (since) {
+          const [y, m, d] = since.split("-");
+          params.set("date", `${m}-${d}-${y}`);
+        }
+        if (until) {
+          const [y, m, d] = until.split("-");
+          params.set("endDate", `${m}-${d}-${y}`);
+        }
 
         const searchRes = await fetch(
           `${GHL_BASE}/opportunities/search?${params.toString()}`,
