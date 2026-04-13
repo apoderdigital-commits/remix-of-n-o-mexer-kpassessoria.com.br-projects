@@ -126,10 +126,6 @@ export default function Index() {
     () => (campaigns || []).reduce((sum, c) => sum + Number(c.amount_spent), 0),
     [campaigns]
   );
-  const cpfApproved = useMemo(
-    () => (leads || []).filter((l) => l.status === "cpf_approved").length,
-    [leads]
-  );
   const salesConsortium = useMemo(
     () => (leads || []).filter((l) => l.status === "sale_consortium").length,
     [leads]
