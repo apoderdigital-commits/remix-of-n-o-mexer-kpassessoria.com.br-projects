@@ -78,8 +78,13 @@ Deno.serve(async (req) => {
     console.log("Pipeline:", pipeline.name, "Stages:", stages.map((s: any) => s.name));
 
     // Categorize stages
-    const cpfAprovadoStageIds: string[] = [];
-    const cpfNaoAprovadoStageIds: string[] = [];
+    // SIMULAÇÃO = CPF Aprovado + CPF Não Aprovado + Proposta Perdida + Vendas Financiamento
+    // CPF APROVADO = CPF Aprovado + Proposta Perdida + Vendas Financiamento
+    // CPF NÃO APROVADO = only CPF Não Aprovado
+    const cpfAprovadoQualificadoIds: string[] = [];
+    const cpfNaoAprovadoIds: string[] = [];
+    const propostaPerdidaIds: string[] = [];
+    const vendasFinancIds: string[] = [];
 
     for (const stage of stages) {
       const name = stage.name.toLowerCase();
@@ -89,18 +94,34 @@ Deno.serve(async (req) => {
         name.includes("nao aprovado") ||
         name.includes("reprovado")
       ) {
-        cpfNaoAprovadoStageIds.push(stage.id);
+        cpfNaoAprovadoIds.push(stage.id);
+      } else if (name.includes("proposta perdida")) {
+        propostaPerdidaIds.push(stage.id);
+      } else if (
+        name.includes("vendas financiamento") ||
+        name.includes("venda financiamento") ||
+        name.includes("à vista") ||
+        name.includes("a vista") ||
+        name.includes("cartão") ||
+        name.includes("cartao")
+      ) {
+        vendasFinancIds.push(stage.id);
       } else if (
         name.includes("qualificado") ||
         name.includes("aprovado")
       ) {
-        cpfAprovadoStageIds.push(stage.id);
+        cpfAprovadoQualificadoIds.push(stage.id);
       }
     }
 
-    const simulacaoStageIds = [...cpfAprovadoStageIds, ...cpfNaoAprovadoStageIds];
+    // Simulação = all that passed CPF analysis
+    const simulacaoStageIds = [...cpfAprovadoQualificadoIds, ...cpfNaoAprovadoIds, ...propostaPerdidaIds, ...vendasFinancIds];
+    // CPF Aprovado = approved + proposta perdida + vendas (they were approved before losing or selling)
+    const cpfAprovadoStageIds = [...cpfAprovadoQualificadoIds, ...propostaPerdidaIds, ...vendasFinancIds];
+    // CPF Não Aprovado = only não aprovado
+    const cpfNaoAprovadoStageIds = [...cpfNaoAprovadoIds];
 
-    console.log("Mapped stages - Aprovado:", cpfAprovadoStageIds, "NaoAprovado:", cpfNaoAprovadoStageIds);
+    console.log("Mapped stages - Simulação:", simulacaoStageIds, "Aprovado:", cpfAprovadoStageIds, "NaoAprovado:", cpfNaoAprovadoStageIds);
     console.log("Date filter:", since, "to", until);
 
     // 2. Count opportunities per stage, with optional date filtering
