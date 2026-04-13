@@ -16,6 +16,7 @@ import {
   useQualifiedLeads,
   useSyncMeta,
   useSyncGoogleSheet,
+  useGhlPipeline,
 } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";

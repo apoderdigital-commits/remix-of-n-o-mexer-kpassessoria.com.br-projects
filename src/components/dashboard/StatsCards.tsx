@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, ShoppingCart, TrendingDown, CreditCard, Handshake } from "lucide-react";
+import { Users, DollarSign, CheckCircle, ShoppingCart, TrendingDown, CreditCard, Handshake, ClipboardCheck, XCircle, BarChart3 } from "lucide-react";
 
 interface StatsCardsProps {
   totalLeads: number;
@@ -8,15 +8,39 @@ interface StatsCardsProps {
   salesConsortium: number;
   salesFinancing: number;
   salesLegacy: number;
+  ghlData?: {
+    simulacoes: number;
+    cpf_aprovado: number;
+    cpf_nao_aprovado: number;
+  } | null;
+  ghlLoading?: boolean;
 }
 
-export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortium, salesFinancing, salesLegacy }: StatsCardsProps) {
+function MetaIndicator({ label, value, target, suffix = "%" }: { label: string; value: number; target: number; suffix?: string }) {
+  const met = value >= target;
+  return (
+    <div className={`text-xs mt-1 font-medium ${met ? "text-green-400" : "text-red-400"}`}>
+      {label}: {value.toFixed(1)}{suffix} {met ? "✅" : "⚠️"} (meta: {target}{suffix})
+    </div>
+  );
+}
+
+export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortium, salesFinancing, salesLegacy, ghlData, ghlLoading }: StatsCardsProps) {
   const totalSales = salesConsortium + salesFinancing + salesLegacy;
   const qualified = cpfApproved + totalSales;
-  const qualificationRate = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) : "0";
   const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
   const costPerQualified = qualified > 0 ? (totalSpent / qualified).toFixed(2) : "—";
   const costPerSale = totalSales > 0 ? (totalSpent / totalSales).toFixed(2) : "—";
+
+  // GHL metrics
+  const simulacoes = ghlData?.simulacoes ?? 0;
+  const ghlAprovado = ghlData?.cpf_aprovado ?? 0;
+  const ghlNaoAprovado = ghlData?.cpf_nao_aprovado ?? 0;
+
+  // Conversion rates
+  const simRate = totalLeads > 0 ? (simulacoes / totalLeads) * 100 : 0;
+  const aprovRate = simulacoes > 0 ? (ghlAprovado / simulacoes) * 100 : 0;
+  const vendasRate = ghlAprovado > 0 ? (totalSales / ghlAprovado) * 100 : 0;
 
   const cards = [
     {
@@ -38,10 +62,24 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       color: "text-fuchsia-400",
     },
     {
-      title: "CPFs Aprovados",
-      value: cpfApproved.toLocaleString("pt-BR"),
+      title: "Simulações",
+      value: ghlLoading ? "..." : simulacoes.toLocaleString("pt-BR"),
+      icon: BarChart3,
+      color: "text-cyan-400",
+      indicator: ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
+    },
+    {
+      title: "CPF Aprovado",
+      value: ghlLoading ? "..." : ghlAprovado.toLocaleString("pt-BR"),
       icon: CheckCircle,
       color: "text-green-400",
+      indicator: ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
+    },
+    {
+      title: "CPF Não Aprovado",
+      value: ghlLoading ? "..." : ghlNaoAprovado.toLocaleString("pt-BR"),
+      icon: XCircle,
+      color: "text-red-400",
     },
     {
       title: "Vendas Consórcio",
@@ -59,7 +97,6 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       title: "Custo / Qualificado",
       value: costPerQualified === "—" ? "—" : `R$ ${costPerQualified}`,
       icon: TrendingDown,
-      subtitle: `Taxa: ${qualificationRate}%`,
       color: "text-violet-300",
     },
     {
@@ -68,11 +105,12 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
       icon: TrendingDown,
       subtitle: `Total: ${totalSales}`,
       color: "text-purple-400",
+      indicator: ghlData ? { label: "Vendas/Aprov", value: vendasRate, target: 20 } : undefined,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
       {cards.map((card) => (
         <Card key={card.title} className="glass-card border-border/50">
           <CardContent className="p-4">
@@ -83,6 +121,9 @@ export function StatsCards({ totalLeads, totalSpent, cpfApproved, salesConsortiu
             <p className="text-xl font-bold">{card.value}</p>
             {card.subtitle && (
               <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+            )}
+            {card.indicator && (
+              <MetaIndicator {...card.indicator} />
             )}
           </CardContent>
         </Card>
