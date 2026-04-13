@@ -65,6 +65,28 @@ export function useSyncMeta(clientId: string | null) {
   return { sync };
 }
 
+export function useGhlPipeline(clientId: string | null) {
+  return useQuery({
+    queryKey: ["ghl_pipeline", clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline", {
+        body: { client_id: clientId },
+      });
+      if (error) throw error;
+      return data as {
+        simulacoes: number;
+        cpf_aprovado: number;
+        cpf_nao_aprovado: number;
+        pipeline_name: string;
+        stages: { id: string; name: string }[];
+      };
+    },
+    enabled: !!clientId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useSyncGoogleSheet(clientId: string | null) {
   const sync = async (since: string, until: string) => {
     if (!clientId) return;
