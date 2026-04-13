@@ -1,39 +1,46 @@
 
 
-## Enviar dados adicionais no webhook WhatsApp
+## Plan: Integração GoHighLevel (GHL) Pipeline na Dashboard
 
 ### Resumo
-Ao clicar no botão WhatsApp, enviar junto com o link e telefone: o período selecionado (de/até), a quantidade e a porcentagem do criativo, e a categoria (CPF/Consórcio/Financiamento).
+Integrar a API do GoHighLevel para puxar contagens de oportunidades por etapa da pipeline, exibindo na dashboard: Simulações, CPF Aprovado, CPF Não Aprovado, com indicadores de % (metas de 60%, 15%, 20%).
 
-### Etapas
+### O que será feito
 
-**1. Passar `since` e `until` para `CreativeRanking`**
-- Adicionar props `since` e `until` no componente
-- No `Criativos.tsx`, passar os valores atuais do filtro de data
+**1. Adicionar campos GHL na tabela `clients`**
+- Migração: adicionar `ghl_api_key` (text) e `ghl_location_id` (text) à tabela `clients`
+- Atualizar o formulário de cadastro de clientes para incluir esses campos
 
-**2. Passar dados do criativo na chamada `handleSendWhatsApp`**
-- Alterar para enviar também `count`, `percentage`, `category`, `since`, `until`
-- Atualizar a invocação da edge function para incluir esses campos no body
+**2. Criar Edge Function `fetch-ghl-pipeline`**
+- Recebe `client_id` como parâmetro
+- Busca `ghl_api_key` e `ghl_location_id` do cliente no banco
+- Chama `GET https://services.leadconnectorhq.com/opportunities/pipelines` para listar pipelines/stages
+- Chama `POST https://services.leadconnectorhq.com/opportunities/search` para contar oportunidades por stage
+- Retorna contagens: simulações, cpf_aprovado, cpf_nao_aprovado
 
-**3. Atualizar edge function `send-creative-whatsapp`**
-- Receber os novos campos: `period_since`, `period_until`, `count`, `percentage`, `category`
-- Repassar tudo no POST para o webhook do n8n
+**3. Atualizar a Dashboard (StatsCards)**
+- Adicionar novos cards: Simulações, CPF Aprovado (GHL), CPF Não Aprovado
+- Adicionar indicadores visuais de % com metas:
+  - Simulações / Leads Totais ≥ 60%
+  - CPF Aprovado / Simulações ≥ 15%  
+  - Vendas / CPF Aprovado ≥ 20%
+- Verde se atingiu a meta, vermelho se não
 
-### Payload final enviado ao n8n
-```json
-{
-  "phone": "5581999999999",
-  "user_name": "João Silva",
-  "creative_url": "https://...",
-  "period_since": "2026-03-13",
-  "period_until": "2026-04-12",
-  "category": "cpf",
-  "count": 15,
-  "percentage": 42.5
-}
-```
+**4. Configuração inicial de teste**
+- Salvar a API key (`pit-8883ff43-...`) e location ID (`T6S5cO1s72adtbDovjdX`) no cliente "Shineray Porto Velho" para validar
 
-### O que NÃO muda
-- Rankings, filtros e dados existentes
-- Fluxo de autenticação e busca de telefone do usuário
+### Detalhes técnicos
+
+- **API GHL v2**: Base URL `https://services.leadconnectorhq.com`, autenticação via header `Authorization: Bearer {api_key}`, header `Version: 2021-07-28`
+- A API key será armazenada no banco (campo da tabela clients), não como secret global, pois cada cliente tem sua própria key
+- A edge function faz a chamada server-side para não expor a key
+- Os nomes das stages serão mapeados por correspondência parcial (ex: "CPF Aprovado" → stage que contém "aprovado/qualificado")
+
+### Arquivos afetados
+- `supabase/migrations/` — nova migração (campos GHL)
+- `supabase/functions/fetch-ghl-pipeline/index.ts` — nova edge function
+- `src/hooks/useDashboardData.ts` — novo hook para dados GHL
+- `src/components/dashboard/StatsCards.tsx` — novos cards + indicadores de %
+- `src/pages/Clients.tsx` — campos GHL no formulário
+- `src/pages/Criativos.tsx` — integrar dados GHL
 
