@@ -39,19 +39,30 @@ function normalizeInstagramUrl(url: string): string {
 
 /**
  * Facebook plugin requires canonical www.facebook.com URLs.
- * Converts m.facebook.com → www.facebook.com, strips tracking params,
- * and tries to resolve common shortlink patterns.
+ * Converts /story.php?story_fbid=X&id=Y → /{id}/posts/{X} (the format the plugin accepts),
+ * normalizes m.facebook.com → www.facebook.com, and strips tracking params.
  */
 function normalizeFacebookUrl(url: string): string {
   try {
     const u = new URL(url);
     // Force www subdomain
-    if (u.hostname === "m.facebook.com" || u.hostname === "mobile.facebook.com") {
+    if (
+      u.hostname === "m.facebook.com" ||
+      u.hostname === "mobile.facebook.com" ||
+      u.hostname === "facebook.com"
+    ) {
       u.hostname = "www.facebook.com";
     }
-    if (u.hostname === "facebook.com") {
-      u.hostname = "www.facebook.com";
+
+    // Convert /story.php?story_fbid=X&id=Y → /{id}/posts/{X} (canonical post URL)
+    if (u.pathname === "/story.php" || u.pathname === "/story_fbid.php") {
+      const storyFbid = u.searchParams.get("story_fbid");
+      const pageId = u.searchParams.get("id");
+      if (storyFbid && pageId) {
+        return `https://www.facebook.com/${pageId}/posts/${storyFbid}`;
+      }
     }
+
     // Strip tracking parameters that confuse the plugin
     const allowedParams = ["v", "story_fbid", "id", "fbid"];
     const newSearch = new URLSearchParams();

@@ -19,16 +19,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Follow redirects and fetch the page HTML
+    // Use a real browser User-Agent so Facebook doesn't bounce us to /login
     const res = await fetch(url, {
       redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Lovable/1.0; +https://lovable.dev)",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept":
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
       },
     });
 
     const html = await res.text();
-    const finalUrl = res.url;
+    let finalUrl = res.url;
+
+    // If Facebook bounced us to a login page, extract the real URL from ?next=
+    try {
+      const u = new URL(finalUrl);
+      if (
+        (u.hostname.includes("facebook.com") || u.hostname.includes("fb.com")) &&
+        u.pathname.startsWith("/login")
+      ) {
+        const next = u.searchParams.get("next");
+        if (next) {
+          finalUrl = decodeURIComponent(next);
+        }
+      }
+    } catch {
+      // ignore
+    }
 
     // Extract og:image
     let ogImage: string | null = null;
