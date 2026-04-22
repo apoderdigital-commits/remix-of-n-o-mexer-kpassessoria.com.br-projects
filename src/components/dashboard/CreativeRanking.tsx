@@ -141,110 +141,132 @@ function FullRankingContent({
         </div>
       )}
 
-      <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={top10} layout="vertical" margin={{ left: 0, right: 16 }}>
-            <XAxis type="number" hide />
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={120}
-              tick={{ fill: "hsl(210 40% 98%)", fontSize: 11 }}
-              tickFormatter={(v) => {
-                if (isUrl(v)) return shortenUrl(v);
-                return v.length > 18 ? v.slice(0, 18) + "…" : v;
-              }}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(222 40% 10%)",
-                border: "1px solid hsl(222 30% 20%)",
-                borderRadius: 8,
-                color: "hsl(210 40% 98%)",
-              }}
-              formatter={(value: number) => [value, "Quantidade"]}
-            />
-            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-              {top10.map((_, i) => (
-                <Cell key={i} fill={color} fillOpacity={1 - i * 0.07} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {showChart && (
+        <div className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={visibleRows} layout="vertical" margin={{ left: 0, right: 16 }}>
+              <XAxis type="number" hide />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={120}
+                tick={{ fill: "hsl(210 40% 98%)", fontSize: 11 }}
+                tickFormatter={(v) => {
+                  if (isUrl(v)) return shortenUrl(v);
+                  return v.length > 18 ? v.slice(0, 18) + "…" : v;
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(222 40% 10%)",
+                  border: "1px solid hsl(222 30% 20%)",
+                  borderRadius: 8,
+                  color: "hsl(210 40% 98%)",
+                }}
+                formatter={(value: number) => [value, "Quantidade"]}
+              />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                {visibleRows.map((_, i) => (
+                  <Cell key={i} fill={color} fillOpacity={1 - i * 0.07} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow className="border-border/30">
-            <TableHead className="text-muted-foreground">#</TableHead>
+            <TableHead className="text-muted-foreground w-12">#</TableHead>
             <TableHead className="text-muted-foreground">Criativo</TableHead>
             <TableHead className="text-right text-muted-foreground">Qtd</TableHead>
             <TableHead className="text-right text-muted-foreground">%</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {top10.map((item, i) => (
-            <TableRow key={item.name} className="border-border/20">
-              <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-              <TableCell className="font-medium max-w-[200px]">
-                <div className="flex items-center gap-1">
-                  {isUrl(item.name) ? (
-                    <>
-                      <button
-                        onClick={() => handlePreview(item.name)}
-                        className={`text-left text-primary hover:underline truncate flex-1 ${
-                          previewUrl === item.name ? "underline" : ""
-                        }`}
-                        title={item.name}
-                      >
-                        {shortenUrl(item.name)}
-                      </button>
-                      <button
-                        onClick={() => {
-                          window.open(item.name, "_blank", "noopener,noreferrer");
-                        }}
-                        className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
-                        title="Abrir em nova aba"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(item.name);
-                          toast.success("Link copiado!");
-                        }}
-                        className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
-                        title="Copiar link"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
-                      {clientId && (
-                        <button
-                          onClick={() => handleSendWhatsApp(item.name)}
-                          disabled={sendingUrl === item.name}
-                          className="flex-shrink-0 p-1 rounded hover:bg-green-500/20 text-green-500 hover:text-green-400 transition-colors disabled:opacity-50"
-                          title="Enviar no WhatsApp"
-                        >
-                          {sendingUrl === item.name ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <MessageCircle className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                    </>
+          {visibleRows.map((item, i) => {
+            const medal = medalFor(i);
+            return (
+              <TableRow key={item.name} className="border-border/20">
+                <TableCell className="text-muted-foreground">
+                  {medal ? (
+                    <span className="text-xl leading-none" title={`${i + 1}º lugar`}>{medal}</span>
                   ) : (
-                    <span className="truncate block">{item.name}</span>
+                    i + 1
                   )}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">{item.count}</TableCell>
-              <TableCell className="text-right text-muted-foreground">
-                {item.percentage.toFixed(1)}%
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell className="font-medium max-w-[200px]">
+                  <div className="flex items-center gap-1">
+                    {isUrl(item.name) ? (
+                      <>
+                        <button
+                          onClick={() => handlePreview(item.name)}
+                          className={`text-left text-primary hover:underline truncate flex-1 ${
+                            previewUrl === item.name ? "underline" : ""
+                          }`}
+                          title={item.name}
+                        >
+                          {shortenUrl(item.name)}
+                        </button>
+                        <button
+                          onClick={() => {
+                            window.open(item.name, "_blank", "noopener,noreferrer");
+                          }}
+                          className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Abrir em nova aba"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(item.name);
+                            toast.success("Link copiado!");
+                          }}
+                          className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Copiar link"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        {clientId && (
+                          <button
+                            onClick={() => handleSendWhatsApp(item.name)}
+                            disabled={sendingUrl === item.name}
+                            className="flex-shrink-0 p-1 rounded hover:bg-green-500/20 text-green-500 hover:text-green-400 transition-colors disabled:opacity-50"
+                            title="Enviar no WhatsApp"
+                          >
+                            {sendingUrl === item.name ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="truncate block">{item.name}</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">{item.count}</TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {item.percentage.toFixed(1)}%
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
+
+      {hasMore && onShowAll && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onShowAll}
+          className="w-full gap-2 text-xs border-border/40 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+        >
+          <Plus className="h-3.5 w-3.5" /> Ver todos os {top10.length} criativos
+        </Button>
+      )}
     </div>
   );
 }
