@@ -437,9 +437,35 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
           clientId={clientId}
           sendingUrl={sendingUrl}
           handleSendWhatsApp={handleSendWhatsApp}
+          maxRows={3}
+          onShowAll={() => setShowAllOpen(true)}
         />
       </CardContent>
     </Card>
+
+    <Dialog open={showAllOpen} onOpenChange={setShowAllOpen}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base">{title} — Todos os criativos</DialogTitle>
+        </DialogHeader>
+        <FullRankingContent
+          top10={top10}
+          color={color}
+          preview={preview}
+          previewLoading={previewLoading}
+          previewUrl={previewUrl}
+          setPreview={setPreview}
+          setPreviewUrl={setPreviewUrl}
+          handlePreview={handlePreview}
+          isUrl={isUrl}
+          shortenUrl={shortenUrl}
+          clientId={clientId}
+          sendingUrl={sendingUrl}
+          handleSendWhatsApp={handleSendWhatsApp}
+          showChart={false}
+        />
+      </DialogContent>
+    </Dialog>
     <CreativePreviewDialog url={popupUrl} open={popupOpen} onOpenChange={setPopupOpen} />
     </>
   );
