@@ -43,7 +43,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
