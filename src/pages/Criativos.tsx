@@ -346,36 +346,43 @@ export default function Index() {
             planilhaCpfApproved={planilhaCpfApproved}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
+            onScrollTo={handleScrollToRanking}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <CreativeRanking
-              title="🏆 Criativos por CPF Aprovado"
-              data={cpfRanking}
-              color="hsl(263, 50%, 68%)"
-              category="cpf"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
-            <CreativeRanking
-              title="🤝 Criativos por Venda Consórcio"
-              data={consortiumRanking}
-              color="hsl(210, 70%, 58%)"
-              category="consortium"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
-            <CreativeRanking
-              title="💳 Criativos por Venda Financiamento"
-              data={financingRanking}
-              color="hsl(35, 80%, 55%)"
-              category="financing"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
+            <div ref={rankingRefs.cpf} className="rounded-xl">
+              <CreativeRanking
+                title="🏆 Criativos por CPF Aprovado"
+                data={cpfRanking}
+                color="hsl(263, 50%, 68%)"
+                category="cpf"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
+            <div ref={rankingRefs.consortium} className="rounded-xl">
+              <CreativeRanking
+                title="🤝 Criativos por Venda Consórcio"
+                data={consortiumRanking}
+                color="hsl(210, 70%, 58%)"
+                category="consortium"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
+            <div ref={rankingRefs.financing} className="rounded-xl">
+              <CreativeRanking
+                title="💳 Criativos por Venda Financiamento"
+                data={financingRanking}
+                color="hsl(35, 80%, 55%)"
+                category="financing"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
           </div>
 
           <EvolutionChart data={evolutionData} />
