@@ -376,6 +376,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
 
   // Desktop: full view
   return (
+    <>
     <Card className="glass-card border-border/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
@@ -406,5 +407,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
         />
       </CardContent>
     </Card>
+    <CreativePreviewDialog url={popupUrl} open={popupOpen} onOpenChange={setPopupOpen} />
+    </>
   );
 }
