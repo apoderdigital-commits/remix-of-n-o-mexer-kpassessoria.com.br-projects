@@ -103,6 +103,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-green-400",
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
+      scrollTarget: "cpf" as const,
     },
     // Row 2 - Results
     {
