@@ -280,6 +280,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
   const [sendingUrl, setSendingUrl] = useState<string | null>(null);
   const [popupUrl, setPopupUrl] = useState<string | null>(null);
   const [popupOpen, setPopupOpen] = useState(false);
+  const [showAllOpen, setShowAllOpen] = useState(false);
 
   const handleSendWhatsApp = async (creativeUrl: string) => {
     const item = top10.find(d => d.name === creativeUrl);
