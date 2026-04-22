@@ -257,6 +257,7 @@ function FullRankingContent({
           })}
         </TableBody>
       </Table>
+      </div>
 
       {hasMore && onShowAll && (
         <Button
