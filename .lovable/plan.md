@@ -1,40 +1,67 @@
 
 
-## Plano: Reorganizar Stats Cards com Clareza e Contagem de Criativos
+## Plano: Visualizar criativo em popup interno (sem sair da página)
 
-### Problema
-Os cards estão misturando dados de fontes diferentes (Meta, Planilha, GHL) sem clareza. O usuário quer uma ordem lógica e adicionar contagens de criativos únicos que trouxeram CPFs aprovados e vendas.
+### Objetivo
+Ao clicar no link de um criativo no ranking, abrir um modal dentro da própria página mostrando o conteúdo do criativo (Instagram/Facebook), em vez de abrir nova aba.
 
-### Nova ordem dos cards (2 linhas de 5)
+### Limitação técnica importante
+Instagram e Facebook **bloqueiam embed via `<iframe>`** com headers `X-Frame-Options: DENY` e `Content-Security-Policy: frame-ancestors`. Não dá para simplesmente carregar `instagram.com/p/...` num iframe — vai aparecer em branco ou com erro.
 
-**Linha 1 — Funil de aquisição:**
-1. Investimento (Meta)
-2. Total de Leads (Meta)
-3. Custo / Lead (Meta)
-4. Simulações (GHL) — indicador Sim/Leads ≥ 60%
-5. CPF Aprovado (GHL) — indicador Aprov/Sim ≥ 15%
+### Solução: Modal com oEmbed + fallback
 
-**Linha 2 — Resultados:**
-6. CPF Não Aprovado (GHL)
-7. Vendas Financiamento (Planilha) — indicador Fin/Aprov ≥ 20%
-8. Vendas Consórcio (Planilha)
-9. Criativos com CPF Aprovado (Planilha) — quantidade de criativos únicos
-10. Criativos com Vendas (Planilha) — quantidade de criativos únicos (financiamento + consórcio)
+Usar a estratégia certa para cada plataforma:
 
-### Alterações técnicas
+**Instagram (`instagram.com/p/...` ou `instagr.am`):**
+- Usar o **oEmbed oficial do Instagram** via edge function (precisa de access token do Facebook Graph API) OU
+- Usar o **blockquote embed público** do Instagram (`//www.instagram.com/embed.js`) — funciona sem token, renderiza o post completo dentro do modal
 
-**`src/pages/Criativos.tsx`**
-- Calcular `uniqueCreativesCpf` = número de criativos únicos com status `cpf_approved`
-- Calcular `uniqueCreativesSales` = número de criativos únicos com status `sale_financing` ou `sale_consortium`
-- Passar esses valores para `StatsCards`
+**Facebook (`fb.me/...`, `facebook.com/...`):**
+- Usar o **Facebook Plugin** (`https://www.facebook.com/plugins/post.php?href=...`) que é embed-friendly via iframe
+- Para `fb.me/...` (link curto), primeiro resolver o redirect via edge function `unfurl-url` (já existe no projeto) para pegar a URL final
 
-**`src/components/dashboard/StatsCards.tsx`**
-- Adicionar props `uniqueCreativesCpf` e `uniqueCreativesSales`
-- Reorganizar os cards na ordem acima
-- Adicionar 2 novos cards com ícone de imagem/criativo
-- Remover card "Custo / Qualificado" e "Custo / Venda" para dar espaço (ou manter se couber)
+**Outros links:**
+- Mostrar preview com `og:image` + título (já temos `unfurl-url`) e botão "Abrir em nova aba"
+
+### Componentes a criar
+
+**1. `src/components/dashboard/CreativePreviewDialog.tsx`** (novo)
+- Recebe `url`, `open`, `onOpenChange`
+- Detecta plataforma pela URL (instagram / facebook / outro)
+- Renderiza:
+  - **Instagram**: `<blockquote class="instagram-media" data-instgrm-permalink={url}>` + carrega `embed.js` dinamicamente e chama `window.instgrm.Embeds.process()`
+  - **Facebook**: `<iframe src="https://www.facebook.com/plugins/post.php?href={encoded}&show_text=true&width=500">`
+  - **Fallback**: card com preview do `unfurl-url` + link externo
+- Usa o `Dialog` do shadcn já presente no projeto
+
+**2. Alterar `src/components/dashboard/CreativeRanking.tsx`**
+- Trocar `<a href={url} target="_blank">` por `<button onClick={() => setPreviewUrl(url)}>`
+- Manter o ícone visual, mas adicionar pequeno botão "abrir externo" ao lado para quem quiser nova aba
+- Renderizar o `<CreativePreviewDialog>` no final do componente
+
+### Fluxo do usuário
+```text
+Click no link "www.instagram.../p/DWO5..."
+  ↓
+Abre Dialog (modal centralizado, ~600px largura)
+  ↓
+Instagram: blockquote oficial renderiza o post (foto/vídeo/carrossel + caption)
+Facebook: iframe do plugin renderiza o post
+  ↓
+Botões no header do modal: "Abrir original ↗" + "Fechar X"
+```
+
+### Detalhes técnicos
+
+- **Script do Instagram**: carregar `https://www.instagram.com/embed.js` apenas uma vez no app (verificar `window.instgrm`); chamar `window.instgrm.Embeds.process()` toda vez que abrir o modal
+- **Normalização de URL Instagram**: garantir que termina sem query string e tem `/` final para o embed funcionar
+- **fb.me redirect**: usar `supabase.functions.invoke('unfurl-url', { body: { url } })` para obter `finalUrl`, depois passar para o iframe do plugin
+- **Loading state**: mostrar skeleton enquanto o embed carrega
+- **Mobile**: Dialog já é responsivo; ajustar `max-w-[90vw]` em telas pequenas
+- **Sem novas dependências** — tudo com componentes/edge functions existentes
 
 ### Arquivos afetados
-- `src/components/dashboard/StatsCards.tsx` — reorganizar cards, adicionar novos
-- `src/pages/Criativos.tsx` — calcular criativos únicos e passar como props
+- `src/components/dashboard/CreativePreviewDialog.tsx` — novo
+- `src/components/dashboard/CreativeRanking.tsx` — trocar link por botão que abre o dialog
+- (Opcional) `index.html` — pré-carregar `instagram.com/embed.js` para acelerar primeira abertura
 
