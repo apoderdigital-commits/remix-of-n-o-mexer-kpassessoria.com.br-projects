@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight, MessageCircle, Loader2 } from "lucide-react";
+import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight, MessageCircle, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreativeGuideButton } from "./CreativeGuideButton";
