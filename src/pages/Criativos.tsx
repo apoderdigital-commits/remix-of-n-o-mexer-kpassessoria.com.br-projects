@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown } from "lucide-react";
@@ -31,6 +31,23 @@ export default function Index() {
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
   const [syncingGhl, setSyncingGhl] = useState(false);
+
+  const rankingRefs = {
+    cpf: useRef<HTMLDivElement>(null),
+    consortium: useRef<HTMLDivElement>(null),
+    financing: useRef<HTMLDivElement>(null),
+  };
+
+  const handleScrollToRanking = (target: "cpf" | "consortium" | "financing") => {
+    const el = rankingRefs[target].current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove("ranking-highlight");
+    // force reflow to restart animation
+    void el.offsetWidth;
+    el.classList.add("ranking-highlight");
+    window.setTimeout(() => el.classList.remove("ranking-highlight"), 1700);
+  };
 
   // Determine active client
   const activeClient = isAdmin ? selectedClient : (selectedClient || accessibleClientIds[0] || authClientId);
@@ -329,36 +346,43 @@ export default function Index() {
             planilhaCpfApproved={planilhaCpfApproved}
             ghlData={ghlData}
             ghlLoading={ghlLoading}
+            onScrollTo={handleScrollToRanking}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <CreativeRanking
-              title="🏆 Criativos por CPF Aprovado"
-              data={cpfRanking}
-              color="hsl(263, 50%, 68%)"
-              category="cpf"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
-            <CreativeRanking
-              title="🤝 Criativos por Venda Consórcio"
-              data={consortiumRanking}
-              color="hsl(210, 70%, 58%)"
-              category="consortium"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
-            <CreativeRanking
-              title="💳 Criativos por Venda Financiamento"
-              data={financingRanking}
-              color="hsl(35, 80%, 55%)"
-              category="financing"
-              clientId={activeClient}
-              since={since}
-              until={until}
-            />
+            <div ref={rankingRefs.cpf} className="rounded-xl">
+              <CreativeRanking
+                title="🏆 Criativos por CPF Aprovado"
+                data={cpfRanking}
+                color="hsl(263, 50%, 68%)"
+                category="cpf"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
+            <div ref={rankingRefs.consortium} className="rounded-xl">
+              <CreativeRanking
+                title="🤝 Criativos por Venda Consórcio"
+                data={consortiumRanking}
+                color="hsl(210, 70%, 58%)"
+                category="consortium"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
+            <div ref={rankingRefs.financing} className="rounded-xl">
+              <CreativeRanking
+                title="💳 Criativos por Venda Financiamento"
+                data={financingRanking}
+                color="hsl(35, 80%, 55%)"
+                category="financing"
+                clientId={activeClient}
+                since={since}
+                until={until}
+              />
+            </div>
           </div>
 
           <EvolutionChart data={evolutionData} />

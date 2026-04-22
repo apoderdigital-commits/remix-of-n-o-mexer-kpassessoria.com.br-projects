@@ -16,6 +16,7 @@ interface StatsCardsProps {
     cpf_nao_aprovado: number;
   } | null;
   ghlLoading?: boolean;
+  onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
 }
 
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
@@ -42,7 +43,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
@@ -102,6 +103,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-green-400",
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
+      scrollTarget: "cpf" as const,
     },
     // Row 2 - Results
     {
@@ -119,6 +121,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-amber-400",
       subtitle: "Planilha",
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
+      scrollTarget: "financing" as const,
     },
     {
       title: "Vendas Consórcio",
@@ -126,6 +129,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: Handshake,
       color: "text-blue-400",
       subtitle: "Planilha",
+      scrollTarget: "consortium" as const,
     },
     {
       title: "Criativos c/ CPF Aprov.",
@@ -145,29 +149,51 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
-      {cards.map((card) => (
-        <Card key={card.title} className="glass-card border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-              <span className="text-xs text-muted-foreground">{card.title}</span>
-            </div>
-            <p className="text-xl font-bold">{card.value}</p>
-            {card.sourceToggle && (
-              <SourceToggle {...card.sourceToggle} />
-            )}
-            {card.subtitle && !card.sourceToggle && (
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{card.subtitle}</p>
-            )}
-            {card.note && (
-              <p className="text-[10px] text-muted-foreground/50 mt-0.5 italic">{card.note}</p>
-            )}
-            {card.indicator && (
-              <MetaIndicator {...card.indicator} />
-            )}
-          </CardContent>
-        </Card>
-      ))}
+      {cards.map((card) => {
+        const clickable = !!(card as any).scrollTarget && !!onScrollTo;
+        return (
+          <Card
+            key={card.title}
+            onClick={clickable ? () => onScrollTo!((card as any).scrollTarget) : undefined}
+            role={clickable ? "button" : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            onKeyDown={clickable ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onScrollTo!((card as any).scrollTarget);
+              }
+            } : undefined}
+            className={`glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
+              clickable ? "cursor-pointer hover:bg-primary/5" : ""
+            }`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <card.icon className={`h-4 w-4 ${card.color} transition-transform duration-300 group-hover:scale-110`} />
+                <span className="text-xs text-muted-foreground">{card.title}</span>
+              </div>
+              <p className="text-xl font-bold">{card.value}</p>
+              {card.sourceToggle && (
+                <SourceToggle {...card.sourceToggle} />
+              )}
+              {card.subtitle && !card.sourceToggle && (
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{card.subtitle}</p>
+              )}
+              {card.note && (
+                <p className="text-[10px] text-muted-foreground/50 mt-0.5 italic">{card.note}</p>
+              )}
+              {card.indicator && (
+                <MetaIndicator {...card.indicator} />
+              )}
+              {clickable && (
+                <p className="text-[10px] text-primary/70 mt-1.5 font-medium">
+                  Clique para ver os criativos →
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
