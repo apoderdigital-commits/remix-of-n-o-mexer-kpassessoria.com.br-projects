@@ -121,6 +121,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-amber-400",
       subtitle: "Planilha",
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
+      scrollTarget: "financing" as const,
     },
     {
       title: "Vendas Consórcio",
@@ -128,6 +129,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: Handshake,
       color: "text-blue-400",
       subtitle: "Planilha",
+      scrollTarget: "consortium" as const,
     },
     {
       title: "Criativos c/ CPF Aprov.",
