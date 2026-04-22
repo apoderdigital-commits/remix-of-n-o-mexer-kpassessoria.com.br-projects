@@ -190,6 +190,15 @@ function FullRankingContent({
                       </button>
                       <button
                         onClick={() => {
+                          window.open(item.name, "_blank", "noopener,noreferrer");
+                        }}
+                        className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Abrir em nova aba"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
                           navigator.clipboard.writeText(item.name);
                           toast.success("Link copiado!");
                         }}
