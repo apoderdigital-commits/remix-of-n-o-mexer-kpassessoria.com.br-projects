@@ -16,6 +16,7 @@ interface StatsCardsProps {
     cpf_nao_aprovado: number;
   } | null;
   ghlLoading?: boolean;
+  onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
 }
 
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
