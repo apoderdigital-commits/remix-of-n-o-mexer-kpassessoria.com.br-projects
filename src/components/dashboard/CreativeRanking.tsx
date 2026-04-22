@@ -9,6 +9,7 @@ import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight, Messag
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreativeGuideButton } from "./CreativeGuideButton";
+import { CreativePreviewDialog } from "./CreativePreviewDialog";
 const PREVIEW_TIMEOUT_MS = 10000;
 
 function supportsUrlPreview(url: string) {
@@ -189,6 +190,15 @@ function FullRankingContent({
                       </button>
                       <button
                         onClick={() => {
+                          window.open(item.name, "_blank", "noopener,noreferrer");
+                        }}
+                        className="flex-shrink-0 p-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Abrir em nova aba"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
                           navigator.clipboard.writeText(item.name);
                           toast.success("Link copiado!");
                         }}
@@ -236,6 +246,8 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sendingUrl, setSendingUrl] = useState<string | null>(null);
+  const [popupUrl, setPopupUrl] = useState<string | null>(null);
+  const [popupOpen, setPopupOpen] = useState(false);
 
   const handleSendWhatsApp = async (creativeUrl: string) => {
     const item = top10.find(d => d.name === creativeUrl);
@@ -264,39 +276,9 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
     }
   };
 
-  const handlePreview = async (url: string) => {
-    if (previewUrl === url) {
-      setPreview(null);
-      setPreviewUrl(null);
-      return;
-    }
-
-    if (!supportsUrlPreview(url)) {
-      setPreviewUrl(url);
-      setPreview({ image: null, title: null, finalUrl: url });
-      return;
-    }
-
-    setPreviewLoading(true);
-    setPreviewUrl(url);
-
-    try {
-      const invokePromise = supabase.functions.invoke("unfurl-url", {
-        body: { url },
-      });
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error("preview-timeout")), PREVIEW_TIMEOUT_MS);
-      });
-
-      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
-      if (error) throw error;
-      setPreview(data as PreviewData);
-    } catch {
-      setPreview({ image: null, title: null, finalUrl: url });
-    } finally {
-      setPreviewLoading(false);
-    }
+  const handlePreview = (url: string) => {
+    setPopupUrl(url);
+    setPopupOpen(true);
   };
 
   const isUrl = (name: string) => name.startsWith("http");
@@ -330,6 +312,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
   // Mobile: compact card with winner + dialog
   if (isMobile) {
     return (
+      <>
       <Card className="glass-card border-border/50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
@@ -386,11 +369,14 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
           </div>
         </CardContent>
       </Card>
+      <CreativePreviewDialog url={popupUrl} open={popupOpen} onOpenChange={setPopupOpen} />
+      </>
     );
   }
 
   // Desktop: full view
   return (
+    <>
     <Card className="glass-card border-border/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
@@ -421,5 +407,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
         />
       </CardContent>
     </Card>
+    <CreativePreviewDialog url={popupUrl} open={popupOpen} onOpenChange={setPopupOpen} />
+    </>
   );
 }
