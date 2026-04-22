@@ -276,39 +276,9 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
     }
   };
 
-  const handlePreview = async (url: string) => {
-    if (previewUrl === url) {
-      setPreview(null);
-      setPreviewUrl(null);
-      return;
-    }
-
-    if (!supportsUrlPreview(url)) {
-      setPreviewUrl(url);
-      setPreview({ image: null, title: null, finalUrl: url });
-      return;
-    }
-
-    setPreviewLoading(true);
-    setPreviewUrl(url);
-
-    try {
-      const invokePromise = supabase.functions.invoke("unfurl-url", {
-        body: { url },
-      });
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error("preview-timeout")), PREVIEW_TIMEOUT_MS);
-      });
-
-      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
-      if (error) throw error;
-      setPreview(data as PreviewData);
-    } catch {
-      setPreview({ image: null, title: null, finalUrl: url });
-    } finally {
-      setPreviewLoading(false);
-    }
+  const handlePreview = (url: string) => {
+    setPopupUrl(url);
+    setPopupOpen(true);
   };
 
   const isUrl = (name: string) => name.startsWith("http");
