@@ -62,6 +62,9 @@ function FullRankingContent({
   clientId,
   sendingUrl,
   handleSendWhatsApp,
+  maxRows,
+  onShowAll,
+  showChart = true,
 }: {
   top10: CreativeData[];
   color: string;
@@ -76,7 +79,14 @@ function FullRankingContent({
   clientId?: string | null;
   sendingUrl: string | null;
   handleSendWhatsApp: (url: string) => void;
+  maxRows?: number;
+  onShowAll?: () => void;
+  showChart?: boolean;
 }) {
+  const visibleRows = maxRows ? top10.slice(0, maxRows) : top10;
+  const hasMore = maxRows ? top10.length > maxRows : false;
+  const medalFor = (i: number) =>
+    i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
   return (
     <div className="space-y-4">
       {/* Preview panel */}
