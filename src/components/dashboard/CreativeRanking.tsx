@@ -9,6 +9,7 @@ import { ExternalLink, X, Image as ImageIcon, Copy, Trophy, ChevronRight, Messag
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreativeGuideButton } from "./CreativeGuideButton";
+import { CreativePreviewDialog } from "./CreativePreviewDialog";
 const PREVIEW_TIMEOUT_MS = 10000;
 
 function supportsUrlPreview(url: string) {
