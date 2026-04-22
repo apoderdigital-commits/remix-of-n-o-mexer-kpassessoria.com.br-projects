@@ -32,6 +32,23 @@ export default function Index() {
   const [syncingSheet, setSyncingSheet] = useState(false);
   const [syncingGhl, setSyncingGhl] = useState(false);
 
+  const rankingRefs = {
+    cpf: useRef<HTMLDivElement>(null),
+    consortium: useRef<HTMLDivElement>(null),
+    financing: useRef<HTMLDivElement>(null),
+  };
+
+  const handleScrollToRanking = (target: "cpf" | "consortium" | "financing") => {
+    const el = rankingRefs[target].current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove("ranking-highlight");
+    // force reflow to restart animation
+    void el.offsetWidth;
+    el.classList.add("ranking-highlight");
+    window.setTimeout(() => el.classList.remove("ranking-highlight"), 1700);
+  };
+
   // Determine active client
   const activeClient = isAdmin ? selectedClient : (selectedClient || accessibleClientIds[0] || authClientId);
 
