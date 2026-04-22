@@ -174,6 +174,7 @@ function FullRankingContent({
           </ResponsiveContainer>
         </div>
       )}
+      <div className="[&>div]:overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="border-border/30">
