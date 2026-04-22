@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown } from "lucide-react";
