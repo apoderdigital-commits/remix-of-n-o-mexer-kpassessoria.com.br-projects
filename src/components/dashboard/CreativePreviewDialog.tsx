@@ -216,15 +216,15 @@ export function CreativePreviewDialog({ url, open, onOpenChange }: CreativePrevi
 
             {!loading && resolvedUrl && platform === "facebook" && (
               <div className="space-y-3">
-                <div className="rounded-lg overflow-hidden border border-border/30 bg-white">
+                <div className="rounded-lg overflow-hidden border border-border/30 bg-white flex justify-center">
                   <iframe
                     key={resolvedUrl}
                     src={`https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(
                       resolvedUrl
                     )}&show_text=true&width=540`}
-                    width="100%"
-                    height="600"
-                    style={{ border: "none", overflow: "hidden", display: "block" }}
+                    width="540"
+                    height="780"
+                    style={{ border: "none", overflow: "hidden", display: "block", maxWidth: "100%" }}
                     scrolling="no"
                     frameBorder="0"
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
