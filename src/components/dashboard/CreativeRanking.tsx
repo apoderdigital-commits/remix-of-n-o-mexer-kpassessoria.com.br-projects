@@ -312,6 +312,7 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
   // Mobile: compact card with winner + dialog
   if (isMobile) {
     return (
+      <>
       <Card className="glass-card border-border/50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
@@ -368,6 +369,8 @@ export function CreativeRanking({ title, data, color, category, clientId, since,
           </div>
         </CardContent>
       </Card>
+      <CreativePreviewDialog url={popupUrl} open={popupOpen} onOpenChange={setPopupOpen} />
+      </>
     );
   }
 
