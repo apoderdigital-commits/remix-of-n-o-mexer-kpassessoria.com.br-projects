@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useClients } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -68,6 +68,55 @@ export default function Clients() {
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Trash state
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [purgeConfirmText, setPurgeConfirmText] = useState("");
+
+  // Trash query (admins only via RLS)
+  const { data: trashedClients, refetch: refetchTrash } = useQuery({
+    queryKey: ["clients_trash"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, meta_account_id, deleted_at, created_at")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const handleRestore = async (id: string, name: string) => {
+    const { error } = await supabase
+      .from("clients")
+      .update({ deleted_at: null })
+      .eq("id", id);
+    if (error) { toast.error("Erro ao restaurar: " + error.message); return; }
+    toast.success(`"${name}" restaurado`);
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+    refetchTrash();
+  };
+
+  const confirmPurge = async () => {
+    if (!purgeTarget) return;
+    if (purgeConfirmText.trim().toLowerCase() !== "excluir") {
+      toast.error('Digite "excluir" para confirmar');
+      return;
+    }
+    const { error } = await supabase.from("clients").delete().eq("id", purgeTarget.id);
+    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
+    toast.success(`"${purgeTarget.name}" excluído definitivamente`);
+    setPurgeTarget(null);
+    setPurgeConfirmText("");
+    refetchTrash();
+  };
+
+  const daysLeft = (deletedAt: string) => {
+    const ms = new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now();
+    return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+  };
 
   const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -137,10 +186,15 @@ export default function Clients() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    const { error } = await supabase.from("clients").delete().eq("id", deleteTarget.id);
+    // Soft delete: send to trash (auto-purge after 30 days)
+    const { error } = await supabase
+      .from("clients")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", deleteTarget.id);
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`Cliente "${deleteTarget.name}" excluído`);
+    toast.success(`"${deleteTarget.name}" enviado para a lixeira (30 dias)`);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+    queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
     setDeleteTarget(null);
     setDeleteConfirmText("");
   };
@@ -196,6 +250,14 @@ export default function Clients() {
           <h1 className="text-2xl font-bold">Gestão de Clientes</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2 relative" onClick={() => setTrashOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Lixeira
+            {trashedClients && trashedClients.length > 0 && (
+              <span className="ml-1 rounded-full bg-destructive/20 text-destructive text-[10px] font-semibold px-1.5 py-0.5 min-w-[1.25rem] text-center">
+                {trashedClients.length}
+              </span>
+            )}
+          </Button>
           <Button className="gap-2" onClick={openCreate}>
             <Plus className="h-4 w-4" /> Novo Cliente
           </Button>
@@ -500,6 +562,144 @@ export default function Clients() {
                 disabled={deleteConfirmText.trim().toLowerCase() !== "confirmar"}
               >
                 Excluir
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trash dialog */}
+      <Dialog open={trashOpen} onOpenChange={setTrashOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4" /> Lixeira de Clientes
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 space-y-3">
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                Clientes na lixeira são excluídos <strong>definitivamente após 30 dias</strong>.
+                Você pode restaurá-los antes disso.
+              </p>
+            </div>
+
+            {!trashedClients?.length ? (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                A lixeira está vazia
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/30">
+                    <TableHead className="text-muted-foreground">Nome</TableHead>
+                    <TableHead className="text-muted-foreground">Excluído em</TableHead>
+                    <TableHead className="text-muted-foreground">Restam</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trashedClients.map((c: any) => {
+                    const days = daysLeft(c.deleted_at);
+                    const danger = days <= 5;
+                    return (
+                      <TableRow key={c.id} className="border-border/20">
+                        <TableCell className="font-medium">
+                          <div>{c.name}</div>
+                          {c.meta_account_id && (
+                            <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">
+                              {c.meta_account_id}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {new Date(c.deleted_at).toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                            danger
+                              ? "border-red-500/30 bg-red-500/10 text-red-300"
+                              : "border-green-500/30 bg-green-500/10 text-green-300"
+                          }`}>
+                            {days} dia{days !== 1 ? "s" : ""}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-green-400 hover:text-green-300"
+                            onClick={() => handleRestore(c.id, c.name)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => { setPurgeTarget({ id: c.id, name: c.name }); setPurgeConfirmText(""); }}
+                            title="Excluir definitivamente"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permanent purge confirmation */}
+      <Dialog
+        open={!!purgeTarget}
+        onOpenChange={(o) => { if (!o) { setPurgeTarget(null); setPurgeConfirmText(""); } }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" /> Excluir definitivamente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a excluir <strong className="text-foreground">{purgeTarget?.name}</strong> de
+              forma <strong className="text-destructive">permanente</strong>. Esta ação não pode ser desfeita.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Para confirmar, digite{" "}
+                <span className="font-mono font-semibold text-foreground">excluir</span>
+              </Label>
+              <Input
+                autoFocus
+                value={purgeConfirmText}
+                onChange={(e) => setPurgeConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && purgeConfirmText.trim().toLowerCase() === "excluir") {
+                    confirmPurge();
+                  }
+                }}
+                placeholder="excluir"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setPurgeTarget(null); setPurgeConfirmText(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmPurge}
+                disabled={purgeConfirmText.trim().toLowerCase() !== "excluir"}
+              >
+                Excluir definitivamente
               </Button>
             </div>
           </div>
