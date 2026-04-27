@@ -137,10 +137,15 @@ export default function Clients() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    const { error } = await supabase.from("clients").delete().eq("id", deleteTarget.id);
+    // Soft delete: send to trash (auto-purge after 30 days)
+    const { error } = await supabase
+      .from("clients")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", deleteTarget.id);
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`Cliente "${deleteTarget.name}" excluído`);
+    toast.success(`"${deleteTarget.name}" enviado para a lixeira (30 dias)`);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+    queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
     setDeleteTarget(null);
     setDeleteConfirmText("");
   };
