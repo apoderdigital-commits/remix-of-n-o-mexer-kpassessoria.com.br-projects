@@ -13,8 +13,10 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("[create-internal-user] request received, has auth:", !!authHeader);
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      console.error("[create-internal-user] missing Authorization header");
+      return new Response(JSON.stringify({ error: "Não autorizado - cabeçalho ausente" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
