@@ -220,19 +220,59 @@ export default function Index() {
   return (
     <div className="min-h-screen max-w-[1400px] mx-auto">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-b-2xl px-5 sm:px-8 pt-8 pb-8 sm:pt-10 sm:pb-10 mb-6">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary)/0.12)] via-background to-background" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[hsl(263,50%,50%,0.06)] to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-border/30" />
+      <div className="relative overflow-hidden rounded-b-[2rem] px-5 sm:px-10 pt-10 pb-10 sm:pt-14 sm:pb-12 mb-6 border-b border-border/40">
+        {/* Layered backgrounds */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(263,55%,18%/0.55)] via-[hsl(255,40%,10%/0.4)] to-background" />
+        <div className="absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-[hsl(263,70%,55%/0.18)] blur-3xl" />
+        <div className="absolute -top-20 right-0 w-[24rem] h-[24rem] rounded-full bg-[hsl(290,65%,55%/0.12)] blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-1/2 h-full bg-gradient-to-l from-[hsl(210,70%,55%/0.08)] to-transparent" />
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* Bottom accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
-        <div className="relative flex flex-col sm:flex-row items-center gap-5">
-          <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-xl shrink-0" />
+        <div className="relative flex flex-col sm:flex-row items-center gap-6">
+          {/* Logo with glow */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-2xl" />
+            <div className="relative p-[2px] rounded-2xl bg-gradient-to-br from-primary/60 via-primary/20 to-transparent">
+              <img
+                src={kpLogo}
+                alt="KP Assessoria"
+                className="relative h-16 w-16 rounded-2xl bg-background/80 backdrop-blur"
+              />
+            </div>
+          </div>
+
           <div className="text-center sm:text-left flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-[1.65rem] font-semibold text-foreground leading-tight tracking-tight">
-              A única análise de métricas reais que te traz previsibilidade nas decisões
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-primary mb-3 backdrop-blur">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              KP Assessoria · Performance Dashboard
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl md:text-[2rem] font-bold leading-[1.15] tracking-tight">
+              <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                A única análise de{" "}
+              </span>
+              <span className="bg-gradient-to-r from-primary via-[hsl(280,75%,70%)] to-[hsl(220,80%,70%)] bg-clip-text text-transparent">
+                métricas reais
+              </span>
+              <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                {" "}que te traz previsibilidade nas decisões
+              </span>
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+            <p className="text-sm sm:text-[15px] text-muted-foreground mt-3 max-w-2xl">
               Dashboard de performance de criativos e leads qualificados
             </p>
           </div>
