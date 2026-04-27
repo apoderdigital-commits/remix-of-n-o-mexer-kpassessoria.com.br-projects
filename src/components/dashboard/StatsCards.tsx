@@ -66,6 +66,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   const simulacoes = ghlData?.simulacoes ?? 0;
   const ghlAprovado = ghlData?.cpf_aprovado ?? 0;
   const ghlNaoAprovado = ghlData?.cpf_nao_aprovado ?? 0;
+  const ghlVendasFin = ghlData?.vendas_financiamento ?? 0;
+  const ghlVendasCons = ghlData?.vendas_consorcio ?? 0;
 
   // Planilha doesn't have simulações or CPF não aprovado, so show "—" 
   const planilhaSimulacoes = planilhaCpfApproved; // Only CPF approved from planilha as approximation
@@ -73,7 +75,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
 
   const simRate = totalLeads > 0 ? (simulacoes / totalLeads) * 100 : 0;
   const aprovRate = simulacoes > 0 ? (ghlAprovado / simulacoes) * 100 : 0;
-  const vendasFinancRate = ghlAprovado > 0 ? (salesFinancing / ghlAprovado) * 100 : 0;
+  const displayVendasFin = vendasFinSource === "ghl" ? ghlVendasFin : salesFinancing;
+  const displayVendasCons = vendasConsSource === "ghl" ? ghlVendasCons : salesConsortium;
+  const vendasFinancRate = ghlAprovado > 0 ? (displayVendasFin / ghlAprovado) * 100 : 0;
 
   // Current displayed values based on source toggle
   const displaySimulacoes = simSource === "ghl" ? simulacoes : planilhaSimulacoes;
