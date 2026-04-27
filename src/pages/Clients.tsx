@@ -417,6 +417,15 @@ export default function Clients() {
               <Input value={form.ghlLocationId} onChange={set("ghlLocationId")} placeholder="Ex: T6S5cO1s72adtbDovjdX" />
               <p className="text-xs text-muted-foreground">ID da subconta no GoHighLevel</p>
             </div>
+
+            <GhlStageMappingEditor
+              clientId={editingId}
+              ghlApiKey={form.ghlApiKey}
+              ghlLocationId={form.ghlLocationId}
+              value={form.stageMapping}
+              onChange={(m) => setForm((f) => ({ ...f, stageMapping: m }))}
+            />
+
             <Button onClick={handleSave} className="w-full">
               {editingId ? "Salvar Alterações" : "Criar Cliente"}
             </Button>
