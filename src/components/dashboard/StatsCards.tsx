@@ -14,6 +14,8 @@ interface StatsCardsProps {
     simulacoes: number;
     cpf_aprovado: number;
     cpf_nao_aprovado: number;
+    vendas_financiamento?: number;
+    vendas_consorcio?: number;
   } | null;
   ghlLoading?: boolean;
   onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
@@ -56,12 +58,16 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
+  const [vendasFinSource, setVendasFinSource] = useState<"ghl" | "planilha">("planilha");
+  const [vendasConsSource, setVendasConsSource] = useState<"ghl" | "planilha">("planilha");
 
   const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
 
   const simulacoes = ghlData?.simulacoes ?? 0;
   const ghlAprovado = ghlData?.cpf_aprovado ?? 0;
   const ghlNaoAprovado = ghlData?.cpf_nao_aprovado ?? 0;
+  const ghlVendasFin = ghlData?.vendas_financiamento ?? 0;
+  const ghlVendasCons = ghlData?.vendas_consorcio ?? 0;
 
   // Planilha doesn't have simulações or CPF não aprovado, so show "—" 
   const planilhaSimulacoes = planilhaCpfApproved; // Only CPF approved from planilha as approximation
@@ -69,7 +75,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
 
   const simRate = totalLeads > 0 ? (simulacoes / totalLeads) * 100 : 0;
   const aprovRate = simulacoes > 0 ? (ghlAprovado / simulacoes) * 100 : 0;
-  const vendasFinancRate = ghlAprovado > 0 ? (salesFinancing / ghlAprovado) * 100 : 0;
+  const displayVendasFin = vendasFinSource === "ghl" ? ghlVendasFin : salesFinancing;
+  const displayVendasCons = vendasConsSource === "ghl" ? ghlVendasCons : salesConsortium;
+  const vendasFinancRate = ghlAprovado > 0 ? (displayVendasFin / ghlAprovado) * 100 : 0;
 
   // Current displayed values based on source toggle
   const displaySimulacoes = simSource === "ghl" ? simulacoes : planilhaSimulacoes;
@@ -131,21 +139,21 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
     },
     {
       title: "Vendas Financiamento",
-      value: salesFinancing.toLocaleString("pt-BR"),
+      value: ghlLoading && vendasFinSource === "ghl" ? "..." : displayVendasFin.toLocaleString("pt-BR"),
       icon: CreditCard,
       color: "text-amber-400",
       accent: "35 85% 55%",
-      subtitle: "Planilha",
+      sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
       scrollTarget: "financing" as const,
     },
     {
       title: "Vendas Consórcio",
-      value: salesConsortium.toLocaleString("pt-BR"),
+      value: ghlLoading && vendasConsSource === "ghl" ? "..." : displayVendasCons.toLocaleString("pt-BR"),
       icon: Handshake,
       color: "text-blue-400",
       accent: "210 75% 60%",
-      subtitle: "Planilha",
+      sourceToggle: { source: vendasConsSource, onToggle: () => setVendasConsSource(s => s === "ghl" ? "planilha" : "ghl") },
       scrollTarget: "consortium" as const,
     },
     {
