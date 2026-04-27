@@ -9,6 +9,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
+import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import {
