@@ -79,7 +79,7 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
-export function EvolutionChart({ data }: EvolutionChartProps) {
+export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   // KPI summary: total + comparison between first half and second half of the period
   const summary = SERIES.map((s) => {
     const total = data.reduce((sum, d) => sum + (d[s.key] as number), 0);
