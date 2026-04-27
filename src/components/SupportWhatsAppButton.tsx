@@ -3,11 +3,7 @@ import { MessageCircle } from "lucide-react";
 const SUPPORT_PHONE = "5581997172434";
 
 export function SupportWhatsAppButton() {
-  // Detecta mobile para usar deep link do app; em desktop usa WhatsApp Web
-  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const href = isMobile
-    ? `whatsapp://send?phone=${SUPPORT_PHONE}`
-    : `https://web.whatsapp.com/send?phone=${SUPPORT_PHONE}`;
+  const href = `https://api.whatsapp.com/send/?phone=${SUPPORT_PHONE}&text&type=phone_number&app_absent=0`;
 
   return (
     <a
