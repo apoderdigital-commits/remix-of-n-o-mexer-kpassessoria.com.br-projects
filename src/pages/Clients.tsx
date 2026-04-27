@@ -126,11 +126,23 @@ export default function Clients() {
     setOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("clients").delete().eq("id", id);
+  const requestDelete = (c: any) => {
+    setDeleteTarget({ id: c.id, name: c.name });
+    setDeleteConfirmText("");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toLowerCase() !== "confirmar") {
+      toast.error('Digite "confirmar" para excluir');
+      return;
+    }
+    const { error } = await supabase.from("clients").delete().eq("id", deleteTarget.id);
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success("Cliente excluído");
+    toast.success(`Cliente "${deleteTarget.name}" excluído`);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
   };
 
   const handleSaveDefaultToken = async () => {
