@@ -16,9 +16,17 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
 
 const DEFAULT_TOKEN_KEY = "default_meta_token";
 const TOKEN_PASSWORD = "KP@2026@";
+
+const EMPTY_MAPPING: StageMapping = {
+  cpf_aprovado: [],
+  cpf_nao_aprovado: [],
+  vendas_financiamento: [],
+  vendas_consorcio: [],
+};
 
 interface ClientForm {
   name: string;
@@ -28,9 +36,19 @@ interface ClientForm {
   ticketMedio: string;
   ghlApiKey: string;
   ghlLocationId: string;
+  stageMapping: StageMapping;
 }
 
-const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "", ticketMedio: "", ghlApiKey: "", ghlLocationId: "" };
+const emptyForm: ClientForm = {
+  name: "",
+  metaAccountId: "",
+  metaToken: "",
+  googleSheetId: "",
+  ticketMedio: "",
+  ghlApiKey: "",
+  ghlLocationId: "",
+  stageMapping: EMPTY_MAPPING,
+};
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
