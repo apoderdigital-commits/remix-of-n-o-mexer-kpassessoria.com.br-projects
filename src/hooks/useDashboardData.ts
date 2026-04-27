@@ -74,8 +74,25 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
         body: { client_id: clientId, since, until },
       });
       if (error) {
-        const msg = typeof data === "object" && data?.error ? data.error : "";
-        if (msg === "GHL not configured for this client") return null;
+        // FunctionsHttpError: try to read the response body for the specific reason
+        let msg = "";
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            msg = body?.error ?? "";
+          } else if (ctx && typeof ctx.text === "function") {
+            msg = await ctx.text();
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+        if (typeof data === "object" && (data as any)?.error) {
+          msg = msg || (data as any).error;
+        }
+        if (msg.includes("GHL not configured")) return null;
+        // Treat any 400 from this function as "not configured" rather than crashing the page
+        if ((error as any)?.context?.status === 400) return null;
         throw error;
       }
       return data as {
