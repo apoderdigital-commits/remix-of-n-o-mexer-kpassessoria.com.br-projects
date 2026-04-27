@@ -20,6 +20,7 @@ export type Database = {
           deleted_at: string | null
           ghl_api_key: string | null
           ghl_location_id: string | null
+          ghl_stage_mapping: Json | null
           google_sheet_id: string | null
           id: string
           meta_access_token: string | null
@@ -36,6 +37,7 @@ export type Database = {
           deleted_at?: string | null
           ghl_api_key?: string | null
           ghl_location_id?: string | null
+          ghl_stage_mapping?: Json | null
           google_sheet_id?: string | null
           id?: string
           meta_access_token?: string | null
@@ -52,6 +54,7 @@ export type Database = {
           deleted_at?: string | null
           ghl_api_key?: string | null
           ghl_location_id?: string | null
+          ghl_stage_mapping?: Json | null
           google_sheet_id?: string | null
           id?: string
           meta_access_token?: string | null
