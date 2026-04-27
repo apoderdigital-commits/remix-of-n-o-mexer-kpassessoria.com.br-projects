@@ -408,6 +408,15 @@ export default function Index() {
               icon="💳"
             />
           </div>
+
+          <GoalsFunnel
+            totalLeads={totalLeads}
+            ghlSimulacoes={ghlData?.simulacoes ?? 0}
+            ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
+            planilhaCpfApproved={planilhaCpfApproved}
+            salesFinancing={salesFinancing + salesLegacy}
+            onScrollTo={(t) => handleScrollToRanking(t)}
+          />
         </>
       )}
       </div>
