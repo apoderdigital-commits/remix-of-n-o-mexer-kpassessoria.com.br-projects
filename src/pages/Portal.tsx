@@ -20,7 +20,7 @@ const allProjects = [
   {
     key: "projecao",
     title: "Funil de Projeção de Vendas",
-    description: "Saiba o que fazer para conseguir mais vendas — analise o mês e projete o próximo!",
+    description: "Saiba o que fazer para conseguir mais vendas, analise o mês e projete o próximo!",
     icon: TrendingUp,
     href: "/projecao",
     gradient: "from-fuchsia-500/20 to-fuchsia-500/5",
