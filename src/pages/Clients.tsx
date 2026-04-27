@@ -155,6 +155,7 @@ export default function Clients() {
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
       ghlLocationId: c.ghl_location_id || "",
+      stageMapping: { ...EMPTY_MAPPING, ...(c.ghl_stage_mapping || {}) },
     });
     setOpen(true);
   };
@@ -170,6 +171,7 @@ export default function Clients() {
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
+      ghl_stage_mapping: form.stageMapping,
     };
 
     if (form.metaToken.trim()) {
