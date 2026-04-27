@@ -567,6 +567,144 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trash dialog */}
+      <Dialog open={trashOpen} onOpenChange={setTrashOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4" /> Lixeira de Clientes
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 space-y-3">
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                Clientes na lixeira são excluídos <strong>definitivamente após 30 dias</strong>.
+                Você pode restaurá-los antes disso.
+              </p>
+            </div>
+
+            {!trashedClients?.length ? (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                A lixeira está vazia
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/30">
+                    <TableHead className="text-muted-foreground">Nome</TableHead>
+                    <TableHead className="text-muted-foreground">Excluído em</TableHead>
+                    <TableHead className="text-muted-foreground">Restam</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trashedClients.map((c: any) => {
+                    const days = daysLeft(c.deleted_at);
+                    const danger = days <= 5;
+                    return (
+                      <TableRow key={c.id} className="border-border/20">
+                        <TableCell className="font-medium">
+                          <div>{c.name}</div>
+                          {c.meta_account_id && (
+                            <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">
+                              {c.meta_account_id}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {new Date(c.deleted_at).toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                            danger
+                              ? "border-red-500/30 bg-red-500/10 text-red-300"
+                              : "border-green-500/30 bg-green-500/10 text-green-300"
+                          }`}>
+                            {days} dia{days !== 1 ? "s" : ""}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-green-400 hover:text-green-300"
+                            onClick={() => handleRestore(c.id, c.name)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => { setPurgeTarget({ id: c.id, name: c.name }); setPurgeConfirmText(""); }}
+                            title="Excluir definitivamente"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permanent purge confirmation */}
+      <Dialog
+        open={!!purgeTarget}
+        onOpenChange={(o) => { if (!o) { setPurgeTarget(null); setPurgeConfirmText(""); } }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" /> Excluir definitivamente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a excluir <strong className="text-foreground">{purgeTarget?.name}</strong> de
+              forma <strong className="text-destructive">permanente</strong>. Esta ação não pode ser desfeita.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Para confirmar, digite{" "}
+                <span className="font-mono font-semibold text-foreground">excluir</span>
+              </Label>
+              <Input
+                autoFocus
+                value={purgeConfirmText}
+                onChange={(e) => setPurgeConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && purgeConfirmText.trim().toLowerCase() === "excluir") {
+                    confirmPurge();
+                  }
+                }}
+                placeholder="excluir"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setPurgeTarget(null); setPurgeConfirmText(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmPurge}
+                disabled={purgeConfirmText.trim().toLowerCase() !== "excluir"}
+              >
+                Excluir definitivamente
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
