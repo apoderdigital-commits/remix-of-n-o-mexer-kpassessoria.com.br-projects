@@ -44,14 +44,43 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
-    // DELETE action
-    if (body.action === "delete" && body.user_id) {
+    // SOFT DELETE (move to trash for 7 days)
+    if ((body.action === "delete" || body.action === "soft_delete") && body.user_id) {
+      // Mark profile as deleted and ban auth user (prevents login)
+      await adminClient
+        .from("profiles")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("user_id", body.user_id);
+      await adminClient.auth.admin.updateUserById(body.user_id, {
+        ban_duration: "876000h", // ~100 years
+      });
+      return new Response(JSON.stringify({ success: true, action: "soft_delete" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // RESTORE from trash
+    if (body.action === "restore" && body.user_id) {
+      await adminClient
+        .from("profiles")
+        .update({ deleted_at: null })
+        .eq("user_id", body.user_id);
+      await adminClient.auth.admin.updateUserById(body.user_id, {
+        ban_duration: "none",
+      });
+      return new Response(JSON.stringify({ success: true, action: "restore" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // PURGE definitive (manual permanent delete)
+    if (body.action === "purge" && body.user_id) {
       await adminClient.from("user_dashboard_access").delete().eq("user_id", body.user_id);
       await adminClient.from("user_client_access").delete().eq("user_id", body.user_id);
       await adminClient.from("user_roles").delete().eq("user_id", body.user_id);
       await adminClient.from("profiles").delete().eq("user_id", body.user_id);
       await adminClient.auth.admin.deleteUser(body.user_id);
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, action: "purge" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
