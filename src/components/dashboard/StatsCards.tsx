@@ -22,8 +22,17 @@ interface StatsCardsProps {
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
   const met = value >= target;
   return (
-    <div className={`text-xs mt-1 font-medium ${met ? "text-green-400" : "text-red-400"}`}>
-      {label}: {value.toFixed(1)}% {met ? "✅" : "⚠️"} (meta: {target}%)
+    <div
+      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+        met
+          ? "border-green-500/30 bg-green-500/10 text-green-300"
+          : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+      }`}
+      title={`Meta: ${target}%`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-400" : "bg-amber-400"}`} />
+      {label}: {value.toFixed(1)}%
+      <span className="text-muted-foreground/70 font-normal">· meta {target}%</span>
     </div>
   );
 }
@@ -31,12 +40,12 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
 function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onToggle: () => void }) {
   return (
     <button
-      onClick={onToggle}
-      className="flex items-center gap-1 text-[10px] text-muted-foreground/60 mt-0.5 hover:text-muted-foreground transition-colors cursor-pointer"
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
       title="Alternar entre GHL e Planilha"
     >
-      <ArrowLeftRight className="w-[16px] h-[16px]" />
-      <span className={source === "ghl" ? "text-cyan-400/80 text-sm" : "text-emerald-400/80 text-sm"}>
+      <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
+      <span className={source === "ghl" ? "text-cyan-300" : "text-emerald-300"}>
         {source === "ghl" ? "GHL" : "Planilha"}
       </span>
     </button>
