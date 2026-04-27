@@ -177,6 +177,13 @@ export default function UsersPage() {
 
         toast.success("Usuário atualizado!");
       } else {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          toast.error("Sua sessão expirou. Faça login novamente para criar usuários.");
+          setSaving(false);
+          return;
+        }
         const { data, error } = await supabase.functions.invoke("create-internal-user", {
           body: {
             username: form.username.trim().toLowerCase(),
@@ -187,6 +194,7 @@ export default function UsersPage() {
             client_ids: form.clientIds,
             phone: form.phone.trim() || null,
           },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
