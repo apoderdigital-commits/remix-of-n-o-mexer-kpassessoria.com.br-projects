@@ -170,6 +170,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
     <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
       {cards.map((card) => {
         const clickable = !!(card as any).scrollTarget && !!onScrollTo;
+        const accent = (card as any).accent as string | undefined;
         return (
           <Card
             key={card.title}
@@ -182,30 +183,48 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 onScrollTo!((card as any).scrollTarget);
               }
             } : undefined}
-            className={`glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
-              clickable ? "cursor-pointer hover:bg-primary/5" : ""
+            style={accent ? { borderLeft: `3px solid hsl(${accent} / 0.7)` } : undefined}
+            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
+              clickable ? "cursor-pointer" : ""
             }`}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className={`h-4 w-4 ${card.color} transition-transform duration-300 group-hover:scale-110`} />
-                <span className="text-xs text-muted-foreground">{card.title}</span>
+            {/* Subtle accent glow */}
+            {accent && (
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"
+                style={{ background: `hsl(${accent})` }}
+              />
+            )}
+            <CardContent className="relative p-4">
+              <div className="flex items-center gap-2 mb-2.5">
+                <div
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border transition-transform duration-300 group-hover:scale-110"
+                  style={accent ? {
+                    background: `hsl(${accent} / 0.12)`,
+                    borderColor: `hsl(${accent} / 0.3)`,
+                  } : undefined}
+                >
+                  <card.icon className={`h-4 w-4 ${card.color}`} />
+                </div>
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  {card.title}
+                </span>
               </div>
-              <p className="text-xl font-bold">{card.value}</p>
+              <p className="text-xl font-bold tracking-tight text-foreground leading-none">{card.value}</p>
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />
               )}
               {card.subtitle && !card.sourceToggle && (
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{card.subtitle}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-1.5">{card.subtitle}</p>
               )}
               {card.note && (
-                <p className="text-[10px] text-muted-foreground/50 mt-0.5 italic">{card.note}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1 italic">{card.note}</p>
               )}
               {card.indicator && (
                 <MetaIndicator {...card.indicator} />
               )}
               {clickable && (
-                <p className="text-[10px] text-primary/70 mt-1.5 font-medium">
+                <p className="mt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
                   Clique para ver os criativos →
                 </p>
               )}
