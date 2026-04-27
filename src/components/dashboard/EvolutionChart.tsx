@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { TrendingUp, TrendingDown, Minus, Activity, Users, CheckCircle2, Banknote, BarChart3 } from "lucide-react";
+import { Activity, Users, CheckCircle2, Banknote, BarChart3 } from "lucide-react";
 
 interface DataPoint {
   date: string;
@@ -22,27 +22,49 @@ interface EvolutionChartProps {
   simulacoesTotal?: number;
 }
 
-const SERIES = [
+type SeriesKey = "leads" | "simulacoes" | "cpf" | "sales";
+
+interface SeriesDef {
+  key: SeriesKey;
+  name: string;
+  description: string;
+  color: string;
+  icon: typeof Users;
+  // metric of conversion: value / base * 100, with a target %
+  goal?: { baseKey: SeriesKey; target: number; label: string };
+}
+
+const SERIES: SeriesDef[] = [
   {
-    key: "leads" as const,
+    key: "leads",
     name: "Leads Totais",
     description: "Total de leads captados pela Meta Ads no dia",
     color: "hsl(199 89% 48%)",
     icon: Users,
   },
   {
-    key: "cpf" as const,
+    key: "simulacoes",
+    name: "Simulações",
+    description: "Simulações de crédito registradas no GHL",
+    color: "hsl(190 80% 55%)",
+    icon: BarChart3,
+    goal: { baseKey: "leads", target: 60, label: "Sim/Leads" },
+  },
+  {
+    key: "cpf",
     name: "CPF Aprovado",
     description: "Leads que tiveram CPF aprovado para crédito",
     color: "hsl(142 71% 45%)",
     icon: CheckCircle2,
+    goal: { baseKey: "simulacoes", target: 15, label: "Aprov/Sim" },
   },
   {
-    key: "sales" as const,
+    key: "sales",
     name: "Vendas",
     description: "Vendas fechadas (financiamento + consórcio)",
     color: "hsl(263 70% 58%)",
     icon: Banknote,
+    goal: { baseKey: "cpf", target: 20, label: "Vendas/Aprov" },
   },
 ];
 
@@ -80,17 +102,36 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
-  // KPI summary: total + comparison between first half and second half of the period
+  const totalLeads = data.reduce((sum, d) => sum + d.leads, 0);
+
+  // Distribute total simulações proportionally to leads per day (approximation since GHL only provides total)
+  const dataWithSim = data.map((d) => ({
+    ...d,
+    simulacoes:
+      simulacoesTotal !== undefined && totalLeads > 0
+        ? Math.round((d.leads / totalLeads) * simulacoesTotal)
+        : 0,
+  }));
+
+  const totals: Record<SeriesKey, number> = {
+    leads: totalLeads,
+    simulacoes: simulacoesTotal ?? 0,
+    cpf: data.reduce((sum, d) => sum + d.cpf, 0),
+    sales: data.reduce((sum, d) => sum + d.sales, 0),
+  };
+
   const summary = SERIES.map((s) => {
-    const total = data.reduce((sum, d) => sum + (d[s.key] as number), 0);
-    const half = Math.floor(data.length / 2);
-    const firstHalf = data.slice(0, half).reduce((sum, d) => sum + (d[s.key] as number), 0);
-    const secondHalf = data.slice(half).reduce((sum, d) => sum + (d[s.key] as number), 0);
-    let trendPct = 0;
-    if (firstHalf > 0) trendPct = ((secondHalf - firstHalf) / firstHalf) * 100;
-    else if (secondHalf > 0) trendPct = 100;
-    return { ...s, total, trendPct, firstHalf, secondHalf };
+    const total = totals[s.key];
+    let achievedPct: number | null = null;
+    if (s.goal) {
+      const base = totals[s.goal.baseKey];
+      achievedPct = base > 0 ? (total / base) * 100 : 0;
+    }
+    return { ...s, total, achievedPct };
   });
+
+  // Hide simulações series from chart if not provided
+  const chartSeries = simulacoesTotal !== undefined ? SERIES : SERIES.filter((s) => s.key !== "simulacoes");
 
   return (
     <Card className="glass-card border-border/50">
@@ -102,7 +143,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-foreground">Evolução Temporal</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Veja como leads, aprovações e vendas se comportam dia a dia no período selecionado.
+              Veja como leads, simulações, aprovações e vendas se comportam dia a dia no período selecionado.
             </p>
           </div>
         </div>
@@ -116,80 +157,58 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
           <>
             {/* KPI summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {(() => {
-                const renderSummary = (s: typeof summary[number]) => {
-                  const Icon = s.icon;
-                  const TrendIcon = s.trendPct > 1 ? TrendingUp : s.trendPct < -1 ? TrendingDown : Minus;
-                  const trendColor =
-                    s.trendPct > 1 ? "text-green-400" : s.trendPct < -1 ? "text-red-400" : "text-muted-foreground";
-                  return (
-                    <div
-                      key={s.key}
-                      className="p-4 rounded-xl border border-border/40 bg-card/60"
-                      style={{ borderLeft: `3px solid ${s.color}` }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" style={{ color: s.color }} />
-                        <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                          {s.name}
-                        </p>
-                      </div>
-                      <p className="text-2xl font-bold text-foreground mt-2 leading-none">
-                        {s.total.toLocaleString("pt-BR")}
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <TrendIcon className={`h-3.5 w-3.5 ${trendColor}`} />
-                        <span className={`text-xs font-semibold ${trendColor}`}>
-                          {s.trendPct > 0 ? "+" : ""}
-                          {s.trendPct.toFixed(1)}%
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">vs. início do período</span>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">{s.description}</p>
-                    </div>
-                  );
-                };
-                const leads = summary.find((s) => s.key === "leads");
-                const cpf = summary.find((s) => s.key === "cpf");
-                const sales = summary.find((s) => s.key === "sales");
+              {summary.map((s) => {
+                const Icon = s.icon;
+                const hasGoal = s.goal && s.achievedPct !== null;
+                const met = hasGoal ? (s.achievedPct as number) >= (s.goal!.target) : false;
+                const pctColor = met ? "text-green-400" : "text-amber-400";
+                const dotColor = met ? "bg-green-400" : "bg-amber-400";
                 return (
-                  <>
-                    {leads && renderSummary(leads)}
-                    {simulacoesTotal !== undefined && (
-                      <div
-                        className="p-4 rounded-xl border border-border/40 bg-card/60"
-                        style={{ borderLeft: `3px solid hsl(190 80% 55%)` }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4" style={{ color: "hsl(190 80% 55%)" }} />
-                          <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                            Simulações
-                          </p>
-                        </div>
-                        <p className="text-2xl font-bold text-foreground mt-2 leading-none">
-                          {simulacoesTotal.toLocaleString("pt-BR")}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <span className="text-[11px] text-muted-foreground">total no período (GHL)</span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
-                          Simulações de crédito registradas no GHL
-                        </p>
+                  <div
+                    key={s.key}
+                    className="p-4 rounded-xl border border-border/40 bg-card/60"
+                    style={{ borderLeft: `3px solid ${s.color}` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" style={{ color: s.color }} />
+                      <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                        {s.name}
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-foreground mt-2 leading-none">
+                      {s.total.toLocaleString("pt-BR")}
+                    </p>
+                    {hasGoal ? (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${
+                          met
+                            ? "border-green-500/30 bg-green-500/10"
+                            : "border-amber-500/30 bg-amber-500/10"
+                        } ${pctColor}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                          {s.goal!.label}: {(s.achievedPct as number).toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          meta {s.goal!.target}%
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <span className="text-[11px] text-muted-foreground">topo do funil</span>
                       </div>
                     )}
-                    {cpf && renderSummary(cpf)}
-                    {sales && renderSummary(sales)}
-                  </>
+                    <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">{s.description}</p>
+                  </div>
                 );
-              })()}
+              })}
             </div>
 
             {/* Chart */}
             <div className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <AreaChart data={dataWithSim} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                   <defs>
-                    {SERIES.map((s) => (
+                    {chartSeries.map((s) => (
                       <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={s.color} stopOpacity={0.35} />
                         <stop offset="100%" stopColor={s.color} stopOpacity={0} />
@@ -204,7 +223,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                   />
                   <YAxis tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  {SERIES.map((s) => (
+                  {chartSeries.map((s) => (
                     <Area
                       key={s.key}
                       type="monotone"
@@ -222,8 +241,8 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
             </div>
 
             {/* Custom legend with descriptions */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-border/30">
-              {SERIES.map((s) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-border/30">
+              {chartSeries.map((s) => (
                 <div key={s.key} className="flex items-start gap-2 text-xs">
                   <span
                     className="mt-1 h-2.5 w-2.5 rounded-full shrink-0"
@@ -231,7 +250,11 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                   />
                   <div>
                     <p className="font-semibold text-foreground">{s.name}</p>
-                    <p className="text-muted-foreground leading-snug">{s.description}</p>
+                    <p className="text-muted-foreground leading-snug">
+                      {s.key === "simulacoes"
+                        ? "Distribuído proporcional aos leads (total do GHL)"
+                        : s.description}
+                    </p>
                   </div>
                 </div>
               ))}
