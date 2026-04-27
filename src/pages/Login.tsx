@@ -107,6 +107,7 @@ export default function Login() {
     const email = username.trim().toLowerCase() + EMAIL_DOMAIN;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setFailedAttempts((n) => n + 1);
       toast.error(
         error.message === "Invalid login credentials"
           ? "Usuário ou senha incorretos"
@@ -114,6 +115,8 @@ export default function Login() {
           ? "Conta não confirmada"
           : error.message
       );
+    } else {
+      setFailedAttempts(0);
     }
     setLoading(false);
   };
