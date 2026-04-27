@@ -188,7 +188,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/30">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Diferença</p>
-                <p className="text-xs text-muted-foreground">GHL | Planilha</p>
+                <p className="text-xs text-primary-foreground">GHL | Planilha</p>
               </div>
               <p className={`text-2xl font-bold ${ghlCpfApproved - planilhaCpfApproved >= 0 ? "text-foreground" : "text-amber-300"}`}>
                 {ghlCpfApproved - planilhaCpfApproved >= 0 ? "+" : ""}{formatNumber(ghlCpfApproved - planilhaCpfApproved)}
