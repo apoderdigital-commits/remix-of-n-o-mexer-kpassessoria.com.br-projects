@@ -11,6 +11,7 @@ import Clients from "./pages/Clients.tsx";
 import UsersPage from "./pages/UsersPage.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
 
 const queryClient = new QueryClient();
 
