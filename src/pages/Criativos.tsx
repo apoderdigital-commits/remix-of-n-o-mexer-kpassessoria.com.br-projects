@@ -377,6 +377,16 @@ export default function Index() {
         </div>
       ) : (
         <>
+          {ghlData && ghlData.mapping_complete === false && ghlData.missing_metrics?.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs">
+              <span className="text-amber-400 font-medium">⚠ Mapeamento GHL incompleto</span>
+              <span className="text-muted-foreground">
+                Configure as etapas em <strong>Clientes → Editar</strong> para:{" "}
+                {ghlData.missing_metrics.join(", ")}
+                {!ghlData.has_manual_mapping && " (usando detecção automática por nome)"}
+              </span>
+            </div>
+          )}
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
