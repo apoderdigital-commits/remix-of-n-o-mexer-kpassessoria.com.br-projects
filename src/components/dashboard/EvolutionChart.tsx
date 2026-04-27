@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { TrendingUp, TrendingDown, Minus, Activity, Users, CheckCircle2, Banknote } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Activity, Users, CheckCircle2, Banknote, BarChart3 } from "lucide-react";
 
 interface DataPoint {
   date: string;
@@ -19,6 +19,7 @@ interface DataPoint {
 
 interface EvolutionChartProps {
   data: DataPoint[];
+  simulacoesTotal?: number;
 }
 
 const SERIES = [
