@@ -452,6 +452,59 @@ export default function Clients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteConfirmText(""); } }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Excluir cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a excluir{" "}
+              <span className="font-semibold text-foreground">{deleteTarget?.name}</span>.
+              Essa ação não pode ser desfeita.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Para confirmar a exclusão desse cliente, digite abaixo{" "}
+                <span className="font-mono font-semibold text-foreground">confirmar</span>
+              </Label>
+              <Input
+                autoFocus
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && deleteConfirmText.trim().toLowerCase() === "confirmar") {
+                    confirmDelete();
+                  }
+                }}
+                placeholder="confirmar"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteConfirmText.trim().toLowerCase() !== "confirmar"}
+              >
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
