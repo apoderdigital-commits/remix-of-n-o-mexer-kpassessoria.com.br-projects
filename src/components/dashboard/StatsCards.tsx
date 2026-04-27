@@ -22,8 +22,17 @@ interface StatsCardsProps {
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
   const met = value >= target;
   return (
-    <div className={`text-xs mt-1 font-medium ${met ? "text-green-400" : "text-red-400"}`}>
-      {label}: {value.toFixed(1)}% {met ? "✅" : "⚠️"} (meta: {target}%)
+    <div
+      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+        met
+          ? "border-green-500/30 bg-green-500/10 text-green-300"
+          : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+      }`}
+      title={`Meta: ${target}%`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-400" : "bg-amber-400"}`} />
+      {label}: {value.toFixed(1)}%
+      <span className="text-muted-foreground/70 font-normal">· meta {target}%</span>
     </div>
   );
 }
@@ -31,12 +40,12 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
 function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onToggle: () => void }) {
   return (
     <button
-      onClick={onToggle}
-      className="flex items-center gap-1 text-[10px] text-muted-foreground/60 mt-0.5 hover:text-muted-foreground transition-colors cursor-pointer"
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
       title="Alternar entre GHL e Planilha"
     >
-      <ArrowLeftRight className="w-[16px] h-[16px]" />
-      <span className={source === "ghl" ? "text-cyan-400/80 text-sm" : "text-emerald-400/80 text-sm"}>
+      <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
+      <span className={source === "ghl" ? "text-cyan-300" : "text-emerald-300"}>
         {source === "ghl" ? "GHL" : "Planilha"}
       </span>
     </button>
@@ -74,24 +83,28 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: `R$ ${totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
       color: "text-purple-300",
+      accent: "263 60% 65%",
     },
     {
       title: "Total de Leads",
       value: totalLeads.toLocaleString("pt-BR"),
       icon: Users,
       color: "text-violet-400",
+      accent: "255 70% 65%",
     },
     {
       title: "Custo / Lead",
       value: costPerLead === "—" ? "—" : `R$ ${costPerLead}`,
       icon: TrendingDown,
       color: "text-fuchsia-400",
+      accent: "300 70% 65%",
     },
     {
       title: "Simulações",
       value: ghlLoading && simSource === "ghl" ? "..." : displaySimulacoes.toLocaleString("pt-BR"),
       icon: BarChart3,
       color: "text-cyan-400",
+      accent: "190 80% 55%",
       sourceToggle: { source: simSource, onToggle: () => setSimSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: simSource === "ghl" && ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
       note: simSource === "planilha" ? "CPFs aprovados (planilha)" : undefined,
@@ -101,6 +114,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: ghlLoading && cpfAprovSource === "ghl" ? "..." : displayCpfAprovado.toLocaleString("pt-BR"),
       icon: CheckCircle,
       color: "text-green-400",
+      accent: "142 65% 50%",
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
       scrollTarget: "cpf" as const,
@@ -111,6 +125,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: ghlLoading && cpfNaoSource === "ghl" ? "..." : (cpfNaoSource === "planilha" ? "—" : displayCpfNaoAprovado.toLocaleString("pt-BR")),
       icon: XCircle,
       color: "text-red-400",
+      accent: "0 70% 60%",
       sourceToggle: { source: cpfNaoSource, onToggle: () => setCpfNaoSource(s => s === "ghl" ? "planilha" : "ghl") },
       note: cpfNaoSource === "planilha" ? "Não disponível na planilha" : undefined,
     },
@@ -119,6 +134,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: salesFinancing.toLocaleString("pt-BR"),
       icon: CreditCard,
       color: "text-amber-400",
+      accent: "35 85% 55%",
       subtitle: "Planilha",
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
       scrollTarget: "financing" as const,
@@ -128,6 +144,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: salesConsortium.toLocaleString("pt-BR"),
       icon: Handshake,
       color: "text-blue-400",
+      accent: "210 75% 60%",
       subtitle: "Planilha",
       scrollTarget: "consortium" as const,
     },
@@ -136,6 +153,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: uniqueCreativesCpf.toLocaleString("pt-BR"),
       icon: Image,
       color: "text-emerald-400",
+      accent: "160 65% 50%",
       subtitle: "Planilha",
     },
     {
@@ -143,6 +161,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       value: uniqueCreativesSales.toLocaleString("pt-BR"),
       icon: ImagePlus,
       color: "text-orange-400",
+      accent: "25 85% 60%",
       subtitle: "Planilha",
     },
   ];
@@ -151,6 +170,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
     <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
       {cards.map((card) => {
         const clickable = !!(card as any).scrollTarget && !!onScrollTo;
+        const accent = (card as any).accent as string | undefined;
         return (
           <Card
             key={card.title}
@@ -163,30 +183,48 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 onScrollTo!((card as any).scrollTarget);
               }
             } : undefined}
-            className={`glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
-              clickable ? "cursor-pointer hover:bg-primary/5" : ""
+            style={accent ? { borderLeft: `3px solid hsl(${accent} / 0.7)` } : undefined}
+            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
+              clickable ? "cursor-pointer" : ""
             }`}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className={`h-4 w-4 ${card.color} transition-transform duration-300 group-hover:scale-110`} />
-                <span className="text-xs text-muted-foreground">{card.title}</span>
+            {/* Subtle accent glow */}
+            {accent && (
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"
+                style={{ background: `hsl(${accent})` }}
+              />
+            )}
+            <CardContent className="relative p-4">
+              <div className="flex items-center gap-2 mb-2.5">
+                <div
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border transition-transform duration-300 group-hover:scale-110"
+                  style={accent ? {
+                    background: `hsl(${accent} / 0.12)`,
+                    borderColor: `hsl(${accent} / 0.3)`,
+                  } : undefined}
+                >
+                  <card.icon className={`h-4 w-4 ${card.color}`} />
+                </div>
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  {card.title}
+                </span>
               </div>
-              <p className="text-xl font-bold">{card.value}</p>
+              <p className="text-xl font-bold tracking-tight text-foreground leading-none">{card.value}</p>
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />
               )}
               {card.subtitle && !card.sourceToggle && (
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{card.subtitle}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-1.5">{card.subtitle}</p>
               )}
               {card.note && (
-                <p className="text-[10px] text-muted-foreground/50 mt-0.5 italic">{card.note}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1 italic">{card.note}</p>
               )}
               {card.indicator && (
                 <MetaIndicator {...card.indicator} />
               )}
               {clickable && (
-                <p className="text-[10px] text-primary/70 mt-1.5 font-medium">
+                <p className="mt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
                   Clique para ver os criativos →
                 </p>
               )}
