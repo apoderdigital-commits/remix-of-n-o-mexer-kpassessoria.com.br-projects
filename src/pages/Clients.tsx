@@ -69,6 +69,55 @@ export default function Clients() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
+  // Trash state
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [purgeConfirmText, setPurgeConfirmText] = useState("");
+
+  // Trash query (admins only via RLS)
+  const { data: trashedClients, refetch: refetchTrash } = useQuery({
+    queryKey: ["clients_trash"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, meta_account_id, deleted_at, created_at")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const handleRestore = async (id: string, name: string) => {
+    const { error } = await supabase
+      .from("clients")
+      .update({ deleted_at: null })
+      .eq("id", id);
+    if (error) { toast.error("Erro ao restaurar: " + error.message); return; }
+    toast.success(`"${name}" restaurado`);
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+    refetchTrash();
+  };
+
+  const confirmPurge = async () => {
+    if (!purgeTarget) return;
+    if (purgeConfirmText.trim().toLowerCase() !== "excluir") {
+      toast.error('Digite "excluir" para confirmar');
+      return;
+    }
+    const { error } = await supabase.from("clients").delete().eq("id", purgeTarget.id);
+    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
+    toast.success(`"${purgeTarget.name}" excluído definitivamente`);
+    setPurgeTarget(null);
+    setPurgeConfirmText("");
+    refetchTrash();
+  };
+
+  const daysLeft = (deletedAt: string) => {
+    const ms = new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now();
+    return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+  };
+
   const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
