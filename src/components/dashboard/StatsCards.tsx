@@ -14,6 +14,8 @@ interface StatsCardsProps {
     simulacoes: number;
     cpf_aprovado: number;
     cpf_nao_aprovado: number;
+    vendas_financiamento?: number;
+    vendas_consorcio?: number;
   } | null;
   ghlLoading?: boolean;
   onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
