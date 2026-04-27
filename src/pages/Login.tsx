@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase } from "lucide-react";
+import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } from "lucide-react";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
@@ -20,6 +20,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [screenTransition, setScreenTransition] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -106,6 +107,7 @@ export default function Login() {
     const email = username.trim().toLowerCase() + EMAIL_DOMAIN;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setFailedAttempts((n) => n + 1);
       toast.error(
         error.message === "Invalid login credentials"
           ? "Usuário ou senha incorretos"
@@ -113,6 +115,8 @@ export default function Login() {
           ? "Conta não confirmada"
           : error.message
       );
+    } else {
+      setFailedAttempts(0);
     }
     setLoading(false);
   };
@@ -331,6 +335,17 @@ export default function Login() {
                       className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
                     />
                   </div>
+                  {failedAttempts >= 3 && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/40 bg-destructive/10">
+                      <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                      <div className="text-xs leading-relaxed text-foreground">
+                        <p className="font-semibold text-destructive mb-1">Muitas tentativas incorretas</p>
+                        <p className="text-foreground/80">
+                          Você errou a senha {failedAttempts} vezes. Por favor, entre em contato com o time pelo grupo do WhatsApp para recuperar seu acesso.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Button type="submit" className="w-full h-14 text-sm font-semibold rounded-xl" disabled={loading}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
