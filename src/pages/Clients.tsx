@@ -250,6 +250,14 @@ export default function Clients() {
           <h1 className="text-2xl font-bold">Gestão de Clientes</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2 relative" onClick={() => setTrashOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Lixeira
+            {trashedClients && trashedClients.length > 0 && (
+              <span className="ml-1 rounded-full bg-destructive/20 text-destructive text-[10px] font-semibold px-1.5 py-0.5 min-w-[1.25rem] text-center">
+                {trashedClients.length}
+              </span>
+            )}
+          </Button>
           <Button className="gap-2" onClick={openCreate}>
             <Plus className="h-4 w-4" /> Novo Cliente
           </Button>
