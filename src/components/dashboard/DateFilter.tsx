@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
-import { format, subDays } from "date-fns";
+import { format, subDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,8 +15,9 @@ interface DateFilterProps {
 export function DateFilter({ onFilterChange }: DateFilterProps) {
   const [active, setActive] = useState("30d");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [singleDate, setSingleDate] = useState<Date | undefined>();
-  const [mode, setMode] = useState<"range" | "single">("range");
+  // Tracks how many clicks have happened in the current selection cycle.
+  // 0 = nothing selected yet, 1 = waiting for end date, 2 = full range selected
+  const [clickStage, setClickStage] = useState<0 | 1 | 2>(0);
 
   const presets = [
     { label: "7d", days: 7 },
@@ -27,37 +28,62 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
   const handlePreset = (label: string, days: number) => {
     setActive(label);
     setDateRange(undefined);
-    setSingleDate(undefined);
+    setClickStage(0);
     const until = format(new Date(), "yyyy-MM-dd");
     const since = format(subDays(new Date(), days), "yyyy-MM-dd");
     onFilterChange(since, until);
   };
 
-  const handleRangeSelect = (range: DateRange | undefined) => {
-    setDateRange(range);
-    if (range?.from && range?.to) {
-      setActive("custom");
-      const since = format(range.from, "yyyy-MM-dd");
-      const until = format(range.to, "yyyy-MM-dd");
-      onFilterChange(since, until);
-    }
+  const applyRange = (from: Date, to: Date) => {
+    const since = format(from, "yyyy-MM-dd");
+    const until = format(to, "yyyy-MM-dd");
+    onFilterChange(since, until);
   };
 
-  const handleSingleSelect = (date: Date | undefined) => {
-    setSingleDate(date);
-    if (date) {
-      setActive("single");
-      const d = format(date, "yyyy-MM-dd");
-      onFilterChange(d, d);
+  // Custom click handler: we use mode="single" semantics manually so we can
+  // implement: 1st click = start, 2nd click = end (or single day if same), 3rd click = reset
+  const handleDayClick = (day: Date) => {
+    if (clickStage === 0 || clickStage === 2) {
+      // Start a new selection
+      setDateRange({ from: day, to: undefined });
+      setClickStage(1);
+      setActive("custom");
+      // Don't fire filter yet — wait for the second click (or single-day double click)
+      // But fire single-day filter so user sees feedback if they stop here? No, wait.
+    } else if (clickStage === 1) {
+      const start = dateRange?.from;
+      if (!start) {
+        setDateRange({ from: day, to: undefined });
+        setClickStage(1);
+        return;
+      }
+      // Same day clicked twice → single day filter
+      if (isSameDay(start, day)) {
+        setDateRange({ from: day, to: day });
+        setClickStage(2);
+        setActive("single");
+        applyRange(day, day);
+        return;
+      }
+      // Order start/end correctly
+      const from = day < start ? day : start;
+      const to = day < start ? start : day;
+      setDateRange({ from, to });
+      setClickStage(2);
+      setActive("custom");
+      applyRange(from, to);
     }
   };
 
   const getCustomLabel = () => {
-    if (active === "single" && singleDate) {
-      return format(singleDate, "dd/MM/yyyy");
+    if (active === "single" && dateRange?.from) {
+      return format(dateRange.from, "dd/MM/yyyy");
     }
     if (active === "custom" && dateRange?.from && dateRange?.to) {
       return `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`;
+    }
+    if (active === "custom" && dateRange?.from && !dateRange?.to) {
+      return `${format(dateRange.from, "dd/MM")} - ...`;
     }
     return null;
   };
@@ -90,45 +116,20 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 bg-card border-border/50" align="end">
-          <div className="flex border-b border-border/30">
-            <Button
-              size="sm"
-              variant={mode === "range" ? "default" : "ghost"}
-              onClick={() => setMode("range")}
-              className="rounded-none text-xs flex-1"
-            >
-              Período
-            </Button>
-            <Button
-              size="sm"
-              variant={mode === "single" ? "default" : "ghost"}
-              onClick={() => setMode("single")}
-              className="rounded-none text-xs flex-1"
-            >
-              Dia específico
-            </Button>
+          <div className="px-3 pt-3 pb-2 text-xs text-muted-foreground border-b border-border/30">
+            {clickStage === 0 && "Clique no dia inicial do período"}
+            {clickStage === 1 && "Clique no dia final (ou no mesmo dia para filtrar 1 dia)"}
+            {clickStage === 2 && "Clique novamente para iniciar uma nova seleção"}
           </div>
-
-          {mode === "range" ? (
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={handleRangeSelect}
-              numberOfMonths={2}
-              locale={ptBR}
-              disabled={(date) => date > new Date()}
-              className={cn("p-3 pointer-events-auto")}
-            />
-          ) : (
-            <Calendar
-              mode="single"
-              selected={singleDate}
-              onSelect={handleSingleSelect}
-              locale={ptBR}
-              disabled={(date) => date > new Date()}
-              className={cn("p-3 pointer-events-auto")}
-            />
-          )}
+          <Calendar
+            mode="range"
+            selected={dateRange}
+            onDayClick={handleDayClick}
+            numberOfMonths={2}
+            locale={ptBR}
+            disabled={(date) => date > new Date()}
+            className={cn("p-3 pointer-events-auto")}
+          />
         </PopoverContent>
       </Popover>
     </div>
