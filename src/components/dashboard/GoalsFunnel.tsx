@@ -181,7 +181,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
             <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
               <div>
                 <p className="text-xs uppercase tracking-wide text-blue-400">Planilha</p>
-                <p className="text-xs text-muted-foreground">Registro manual</p>
+                <p className="text-xs text-muted-foreground">Registro por API</p>
               </div>
               <p className="text-2xl font-bold text-blue-300">{formatNumber(planilhaCpfApproved)}</p>
             </div>
