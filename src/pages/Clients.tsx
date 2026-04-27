@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useClients } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
