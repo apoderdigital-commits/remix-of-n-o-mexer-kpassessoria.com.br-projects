@@ -335,6 +335,17 @@ export default function Login() {
                       className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
                     />
                   </div>
+                  {failedAttempts >= 3 && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/40 bg-destructive/10">
+                      <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                      <div className="text-xs leading-relaxed text-foreground">
+                        <p className="font-semibold text-destructive mb-1">Muitas tentativas incorretas</p>
+                        <p className="text-foreground/80">
+                          Você errou a senha {failedAttempts} vezes. Por favor, entre em contato com o time pelo grupo do WhatsApp para recuperar seu acesso.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Button type="submit" className="w-full h-14 text-sm font-semibold rounded-xl" disabled={loading}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
