@@ -1,10 +1,9 @@
 import { MessageCircle } from "lucide-react";
 
 const SUPPORT_PHONE = "5581997172434";
-const DEFAULT_MESSAGE = "Olá! Preciso de suporte com o dashboard.";
 
 export function SupportWhatsAppButton() {
-  const href = `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
+  const href = `https://wa.me/${SUPPORT_PHONE}`;
 
   return (
     <a
