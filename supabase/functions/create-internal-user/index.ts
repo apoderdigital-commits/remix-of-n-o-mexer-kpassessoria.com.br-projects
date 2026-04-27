@@ -28,12 +28,15 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
+    const { data: { user }, error: getUserError } = await userClient.auth.getUser();
+    if (getUserError) console.error("[create-internal-user] getUser error:", getUserError.message);
     if (!user) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      console.error("[create-internal-user] no user from token");
+      return new Response(JSON.stringify({ error: "Não autorizado - token inválido" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("[create-internal-user] caller:", user.id);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data: roles } = await adminClient
