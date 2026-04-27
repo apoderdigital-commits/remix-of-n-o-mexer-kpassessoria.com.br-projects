@@ -38,50 +38,108 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, g
   const missing = metaQty !== null ? Math.max(0, metaQty - value) : 0;
   const missingPct = metaQty !== null && metaPct !== undefined ? Math.max(0, metaPct - achievedPct) : 0;
 
+  const progressPct = metaPct ? Math.min(100, (achievedPct / metaPct) * 100) : 0;
+
   return (
-    <div className={`flex flex-col gap-3 p-5 rounded-2xl border transition-all ${
+    <div className={`flex flex-col gap-4 p-5 rounded-2xl border transition-all ${
       highlight ? "bg-gradient-to-r from-fuchsia-900/40 to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10" : "bg-card/60 border-border/30"
     }`}>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}>
-            <Icon className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className={`text-xs uppercase tracking-wide ${textColor}`}>{label}</p>
-            <p className="text-2xl font-bold text-foreground">{formatNumber(value)}</p>
-            {metaLabel && <p className="text-xs text-muted-foreground">{metaLabel}</p>}
-          </div>
+      <div className="flex items-center gap-3">
+        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}>
+          <Icon className="h-5 w-5 text-white" />
         </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs uppercase tracking-wide ${textColor}`}>{label}</p>
+          {metaLabel && <p className="text-xs text-muted-foreground">{metaLabel}</p>}
+        </div>
+      </div>
 
-        {metaQty !== null && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="px-3 py-2 rounded-xl bg-muted/30 border border-border/30 text-right">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1 justify-end">
+      {metaQty !== null ? (
+        <>
+          {/* Big comparison cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Realizado */}
+            <div className={`p-4 rounded-xl border ${
+              hitGoal ? "bg-green-500/10 border-green-500/30" : "bg-blue-500/10 border-blue-500/30"
+            }`}>
+              <p className={`text-[11px] uppercase tracking-wider font-semibold ${hitGoal ? "text-green-400" : "text-blue-400"}`}>
+                Realizado
+              </p>
+              <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(value)}</p>
+              <p className={`text-base font-semibold mt-1 ${hitGoal ? "text-green-300" : "text-blue-300"}`}>
+                {achievedPct.toFixed(1)}%
+              </p>
+              {baseValue !== undefined && (
+                <p className="text-[11px] text-muted-foreground mt-1">de {formatNumber(baseValue)}</p>
+              )}
+            </div>
+
+            {/* Meta */}
+            <div className="p-4 rounded-xl border bg-muted/30 border-border/40">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1">
                 <Target className="h-3 w-3" /> Meta
               </p>
-              <p className="text-sm font-semibold text-foreground">{formatNumber(metaQty)} <span className="text-muted-foreground text-xs">({metaPct}%)</span></p>
+              <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(metaQty)}</p>
+              <p className="text-base font-semibold text-foreground/80 mt-1">{metaPct}%</p>
+              <p className="text-[11px] text-muted-foreground mt-1">esperado</p>
             </div>
+
+            {/* Faltou ou Bateu */}
             {hitGoal ? (
-              <div className="px-3 py-2 rounded-xl bg-green-500/15 border border-green-500/30 text-right">
-                <p className="text-[10px] uppercase tracking-wide text-green-400 flex items-center gap-1 justify-end">
-                  <CheckCheck className="h-3 w-3" /> Bateu
+              <div className="p-4 rounded-xl border bg-green-500/15 border-green-500/40">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-green-400 flex items-center gap-1">
+                  <CheckCheck className="h-3 w-3" /> Bateu a meta
                 </p>
-                <p className="text-sm font-semibold text-green-300">{achievedPct.toFixed(1)}%</p>
+                <p className="text-3xl font-bold text-green-300 mt-1 leading-none">
+                  +{formatNumber(value - metaQty)}
+                </p>
+                <p className="text-base font-semibold text-green-300 mt-1">
+                  +{(achievedPct - metaPct!).toFixed(1)}%
+                </p>
+                <p className="text-[11px] text-green-400/80 mt-1">acima do mínimo</p>
               </div>
             ) : (
-              <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-right">
-                <p className="text-[10px] uppercase tracking-wide text-amber-400 flex items-center gap-1 justify-end">
+              <div className="p-4 rounded-xl border bg-amber-500/10 border-amber-500/40">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-400 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> Faltou
                 </p>
-                <p className="text-sm font-semibold text-amber-300">
-                  {formatNumber(missing)} <span className="text-amber-400/80 text-xs">({missingPct.toFixed(1)}%)</span>
+                <p className="text-3xl font-bold text-amber-300 mt-1 leading-none">
+                  {formatNumber(missing)}
                 </p>
+                <p className="text-base font-semibold text-amber-300 mt-1">
+                  {missingPct.toFixed(1)}%
+                </p>
+                <p className="text-[11px] text-amber-400/80 mt-1">para bater a meta</p>
               </div>
             )}
           </div>
-        )}
-      </div>
+
+          {/* Progress bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Progresso da meta</span>
+              <span className={`font-semibold ${hitGoal ? "text-green-300" : "text-amber-300"}`}>
+                {progressPct.toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  hitGoal ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-amber-500 to-orange-400"
+                }`}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        // Topo do funil (Leads) — sem meta comparativa
+        <div className="p-4 rounded-xl bg-muted/20 border border-border/30">
+          <p className="text-3xl font-bold text-foreground leading-none">{formatNumber(value)}</p>
+          <p className="text-xs text-muted-foreground mt-1">leads captados</p>
+        </div>
+      )}
+
       {extra && <div className="pt-1">{extra}</div>}
     </div>
   );
