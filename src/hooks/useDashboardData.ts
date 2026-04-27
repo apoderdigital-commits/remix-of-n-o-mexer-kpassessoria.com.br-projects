@@ -105,8 +105,13 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
         simulacoes: number;
         cpf_aprovado: number;
         cpf_nao_aprovado: number;
+        vendas_financiamento: number;
+        vendas_consorcio: number;
         pipeline_name: string;
         stages: { id: string; name: string }[];
+        mapping_complete: boolean;
+        missing_metrics: string[];
+        has_manual_mapping: boolean;
       };
     },
     enabled: !!clientId,
