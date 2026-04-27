@@ -65,6 +65,10 @@ export default function Clients() {
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [pwdInput, setPwdInput] = useState("");
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
   const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
