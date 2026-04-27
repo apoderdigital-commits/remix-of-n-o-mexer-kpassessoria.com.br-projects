@@ -70,28 +70,34 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
     queryKey: ["ghl_pipeline", clientId, since, until],
     queryFn: async () => {
       if (!clientId) return null;
+
+      // Pre-check: only call the edge function if the client actually has GHL configured.
+      // This avoids noisy 400 responses that get surfaced as runtime errors.
+      const { data: client } = await supabase
+        .from("clients")
+        .select("ghl_api_key, ghl_location_id")
+        .eq("id", clientId)
+        .maybeSingle();
+
+      if (!client?.ghl_api_key || !client?.ghl_location_id) {
+        return null;
+      }
+
       const { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline", {
         body: { client_id: clientId, since, until },
       });
       if (error) {
-        // FunctionsHttpError: try to read the response body for the specific reason
         let msg = "";
         try {
           const ctx: any = (error as any).context;
           if (ctx && typeof ctx.json === "function") {
             const body = await ctx.json();
             msg = body?.error ?? "";
-          } else if (ctx && typeof ctx.text === "function") {
-            msg = await ctx.text();
           }
         } catch (_) {
-          // ignore parse errors
-        }
-        if (typeof data === "object" && (data as any)?.error) {
-          msg = msg || (data as any).error;
+          // ignore
         }
         if (msg.includes("GHL not configured")) return null;
-        // Treat any 400 from this function as "not configured" rather than crashing the page
         if ((error as any)?.context?.status === 400) return null;
         throw error;
       }
