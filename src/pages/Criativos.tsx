@@ -9,6 +9,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
+import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import {
@@ -407,6 +408,15 @@ export default function Index() {
               icon="💳"
             />
           </div>
+
+          <GoalsFunnel
+            totalLeads={totalLeads}
+            ghlSimulacoes={ghlData?.simulacoes ?? 0}
+            ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
+            planilhaCpfApproved={planilhaCpfApproved}
+            salesFinancing={salesFinancing + salesLegacy}
+            onScrollTo={(t) => handleScrollToRanking(t)}
+          />
         </>
       )}
       </div>
