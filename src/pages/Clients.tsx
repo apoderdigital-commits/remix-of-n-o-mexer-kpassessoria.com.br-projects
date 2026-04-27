@@ -65,6 +65,10 @@ export default function Clients() {
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [pwdInput, setPwdInput] = useState("");
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
   const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -122,11 +126,23 @@ export default function Clients() {
     setOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("clients").delete().eq("id", id);
+  const requestDelete = (c: any) => {
+    setDeleteTarget({ id: c.id, name: c.name });
+    setDeleteConfirmText("");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toLowerCase() !== "confirmar") {
+      toast.error('Digite "confirmar" para excluir');
+      return;
+    }
+    const { error } = await supabase.from("clients").delete().eq("id", deleteTarget.id);
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success("Cliente excluído");
+    toast.success(`Cliente "${deleteTarget.name}" excluído`);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
   };
 
   const handleSaveDefaultToken = async () => {
@@ -424,7 +440,7 @@ export default function Clients() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="icon" onClick={() => requestDelete(c)} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -436,6 +452,59 @@ export default function Clients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteConfirmText(""); } }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Excluir cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a excluir{" "}
+              <span className="font-semibold text-foreground">{deleteTarget?.name}</span>.
+              Essa ação não pode ser desfeita.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Para confirmar a exclusão desse cliente, digite abaixo{" "}
+                <span className="font-mono font-semibold text-foreground">confirmar</span>
+              </Label>
+              <Input
+                autoFocus
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && deleteConfirmText.trim().toLowerCase() === "confirmar") {
+                    confirmDelete();
+                  }
+                }}
+                placeholder="confirmar"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteConfirmText.trim().toLowerCase() !== "confirmar"}
+              >
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
