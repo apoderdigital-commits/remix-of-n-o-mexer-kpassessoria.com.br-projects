@@ -115,7 +115,29 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
         ) : (
           <>
             {/* KPI summary cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {simulacoesTotal !== undefined && (
+                <div
+                  className="p-4 rounded-xl border border-border/40 bg-card/60"
+                  style={{ borderLeft: `3px solid hsl(190 80% 55%)` }}
+                >
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" style={{ color: "hsl(190 80% 55%)" }} />
+                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                      Simulações
+                    </p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground mt-2 leading-none">
+                    {simulacoesTotal.toLocaleString("pt-BR")}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <span className="text-[11px] text-muted-foreground">total no período (GHL)</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
+                    Simulações de crédito registradas no GHL
+                  </p>
+                </div>
+              )}
               {summary.map((s) => {
                 const Icon = s.icon;
                 const TrendIcon = s.trendPct > 1 ? TrendingUp : s.trendPct < -1 ? TrendingDown : Minus;
