@@ -69,6 +69,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AppRoutes />
+        <SupportWhatsAppButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
