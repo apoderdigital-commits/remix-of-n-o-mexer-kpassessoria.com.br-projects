@@ -378,11 +378,11 @@ export default function Clients() {
 
       {/* Client Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-card border-border/50">
+        <DialogContent className="bg-card border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar Cliente" : "Adicionar Cliente"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
+          <div className="space-y-4 mt-2 pb-2">
             <div className="space-y-2">
               <Label>Nome do Cliente</Label>
               <Input value={form.name} onChange={set("name")} placeholder="Ex: Moto Honda Recife" />
