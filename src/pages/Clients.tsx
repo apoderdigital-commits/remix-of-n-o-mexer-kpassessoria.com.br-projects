@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useClients } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,14 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
 const DEFAULT_TOKEN_KEY = "default_meta_token";
+const TOKEN_PASSWORD = "KP@2026@";
 
 interface ClientForm {
   name: string;
@@ -31,6 +32,22 @@ interface ClientForm {
 
 const emptyForm: ClientForm = { name: "", metaAccountId: "", metaToken: "", googleSheetId: "", ticketMedio: "", ghlApiKey: "", ghlLocationId: "" };
 
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+        ok
+          ? "border-green-500/30 bg-green-500/10 text-green-300"
+          : "border-red-500/30 bg-red-500/10 text-red-300"
+      }`}
+      title={ok ? `${label} configurado` : `${label} faltando`}
+    >
+      {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      {label}
+    </span>
+  );
+}
+
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
   const { signOut } = useAuth();
@@ -40,6 +57,13 @@ export default function Clients() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [defaultToken, setDefaultToken] = useState(() => localStorage.getItem(DEFAULT_TOKEN_KEY) || "");
+  const [search, setSearch] = useState("");
+
+  // Token lock state
+  const [tokenUnlocked, setTokenUnlocked] = useState(false);
+  const [showTokenValue, setShowTokenValue] = useState(false);
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+  const [pwdInput, setPwdInput] = useState("");
 
   const set = (field: keyof ClientForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -77,7 +101,6 @@ export default function Clients() {
       ghl_location_id: form.ghlLocationId.trim() || null,
     };
 
-    // Save token as default
     if (form.metaToken.trim()) {
       localStorage.setItem(DEFAULT_TOKEN_KEY, form.metaToken.trim());
       setDefaultToken(form.metaToken.trim());
@@ -107,6 +130,10 @@ export default function Clients() {
   };
 
   const handleSaveDefaultToken = async () => {
+    if (!tokenUnlocked) {
+      setPwdDialogOpen(true);
+      return;
+    }
     const token = defaultToken.trim();
     if (!token) return;
     localStorage.setItem(DEFAULT_TOKEN_KEY, token);
@@ -124,6 +151,24 @@ export default function Clients() {
     queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
+  const handleUnlockSubmit = () => {
+    if (pwdInput === TOKEN_PASSWORD) {
+      setTokenUnlocked(true);
+      setPwdDialogOpen(false);
+      setPwdInput("");
+      toast.success("Token desbloqueado");
+    } else {
+      toast.error("Senha incorreta");
+      setPwdInput("");
+    }
+  };
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c: any) => c.name?.toLowerCase().includes(q));
+  }, [clients, search]);
 
   return (
     <div className="min-h-screen p-6 space-y-6">
@@ -144,10 +189,22 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Default Token */}
+      {/* Default Token (protected) */}
       <Card className="glass-card border-border/50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Token Padrão da Meta</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            Token Padrão da Meta
+            <span
+              className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                tokenUnlocked
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                  : "border-primary/30 bg-primary/10 text-primary"
+              }`}
+            >
+              {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+              {tokenUnlocked ? "Desbloqueado" : "Protegido"}
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3 items-end">
@@ -155,17 +212,71 @@ export default function Clients() {
               <Label className="text-xs text-muted-foreground">
                 Esse token será pré-preenchido ao criar novos clientes
               </Label>
-              <Input
-                type="password"
-                value={defaultToken}
-                onChange={(e) => setDefaultToken(e.target.value)}
-                placeholder="Token de longa duração da Meta"
-              />
+              <div className="relative">
+                <Input
+                  type={tokenUnlocked && showTokenValue ? "text" : "password"}
+                  value={defaultToken}
+                  onChange={(e) => setDefaultToken(e.target.value)}
+                  placeholder="Token de longa duração da Meta"
+                  disabled={!tokenUnlocked}
+                  className="pr-10"
+                />
+                {tokenUnlocked && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTokenValue((s) => !s)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    title={showTokenValue ? "Ocultar" : "Mostrar"}
+                  >
+                    {showTokenValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
             </div>
-            <Button variant="outline" onClick={handleSaveDefaultToken}>Salvar</Button>
+            {tokenUnlocked ? (
+              <>
+                <Button variant="outline" onClick={handleSaveDefaultToken}>Salvar</Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => { setTokenUnlocked(false); setShowTokenValue(false); }}
+                  title="Bloquear novamente"
+                >
+                  <Lock className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
+                <Lock className="h-4 w-4" /> Desbloquear para editar
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Password Dialog */}
+      <Dialog open={pwdDialogOpen} onOpenChange={(o) => { setPwdDialogOpen(o); if (!o) setPwdInput(""); }}>
+        <DialogContent className="bg-card border-border/50 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4" /> Acesso restrito
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <Label className="text-xs text-muted-foreground">
+              Digite a senha para editar o Token Padrão da Meta
+            </Label>
+            <Input
+              type="password"
+              autoFocus
+              value={pwdInput}
+              onChange={(e) => setPwdInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSubmit(); }}
+              placeholder="Senha"
+            />
+            <Button onClick={handleUnlockSubmit} className="w-full">Desbloquear</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Client Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -218,50 +329,108 @@ export default function Clients() {
 
       {/* Clients Table */}
       <Card className="glass-card border-border/50">
-        <CardHeader>
-          <CardTitle className="text-base">Clientes Cadastrados</CardTitle>
+        <CardHeader className="gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-base">
+              Clientes Cadastrados
+              {clients?.length ? (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  ({filteredClients.length} de {clients.length})
+                </span>
+              ) : null}
+            </CardTitle>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Pesquisar cliente..."
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="text-muted-foreground text-center py-8">Carregando...</p>
           ) : !clients?.length ? (
             <p className="text-muted-foreground text-center py-8">Nenhum cliente cadastrado</p>
+          ) : !filteredClients.length ? (
+            <p className="text-muted-foreground text-center py-8">Nenhum cliente encontrado para "{search}"</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow className="border-border/30">
                   <TableHead className="text-muted-foreground">Nome</TableHead>
-                  <TableHead className="text-muted-foreground">Meta Account ID</TableHead>
-                   <TableHead className="text-muted-foreground">Google Sheet</TableHead>
-                   <TableHead className="text-muted-foreground">Ticket Médio</TableHead>
+                  <TableHead className="text-muted-foreground">Status do Cadastro</TableHead>
+                  <TableHead className="text-muted-foreground">Ticket Médio</TableHead>
                   <TableHead className="text-muted-foreground">Criado em</TableHead>
                   <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((c: any) => (
-                  <TableRow key={c.id} className="border-border/20">
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{c.meta_account_id || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.google_sheet_id ? "✅ Configurado" : "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.ticket_medio ? `R$ ${Number(c.ticket_medio).toLocaleString('pt-BR')}` : "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(c.created_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredClients.map((c: any) => {
+                  const checks = [
+                    { label: "Meta ID", ok: !!c.meta_account_id },
+                    { label: "Token Meta", ok: !!c.meta_access_token },
+                    { label: "Sheet", ok: !!c.google_sheet_id },
+                    { label: "Ticket", ok: !!c.ticket_medio },
+                    { label: "GHL Key", ok: !!c.ghl_api_key },
+                    { label: "Subconta GHL", ok: !!c.ghl_location_id },
+                  ];
+                  const okCount = checks.filter((x) => x.ok).length;
+                  const total = checks.length;
+                  const pct = (okCount / total) * 100;
+                  const barColor =
+                    pct === 100 ? "bg-green-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+
+                  return (
+                    <TableRow key={c.id} className="border-border/20">
+                      <TableCell className="font-medium align-top">
+                        <div>{c.name}</div>
+                        {c.meta_account_id && (
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">
+                            {c.meta_account_id}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="space-y-2 min-w-[260px]">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${barColor}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
+                              {okCount}/{total}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {checks.map((chk) => (
+                              <StatusPill key={chk.label} ok={chk.ok} label={chk.label} />
+                            ))}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground align-top">
+                        {c.ticket_medio ? `R$ ${Number(c.ticket_medio).toLocaleString('pt-BR')}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground align-top">
+                        {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1 align-top">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
