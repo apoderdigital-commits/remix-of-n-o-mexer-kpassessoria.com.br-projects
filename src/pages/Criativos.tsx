@@ -386,7 +386,14 @@ export default function Index() {
             </div>
           </div>
 
-          <EvolutionChart data={evolutionData} />
+          <GoalsFunnel
+            totalLeads={totalLeads}
+            ghlSimulacoes={ghlData?.simulacoes ?? 0}
+            ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
+            planilhaCpfApproved={planilhaCpfApproved}
+            salesFinancing={salesFinancing + salesLegacy}
+            onScrollTo={(t) => handleScrollToRanking(t)}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SellerRanking
@@ -409,14 +416,7 @@ export default function Index() {
             />
           </div>
 
-          <GoalsFunnel
-            totalLeads={totalLeads}
-            ghlSimulacoes={ghlData?.simulacoes ?? 0}
-            ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
-            planilhaCpfApproved={planilhaCpfApproved}
-            salesFinancing={salesFinancing + salesLegacy}
-            onScrollTo={(t) => handleScrollToRanking(t)}
-          />
+          <EvolutionChart data={evolutionData} />
         </>
       )}
       </div>
