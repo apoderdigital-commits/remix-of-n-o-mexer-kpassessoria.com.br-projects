@@ -466,7 +466,7 @@ export default function Index() {
             />
           </div>
 
-          <EvolutionChart data={evolutionData} />
+          <EvolutionChart data={evolutionData} simulacoesTotal={ghlData?.simulacoes} />
         </>
       )}
       </div>
