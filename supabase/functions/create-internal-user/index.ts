@@ -13,8 +13,10 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("[create-internal-user] request received, has auth:", !!authHeader);
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      console.error("[create-internal-user] missing Authorization header");
+      return new Response(JSON.stringify({ error: "Não autorizado - cabeçalho ausente" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -26,12 +28,15 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
+    const { data: { user }, error: getUserError } = await userClient.auth.getUser();
+    if (getUserError) console.error("[create-internal-user] getUser error:", getUserError.message);
     if (!user) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      console.error("[create-internal-user] no user from token");
+      return new Response(JSON.stringify({ error: "Não autorizado - token inválido" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("[create-internal-user] caller:", user.id);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data: roles } = await adminClient
@@ -138,7 +143,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("[create-internal-user] unhandled error:", err);
+    return new Response(JSON.stringify({ error: err.message || String(err) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
