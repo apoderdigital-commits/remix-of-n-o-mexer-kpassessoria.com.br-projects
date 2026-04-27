@@ -3,7 +3,7 @@ import { MessageCircle } from "lucide-react";
 const SUPPORT_PHONE = "5581997172434";
 
 export function SupportWhatsAppButton() {
-  const href = `https://api.whatsapp.com/send/?phone=${SUPPORT_PHONE}&text&type=phone_number&app_absent=0`;
+  const href = `https://wa.me/${SUPPORT_PHONE}`;
 
   return (
     <a
