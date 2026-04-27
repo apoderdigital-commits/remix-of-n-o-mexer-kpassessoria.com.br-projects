@@ -20,6 +20,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [screenTransition, setScreenTransition] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
