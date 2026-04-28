@@ -22,7 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
-const TOKEN_PASSWORD = "KP@2026@";
+const TOKEN_PASSWORD = "tokenkp";
 
 const EMPTY_MAPPING: StageMapping = {
   cpf_aprovado: [],
