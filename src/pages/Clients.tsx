@@ -22,7 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
-const TOKEN_PASSWORD = "KP@2026@";
+const TOKEN_PASSWORD = "tokenkp";
 
 const EMPTY_MAPPING: StageMapping = {
   cpf_aprovado: [],
@@ -550,7 +550,7 @@ export default function Clients() {
           </DialogHeader>
           <div className="space-y-3 mt-2">
             <Label className="text-xs text-muted-foreground">
-              Digite a senha para editar o Token Padrão da Meta
+              Digite a senha para gerenciar os Tokens da Meta
             </Label>
             <Input
               type="password"
