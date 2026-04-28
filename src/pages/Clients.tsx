@@ -353,9 +353,7 @@ export default function Clients() {
       setPwdInput("");
     }
   };
-      setPwdInput("");
-    }
-  };
+
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
