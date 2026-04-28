@@ -25,6 +25,7 @@ export type Database = {
           id: string
           meta_access_token: string | null
           meta_account_id: string | null
+          meta_token_id: string | null
           name: string
           phone: string | null
           share_token: string | null
@@ -42,6 +43,7 @@ export type Database = {
           id?: string
           meta_access_token?: string | null
           meta_account_id?: string | null
+          meta_token_id?: string | null
           name: string
           phone?: string | null
           share_token?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           id?: string
           meta_access_token?: string | null
           meta_account_id?: string | null
+          meta_token_id?: string | null
           name?: string
           phone?: string | null
           share_token?: string | null
@@ -66,7 +69,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_meta_token_id_fkey"
+            columns: ["meta_token_id"]
+            isOneToOne: false
+            referencedRelation: "meta_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       comparison_notes: {
         Row: {
@@ -208,6 +219,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meta_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
