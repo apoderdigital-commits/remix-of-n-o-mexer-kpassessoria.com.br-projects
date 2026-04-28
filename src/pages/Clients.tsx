@@ -11,14 +11,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
 
-const DEFAULT_TOKEN_KEY = "default_meta_token";
+const LEGACY_TOKEN_KEY = "default_meta_token";
 const TOKEN_PASSWORD = "KP@2026@";
 
 const EMPTY_MAPPING: StageMapping = {
@@ -28,10 +31,16 @@ const EMPTY_MAPPING: StageMapping = {
   vendas_consorcio: [],
 };
 
+interface MetaToken {
+  id: string;
+  name: string;
+  token: string;
+}
+
 interface ClientForm {
   name: string;
   metaAccountId: string;
-  metaToken: string;
+  metaTokenId: string;
   googleSheetId: string;
   ticketMedio: string;
   ghlApiKey: string;
@@ -42,7 +51,7 @@ interface ClientForm {
 const emptyForm: ClientForm = {
   name: "",
   metaAccountId: "",
-  metaToken: "",
+  metaTokenId: "",
   googleSheetId: "",
   ticketMedio: "",
   ghlApiKey: "",
@@ -74,14 +83,54 @@ export default function Clients() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
-  const [defaultToken, setDefaultToken] = useState(() => localStorage.getItem(DEFAULT_TOKEN_KEY) || "");
   const [search, setSearch] = useState("");
 
-  // Token lock state
+  // Token lock state (shared for the whole tokens card)
   const [tokenUnlocked, setTokenUnlocked] = useState(false);
-  const [showTokenValue, setShowTokenValue] = useState(false);
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [pwdInput, setPwdInput] = useState("");
+  const [revealedTokenId, setRevealedTokenId] = useState<string | null>(null);
+
+  // Tokens — load from DB
+  const { data: metaTokens, refetch: refetchTokens } = useQuery({
+    queryKey: ["meta_tokens"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("meta_tokens")
+        .select("id, name, token")
+        .order("name");
+      if (error) throw error;
+      return (data || []) as MetaToken[];
+    },
+  });
+
+  // Token add/edit dialog
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
+  const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
+  const [tokenForm, setTokenForm] = useState<{ name: string; token: string }>({ name: "", token: "" });
+  const [deleteTokenTarget, setDeleteTokenTarget] = useState<MetaToken | null>(null);
+
+  // One-time migration of legacy default token from localStorage to meta_tokens
+  useEffect(() => {
+    if (!metaTokens) return;
+    const legacy = localStorage.getItem(LEGACY_TOKEN_KEY);
+    if (!legacy) return;
+    if (metaTokens.some((t) => t.token === legacy)) {
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      return;
+    }
+    if (metaTokens.length > 0) return; // já existem tokens — não migrar
+    (async () => {
+      const { error } = await supabase
+        .from("meta_tokens")
+        .insert({ name: "Token Padrão", token: legacy });
+      if (!error) {
+        localStorage.removeItem(LEGACY_TOKEN_KEY);
+        refetchTokens();
+        toast.success("Token padrão antigo migrado para a lista");
+      }
+    })();
+  }, [metaTokens, refetchTokens]);
 
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -141,7 +190,7 @@ export default function Clients() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ ...emptyForm, metaToken: defaultToken });
+    setForm({ ...emptyForm });
     setOpen(true);
   };
 
@@ -150,7 +199,7 @@ export default function Clients() {
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
-      metaToken: c.meta_access_token || "",
+      metaTokenId: c.meta_token_id || "",
       googleSheetId: c.google_sheet_id || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
@@ -163,21 +212,21 @@ export default function Clients() {
   const handleSave = async () => {
     if (!form.name.trim()) return;
 
+    const selectedToken = metaTokens?.find((t) => t.id === form.metaTokenId);
+
     const payload = {
       name: form.name.trim(),
       meta_account_id: form.metaAccountId.trim() || null,
-      meta_access_token: form.metaToken.trim() || null,
+      meta_token_id: form.metaTokenId || null,
+      // Mantém o valor copiado em meta_access_token para compatibilidade
+      // com a edge function fetch-meta-data (que lê desse campo).
+      meta_access_token: selectedToken?.token || null,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
       ghl_stage_mapping: form.stageMapping,
     };
-
-    if (form.metaToken.trim()) {
-      localStorage.setItem(DEFAULT_TOKEN_KEY, form.metaToken.trim());
-      setDefaultToken(form.metaToken.trim());
-    }
 
     if (editingId) {
       const { error } = await supabase.from("clients").update(payload).eq("id", editingId);
@@ -206,7 +255,6 @@ export default function Clients() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    // Soft delete: send to trash (auto-purge after 30 days)
     const { error } = await supabase
       .from("clients")
       .update({ deleted_at: new Date().toISOString() })
@@ -219,25 +267,75 @@ export default function Clients() {
     setDeleteConfirmText("");
   };
 
-  const handleSaveDefaultToken = async () => {
-    if (!tokenUnlocked) {
-      setPwdDialogOpen(true);
+  // === Tokens da Meta ===
+  const requireUnlock = (after: () => void) => {
+    if (tokenUnlocked) { after(); return; }
+    setPwdDialogOpen(true);
+    pendingAfterUnlock.current = after;
+  };
+  const pendingAfterUnlock = useMemo(() => ({ current: null as null | (() => void) }), []);
+
+  const openCreateToken = () => {
+    requireUnlock(() => {
+      setEditingTokenId(null);
+      setTokenForm({ name: "", token: "" });
+      setTokenDialogOpen(true);
+    });
+  };
+
+  const openEditToken = (t: MetaToken) => {
+    requireUnlock(() => {
+      setEditingTokenId(t.id);
+      setTokenForm({ name: t.name, token: t.token });
+      setTokenDialogOpen(true);
+    });
+  };
+
+  const saveToken = async () => {
+    const name = tokenForm.name.trim();
+    const token = tokenForm.token.trim();
+    if (!name || !token) {
+      toast.error("Preencha nome e token");
       return;
     }
-    const token = defaultToken.trim();
-    if (!token) return;
-    localStorage.setItem(DEFAULT_TOKEN_KEY, token);
-
-    const { count, error } = await supabase
-      .from("clients")
-      .update({ meta_access_token: token })
-      .not("id", "is", null);
-
-    if (error) {
-      toast.error("Erro ao atualizar clientes: " + error.message);
-      return;
+    if (editingTokenId) {
+      const { error } = await supabase
+        .from("meta_tokens")
+        .update({ name, token })
+        .eq("id", editingTokenId);
+      if (error) { toast.error("Erro ao salvar: " + error.message); return; }
+      // Propaga novo valor para todos os clientes vinculados
+      const { error: propErr, count } = await supabase
+        .from("clients")
+        .update({ meta_access_token: token })
+        .eq("meta_token_id", editingTokenId);
+      if (propErr) {
+        toast.error("Token salvo, mas falhou ao atualizar clientes: " + propErr.message);
+      } else {
+        toast.success(`Token "${name}" atualizado (${count ?? 0} cliente(s) sincronizado(s))`);
+      }
+    } else {
+      const { error } = await supabase.from("meta_tokens").insert({ name, token });
+      if (error) { toast.error("Erro ao criar: " + error.message); return; }
+      toast.success(`Token "${name}" criado`);
     }
-    toast.success(`Token atualizado em ${count ?? 0} cliente(s)!`);
+    setTokenDialogOpen(false);
+    setEditingTokenId(null);
+    setTokenForm({ name: "", token: "" });
+    refetchTokens();
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+  };
+
+  const confirmDeleteToken = async () => {
+    if (!deleteTokenTarget) return;
+    const { error } = await supabase
+      .from("meta_tokens")
+      .delete()
+      .eq("id", deleteTokenTarget.id);
+    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
+    toast.success(`Token "${deleteTokenTarget.name}" excluído`);
+    setDeleteTokenTarget(null);
+    refetchTokens();
     queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
@@ -246,12 +344,16 @@ export default function Clients() {
       setTokenUnlocked(true);
       setPwdDialogOpen(false);
       setPwdInput("");
-      toast.success("Token desbloqueado");
+      toast.success("Tokens desbloqueados");
+      const cb = pendingAfterUnlock.current;
+      pendingAfterUnlock.current = null;
+      if (cb) cb();
     } else {
       toast.error("Senha incorreta");
       setPwdInput("");
     }
   };
+
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
@@ -287,69 +389,156 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Default Token (protected) */}
+      {/* Tokens da Meta (lista, protegida) */}
       <Card className="glass-card border-border/50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            Token Padrão da Meta
-            <span
-              className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                tokenUnlocked
-                  ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                  : "border-primary/30 bg-primary/10 text-primary"
-              }`}
-            >
-              {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-              {tokenUnlocked ? "Desbloqueado" : "Protegido"}
+          <CardTitle className="text-base flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Tokens da Meta
+              <span
+                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                  tokenUnlocked
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                    : "border-primary/30 bg-primary/10 text-primary"
+                }`}
+              >
+                {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                {tokenUnlocked ? "Desbloqueado" : "Protegido"}
+              </span>
             </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">
-                Esse token será pré-preenchido ao criar novos clientes
-              </Label>
-              <div className="relative">
-                <Input
-                  type={tokenUnlocked && showTokenValue ? "text" : "password"}
-                  value={defaultToken}
-                  onChange={(e) => setDefaultToken(e.target.value)}
-                  placeholder="Token de longa duração da Meta"
-                  disabled={!tokenUnlocked}
-                  className="pr-10"
-                />
-                {tokenUnlocked && (
-                  <button
-                    type="button"
-                    onClick={() => setShowTokenValue((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    title={showTokenValue ? "Ocultar" : "Mostrar"}
-                  >
-                    {showTokenValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                )}
-              </div>
-            </div>
-            {tokenUnlocked ? (
-              <>
-                <Button variant="outline" onClick={handleSaveDefaultToken}>Salvar</Button>
+            <div className="flex gap-2">
+              {tokenUnlocked && (
                 <Button
                   variant="ghost"
-                  onClick={() => { setTokenUnlocked(false); setShowTokenValue(false); }}
+                  size="sm"
+                  onClick={() => { setTokenUnlocked(false); setRevealedTokenId(null); }}
                   title="Bloquear novamente"
                 >
                   <Lock className="h-4 w-4" />
                 </Button>
-              </>
-            ) : (
-              <Button variant="outline" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
-                <Lock className="h-4 w-4" /> Desbloquear para editar
+              )}
+              <Button size="sm" className="gap-2" onClick={openCreateToken}>
+                <Plus className="h-4 w-4" /> Adicionar Token
               </Button>
-            )}
-          </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">
+            Cadastre tokens nomeados (ex: "Token de Will", "Token de Thiago"). Ao configurar um cliente, escolha qual token utilizar.
+          </p>
+          {!metaTokens?.length ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhum token cadastrado ainda. Clique em "Adicionar Token" para começar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {metaTokens.map((t) => {
+                const isRevealed = tokenUnlocked && revealedTokenId === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg border border-border/40 bg-secondary/40 p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{t.name}</div>
+                      <div className="text-xs font-mono text-muted-foreground truncate">
+                        {isRevealed ? t.token : "•".repeat(Math.min(40, t.token.length))}
+                      </div>
+                    </div>
+                    {tokenUnlocked && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
+                        title={isRevealed ? "Ocultar" : "Mostrar"}
+                      >
+                        {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => openEditToken(t)} title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => requireUnlock(() => setDeleteTokenTarget(t))}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {!tokenUnlocked && (
+            <div className="mt-3">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
+                <Lock className="h-4 w-4" /> Desbloquear para ver/editar valores
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Token add/edit dialog */}
+      <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingTokenId ? "Editar Token" : "Novo Token"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Nome do token</Label>
+              <Input
+                autoFocus
+                value={tokenForm.name}
+                onChange={(e) => setTokenForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ex: Token de Will"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Token de longa duração da Meta</Label>
+              <Input
+                value={tokenForm.token}
+                onChange={(e) => setTokenForm((f) => ({ ...f, token: e.target.value }))}
+                placeholder="EAAB..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setTokenDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={saveToken}>{editingTokenId ? "Salvar" : "Criar"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete token confirmation */}
+      <Dialog
+        open={!!deleteTokenTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTokenTarget(null); }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Excluir token
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Excluir <span className="font-semibold text-foreground">{deleteTokenTarget?.name}</span>?
+              Clientes vinculados a esse token <strong>perderão a referência</strong> (mas o valor copiado em cada cliente continuará funcionando até ser alterado).
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setDeleteTokenTarget(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmDeleteToken}>Excluir</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Password Dialog */}
       <Dialog open={pwdDialogOpen} onOpenChange={(o) => { setPwdDialogOpen(o); if (!o) setPwdInput(""); }}>
@@ -392,8 +581,30 @@ export default function Clients() {
               <Input value={form.metaAccountId} onChange={set("metaAccountId")} placeholder="Ex: 123456789" />
             </div>
             <div className="space-y-2">
-              <Label>Meta Access Token</Label>
-              <Input type="password" value={form.metaToken} onChange={set("metaToken")} placeholder="Token de longa duração" />
+              <Label>Token da Meta</Label>
+              <Select
+                value={form.metaTokenId || "__none__"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um token cadastrado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhum —</SelectItem>
+                  {metaTokens?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!metaTokens?.length && (
+                <p className="text-xs text-amber-300/80">
+                  Nenhum token cadastrado. Adicione um na seção "Tokens da Meta" acima.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
