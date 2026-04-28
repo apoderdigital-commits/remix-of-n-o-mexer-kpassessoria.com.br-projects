@@ -11,14 +11,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
 
-const DEFAULT_TOKEN_KEY = "default_meta_token";
+const LEGACY_TOKEN_KEY = "default_meta_token";
 const TOKEN_PASSWORD = "KP@2026@";
 
 const EMPTY_MAPPING: StageMapping = {
@@ -28,10 +31,16 @@ const EMPTY_MAPPING: StageMapping = {
   vendas_consorcio: [],
 };
 
+interface MetaToken {
+  id: string;
+  name: string;
+  token: string;
+}
+
 interface ClientForm {
   name: string;
   metaAccountId: string;
-  metaToken: string;
+  metaTokenId: string;
   googleSheetId: string;
   ticketMedio: string;
   ghlApiKey: string;
@@ -42,7 +51,7 @@ interface ClientForm {
 const emptyForm: ClientForm = {
   name: "",
   metaAccountId: "",
-  metaToken: "",
+  metaTokenId: "",
   googleSheetId: "",
   ticketMedio: "",
   ghlApiKey: "",
