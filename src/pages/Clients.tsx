@@ -389,69 +389,156 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Default Token (protected) */}
+      {/* Tokens da Meta (lista, protegida) */}
       <Card className="glass-card border-border/50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            Token Padrão da Meta
-            <span
-              className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                tokenUnlocked
-                  ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                  : "border-primary/30 bg-primary/10 text-primary"
-              }`}
-            >
-              {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-              {tokenUnlocked ? "Desbloqueado" : "Protegido"}
+          <CardTitle className="text-base flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Tokens da Meta
+              <span
+                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                  tokenUnlocked
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                    : "border-primary/30 bg-primary/10 text-primary"
+                }`}
+              >
+                {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                {tokenUnlocked ? "Desbloqueado" : "Protegido"}
+              </span>
             </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">
-                Esse token será pré-preenchido ao criar novos clientes
-              </Label>
-              <div className="relative">
-                <Input
-                  type={tokenUnlocked && showTokenValue ? "text" : "password"}
-                  value={defaultToken}
-                  onChange={(e) => setDefaultToken(e.target.value)}
-                  placeholder="Token de longa duração da Meta"
-                  disabled={!tokenUnlocked}
-                  className="pr-10"
-                />
-                {tokenUnlocked && (
-                  <button
-                    type="button"
-                    onClick={() => setShowTokenValue((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    title={showTokenValue ? "Ocultar" : "Mostrar"}
-                  >
-                    {showTokenValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                )}
-              </div>
-            </div>
-            {tokenUnlocked ? (
-              <>
-                <Button variant="outline" onClick={handleSaveDefaultToken}>Salvar</Button>
+            <div className="flex gap-2">
+              {tokenUnlocked && (
                 <Button
                   variant="ghost"
-                  onClick={() => { setTokenUnlocked(false); setShowTokenValue(false); }}
+                  size="sm"
+                  onClick={() => { setTokenUnlocked(false); setRevealedTokenId(null); }}
                   title="Bloquear novamente"
                 >
                   <Lock className="h-4 w-4" />
                 </Button>
-              </>
-            ) : (
-              <Button variant="outline" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
-                <Lock className="h-4 w-4" /> Desbloquear para editar
+              )}
+              <Button size="sm" className="gap-2" onClick={openCreateToken}>
+                <Plus className="h-4 w-4" /> Adicionar Token
               </Button>
-            )}
-          </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">
+            Cadastre tokens nomeados (ex: "Token de Will", "Token de Thiago"). Ao configurar um cliente, escolha qual token utilizar.
+          </p>
+          {!metaTokens?.length ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhum token cadastrado ainda. Clique em "Adicionar Token" para começar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {metaTokens.map((t) => {
+                const isRevealed = tokenUnlocked && revealedTokenId === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg border border-border/40 bg-secondary/40 p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{t.name}</div>
+                      <div className="text-xs font-mono text-muted-foreground truncate">
+                        {isRevealed ? t.token : "•".repeat(Math.min(40, t.token.length))}
+                      </div>
+                    </div>
+                    {tokenUnlocked && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
+                        title={isRevealed ? "Ocultar" : "Mostrar"}
+                      >
+                        {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => openEditToken(t)} title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => requireUnlock(() => setDeleteTokenTarget(t))}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {!tokenUnlocked && (
+            <div className="mt-3">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
+                <Lock className="h-4 w-4" /> Desbloquear para ver/editar valores
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Token add/edit dialog */}
+      <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingTokenId ? "Editar Token" : "Novo Token"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Nome do token</Label>
+              <Input
+                autoFocus
+                value={tokenForm.name}
+                onChange={(e) => setTokenForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ex: Token de Will"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Token de longa duração da Meta</Label>
+              <Input
+                value={tokenForm.token}
+                onChange={(e) => setTokenForm((f) => ({ ...f, token: e.target.value }))}
+                placeholder="EAAB..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setTokenDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={saveToken}>{editingTokenId ? "Salvar" : "Criar"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete token confirmation */}
+      <Dialog
+        open={!!deleteTokenTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTokenTarget(null); }}
+      >
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Excluir token
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Excluir <span className="font-semibold text-foreground">{deleteTokenTarget?.name}</span>?
+              Clientes vinculados a esse token <strong>perderão a referência</strong> (mas o valor copiado em cada cliente continuará funcionando até ser alterado).
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setDeleteTokenTarget(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmDeleteToken}>Excluir</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Password Dialog */}
       <Dialog open={pwdDialogOpen} onOpenChange={(o) => { setPwdDialogOpen(o); if (!o) setPwdInput(""); }}>
