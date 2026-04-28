@@ -218,7 +218,7 @@ export default function Index() {
   }, [campaigns, leads]);
 
   return (
-    <div className="min-h-screen max-w-[1400px] mx-auto">
+    <div className="min-h-screen w-full mx-auto">
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-b-[2rem] px-5 sm:px-10 pt-10 pb-10 sm:pt-14 sm:pb-12 mb-6 border-b border-border/40">
         {/* Layered backgrounds */}
