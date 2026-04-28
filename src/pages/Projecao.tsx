@@ -58,7 +58,7 @@ export default function Projecao() {
             Simule, compare e otimize suas estratégias de conversão
           </p>
 
-          <div className="w-full max-w-7xl mx-auto px-2">
+          <div className="w-full mx-auto px-2">
             <Tabs defaultValue="calculator" className="space-y-8">
               <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-black/80 backdrop-blur-xl border border-purple-500/30 p-2 rounded-2xl h-auto gap-2 shadow-2xl">
                 <TabsTrigger value="calculator" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-white hover:bg-white/10">
