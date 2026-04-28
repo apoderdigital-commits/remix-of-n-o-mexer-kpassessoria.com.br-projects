@@ -581,8 +581,30 @@ export default function Clients() {
               <Input value={form.metaAccountId} onChange={set("metaAccountId")} placeholder="Ex: 123456789" />
             </div>
             <div className="space-y-2">
-              <Label>Meta Access Token</Label>
-              <Input type="password" value={form.metaToken} onChange={set("metaToken")} placeholder="Token de longa duração" />
+              <Label>Token da Meta</Label>
+              <Select
+                value={form.metaTokenId || "__none__"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um token cadastrado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhum —</SelectItem>
+                  {metaTokens?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!metaTokens?.length && (
+                <p className="text-xs text-amber-300/80">
+                  Nenhum token cadastrado. Adicione um na seção "Tokens da Meta" acima.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Google Sheet ID (Planilha de Leads Qualificados)</Label>
