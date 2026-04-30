@@ -459,6 +459,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_accessible_clients: {
+        Args: never
+        Returns: {
+          created_at: string
+          google_sheet_id: string
+          has_ghl_credentials: boolean
+          has_google_sheet: boolean
+          has_meta_credentials: boolean
+          has_ticket_medio: boolean
+          id: string
+          meta_account_id: string
+          name: string
+          phone: string
+          ticket_medio: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -466,6 +482,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_can_access_client: { Args: { _client_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "manager" | "client"

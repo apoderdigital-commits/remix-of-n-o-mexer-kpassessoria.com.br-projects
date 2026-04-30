@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("meta_account_id, meta_access_token")
+      .select("meta_account_id, meta_access_token, meta_token_id")
       .eq("id", client_id)
       .single();
 
@@ -79,7 +79,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!client.meta_account_id || !client.meta_access_token) {
+    let metaAccessToken = client.meta_access_token;
+
+    if (!metaAccessToken && client.meta_token_id) {
+      const { data: linkedToken } = await supabase
+        .from("meta_tokens")
+        .select("token")
+        .eq("id", client.meta_token_id)
+        .maybeSingle();
+
+      metaAccessToken = linkedToken?.token ?? null;
+    }
+
+    if (!metaAccessToken) {
+      const { data: defaultToken } = await supabase
+        .from("meta_tokens")
+        .select("token")
+        .eq("name", "Token Padrão")
+        .maybeSingle();
+
+      metaAccessToken = defaultToken?.token ?? null;
+    }
+
+    if (!client.meta_account_id || !metaAccessToken) {
       return new Response(
         JSON.stringify({ error: "Client missing Meta Ads credentials" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -90,7 +112,7 @@ Deno.serve(async (req) => {
       ? `&time_range={"since":"${since}","until":"${until}"}`
       : "";
 
-    const initialUrl = `${META_API_BASE}/act_${client.meta_account_id}/insights?fields=campaign_name,ad_name,spend,actions&level=ad&time_increment=1${timeRange}&access_token=${client.meta_access_token}&limit=500`;
+    const initialUrl = `${META_API_BASE}/act_${client.meta_account_id}/insights?fields=campaign_name,ad_name,spend,actions&level=ad&time_increment=1${timeRange}&access_token=${metaAccessToken}&limit=500`;
 
     // Fetch ALL pages
     let allItems: any[];
