@@ -14,6 +14,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import {
   useClients,
+  useAccessibleClients,
   useMetaCampaigns,
   useQualifiedLeads,
   useSyncMeta,
@@ -61,8 +62,9 @@ export default function Index() {
   }, [isAdmin, authClientId, accessibleClientIds]);
 
   const { data: allClients } = useClients();
+  const { data: accessibleClients } = useAccessibleClients();
   // Filter clients by access
-  const clients = isAdmin ? allClients : allClients?.filter((c: any) => accessibleClientIds.includes(c.id));
+  const clients = isAdmin ? allClients : (accessibleClients || []);
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
