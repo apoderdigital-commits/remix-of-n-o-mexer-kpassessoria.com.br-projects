@@ -75,24 +75,42 @@ export default function Index() {
     setUntil(u);
   };
 
+  const activeClientData = clients?.find((c: any) => c.id === activeClient);
+
   const handleSyncAll = async () => {
     if (!activeClient) return;
-    setSyncing(true);
-    setSyncingSheet(true);
-    setSyncingGhl(true);
+    const promises: Promise<any>[] = [];
+    const hasMeta = !!(activeClientData?.meta_access_token && activeClientData?.meta_account_id);
+    const hasSheet = !!activeClientData?.google_sheet_id;
+    const hasGhl = !!(activeClientData?.ghl_api_key && activeClientData?.ghl_location_id);
+
+    if (hasMeta) {
+      setSyncing(true);
+      promises.push(sync(since, until));
+    }
+    if (hasSheet) {
+      setSyncingSheet(true);
+      promises.push(syncSheet(since, until));
+    }
+    if (hasGhl) {
+      setSyncingGhl(true);
+      promises.push(queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] }));
+    }
+
+    if (promises.length === 0) {
+      toast.error("Nenhuma integração configurada para este cliente.");
+      return;
+    }
+
     try {
-      const results = await Promise.allSettled([
-        sync(since, until),
-        syncSheet(since, until),
-        queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] }),
-      ]);
+      const results = await Promise.allSettled(promises);
       queryClient.invalidateQueries({ queryKey: ["meta_campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
       const failures = results.filter((r) => r.status === "rejected");
       if (failures.length === 0) {
-        toast.success("Todos os dados sincronizados!");
+        toast.success("Dados sincronizados com sucesso!");
       } else if (failures.length < results.length) {
-        toast.warning("Sincronização parcial — algumas fontes falharam. Verifique as configurações do cliente.");
+        toast.warning("Sincronização parcial — algumas fontes falharam.");
       } else {
         toast.error("Erro ao sincronizar. Verifique as configurações do cliente.");
       }
