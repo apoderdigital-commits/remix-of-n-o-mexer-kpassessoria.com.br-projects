@@ -81,14 +81,21 @@ export default function Index() {
     setSyncingSheet(true);
     setSyncingGhl(true);
     try {
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         sync(since, until),
         syncSheet(since, until),
         queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] }),
       ]);
       queryClient.invalidateQueries({ queryKey: ["meta_campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["qualified_leads"] });
-      toast.success("Todos os dados sincronizados!");
+      const failures = results.filter((r) => r.status === "rejected");
+      if (failures.length === 0) {
+        toast.success("Todos os dados sincronizados!");
+      } else if (failures.length < results.length) {
+        toast.warning("Sincronização parcial — algumas fontes falharam. Verifique as configurações do cliente.");
+      } else {
+        toast.error("Erro ao sincronizar. Verifique as configurações do cliente.");
+      }
     } catch {
       toast.error("Erro ao sincronizar");
     }
