@@ -296,17 +296,17 @@ export default function Index() {
             />
           )}
           <DateFilter onFilterChange={handleFilterChange} />
+          <Button
+            size="sm"
+            onClick={handleSyncAll}
+            disabled={!activeClient || syncing || syncingSheet || syncingGhl}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
+            Sincronizar Tudo
+          </Button>
           {isAdmin && (
             <>
-              <Button
-                size="sm"
-                onClick={handleSyncAll}
-                disabled={!activeClient || syncing || syncingSheet || syncingGhl}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
-                Sincronizar Tudo
-              </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5">
