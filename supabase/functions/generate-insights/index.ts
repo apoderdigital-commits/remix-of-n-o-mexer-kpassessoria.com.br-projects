@@ -223,6 +223,37 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Cache lookup (only if we have clientId + valid period)
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase =
+      SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+    const canCache = !!(payload.clientId && payload.period?.since && payload.period?.until && supabase);
+
+    if (canCache && !payload.force) {
+      const { data: cached } = await supabase!
+        .from("ai_insights_cache")
+        .select("result, created_at")
+        .eq("client_id", payload.clientId!)
+        .eq("since", payload.period.since)
+        .eq("until", payload.period.until)
+        .eq("mode", payload.mode)
+        .maybeSingle();
+
+      if (cached?.result) {
+        return new Response(
+          JSON.stringify({
+            mode: payload.mode,
+            result: cached.result,
+            generatedAt: cached.created_at,
+            cached: true,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+    }
+
     const tool = payload.mode === "summary" ? summaryTool : alertsTool;
     const toolName = tool.function.name;
 
