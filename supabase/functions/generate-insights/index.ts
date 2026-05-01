@@ -13,6 +13,8 @@ const MODEL = "google/gemini-3-flash-preview";
 
 interface Payload {
   mode: "summary" | "alerts";
+  clientId?: string;
+  force?: boolean;
   clientName?: string;
   period: { since: string; until: string; label?: string };
   kpis: {
