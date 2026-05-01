@@ -70,11 +70,22 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const phoneDigits = String(phone).replace(/\D/g, "");
-    if (phoneDigits.length < 10) {
-      return new Response(JSON.stringify({ error: "Telefone inválido" }), {
+    const newUserPhoneDigits = String(phone).replace(/\D/g, "");
+    if (newUserPhoneDigits.length < 10) {
+      return new Response(JSON.stringify({ error: "Telefone do novo usuário inválido" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Lookup admin profile to get phone (code goes to admin, NOT to new user)
+    const { data: adminProfile } = await adminClient
+      .from("profiles").select("full_name, email, phone").eq("user_id", user.id).maybeSingle();
+
+    const adminPhoneDigits = String(adminProfile?.phone ?? "").replace(/\D/g, "");
+    if (adminPhoneDigits.length < 10) {
+      return new Response(JSON.stringify({
+        error: "Seu perfil de admin não tem telefone cadastrado. Atualize seu telefone antes de criar usuários."
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Rate limit: max 1 active code per minute per admin
@@ -101,14 +112,14 @@ Deno.serve(async (req) => {
       role: role || "manager",
       dashboard_keys: Array.isArray(dashboard_keys) ? dashboard_keys : [],
       client_ids: Array.isArray(client_ids) ? client_ids : [],
-      phone: phoneDigits,
+      phone: newUserPhoneDigits,
     };
 
     const { data: inserted, error: insertError } = await adminClient
       .from("user_creation_verifications")
       .insert({
         requested_by: user.id,
-        phone: phoneDigits,
+        phone: adminPhoneDigits, // recipient of the code
         code_hash,
         payload,
         expires_at,
@@ -123,19 +134,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Lookup admin name for context
-    const { data: adminProfile } = await adminClient
-      .from("profiles").select("full_name, email").eq("user_id", user.id).maybeSingle();
-
     const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "verification_code",
-        phone: phoneDigits,
+        phone: adminPhoneDigits, // send code to admin's WhatsApp
         code,
         admin_name: adminProfile?.full_name || adminProfile?.email || "Admin KP",
         new_user_name: full_name || username,
+        new_user_phone: newUserPhoneDigits,
         expires_in_minutes: 10,
       }),
     });
