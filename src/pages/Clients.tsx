@@ -748,7 +748,10 @@ export default function Clients() {
                   return (
                     <TableRow key={c.id} className="border-border/20">
                       <TableCell className="font-medium align-top">
-                        <div>{c.name}</div>
+                        <div className="flex items-center gap-2">
+                          <HealthBadge health={healthMap?.[c.id]} />
+                          <span>{c.name}</span>
+                        </div>
                         {c.meta_account_id && (
                           <div className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">
                             {c.meta_account_id}
