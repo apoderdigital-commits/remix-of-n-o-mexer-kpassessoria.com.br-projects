@@ -88,18 +88,26 @@ Deno.serve(async (req) => {
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Rate limit: max 1 active code per minute per admin
+    // Rate limit: max 1 request per 30s per admin, only counting still-active (unconsumed) codes
     const { data: recent } = await adminClient
       .from("user_creation_verifications")
       .select("created_at")
       .eq("requested_by", user.id)
-      .gt("created_at", new Date(Date.now() - 60 * 1000).toISOString())
+      .is("consumed_at", null)
+      .gt("created_at", new Date(Date.now() - 30 * 1000).toISOString())
       .limit(1);
     if (recent?.length) {
-      return new Response(JSON.stringify({ error: "Aguarde 60s antes de pedir um novo código" }), {
+      return new Response(JSON.stringify({ error: "Aguarde 30s antes de pedir um novo código" }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Invalidate any previous unconsumed codes from this admin
+    await adminClient
+      .from("user_creation_verifications")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("requested_by", user.id)
+      .is("consumed_at", null);
 
     const code = generateCode();
     const code_hash = await sha256(code);
