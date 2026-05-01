@@ -223,6 +223,8 @@ export function ExecutiveSummary({
           </div>
         )}
       </div>
+
+      <CreativePreviewDialog url={previewUrl} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }
