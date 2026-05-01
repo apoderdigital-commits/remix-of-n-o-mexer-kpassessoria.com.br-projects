@@ -45,6 +45,20 @@ export default function Index() {
     financing: useRef<HTMLDivElement>(null),
   };
   const funnelRef = useRef<HTMLDivElement>(null);
+  const creativesRef = useRef<HTMLDivElement>(null);
+  const sellersRef = useRef<HTMLDivElement>(null);
+
+  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleJumpTo = (target: "funnel" | "creatives" | "sellers") => {
+    if (target === "funnel") scrollToRef(funnelRef);
+    else if (target === "creatives") scrollToRef(creativesRef);
+    else scrollToRef(sellersRef);
+  };
 
   const scrollToFunnel = () => {
     const el = funnelRef.current;
