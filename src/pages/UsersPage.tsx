@@ -390,10 +390,10 @@ export default function UsersPage() {
             <div className="space-y-5 mt-2">
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
                 <p className="text-sm">
-                  Enviamos um código de 6 dígitos para o WhatsApp <strong className="text-foreground">{form.phone}</strong>.
+                  Enviamos um código de 6 dígitos para o <strong className="text-foreground">seu WhatsApp</strong> (admin).
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  O código expira em 10 minutos. Confira a mensagem e digite abaixo para confirmar a criação do usuário.
+                  O código expira em 10 minutos. Confira a mensagem no seu celular e digite abaixo para confirmar a criação do usuário.
                 </p>
               </div>
 
