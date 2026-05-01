@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight, ArrowUp, ArrowDown, Minus } from "lucide-react";
+
+interface DayCompare {
+  today: number;
+  yesterday: number;
+  avg7d: number;
+}
 
 interface StatsCardsProps {
   totalLeads: number;
@@ -19,6 +25,32 @@ interface StatsCardsProps {
   } | null;
   ghlLoading?: boolean;
   onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
+  comparisons?: {
+    spent?: DayCompare;
+    leads?: DayCompare;
+    cpf?: DayCompare;
+  };
+}
+
+function CompareLine({ data, format }: { data: DayCompare; format: (n: number) => string }) {
+  const { today, yesterday, avg7d } = data;
+  const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
+  const arrowColor =
+    today > yesterday
+      ? "text-green-400"
+      : today < yesterday
+      ? "text-red-400"
+      : "text-muted-foreground";
+  return (
+    <p className="mt-1.5 flex items-center gap-1 text-[12px] text-muted-foreground">
+      <Arrow className={`h-3 w-3 ${arrowColor}`} />
+      <span className="text-foreground/80">Hoje: {format(today)}</span>
+      <span className="text-muted-foreground/50">·</span>
+      <span>Ontem: {format(yesterday)}</span>
+      <span className="text-muted-foreground/50">·</span>
+      <span>Média 7d: {format(avg7d)}</span>
+    </p>
+  );
 }
 
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
