@@ -192,9 +192,10 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   };
 
   const lastRealDate = sortedData.length > 0 ? sortedData[sortedData.length - 1].date : todayIso;
-  // Project from the day AFTER the last real point through end of month
-  const projectionStart = new Date(Math.max(new Date(lastRealDate + "T00:00:00").getTime(), today.getTime()));
-  projectionStart.setDate(projectionStart.getDate() + (lastRealDate < todayIso ? 1 : 1));
+  // Project starting the day AFTER the last real data point, so the dashed line
+  // connects directly from where the realized series ends (no gap).
+  const projectionStart = new Date(lastRealDate + "T00:00:00");
+  projectionStart.setDate(projectionStart.getDate() + 1);
   const projectionStartIso = toIso(projectionStart);
 
   // Build projection points (one per day until month end)
