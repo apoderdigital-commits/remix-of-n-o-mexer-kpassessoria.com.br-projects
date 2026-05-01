@@ -6,6 +6,10 @@ interface DayCompare {
   today: number;
   yesterday: number;
   avg7d: number;
+  todayDate?: string;      // dd/mm/yyyy
+  yesterdayDate?: string;  // dd/mm/yyyy
+  rangeStart?: string;     // dd/mm
+  rangeEnd?: string;       // dd/mm
 }
 
 interface StatsCardsProps {
@@ -33,7 +37,7 @@ interface StatsCardsProps {
 }
 
 function CompareLine({ data, format }: { data: DayCompare; format: (n: number) => string }) {
-  const { today, yesterday, avg7d } = data;
+  const { today, yesterday, avg7d, todayDate, yesterdayDate, rangeStart, rangeEnd } = data;
   const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
   const arrowColor =
     today > yesterday
@@ -42,14 +46,26 @@ function CompareLine({ data, format }: { data: DayCompare; format: (n: number) =
       ? "text-red-400"
       : "text-muted-foreground";
   return (
-    <p className="mt-1.5 flex items-center gap-1 text-[12px] text-muted-foreground">
-      <Arrow className={`h-3 w-3 ${arrowColor}`} />
-      <span className="text-foreground/80">Hoje: {format(today)}</span>
-      <span className="text-muted-foreground/50">·</span>
-      <span>Ontem: {format(yesterday)}</span>
-      <span className="text-muted-foreground/50">·</span>
-      <span>Média 7d: {format(avg7d)}</span>
-    </p>
+    <div className="mt-1.5 space-y-0.5 text-[12px] text-muted-foreground leading-snug">
+      <div className="flex items-center gap-1">
+        <Arrow className={`h-3 w-3 shrink-0 ${arrowColor}`} />
+        <span className="text-foreground/85 font-medium">Hoje</span>
+        {todayDate && <span className="text-muted-foreground/60">({todayDate})</span>}
+        <span className="text-foreground/85">: {format(today)}</span>
+      </div>
+      <div className="pl-4">
+        <span className="text-foreground/70">Ontem</span>
+        {yesterdayDate && <span className="text-muted-foreground/60"> ({yesterdayDate})</span>}
+        <span>: {format(yesterday)}</span>
+      </div>
+      <div className="pl-4">
+        <span className="text-foreground/70">Média 7d</span>
+        {rangeStart && rangeEnd && (
+          <span className="text-muted-foreground/60"> ({rangeStart} – {rangeEnd})</span>
+        )}
+        <span>: {format(avg7d)}</span>
+      </div>
+    </div>
   );
 }
 
