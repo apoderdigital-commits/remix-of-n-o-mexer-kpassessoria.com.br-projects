@@ -159,6 +159,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: TrendingDown,
       color: "text-fuchsia-400",
       accent: "300 70% 65%",
+      insight: "Referência de mercado para CPL no setor é de R$ 6 a R$ 8. Quanto mais baixo, melhor o aproveitamento do investimento.",
     },
     {
       title: "Simulações",
@@ -190,6 +191,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "0 70% 60%",
       sourceToggle: { source: cpfNaoSource, onToggle: () => setCpfNaoSource(s => s === "ghl" ? "planilha" : "ghl") },
       note: cpfNaoSource === "planilha" ? "Não disponível na planilha" : undefined,
+      insight: "Estamos otimizando todo o projeto continuamente para buscar a maior taxa de qualificação possível dos leads.",
     },
     {
       title: "Vendas Financiamento",
@@ -209,6 +211,15 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "210 75% 60%",
       sourceToggle: { source: vendasConsSource, onToggle: () => setVendasConsSource(s => s === "ghl" ? "planilha" : "ghl") },
       scrollTarget: "consortium" as const,
+      insight: (() => {
+        const base = displayCpfNaoAprovado;
+        if (!base || base <= 0) {
+          return "Em média, de 3% a 5% dos CPFs não aprovados se convertem em vendas de consórcio.";
+        }
+        const min = Math.round(base * 0.03);
+        const max = Math.round(base * 0.05);
+        return `Em média, 3% a 5% dos CPFs não aprovados viram consórcio. Atual: ${displayVendasCons} · esperado: ${min} a ${max}.`;
+      })(),
     },
     {
       title: "Criativos c/ CPF Aprov.",
@@ -217,6 +228,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-emerald-400",
       accent: "160 65% 50%",
       subtitle: "Planilha",
+      largeValue: true,
+      insight: "Meta: manter sempre pelo menos 15 criativos validados rodando ao mesmo tempo para sustentar o volume de aprovações.",
     },
     {
       title: "Criativos c/ Vendas",
@@ -225,6 +238,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-orange-400",
       accent: "25 85% 60%",
       subtitle: "Planilha",
+      largeValue: true,
+      insight: "Continuando o trabalho de validação: a média é alcançar 15 criativos validados em até 3 meses de operação.",
     },
   ];
 
@@ -272,7 +287,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                   {card.title}
                 </span>
               </div>
-              <p className="text-lg font-bold tracking-tight text-foreground leading-none">{card.value}</p>
+              <p className={`${(card as any).largeValue ? "text-2xl" : "text-lg"} font-bold tracking-tight text-foreground leading-none`}>{card.value}</p>
               {(card as any).compare && (
                 <CompareLine {...(card as any).compare} />
               )}
@@ -288,8 +303,13 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               {card.indicator && (
                 <MetaIndicator {...card.indicator} />
               )}
+              {(card as any).insight && (
+                <p className="mt-2 text-[11px] leading-snug text-muted-foreground/75">
+                  {(card as any).insight}
+                </p>
+              )}
               {clickable && (
-                <p className="mt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
+                <p className="mt-auto pt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
                   Clique para ver os criativos →
                 </p>
               )}
