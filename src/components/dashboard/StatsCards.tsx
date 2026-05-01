@@ -86,7 +86,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, comparisons }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
@@ -116,6 +116,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   const displayCpfAprovado = cpfAprovSource === "ghl" ? ghlAprovado : planilhaCpfApproved;
   const displayCpfNaoAprovado = cpfNaoSource === "ghl" ? ghlNaoAprovado : planilhaNaoAprovado;
 
+  const fmtMoney = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtInt = (n: number) => Math.round(n).toLocaleString("pt-BR");
+
   const cards = [
     // Row 1 - Funnel
     {
@@ -124,6 +127,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: DollarSign,
       color: "text-purple-300",
       accent: "263 60% 65%",
+      compare: comparisons?.spent ? { data: comparisons.spent, format: fmtMoney } : undefined,
     },
     {
       title: "Total de Leads",
@@ -131,6 +135,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: Users,
       color: "text-violet-400",
       accent: "255 70% 65%",
+      compare: comparisons?.leads ? { data: comparisons.leads, format: fmtInt } : undefined,
     },
     {
       title: "Custo / Lead",
@@ -158,6 +163,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
       scrollTarget: "cpf" as const,
+      compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
     },
     // Row 2 - Results
     {
