@@ -250,9 +250,10 @@ export default function Index() {
     const today = valueOn(0);
     const yesterday = valueOn(1);
 
-    // Average over the 7 calendar days ending on latest (inclusive), counting zero days
+    // Average over the 7 completed days BEFORE today (offsets 1..7),
+    // so the in-progress current day doesn't drag the average down
     let sum7 = 0;
-    for (let i = 0; i < 7; i++) sum7 += valueOn(i);
+    for (let i = 1; i <= 7; i++) sum7 += valueOn(i);
     const avg7d = sum7 / 7;
 
     return { today, yesterday, avg7d };
