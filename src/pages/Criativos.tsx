@@ -435,6 +435,7 @@ export default function Index() {
             ghlData={ghlData}
             ghlLoading={ghlLoading}
             onScrollTo={handleScrollToRanking}
+            comparisons={comparisons}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
