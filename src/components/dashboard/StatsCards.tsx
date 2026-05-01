@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight, ArrowUp, ArrowDown, Minus } from "lucide-react";
+
+interface DayCompare {
+  today: number;
+  yesterday: number;
+  avg7d: number;
+}
 
 interface StatsCardsProps {
   totalLeads: number;
@@ -19,6 +25,32 @@ interface StatsCardsProps {
   } | null;
   ghlLoading?: boolean;
   onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
+  comparisons?: {
+    spent?: DayCompare;
+    leads?: DayCompare;
+    cpf?: DayCompare;
+  };
+}
+
+function CompareLine({ data, format }: { data: DayCompare; format: (n: number) => string }) {
+  const { today, yesterday, avg7d } = data;
+  const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
+  const arrowColor =
+    today > yesterday
+      ? "text-green-400"
+      : today < yesterday
+      ? "text-red-400"
+      : "text-muted-foreground";
+  return (
+    <p className="mt-1.5 flex items-center gap-1 text-[12px] text-muted-foreground">
+      <Arrow className={`h-3 w-3 ${arrowColor}`} />
+      <span className="text-foreground/80">Hoje: {format(today)}</span>
+      <span className="text-muted-foreground/50">·</span>
+      <span>Ontem: {format(yesterday)}</span>
+      <span className="text-muted-foreground/50">·</span>
+      <span>Média 7d: {format(avg7d)}</span>
+    </p>
+  );
 }
 
 function MetaIndicator({ label, value, target }: { label: string; value: number; target: number }) {
@@ -54,7 +86,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, comparisons }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
@@ -84,6 +116,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   const displayCpfAprovado = cpfAprovSource === "ghl" ? ghlAprovado : planilhaCpfApproved;
   const displayCpfNaoAprovado = cpfNaoSource === "ghl" ? ghlNaoAprovado : planilhaNaoAprovado;
 
+  const fmtMoney = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtInt = (n: number) => Math.round(n).toLocaleString("pt-BR");
+
   const cards = [
     // Row 1 - Funnel
     {
@@ -92,6 +127,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: DollarSign,
       color: "text-purple-300",
       accent: "263 60% 65%",
+      compare: comparisons?.spent ? { data: comparisons.spent, format: fmtMoney } : undefined,
     },
     {
       title: "Total de Leads",
@@ -99,6 +135,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: Users,
       color: "text-violet-400",
       accent: "255 70% 65%",
+      compare: comparisons?.leads ? { data: comparisons.leads, format: fmtInt } : undefined,
     },
     {
       title: "Custo / Lead",
@@ -126,6 +163,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
       scrollTarget: "cpf" as const,
+      compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
     },
     // Row 2 - Results
     {
@@ -219,6 +257,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 </span>
               </div>
               <p className="text-xl font-bold tracking-tight text-foreground leading-none">{card.value}</p>
+              {(card as any).compare && (
+                <CompareLine {...(card as any).compare} />
+              )}
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />
               )}
