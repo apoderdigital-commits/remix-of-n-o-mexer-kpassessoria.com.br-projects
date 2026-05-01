@@ -181,7 +181,7 @@ export function ExecutiveSummary({
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {movers.rising && (
               <button
-                onClick={() => onJumpTo?.("creatives")}
+                onClick={() => openPreview(movers.rising!.name)}
                 className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-green-500/25 bg-gradient-to-br from-green-500/[0.08] to-transparent hover:border-green-500/50 transition-all"
               >
                 <div className="p-1.5 rounded-lg bg-green-500/15 shrink-0">
