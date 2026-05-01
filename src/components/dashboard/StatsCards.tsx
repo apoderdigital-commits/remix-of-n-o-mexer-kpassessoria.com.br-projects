@@ -170,6 +170,16 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: simSource, onToggle: () => setSimSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: simSource === "ghl" && ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
       note: simSource === "planilha" ? "CPFs aprovados (planilha)" : undefined,
+      insight: simSource === "ghl" && ghlData && totalLeads > 0
+        ? (() => {
+            const target = Math.round(totalLeads * 0.6);
+            const diff = simulacoes - target;
+            const status = diff >= 0
+              ? `acima da meta em ${diff} simulações`
+              : `faltam ${Math.abs(diff)} para bater a meta`;
+            return `Atual: ${simulacoes} (${simRate.toFixed(1)}%) · esperado: ${target} (60% dos leads). Estamos ${status}.`;
+          })()
+        : undefined,
     },
     {
       title: "CPF Aprovado",
