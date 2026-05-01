@@ -24,7 +24,6 @@ import { HealthBadge } from "@/components/clients/HealthBadge";
 import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
-const TOKEN_PASSWORD = "tokenkp";
 
 const EMPTY_MAPPING: StageMapping = {
   cpf_aprovado: [],
@@ -90,9 +89,6 @@ export default function Clients() {
   const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
-  const [tokenUnlocked, setTokenUnlocked] = useState(false);
-  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
-  const [pwdInput, setPwdInput] = useState("");
   const [revealedTokenId, setRevealedTokenId] = useState<string | null>(null);
 
   // Tokens — load from DB
