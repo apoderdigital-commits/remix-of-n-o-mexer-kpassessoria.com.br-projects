@@ -549,6 +549,8 @@ export default function Index() {
             onScrollToFunnel={scrollToFunnel}
           />
 
+          <AIInsights buildContext={buildAIContext} disabled={!activeClient} />
+
           <ExecutiveSummary
             totalLeads={totalLeads}
             totalSpent={totalSpent}
