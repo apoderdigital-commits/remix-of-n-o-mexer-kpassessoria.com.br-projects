@@ -20,6 +20,8 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
+import { HealthBadge } from "@/components/clients/HealthBadge";
+import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
 const TOKEN_PASSWORD = "tokenkp";
@@ -84,6 +86,8 @@ export default function Clients() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
+  const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
+  const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
   const [tokenUnlocked, setTokenUnlocked] = useState(false);
@@ -358,9 +362,27 @@ export default function Clients() {
   const filteredClients = useMemo(() => {
     if (!clients) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c: any) => c.name?.toLowerCase().includes(q));
-  }, [clients, search]);
+    let list = q ? clients.filter((c: any) => c.name?.toLowerCase().includes(q)) : [...clients];
+
+    if (healthFilter !== "all" && healthMap) {
+      list = list.filter((c: any) => {
+        const lvl = healthMap[c.id]?.level;
+        if (healthFilter === "critical") return lvl === "red";
+        if (healthFilter === "attention") return lvl === "red" || lvl === "yellow";
+        return true;
+      });
+    }
+
+    const order: Record<HealthLevel | "none", number> = { red: 0, yellow: 1, green: 2, none: 3 };
+    list.sort((a: any, b: any) => {
+      const la = (healthMap?.[a.id]?.level ?? "none") as HealthLevel | "none";
+      const lb = (healthMap?.[b.id]?.level ?? "none") as HealthLevel | "none";
+      if (order[la] !== order[lb]) return order[la] - order[lb];
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+    return list;
+  }, [clients, search, healthFilter, healthMap]);
 
   return (
     <div className="min-h-screen p-6 space-y-6">
@@ -657,14 +679,35 @@ export default function Clients() {
                 </span>
               ) : null}
             </CardTitle>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Pesquisar cliente..."
-                className="pl-9"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <div className="inline-flex rounded-md border border-border/40 bg-secondary/30 p-0.5 text-xs">
+                {([
+                  { k: "all", label: "Todos" },
+                  { k: "attention", label: "Atenção" },
+                  { k: "critical", label: "Críticos" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    onClick={() => setHealthFilter(opt.k)}
+                    className={`px-2.5 py-1 rounded transition-colors ${
+                      healthFilter === opt.k
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Pesquisar cliente..."
+                  className="pl-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -705,7 +748,10 @@ export default function Clients() {
                   return (
                     <TableRow key={c.id} className="border-border/20">
                       <TableCell className="font-medium align-top">
-                        <div>{c.name}</div>
+                        <div className="flex items-center gap-2">
+                          <HealthBadge health={healthMap?.[c.id]} />
+                          <span>{c.name}</span>
+                        </div>
                         {c.meta_account_id && (
                           <div className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">
                             {c.meta_account_id}
