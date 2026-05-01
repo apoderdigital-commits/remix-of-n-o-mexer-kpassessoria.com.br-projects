@@ -314,8 +314,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    const generatedAt = new Date().toISOString();
+
+    // Save to cache (upsert)
+    if (canCache) {
+      try {
+        await supabase!
+          .from("ai_insights_cache")
+          .upsert(
+            {
+              client_id: payload.clientId!,
+              since: payload.period.since,
+              until: payload.period.until,
+              mode: payload.mode,
+              payload_hash: "",
+              result: parsed as any,
+              created_at: generatedAt,
+            },
+            { onConflict: "client_id,since,until,mode" }
+          );
+      } catch (e) {
+        console.error("cache upsert failed:", e);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ mode: payload.mode, result: parsed, generatedAt: new Date().toISOString() }),
+      JSON.stringify({ mode: payload.mode, result: parsed, generatedAt, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (e) {
