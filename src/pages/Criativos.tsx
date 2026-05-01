@@ -94,6 +94,8 @@ export default function Index() {
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
+  const { data: previousPeriod } = usePreviousPeriodData(activeClient, since, until);
+  const { data: monthlyTrend } = useMonthlyTrend(activeClient, 6);
   const { sync } = useSyncMeta(activeClient);
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
