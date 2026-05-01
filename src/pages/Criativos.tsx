@@ -476,6 +476,28 @@ export default function Index() {
             vendasFinanciamento={(ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy)}
             onScrollToFunnel={scrollToFunnel}
           />
+
+          <ExecutiveSummary
+            totalLeads={totalLeads}
+            totalSpent={totalSpent}
+            cpl={totalLeads > 0 ? totalSpent / totalLeads : 0}
+            simulacoes={ghlData?.simulacoes ?? 0}
+            cpfAprovado={ghlData?.cpf_aprovado ?? planilhaCpfApproved}
+            vendasFinanciamento={(ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy)}
+            vendasConsorcio={(ghlData?.vendas_consorcio ?? 0) || salesConsortium}
+            previous={previousPeriod ? {
+              totalLeads: previousPeriod.totalLeads,
+              totalSpent: previousPeriod.totalSpent,
+              cpl: previousPeriod.cpl,
+              simulacoes: previousPeriod.simulacoes,
+              cpfAprovado: previousPeriod.ghlCpfAprovado || previousPeriod.cpfApproved,
+              vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
+              vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
+            } : null}
+            leadsByDate={(leads || []).map(l => ({ creative_name: l.creative_name, lead_date: l.lead_date, status: l.status }))}
+            onJumpTo={handleJumpTo}
+          />
+
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
@@ -488,9 +510,18 @@ export default function Index() {
             ghlLoading={ghlLoading}
             onScrollTo={handleScrollToRanking}
             comparisons={comparisons}
+            previousPeriod={previousPeriod ? {
+              totalLeads: previousPeriod.totalLeads,
+              totalSpent: previousPeriod.totalSpent,
+              cpl: previousPeriod.cpl,
+              simulacoes: previousPeriod.simulacoes,
+              cpfAprovado: previousPeriod.ghlCpfAprovado || previousPeriod.cpfApproved,
+              vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
+              vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
+            } : null}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div ref={rankingRefs.cpf} className="rounded-xl">
               <CreativeRanking
                 title="🏆 Criativos por CPF Aprovado"
@@ -537,7 +568,11 @@ export default function Index() {
           />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {monthlyTrend && monthlyTrend.length > 0 && (
+            <MonthlyTrend data={monthlyTrend} />
+          )}
+
+          <div ref={sellersRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SellerRanking
               title="CPFs Aprovados por Vendedor"
               data={sellerCpfRanking}
