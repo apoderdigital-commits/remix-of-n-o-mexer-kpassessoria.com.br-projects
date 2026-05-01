@@ -679,14 +679,35 @@ export default function Clients() {
                 </span>
               ) : null}
             </CardTitle>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Pesquisar cliente..."
-                className="pl-9"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <div className="inline-flex rounded-md border border-border/40 bg-secondary/30 p-0.5 text-xs">
+                {([
+                  { k: "all", label: "Todos" },
+                  { k: "attention", label: "Atenção" },
+                  { k: "critical", label: "Críticos" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    onClick={() => setHealthFilter(opt.k)}
+                    className={`px-2.5 py-1 rounded transition-colors ${
+                      healthFilter === opt.k
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Pesquisar cliente..."
+                  className="pl-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
