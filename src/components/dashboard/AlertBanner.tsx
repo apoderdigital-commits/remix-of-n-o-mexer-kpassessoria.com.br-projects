@@ -33,7 +33,7 @@ export function AlertBanner({
         list.push({
           id: "sim-lead",
           level: "warning",
-          message: `Simulações abaixo da meta — Sim/Lead atual: ${simRate.toFixed(1)}%. Meta: 60%.`,
+          message: `Sim/Lead ${simRate.toFixed(1)}% · meta 60%`,
         });
       }
     }
@@ -44,7 +44,7 @@ export function AlertBanner({
         list.push({
           id: "aprov-sim",
           level: "warning",
-          message: `Aprovação de CPF abaixo da meta — atual: ${aprovRate.toFixed(1)}%. Meta: 20%.`,
+          message: `Aprov/Sim ${aprovRate.toFixed(1)}% · meta 20%`,
         });
       }
     }
@@ -52,20 +52,14 @@ export function AlertBanner({
     if (cpfAprovado > 0) {
       const finRate = (vendasFinanciamento / cpfAprovado) * 100;
       if (finRate < 25) {
-        if (vendasFinanciamento === 0) {
-          list.push({
-            id: "fin-aprov",
-            level: "critical",
-            message:
-              "Conversão em venda zerada — nenhum CPF aprovado virou venda ainda.",
-          });
-        } else {
-          list.push({
-            id: "fin-aprov",
-            level: "critical",
-            message: `Conversão em venda crítica — Fin/Aprov atual: ${finRate.toFixed(1)}%. Meta: 25%.`,
-          });
-        }
+        list.push({
+          id: "fin-aprov",
+          level: "critical",
+          message:
+            vendasFinanciamento === 0
+              ? "Fin/Aprov 0% — sem vendas"
+              : `Fin/Aprov ${finRate.toFixed(1)}% · meta 25%`,
+        });
       }
     }
 
@@ -76,7 +70,7 @@ export function AlertBanner({
   if (visible.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {visible.map((alert) => {
         const isCritical = alert.level === "critical";
         const Icon = isCritical ? AlertOctagon : AlertTriangle;
@@ -84,56 +78,42 @@ export function AlertBanner({
           <div
             key={alert.id}
             role="alert"
-            className={`flex items-start gap-3 rounded-xl border px-4 py-3 backdrop-blur-sm ${
+            className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${
               isCritical
-                ? "border-red-500/40 bg-red-500/10"
-                : "border-amber-500/40 bg-amber-500/10"
+                ? "border-red-500/25 bg-red-500/[0.06] text-red-200/90"
+                : "border-amber-500/25 bg-amber-500/[0.06] text-amber-200/90"
             }`}
           >
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+            <Icon
+              className={`h-3.5 w-3.5 shrink-0 ${
+                isCritical ? "text-red-400" : "text-amber-400"
+              }`}
+            />
+            <span className="font-medium whitespace-nowrap">{alert.message}</span>
+            <button
+              onClick={onScrollToFunnel}
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
                 isCritical
-                  ? "bg-red-500/20 text-red-300"
-                  : "bg-amber-500/20 text-amber-300"
+                  ? "text-red-300 hover:bg-red-500/15"
+                  : "text-amber-300 hover:bg-amber-500/15"
               }`}
             >
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <p
-                className={`text-sm font-medium ${
-                  isCritical ? "text-red-100" : "text-amber-100"
-                }`}
-              >
-                {alert.message}
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={onScrollToFunnel}
-                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                  isCritical
-                    ? "border-red-400/40 bg-red-500/20 text-red-100 hover:bg-red-500/30"
-                    : "border-amber-400/40 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30"
-                }`}
-              >
-                <ArrowDown className="h-3 w-3" />
-                Ver funil
-              </button>
-              <button
-                onClick={() =>
-                  setDismissed((prev) => new Set(prev).add(alert.id))
-                }
-                aria-label="Dispensar alerta"
-                className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                  isCritical
-                    ? "text-red-200/70 hover:bg-red-500/20 hover:text-red-100"
-                    : "text-amber-200/70 hover:bg-amber-500/20 hover:text-amber-100"
-                }`}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+              <ArrowDown className="h-2.5 w-2.5" />
+              funil
+            </button>
+            <button
+              onClick={() =>
+                setDismissed((prev) => new Set(prev).add(alert.id))
+              }
+              aria-label="Dispensar"
+              className={`flex h-4 w-4 items-center justify-center rounded transition-colors ${
+                isCritical
+                  ? "text-red-300/60 hover:bg-red-500/15 hover:text-red-200"
+                  : "text-amber-300/60 hover:bg-amber-500/15 hover:text-amber-200"
+              }`}
+            >
+              <X className="h-3 w-3" />
+            </button>
           </div>
         );
       })}
