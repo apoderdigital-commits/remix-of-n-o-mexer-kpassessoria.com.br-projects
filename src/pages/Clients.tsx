@@ -268,27 +268,18 @@ export default function Clients() {
   };
 
   // === Tokens da Meta ===
-  const requireUnlock = (after: () => void) => {
-    if (tokenUnlocked) { after(); return; }
-    setPwdDialogOpen(true);
-    pendingAfterUnlock.current = after;
-  };
-  const pendingAfterUnlock = useMemo(() => ({ current: null as null | (() => void) }), []);
+  // Access control is enforced server-side via RLS (admin-only on meta_tokens).
 
   const openCreateToken = () => {
-    requireUnlock(() => {
-      setEditingTokenId(null);
-      setTokenForm({ name: "", token: "" });
-      setTokenDialogOpen(true);
-    });
+    setEditingTokenId(null);
+    setTokenForm({ name: "", token: "" });
+    setTokenDialogOpen(true);
   };
 
   const openEditToken = (t: MetaToken) => {
-    requireUnlock(() => {
-      setEditingTokenId(t.id);
-      setTokenForm({ name: t.name, token: t.token });
-      setTokenDialogOpen(true);
-    });
+    setEditingTokenId(t.id);
+    setTokenForm({ name: t.name, token: t.token });
+    setTokenDialogOpen(true);
   };
 
   const saveToken = async () => {
@@ -337,21 +328,6 @@ export default function Clients() {
     setDeleteTokenTarget(null);
     refetchTokens();
     queryClient.invalidateQueries({ queryKey: ["clients"] });
-  };
-
-  const handleUnlockSubmit = () => {
-    if (pwdInput === TOKEN_PASSWORD) {
-      setTokenUnlocked(true);
-      setPwdDialogOpen(false);
-      setPwdInput("");
-      toast.success("Tokens desbloqueados");
-      const cb = pendingAfterUnlock.current;
-      pendingAfterUnlock.current = null;
-      if (cb) cb();
-    } else {
-      toast.error("Senha incorreta");
-      setPwdInput("");
-    }
   };
 
 
