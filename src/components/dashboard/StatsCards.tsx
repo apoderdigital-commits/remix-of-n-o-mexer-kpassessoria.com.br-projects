@@ -34,6 +34,52 @@ interface StatsCardsProps {
     leads?: DayCompare;
     cpf?: DayCompare;
   };
+  previousPeriod?: {
+    totalLeads: number;
+    totalSpent: number;
+    cpl: number;
+    simulacoes: number;
+    cpfAprovado: number;
+    vendasFinanciamento: number;
+    vendasConsorcio: number;
+  } | null;
+}
+
+function PrevDelta({
+  current,
+  previous,
+  invertColor = false,
+  format,
+}: {
+  current: number;
+  previous: number | null | undefined;
+  invertColor?: boolean;
+  format?: (n: number) => string;
+}) {
+  if (previous === null || previous === undefined) return null;
+  if (previous === 0 && current === 0) return null;
+  let pct: number;
+  if (previous === 0) pct = 100;
+  else pct = ((current - previous) / previous) * 100;
+  const isUp = pct > 0.5;
+  const isDown = pct < -0.5;
+  const positive = invertColor ? isDown : isUp;
+  const negative = invertColor ? isUp : isDown;
+  const Icon = isUp ? ArrowUp : isDown ? ArrowDown : Minus;
+  const color = positive ? "text-green-400" : negative ? "text-red-400" : "text-muted-foreground";
+  const sign = pct > 0 ? "+" : "";
+  return (
+    <p className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold ${color}`}>
+      <Icon className="h-2.5 w-2.5" />
+      {sign}
+      {pct.toFixed(1)}% vs anterior
+      {format && (
+        <span className="text-muted-foreground/70 font-normal ml-0.5">
+          ({format(previous)})
+        </span>
+      )}
+    </p>
+  );
 }
 
 function CompareLine({ data, format }: { data: DayCompare; format: (n: number) => string }) {
@@ -102,7 +148,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, comparisons }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, comparisons, previousPeriod }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
@@ -144,6 +190,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-purple-300",
       accent: "263 60% 65%",
       compare: comparisons?.spent ? { data: comparisons.spent, format: fmtMoney } : undefined,
+      prev: previousPeriod?.totalSpent,
+      prevFormat: fmtMoney,
     },
     {
       title: "Total de Leads",
@@ -152,6 +200,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-violet-400",
       accent: "255 70% 65%",
       compare: comparisons?.leads ? { data: comparisons.leads, format: fmtInt } : undefined,
+      prev: previousPeriod?.totalLeads,
+      prevFormat: fmtInt,
     },
     {
       title: "Custo / Lead",
@@ -160,6 +210,10 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-fuchsia-400",
       accent: "300 70% 65%",
       insight: "Referência de mercado para CPL no setor é de R$ 6 a R$ 8. Quanto mais baixo, melhor o aproveitamento do investimento.",
+      prev: previousPeriod?.cpl,
+      prevFormat: fmtMoney,
+      prevInvert: true,
+      currentForPrev: totalLeads > 0 ? totalSpent / totalLeads : 0,
     },
     {
       title: "Simulações",
@@ -180,6 +234,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
             return `Atual: ${simulacoes} (${simRate.toFixed(1)}%) · esperado: ${target} (60% dos leads). Estamos ${status}.`;
           })()
         : undefined,
+      prev: simSource === "ghl" ? previousPeriod?.simulacoes : undefined,
+      prevFormat: fmtInt,
+      currentForPrev: displaySimulacoes,
     },
     {
       title: "CPF Aprovado",
@@ -191,6 +248,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
       scrollTarget: "cpf" as const,
       compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
+      prev: cpfAprovSource === "ghl" ? previousPeriod?.cpfAprovado : undefined,
+      prevFormat: fmtInt,
+      currentForPrev: displayCpfAprovado,
     },
     // Row 2 - Results
     {
@@ -222,6 +282,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
             return `Atual: ${displayVendasFin} (${vendasFinancRate.toFixed(1)}%) · esperado: ${target} (20% dos CPFs aprovados). Estamos ${status}.`;
           })()
         : undefined,
+      prev: vendasFinSource === "ghl" ? previousPeriod?.vendasFinanciamento : previousPeriod?.vendasFinanciamento,
+      prevFormat: fmtInt,
+      currentForPrev: displayVendasFin,
     },
     {
       title: "Vendas Consórcio",
@@ -240,6 +303,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
         const max = Math.round(base * 0.05);
         return `Em média, 3% a 5% dos CPFs não aprovados viram consórcio. Atual: ${displayVendasCons} · esperado: ${min} a ${max}.`;
       })(),
+      prev: previousPeriod?.vendasConsorcio,
+      prevFormat: fmtInt,
+      currentForPrev: displayVendasCons,
     },
     {
       title: "Criativos c/ CPF Aprov.",
@@ -310,6 +376,22 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               <p className={`${(card as any).largeValue ? "text-2xl" : "text-lg"} font-bold tracking-tight text-foreground leading-none`}>{card.value}</p>
               {(card as any).compare && (
                 <CompareLine {...(card as any).compare} />
+              )}
+              {(card as any).prev !== undefined && (card as any).prev !== null && (
+                <PrevDelta
+                  current={
+                    (card as any).currentForPrev !== undefined
+                      ? (card as any).currentForPrev
+                      : card.title === "Investimento"
+                      ? totalSpent
+                      : card.title === "Total de Leads"
+                      ? totalLeads
+                      : 0
+                  }
+                  previous={(card as any).prev}
+                  invertColor={(card as any).prevInvert}
+                  format={(card as any).prevFormat}
+                />
               )}
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />

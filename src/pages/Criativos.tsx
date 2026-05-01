@@ -13,6 +13,8 @@ import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
+import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
+import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
 import {
   useClients,
   useAccessibleClients,
@@ -21,6 +23,8 @@ import {
   useSyncMeta,
   useSyncGoogleSheet,
   useGhlPipeline,
+  usePreviousPeriodData,
+  useMonthlyTrend,
 } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,6 +45,20 @@ export default function Index() {
     financing: useRef<HTMLDivElement>(null),
   };
   const funnelRef = useRef<HTMLDivElement>(null);
+  const creativesRef = useRef<HTMLDivElement>(null);
+  const sellersRef = useRef<HTMLDivElement>(null);
+
+  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleJumpTo = (target: "funnel" | "creatives" | "sellers") => {
+    if (target === "funnel") scrollToRef(funnelRef);
+    else if (target === "creatives") scrollToRef(creativesRef);
+    else scrollToRef(sellersRef);
+  };
 
   const scrollToFunnel = () => {
     const el = funnelRef.current;
@@ -76,6 +94,8 @@ export default function Index() {
   const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
+  const { data: previousPeriod } = usePreviousPeriodData(activeClient, since, until);
+  const { data: monthlyTrend } = useMonthlyTrend(activeClient, 6);
   const { sync } = useSyncMeta(activeClient);
   const { sync: syncSheet } = useSyncGoogleSheet(activeClient);
   const queryClient = useQueryClient();
@@ -456,6 +476,28 @@ export default function Index() {
             vendasFinanciamento={(ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy)}
             onScrollToFunnel={scrollToFunnel}
           />
+
+          <ExecutiveSummary
+            totalLeads={totalLeads}
+            totalSpent={totalSpent}
+            cpl={totalLeads > 0 ? totalSpent / totalLeads : 0}
+            simulacoes={ghlData?.simulacoes ?? 0}
+            cpfAprovado={ghlData?.cpf_aprovado ?? planilhaCpfApproved}
+            vendasFinanciamento={(ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy)}
+            vendasConsorcio={(ghlData?.vendas_consorcio ?? 0) || salesConsortium}
+            previous={previousPeriod ? {
+              totalLeads: previousPeriod.totalLeads,
+              totalSpent: previousPeriod.totalSpent,
+              cpl: previousPeriod.cpl,
+              simulacoes: previousPeriod.simulacoes,
+              cpfAprovado: previousPeriod.ghlCpfAprovado || previousPeriod.cpfApproved,
+              vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
+              vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
+            } : null}
+            leadsByDate={(leads || []).map(l => ({ creative_name: l.creative_name, lead_date: l.lead_date, status: l.status }))}
+            onJumpTo={handleJumpTo}
+          />
+
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
@@ -468,9 +510,18 @@ export default function Index() {
             ghlLoading={ghlLoading}
             onScrollTo={handleScrollToRanking}
             comparisons={comparisons}
+            previousPeriod={previousPeriod ? {
+              totalLeads: previousPeriod.totalLeads,
+              totalSpent: previousPeriod.totalSpent,
+              cpl: previousPeriod.cpl,
+              simulacoes: previousPeriod.simulacoes,
+              cpfAprovado: previousPeriod.ghlCpfAprovado || previousPeriod.cpfApproved,
+              vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
+              vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
+            } : null}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div ref={rankingRefs.cpf} className="rounded-xl">
               <CreativeRanking
                 title="🏆 Criativos por CPF Aprovado"
@@ -517,7 +568,11 @@ export default function Index() {
           />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {monthlyTrend && monthlyTrend.length > 0 && (
+            <MonthlyTrend data={monthlyTrend} />
+          )}
+
+          <div ref={sellersRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SellerRanking
               title="CPFs Aprovados por Vendedor"
               data={sellerCpfRanking}
