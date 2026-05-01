@@ -20,6 +20,8 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
+import { HealthBadge } from "@/components/clients/HealthBadge";
+import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
 const TOKEN_PASSWORD = "tokenkp";
@@ -84,6 +86,8 @@ export default function Clients() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
+  const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
+  const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
   const [tokenUnlocked, setTokenUnlocked] = useState(false);
