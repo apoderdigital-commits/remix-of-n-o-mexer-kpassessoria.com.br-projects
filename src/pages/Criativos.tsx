@@ -15,6 +15,9 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
 import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
+import { AIInsights } from "@/components/dashboard/AIInsights";
+import { AIChat } from "@/components/dashboard/AIChat";
+import { deriveCreativeMovers, type AIContext } from "@/lib/aiContext";
 import {
   useClients,
   useAccessibleClients,
