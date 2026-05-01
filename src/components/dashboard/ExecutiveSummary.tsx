@@ -390,18 +390,19 @@ export function ExecutiveSummary({
             {movers.falling && (
               <button
                 onClick={() => onJumpTo?.("creatives")}
-                className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.08] to-transparent hover:border-amber-500/50 transition-all"
+                className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-border/40 bg-background/30 hover:border-border/70 hover:bg-background/50 transition-all"
               >
-                <div className="p-1.5 rounded-lg bg-amber-500/15 shrink-0">
-                  <ArrowDownRight className="h-3.5 w-3.5 text-amber-300" />
+                <div className="p-1.5 rounded-lg bg-muted/40 shrink-0">
+                  <ArrowDownRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-amber-300">
-                    Atenção · Avaliar pausa
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    Avaliar pausa
                   </p>
-                  <p className="text-xs text-foreground/90 mt-0.5 truncate">
-                    <span className="font-semibold">{shortenName(movers.falling.name)}</span> caiu{" "}
-                    <span className="text-amber-300 font-bold">{movers.falling.pct.toFixed(0)}%</span>{" "}
+                  <p className="text-xs text-foreground/80 mt-0.5 truncate">
+                    <span className="font-medium text-foreground/90">{shortenName(movers.falling.name)}</span>{" "}
+                    caiu{" "}
+                    <span className="text-foreground font-semibold">{movers.falling.pct.toFixed(0)}%</span>{" "}
                     vs semana anterior.
                   </p>
                 </div>
