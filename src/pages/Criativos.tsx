@@ -302,6 +302,74 @@ export default function Index() {
     cpf: buildComparison("cpf"),
   }), [evolutionData]);
 
+  const activeClientName = useMemo(
+    () => clients?.find((c) => c.id === activeClient)?.name,
+    [clients, activeClient]
+  );
+
+  const buildAIContext = (): AIContext | null => {
+    if (!activeClient) return null;
+    const cpfA = ghlData?.cpf_aprovado ?? planilhaCpfApproved;
+    const vF = (ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy);
+    const vC = (ghlData?.vendas_consorcio ?? 0) || salesConsortium;
+    const movers = deriveCreativeMovers(
+      (leads || []).map((l) => ({
+        creative_name: l.creative_name,
+        lead_date: l.lead_date,
+        status: l.status,
+      }))
+    );
+    const previous = previousPeriod
+      ? {
+          investimento: previousPeriod.totalSpent,
+          leads: previousPeriod.totalLeads,
+          cpl: previousPeriod.cpl,
+          simulacoes: previousPeriod.simulacoes,
+          cpfAprovado: previousPeriod.ghlCpfAprovado || previousPeriod.cpfApproved,
+          vendasFinanciamento:
+            previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
+          vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
+        }
+      : null;
+    return {
+      clientName: activeClientName,
+      period: { since, until },
+      kpis: {
+        investimento: totalSpent,
+        leads: totalLeads,
+        cpl: totalLeads > 0 ? totalSpent / totalLeads : 0,
+        simulacoes: ghlData?.simulacoes ?? 0,
+        cpfAprovado: cpfA,
+        vendasFinanciamento: vF,
+        vendasConsorcio: vC,
+      },
+      previous,
+      topCreatives: cpfRanking.slice(0, 8).map((c) => ({
+        name: c.name,
+        count: c.count,
+        pct: c.percentage,
+      })),
+      topSellers: [...sellerCpfRanking, ...sellerFinancingRanking, ...sellerConsortiumRanking]
+        .reduce<{ name: string; count: number }[]>((acc, s) => {
+          const existing = acc.find((x) => x.name === s.name);
+          if (existing) existing.count += s.count;
+          else acc.push({ name: s.name, count: s.count });
+          return acc;
+        }, [])
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8),
+      risingCreatives: movers.rising,
+      fallingCreatives: movers.falling,
+      monthlyTrend: (monthlyTrend || []).map((m: any) => ({
+        month: m.month,
+        leads: m.leads,
+        cpf: m.cpf,
+        sales: m.sales,
+      })),
+      evolutionDaily: evolutionData,
+    };
+  };
+
   return (
     <div className="min-h-screen max-w-[1680px] mx-auto">
       {/* Hero Header */}
