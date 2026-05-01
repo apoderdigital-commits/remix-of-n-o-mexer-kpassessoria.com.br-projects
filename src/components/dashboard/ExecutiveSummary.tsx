@@ -59,6 +59,15 @@ export function ExecutiveSummary({
   leadsByDate = [],
   onJumpTo,
 }: ExecutiveSummaryProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const openPreview = (name: string) => {
+    if (!name) return;
+    setPreviewUrl(name);
+    setPreviewOpen(true);
+  };
+
   const monthName = useMemo(
     () => new Date().toLocaleDateString("pt-BR", { month: "long" }),
     []
