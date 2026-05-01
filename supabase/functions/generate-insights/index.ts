@@ -1,5 +1,7 @@
 // Lovable AI: gera resumo executivo OU alertas/oportunidades a partir dos dados agregados da dashboard.
-// Public function (verify_jwt = false). Não acessa banco — recebe tudo já agregado do frontend.
+// Public function (verify_jwt = false). Cacheia por (cliente, período, mode) para retornar sempre o mesmo resultado.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
