@@ -201,7 +201,7 @@ export function ExecutiveSummary({
             )}
             {movers.falling && (
               <button
-                onClick={() => onJumpTo?.("creatives")}
+                onClick={() => openPreview(movers.falling!.name)}
                 className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-border/40 bg-background/30 hover:border-border/70 hover:bg-background/50 transition-all"
               >
                 <div className="p-1.5 rounded-lg bg-muted/40 shrink-0">
