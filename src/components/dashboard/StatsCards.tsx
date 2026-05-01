@@ -257,6 +257,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 </span>
               </div>
               <p className="text-xl font-bold tracking-tight text-foreground leading-none">{card.value}</p>
+              {(card as any).compare && (
+                <CompareLine {...(card as any).compare} />
+              )}
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />
               )}
