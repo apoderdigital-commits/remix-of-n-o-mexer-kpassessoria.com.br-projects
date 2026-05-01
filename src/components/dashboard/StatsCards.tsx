@@ -170,6 +170,16 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: simSource, onToggle: () => setSimSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: simSource === "ghl" && ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
       note: simSource === "planilha" ? "CPFs aprovados (planilha)" : undefined,
+      insight: simSource === "ghl" && ghlData && totalLeads > 0
+        ? (() => {
+            const target = Math.round(totalLeads * 0.6);
+            const diff = simulacoes - target;
+            const status = diff >= 0
+              ? `acima da meta em ${diff} simulações`
+              : `faltam ${Math.abs(diff)} para bater a meta`;
+            return `Atual: ${simulacoes} (${simRate.toFixed(1)}%) · esperado: ${target} (60% dos leads). Estamos ${status}.`;
+          })()
+        : undefined,
     },
     {
       title: "CPF Aprovado",
@@ -202,6 +212,16 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
       scrollTarget: "financing" as const,
+      insight: ghlData && ghlAprovado > 0
+        ? (() => {
+            const target = Math.round(ghlAprovado * 0.2);
+            const diff = displayVendasFin - target;
+            const status = diff >= 0
+              ? `acima da meta em ${diff} vendas`
+              : `faltam ${Math.abs(diff)} para bater a meta`;
+            return `Atual: ${displayVendasFin} (${vendasFinancRate.toFixed(1)}%) · esperado: ${target} (20% dos CPFs aprovados). Estamos ${status}.`;
+          })()
+        : undefined,
     },
     {
       title: "Vendas Consórcio",
