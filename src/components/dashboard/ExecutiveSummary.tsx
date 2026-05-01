@@ -1,5 +1,6 @@
 import { Activity, TrendingUp, TrendingDown, Minus, Sparkles, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { CreativePreviewDialog } from "./CreativePreviewDialog";
 
 interface ExecutiveSummaryProps {
   totalLeads: number;
