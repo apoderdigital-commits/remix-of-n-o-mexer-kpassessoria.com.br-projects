@@ -190,6 +190,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-purple-300",
       accent: "263 60% 65%",
       compare: comparisons?.spent ? { data: comparisons.spent, format: fmtMoney } : undefined,
+      prev: previousPeriod?.totalSpent,
+      prevFormat: fmtMoney,
     },
     {
       title: "Total de Leads",
@@ -198,6 +200,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-violet-400",
       accent: "255 70% 65%",
       compare: comparisons?.leads ? { data: comparisons.leads, format: fmtInt } : undefined,
+      prev: previousPeriod?.totalLeads,
+      prevFormat: fmtInt,
     },
     {
       title: "Custo / Lead",
@@ -206,6 +210,10 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       color: "text-fuchsia-400",
       accent: "300 70% 65%",
       insight: "Referência de mercado para CPL no setor é de R$ 6 a R$ 8. Quanto mais baixo, melhor o aproveitamento do investimento.",
+      prev: previousPeriod?.cpl,
+      prevFormat: fmtMoney,
+      prevInvert: true,
+      currentForPrev: totalLeads > 0 ? totalSpent / totalLeads : 0,
     },
     {
       title: "Simulações",
@@ -226,6 +234,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
             return `Atual: ${simulacoes} (${simRate.toFixed(1)}%) · esperado: ${target} (60% dos leads). Estamos ${status}.`;
           })()
         : undefined,
+      prev: simSource === "ghl" ? previousPeriod?.simulacoes : undefined,
+      prevFormat: fmtInt,
+      currentForPrev: displaySimulacoes,
     },
     {
       title: "CPF Aprovado",
@@ -237,6 +248,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
       scrollTarget: "cpf" as const,
       compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
+      prev: cpfAprovSource === "ghl" ? previousPeriod?.cpfAprovado : undefined,
+      prevFormat: fmtInt,
+      currentForPrev: displayCpfAprovado,
     },
     // Row 2 - Results
     {
@@ -268,6 +282,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
             return `Atual: ${displayVendasFin} (${vendasFinancRate.toFixed(1)}%) · esperado: ${target} (20% dos CPFs aprovados). Estamos ${status}.`;
           })()
         : undefined,
+      prev: vendasFinSource === "ghl" ? previousPeriod?.vendasFinanciamento : previousPeriod?.vendasFinanciamento,
+      prevFormat: fmtInt,
+      currentForPrev: displayVendasFin,
     },
     {
       title: "Vendas Consórcio",
@@ -286,6 +303,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
         const max = Math.round(base * 0.05);
         return `Em média, 3% a 5% dos CPFs não aprovados viram consórcio. Atual: ${displayVendasCons} · esperado: ${min} a ${max}.`;
       })(),
+      prev: previousPeriod?.vendasConsorcio,
+      prevFormat: fmtInt,
+      currentForPrev: displayVendasCons,
     },
     {
       title: "Criativos c/ CPF Aprov.",
