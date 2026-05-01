@@ -229,34 +229,48 @@ export default function Index() {
   }, [campaigns, leads]);
 
   const buildComparison = (key: "spent" | "leads" | "cpf") => {
-    if (evolutionData.length === 0) return { today: 0, yesterday: 0, avg7d: 0 };
+    if (evolutionData.length === 0) {
+      return { today: 0, yesterday: 0, avg7d: 0 };
+    }
 
-    // Index by date for O(1) lookup
     const byDate = new Map<string, any>();
     evolutionData.forEach((d: any) => byDate.set(d.date, d));
 
-    // Anchor "today" to the most recent date present in the data
     const latestDateStr = evolutionData[evolutionData.length - 1].date;
     const latest = new Date(latestDateStr + "T00:00:00");
 
-    const valueOn = (offsetDays: number) => {
+    const dateAt = (offsetDays: number) => {
       const d = new Date(latest);
       d.setDate(d.getDate() - offsetDays);
-      const key2 = d.toISOString().slice(0, 10);
-      const row = byDate.get(key2);
+      return d;
+    };
+    const isoAt = (offsetDays: number) => dateAt(offsetDays).toISOString().slice(0, 10);
+    const valueOn = (offsetDays: number) => {
+      const row = byDate.get(isoAt(offsetDays));
       return row ? Number((row as any)[key]) || 0 : 0;
     };
+    const fmtFull = (d: Date) =>
+      `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    const fmtShort = (d: Date) =>
+      `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 
     const today = valueOn(0);
     const yesterday = valueOn(1);
 
-    // Average over the 7 completed days BEFORE today (offsets 1..7),
-    // so the in-progress current day doesn't drag the average down
+    // Average over the 7 completed days BEFORE today (offsets 1..7)
     let sum7 = 0;
     for (let i = 1; i <= 7; i++) sum7 += valueOn(i);
     const avg7d = sum7 / 7;
 
-    return { today, yesterday, avg7d };
+    return {
+      today,
+      yesterday,
+      avg7d,
+      todayDate: fmtFull(dateAt(0)),
+      yesterdayDate: fmtFull(dateAt(1)),
+      rangeStart: fmtShort(dateAt(7)),
+      rangeEnd: fmtShort(dateAt(1)),
+    };
   };
 
   const comparisons = useMemo(() => ({
