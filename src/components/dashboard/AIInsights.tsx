@@ -1,5 +1,17 @@
-import { useState } from "react";
-import { Sparkles, RefreshCw, AlertTriangle, TrendingUp, Lightbulb, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Sparkles,
+  RefreshCw,
+  AlertTriangle,
+  TrendingUp,
+  Lightbulb,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,8 +53,55 @@ export function AIInsights({ buildContext, disabled }: AIInsightsProps) {
   const [summary, setSummary] = useState<SummaryResult | null>(null);
   const [alerts, setAlerts] = useState<AlertsResult | null>(null);
   const [generatedAt, setGeneratedAt] = useState<{ summary?: string; alerts?: string }>({});
+  const [open, setOpen] = useState(false);
+  const [checkingCache, setCheckingCache] = useState(false);
 
-  const generate = async (mode: Tab) => {
+  // Identifica o "escopo" atual (cliente + período) para invalidar estado quando muda
+  const ctxProbe = buildContext();
+  const scopeKey = ctxProbe
+    ? `${ctxProbe.clientId || ""}|${ctxProbe.period.since}|${ctxProbe.period.until}`
+    : "";
+
+  // Reset + tenta carregar do cache quando o escopo (cliente/período) mudar
+  useEffect(() => {
+    setSummary(null);
+    setAlerts(null);
+    setGeneratedAt({});
+    setOpen(false);
+
+    const ctx = buildContext();
+    if (!ctx?.clientId) return;
+
+    let cancelled = false;
+    setCheckingCache(true);
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("ai_insights_cache")
+          .select("mode, result, created_at")
+          .eq("client_id", ctx.clientId!)
+          .eq("since", ctx.period.since)
+          .eq("until", ctx.period.until)
+          .in("mode", ["summary", "alerts"]);
+        if (cancelled || !data) return;
+        const next: typeof generatedAt = {};
+        data.forEach((row: any) => {
+          if (row.mode === "summary") setSummary(row.result as SummaryResult);
+          if (row.mode === "alerts") setAlerts(row.result as AlertsResult);
+          next[row.mode as Tab] = row.created_at;
+        });
+        if (Object.keys(next).length) setGeneratedAt(next);
+      } finally {
+        if (!cancelled) setCheckingCache(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeKey]);
+
+  const generate = async (mode: Tab, force = false) => {
     const ctx = buildContext();
     if (!ctx) {
       toast.error("Sem dados suficientes para gerar análise");
@@ -51,13 +110,17 @@ export function AIInsights({ buildContext, disabled }: AIInsightsProps) {
     setLoading(mode);
     try {
       const { data, error } = await supabase.functions.invoke("generate-insights", {
-        body: { mode, ...ctx },
+        body: { mode, force, ...ctx },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       if (mode === "summary") setSummary((data as any).result as SummaryResult);
       else setAlerts((data as any).result as AlertsResult);
-      setGeneratedAt((g) => ({ ...g, [mode]: new Date().toISOString() }));
+      setGeneratedAt((g) => ({ ...g, [mode]: (data as any).generatedAt || new Date().toISOString() }));
+      setOpen(true);
+      if ((data as any).cached) {
+        toast.info("Análise carregada do cache deste período");
+      }
     } catch (e: any) {
       const msg = e?.message || "Falha ao gerar análise";
       if (msg.includes("429") || msg.toLowerCase().includes("limite"))
@@ -70,11 +133,16 @@ export function AIInsights({ buildContext, disabled }: AIInsightsProps) {
     }
   };
 
-  const current = tab === "summary" ? summary : alerts;
-  const hasGenerated = !!current;
+  const hasAny = !!(summary || alerts);
+  const hasCurrent = tab === "summary" ? !!summary : !!alerts;
   const ts = generatedAt[tab];
   const tsLabel = ts
-    ? new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(ts).toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : null;
 
   return (
@@ -83,7 +151,7 @@ export function AIInsights({ buildContext, disabled }: AIInsightsProps) {
 
       <div className="relative">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-fuchsia-600 shadow-lg shadow-primary/20">
               <Sparkles className="h-3.5 w-3.5 text-white" />
@@ -99,71 +167,126 @@ export function AIInsights({ buildContext, disabled }: AIInsightsProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {tsLabel && (
+            {tsLabel && hasAny && (
               <span className="text-[10px] text-muted-foreground hidden sm:inline">
-                gerado às {tsLabel}
+                gerado em {tsLabel}
               </span>
             )}
-            <Button
-              size="sm"
-              variant={hasGenerated ? "outline" : "default"}
-              onClick={() => generate(tab)}
-              disabled={disabled || loading !== null}
-              className="gap-1.5 h-8"
-            >
-              {loading === tab ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : hasGenerated ? (
-                <RefreshCw className="h-3.5 w-3.5" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              {hasGenerated ? "Regenerar" : "Gerar análise"}
-            </Button>
+
+            {!hasAny && (
+              <Button
+                size="sm"
+                onClick={() => generate(tab, false)}
+                disabled={disabled || loading !== null || checkingCache}
+                className="gap-1.5 h-8"
+              >
+                {loading !== null || checkingCache ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                Gerar análise
+              </Button>
+            )}
+
+            {hasAny && (
+              <>
+                <Button
+                  size="sm"
+                  variant={open ? "outline" : "default"}
+                  onClick={() => setOpen((v) => !v)}
+                  className="gap-1.5 h-8"
+                >
+                  {open ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                      Recolher
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3.5 w-3.5" />
+                      Abrir análise
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => generate(tab, true)}
+                  disabled={disabled || loading !== null}
+                  className="gap-1.5 h-8"
+                  title="Forçar nova geração ignorando o cache"
+                >
+                  {loading === tab ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Regenerar
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-4 p-1 rounded-lg bg-background/40 border border-border/30 w-fit">
-          <button
-            onClick={() => setTab("summary")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              tab === "summary"
-                ? "bg-primary/20 text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <Lightbulb className="h-3 w-3" /> Resumo
-            </span>
-          </button>
-          <button
-            onClick={() => setTab("alerts")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              tab === "alerts"
-                ? "bg-primary/20 text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <AlertTriangle className="h-3 w-3" /> Alertas & oportunidades
-            </span>
-          </button>
-        </div>
+        {/* Conteúdo só aparece quando aberto */}
+        {open && (
+          <div className="mt-4 space-y-4">
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 rounded-lg bg-background/40 border border-border/30 w-fit">
+              <button
+                onClick={() => setTab("summary")}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  tab === "summary"
+                    ? "bg-primary/20 text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Lightbulb className="h-3 w-3" /> Resumo
+                </span>
+              </button>
+              <button
+                onClick={() => setTab("alerts")}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  tab === "alerts"
+                    ? "bg-primary/20 text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <AlertTriangle className="h-3 w-3" /> Alertas & oportunidades
+                </span>
+              </button>
+            </div>
 
-        {/* Content */}
-        {!hasGenerated && (
-          <div className="rounded-xl border border-dashed border-border/40 bg-background/20 px-4 py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              {tab === "summary"
-                ? "Clique em \"Gerar análise\" para receber um resumo executivo do período."
-                : "Clique em \"Gerar análise\" para identificar alertas e oportunidades automaticamente."}
-            </p>
+            {!hasCurrent && (
+              <div className="rounded-xl border border-dashed border-border/40 bg-background/20 px-4 py-6 text-center">
+                <p className="text-sm text-muted-foreground mb-3">
+                  {tab === "summary"
+                    ? "Ainda não há resumo gerado para este período."
+                    : "Ainda não há alertas gerados para este período."}
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => generate(tab, false)}
+                  disabled={disabled || loading !== null}
+                  className="gap-1.5"
+                >
+                  {loading === tab ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Gerar {tab === "summary" ? "resumo" : "alertas"}
+                </Button>
+              </div>
+            )}
+
+            {tab === "summary" && summary && <SummaryView data={summary} />}
+            {tab === "alerts" && alerts && <AlertsView data={alerts} />}
           </div>
         )}
-
-        {tab === "summary" && summary && <SummaryView data={summary} />}
-        {tab === "alerts" && alerts && <AlertsView data={alerts} />}
       </div>
     </div>
   );
