@@ -377,6 +377,22 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               {(card as any).compare && (
                 <CompareLine {...(card as any).compare} />
               )}
+              {(card as any).prev !== undefined && (card as any).prev !== null && (
+                <PrevDelta
+                  current={
+                    (card as any).currentForPrev !== undefined
+                      ? (card as any).currentForPrev
+                      : card.title === "Investimento"
+                      ? totalSpent
+                      : card.title === "Total de Leads"
+                      ? totalLeads
+                      : 0
+                  }
+                  previous={(card as any).prev}
+                  invertColor={(card as any).prevInvert}
+                  format={(card as any).prevFormat}
+                />
+              )}
               {card.sourceToggle && (
                 <SourceToggle {...card.sourceToggle} />
               )}
