@@ -458,6 +458,7 @@ export default function Index() {
             <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
             Sincronizar Tudo
           </Button>
+          <AIChat buildContext={buildAIContext} disabled={!activeClient} />
           {isAdmin && (
             <>
               <Popover>
