@@ -196,6 +196,41 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
     cpf: avg("cpf"),
   };
 
+  // Standard deviation of last 7 days (used to create realistic ups/downs in projection)
+  const stdDev = (key: SeriesKey) => {
+    if (last7.length < 2) return 0;
+    const mean = avg(key);
+    const variance =
+      last7.reduce((s, d: any) => s + Math.pow((Number(d[key]) || 0) - mean, 2), 0) / last7.length;
+    return Math.sqrt(variance);
+  };
+  const dailyStd: Record<string, number> = {
+    leads: stdDev("leads"),
+    simulacoes: stdDev("simulacoes"),
+    cpf: stdDev("cpf"),
+  };
+
+  // Deterministic pseudo-random generator (mulberry32) seeded from last real date
+  // so projection stays stable across renders but varies between datasets.
+  const seedFromString = (s: string) => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  };
+  const mulberry32 = (a: number) => {
+    return () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
   const lastRealDate = sortedData.length > 0 ? sortedData[sortedData.length - 1].date : todayIso;
   // Project starting the day AFTER the last real data point, so the dashed line
   // connects directly from where the realized series ends (no gap).
@@ -203,7 +238,29 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   projectionStart.setDate(projectionStart.getDate() + 1);
   const projectionStartIso = toIso(projectionStart);
 
-  // Build projection points (one per day until month end)
+  // Generators per series (Box-Muller for gaussian-like noise)
+  const rngLeads = mulberry32(seedFromString(lastRealDate + "_leads"));
+  const rngSim = mulberry32(seedFromString(lastRealDate + "_sim"));
+  const rngCpf = mulberry32(seedFromString(lastRealDate + "_cpf"));
+  const gaussian = (rng: () => number) => {
+    const u = Math.max(rng(), 1e-9);
+    const v = Math.max(rng(), 1e-9);
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  // Dampen volatility so projection doesn't look chaotic — about 70% of historical std
+  const VOLATILITY = 0.7;
+  // Cap deviation per day to ±1.8σ to avoid extreme spikes
+  const clampDev = (z: number) => Math.max(-1.8, Math.min(1.8, z));
+
+  const projectValue = (mean: number, std: number, rng: () => number) => {
+    if (mean <= 0) return 0;
+    const z = clampDev(gaussian(rng)) * VOLATILITY;
+    const v = mean + z * std;
+    return Math.max(0, Math.round(v));
+  };
+
+  // Build projection points (one per day until month end) with realistic ups/downs
   const projectionPoints: any[] = [];
   if (projectionStart <= monthEnd && last7.length > 0) {
     const cursor = new Date(projectionStart);
@@ -215,9 +272,9 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
         simulacoes: null,
         cpf: null,
         sales: null,
-        proj_leads: Math.round(dailyAvg.leads),
-        proj_simulacoes: Math.round(dailyAvg.simulacoes),
-        proj_cpf: Math.round(dailyAvg.cpf),
+        proj_leads: projectValue(dailyAvg.leads, dailyStd.leads, rngLeads),
+        proj_simulacoes: projectValue(dailyAvg.simulacoes, dailyStd.simulacoes, rngSim),
+        proj_cpf: projectValue(dailyAvg.cpf, dailyStd.cpf, rngCpf),
         __projectionStartIso: projectionStartIso,
       });
       cursor.setDate(cursor.getDate() + 1);
