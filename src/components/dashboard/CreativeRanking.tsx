@@ -141,39 +141,68 @@ function FullRankingContent({
         </div>
       )}
 
-      {showChart && (
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={visibleRows} layout="vertical" margin={{ left: 0, right: 16 }}>
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={120}
-                tick={{ fill: "hsl(210 40% 98%)", fontSize: 11 }}
-                tickFormatter={(v) => {
-                  if (isUrl(v)) return shortenUrl(v);
-                  return v.length > 18 ? v.slice(0, 18) + "…" : v;
-                }}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(222 40% 10%)",
-                  border: "1px solid hsl(222 30% 20%)",
-                  borderRadius: 8,
-                  color: "hsl(210 40% 98%)",
-                }}
-                formatter={(value: number) => [value, "Quantidade"]}
-              />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {visibleRows.map((_, i) => (
-                  <Cell key={i} fill={color} fillOpacity={1 - i * 0.07} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {showChart && (() => {
+        const chartData = visibleRows.map((r, i) => ({
+          ...r,
+          rankLabel: ["🥇 Top 1", "🥈 Top 2", "🥉 Top 3"][i] ?? `#${i + 1}`,
+        }));
+        const gradId = `bar-grad-${color.replace(/[^a-z0-9]/gi, "")}`;
+        const rowH = 44;
+        const chartH = Math.max(160, chartData.length * rowH + 32);
+        return (
+          <div style={{ height: chartH }} className="rounded-lg bg-background/30 border border-border/20 p-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 56, top: 4, bottom: 4 }}>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.55} />
+                    <stop offset="100%" stopColor={color} stopOpacity={1} />
+                  </linearGradient>
+                </defs>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="rankLabel"
+                  width={86}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "hsl(210 40% 92%)", fontSize: 12, fontWeight: 600 }}
+                />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
+                  contentStyle={{
+                    background: "hsl(222 40% 10%)",
+                    border: "1px solid hsl(222 30% 20%)",
+                    borderRadius: 8,
+                    color: "hsl(210 40% 98%)",
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number) => [value, "Quantidade"]}
+                  labelFormatter={(_, payload) => {
+                    const item = payload?.[0]?.payload as CreativeData | undefined;
+                    if (!item) return "";
+                    return isUrl(item.name) ? shortenUrl(item.name) : item.name;
+                  }}
+                />
+                <Bar dataKey="count" radius={[6, 6, 6, 6]} barSize={22} background={{ fill: "hsl(var(--muted) / 0.15)", radius: 6 } as any}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={`url(#${gradId})`} fillOpacity={1 - i * 0.12} />
+                  ))}
+                  <LabelList
+                    dataKey="count"
+                    position="right"
+                    style={{ fill: "hsl(210 40% 98%)", fontSize: 12, fontWeight: 700 }}
+                    formatter={(v: number) => {
+                      const item = chartData.find((d) => d.count === v);
+                      return item ? `${v} · ${item.percentage.toFixed(1)}%` : `${v}`;
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      })()}
       <div className="[&>div]:overflow-hidden">
       <Table>
         <TableHeader>
