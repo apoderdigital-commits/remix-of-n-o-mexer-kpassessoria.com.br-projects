@@ -1,7 +1,9 @@
+import { forwardRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  AreaChart,
+  ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -84,13 +86,16 @@ function toIso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function CustomTooltip({ active, payload, label, projectionEndIso }: any) {
+const CustomTooltip = forwardRef<HTMLDivElement, any>(function CustomTooltip(
+  { active, payload, label, projectionEndIso },
+  ref
+) {
   if (!active || !payload?.length) return null;
   const isProjection = label > projectionEndIso ? false : label >= (payload[0]?.payload?.__projectionStartIso ?? "9999");
   // Filter duplicate (real + proj at same date) — show only relevant ones
   const filtered = payload.filter((p: any) => p.value !== null && p.value !== undefined);
   return (
-    <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-xl max-w-xs">
+    <div ref={ref} className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-xl max-w-xs">
       <div className="flex items-center justify-between gap-3 mb-2">
         <p className="text-xs font-semibold text-foreground capitalize">{formatFullDate(label)}</p>
         {isProjection && (
@@ -134,7 +139,7 @@ function CustomTooltip({ active, payload, label, projectionEndIso }: any) {
       )}
     </div>
   );
-}
+});
 
 export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   const totalLeads = data.reduce((sum, d) => sum + d.leads, 0);
@@ -361,7 +366,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
             {/* Chart */}
             <div className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                   <defs>
                     {chartSeries.map((s) => (
                       <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -396,32 +401,37 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                     />
                   ))}
 
-                  {/* Projection series (dashed, no fill) */}
+                  {/* Projection series (dashed) */}
                   {showProjection &&
                     chartSeries
                       .filter((s) => PROJECTION_KEYS.includes(s.key))
                       .map((s) => (
-                        <Area
+                        <Line
                           key={`proj-${s.key}`}
                           type="monotone"
                           dataKey={`proj_${s.key}`}
                           name={`${s.name} (projeção)`}
                           stroke={s.color}
-                          strokeWidth={2}
-                          strokeDasharray="5 4"
-                          fill="none"
+                          strokeWidth={2.5}
+                          strokeDasharray="7 5"
                           dot={false}
-                          activeDot={{ r: 4, strokeWidth: 2, stroke: "hsl(222 40% 10%)" }}
-                          connectNulls={false}
+                          activeDot={{
+                            r: 4,
+                            strokeWidth: 2,
+                            stroke: "hsl(var(--background))",
+                            fill: s.color,
+                          }}
+                          connectNulls
                           isAnimationActive={false}
                           legendType="none"
+                          strokeOpacity={0.95}
                         />
                       ))}
 
                   {/* Vertical "today" line */}
                   {showProjection && (
                     <ReferenceLine
-                      x={projectionStartIso}
+                      x={todayIso}
                       stroke="hsl(215 25% 60%)"
                       strokeWidth={1}
                       strokeDasharray="2 3"
@@ -433,7 +443,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                       }}
                     />
                   )}
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
 
