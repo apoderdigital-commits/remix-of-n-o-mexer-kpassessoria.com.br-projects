@@ -383,39 +383,17 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Tokens da Meta (lista, protegida) */}
+      {/* Tokens da Meta — acesso restrito a admins via RLS */}
       <Card className="glass-card border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <KeyRound className="h-4 w-4" />
               Tokens da Meta
-              <span
-                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                  tokenUnlocked
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                    : "border-primary/30 bg-primary/10 text-primary"
-                }`}
-              >
-                {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                {tokenUnlocked ? "Desbloqueado" : "Protegido"}
-              </span>
             </span>
-            <div className="flex gap-2">
-              {tokenUnlocked && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setTokenUnlocked(false); setRevealedTokenId(null); }}
-                  title="Bloquear novamente"
-                >
-                  <Lock className="h-4 w-4" />
-                </Button>
-              )}
-              <Button size="sm" className="gap-2" onClick={openCreateToken}>
-                <Plus className="h-4 w-4" /> Adicionar Token
-              </Button>
-            </div>
+            <Button size="sm" className="gap-2" onClick={openCreateToken}>
+              <Plus className="h-4 w-4" /> Adicionar Token
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -429,7 +407,7 @@ export default function Clients() {
           ) : (
             <div className="space-y-2">
               {metaTokens.map((t) => {
-                const isRevealed = tokenUnlocked && revealedTokenId === t.id;
+                const isRevealed = revealedTokenId === t.id;
                 return (
                   <div
                     key={t.id}
@@ -441,16 +419,14 @@ export default function Clients() {
                         {isRevealed ? t.token : "•".repeat(Math.min(40, t.token.length))}
                       </div>
                     </div>
-                    {tokenUnlocked && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
-                        title={isRevealed ? "Ocultar" : "Mostrar"}
-                      >
-                        {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
+                      title={isRevealed ? "Ocultar" : "Mostrar"}
+                    >
+                      {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditToken(t)} title="Editar">
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -458,7 +434,7 @@ export default function Clients() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => requireUnlock(() => setDeleteTokenTarget(t))}
+                      onClick={() => setDeleteTokenTarget(t)}
                       title="Excluir"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -466,13 +442,6 @@ export default function Clients() {
                   </div>
                 );
               })}
-            </div>
-          )}
-          {!tokenUnlocked && (
-            <div className="mt-3">
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
-                <Lock className="h-4 w-4" /> Desbloquear para ver/editar valores
-              </Button>
             </div>
           )}
         </CardContent>
