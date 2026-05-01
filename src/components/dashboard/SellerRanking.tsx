@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { Trophy, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -19,33 +19,65 @@ interface SellerRankingProps {
   icon: string;
 }
 
+const medalFor = (i: number) =>
+  i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
+
 function FullSellerContent({ top10, color }: { top10: SellerData[]; color: string }) {
+  const chartData = top10.map((r, i) => ({
+    ...r,
+    rankLabel: ["🥇 Top 1", "🥈 Top 2", "🥉 Top 3"][i] ?? `#${i + 1}`,
+  }));
+  const gradId = `seller-bar-grad-${color.replace(/[^a-z0-9]/gi, "")}`;
+  const rowH = 44;
+  const chartH = Math.max(160, chartData.length * rowH + 32);
   return (
     <div className="space-y-4">
-      <div className="h-[200px]">
+      <div style={{ height: chartH }} className="rounded-lg bg-background/30 border border-border/20 p-3">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={top10} layout="vertical" margin={{ left: 0, right: 16 }}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 56, top: 4, bottom: 4 }}>
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={color} stopOpacity={0.55} />
+                <stop offset="100%" stopColor={color} stopOpacity={1} />
+              </linearGradient>
+            </defs>
             <XAxis type="number" hide />
             <YAxis
               type="category"
-              dataKey="name"
-              width={120}
-              tick={{ fill: "hsl(210 40% 98%)", fontSize: 11 }}
-              tickFormatter={(v) => v.length > 18 ? v.slice(0, 18) + "…" : v}
+              dataKey="rankLabel"
+              width={86}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "hsl(210 40% 92%)", fontSize: 12, fontWeight: 600 }}
             />
             <Tooltip
+              cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
               contentStyle={{
                 background: "hsl(222 40% 10%)",
                 border: "1px solid hsl(222 30% 20%)",
                 borderRadius: 8,
                 color: "hsl(210 40% 98%)",
+                fontSize: 12,
               }}
               formatter={(value: number) => [value, "Quantidade"]}
+              labelFormatter={(_, payload) => {
+                const item = payload?.[0]?.payload as SellerData | undefined;
+                return item?.name ?? "";
+              }}
             />
-            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-              {top10.map((_, i) => (
-                <Cell key={i} fill={color} fillOpacity={1 - i * 0.07} />
+            <Bar dataKey="count" radius={[6, 6, 6, 6]} barSize={22} background={{ fill: "hsl(var(--muted) / 0.15)", radius: 6 } as any}>
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={`url(#${gradId})`} fillOpacity={1 - i * 0.12} />
               ))}
+              <LabelList
+                dataKey="count"
+                position="right"
+                style={{ fill: "hsl(210 40% 98%)", fontSize: 12, fontWeight: 700 }}
+                formatter={(v: number) => {
+                  const item = chartData.find((d) => d.count === v);
+                  return item ? `${v} · ${item.percentage.toFixed(1)}%` : `${v}`;
+                }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -53,23 +85,32 @@ function FullSellerContent({ top10, color }: { top10: SellerData[]; color: strin
       <Table>
         <TableHeader>
           <TableRow className="border-border/30">
-            <TableHead className="text-muted-foreground">#</TableHead>
+            <TableHead className="text-muted-foreground w-12">#</TableHead>
             <TableHead className="text-muted-foreground">Vendedor</TableHead>
             <TableHead className="text-right text-muted-foreground">Qtd</TableHead>
             <TableHead className="text-right text-muted-foreground">%</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {top10.map((item, i) => (
-            <TableRow key={item.name} className="border-border/20">
-              <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-              <TableCell className="font-medium">{item.name}</TableCell>
-              <TableCell className="text-right">{item.count}</TableCell>
-              <TableCell className="text-right text-muted-foreground">
-                {item.percentage.toFixed(1)}%
-              </TableCell>
-            </TableRow>
-          ))}
+          {top10.map((item, i) => {
+            const medal = medalFor(i);
+            return (
+              <TableRow key={item.name} className="border-border/20">
+                <TableCell className="text-muted-foreground">
+                  {medal ? (
+                    <span className="text-xl leading-none" title={`${i + 1}º lugar`}>{medal}</span>
+                  ) : (
+                    i + 1
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell className="text-right">{item.count}</TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {item.percentage.toFixed(1)}%
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
