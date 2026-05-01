@@ -210,14 +210,15 @@ export default function Index() {
   const sellerFinancingRanking = useMemo(() => buildSellerRanking(["sale_financing"]), [leads]);
 
   const evolutionData = useMemo(() => {
-    const dateMap = new Map<string, { leads: number; cpf: number; sales: number }>();
+    const dateMap = new Map<string, { leads: number; cpf: number; sales: number; spent: number }>();
     (campaigns || []).forEach((c) => {
-      const entry = dateMap.get(c.date) || { leads: 0, cpf: 0, sales: 0 };
+      const entry = dateMap.get(c.date) || { leads: 0, cpf: 0, sales: 0, spent: 0 };
       entry.leads += c.leads_total;
+      entry.spent += Number(c.amount_spent) || 0;
       dateMap.set(c.date, entry);
     });
     (leads || []).forEach((l) => {
-      const entry = dateMap.get(l.lead_date) || { leads: 0, cpf: 0, sales: 0 };
+      const entry = dateMap.get(l.lead_date) || { leads: 0, cpf: 0, sales: 0, spent: 0 };
       if (l.status === "cpf_approved") entry.cpf += 1;
       else if (l.status === "sale_consortium" || l.status === "sale_financing" || l.status === "sale") entry.sales += 1;
       dateMap.set(l.lead_date, entry);
@@ -226,6 +227,25 @@ export default function Index() {
       .map(([date, vals]) => ({ date, ...vals }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [campaigns, leads]);
+
+  const buildComparison = (key: "spent" | "leads" | "cpf") => {
+    if (evolutionData.length === 0) return { today: 0, yesterday: 0, avg7d: 0 };
+    const last = evolutionData[evolutionData.length - 1];
+    const prev = evolutionData.length > 1 ? evolutionData[evolutionData.length - 2] : null;
+    const last7 = evolutionData.slice(-7);
+    const sum7 = last7.reduce((s, d) => s + (d as any)[key], 0);
+    return {
+      today: (last as any)[key] || 0,
+      yesterday: prev ? (prev as any)[key] || 0 : 0,
+      avg7d: last7.length > 0 ? sum7 / last7.length : 0,
+    };
+  };
+
+  const comparisons = useMemo(() => ({
+    spent: buildComparison("spent"),
+    leads: buildComparison("leads"),
+    cpf: buildComparison("cpf"),
+  }), [evolutionData]);
 
   return (
     <div className="min-h-screen max-w-[1680px] mx-auto">
