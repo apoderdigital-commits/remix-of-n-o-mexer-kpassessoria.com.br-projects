@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard, ShieldCheck, ArrowLeft as BackIcon } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
