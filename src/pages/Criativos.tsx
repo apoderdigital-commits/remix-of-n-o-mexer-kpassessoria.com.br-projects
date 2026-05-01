@@ -13,6 +13,8 @@ import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
+import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
+import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
 import {
   useClients,
   useAccessibleClients,
@@ -21,6 +23,8 @@ import {
   useSyncMeta,
   useSyncGoogleSheet,
   useGhlPipeline,
+  usePreviousPeriodData,
+  useMonthlyTrend,
 } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
