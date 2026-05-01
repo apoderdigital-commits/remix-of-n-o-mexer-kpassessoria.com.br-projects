@@ -240,9 +240,9 @@ function DeltaRow({
 }) {
   if (pct === null) {
     return (
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground/60 font-medium text-base">—</span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-muted-foreground/60 font-medium text-sm">—</span>
       </div>
     );
   }
@@ -257,10 +257,10 @@ function DeltaRow({
     ? "text-red-300"
     : "text-muted-foreground";
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className={`inline-flex items-center gap-1.5 font-semibold text-base ${color}`}>
-        <Icon className="h-3.5 w-3.5" />
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`inline-flex items-center gap-1 font-semibold text-sm ${color}`}>
+        <Icon className="h-3 w-3" />
         {fmtPct(pct)}
       </span>
     </div>
