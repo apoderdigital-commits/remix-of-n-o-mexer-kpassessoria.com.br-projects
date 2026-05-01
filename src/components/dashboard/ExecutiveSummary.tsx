@@ -125,12 +125,22 @@ export function ExecutiveSummary({
     const dayOfMonth = today.getDate();
     const monthIso = monthStart.toISOString().slice(0, 7);
 
-    // Filtra leads do mês corrente
+    // Tenta primeiro pelos leadsByDate (precisa que o filtro inclua o mês corrente)
     const monthLeads = leadsByDate.filter((l) => l.lead_date?.slice(0, 7) === monthIso);
-    const monthCpf = monthLeads.filter((l) => l.status === "cpf_approved").length;
-    const monthSales = monthLeads.filter(
+    let monthCpf = monthLeads.filter((l) => l.status === "cpf_approved").length;
+    let monthSales = monthLeads.filter(
       (l) => l.status === "sale_financing" || l.status === "sale_consortium" || l.status === "sale"
     ).length;
+
+    // Fallback: se o filtro atual não cobre o mês corrente, usa os totais do período
+    // selecionado como aproximação (melhor que mostrar zero).
+    let usingFallback = false;
+    if (monthCpf === 0 && monthSales === 0) {
+      monthCpf = cpfAprovado;
+      monthSales = vendasFinanciamento + vendasConsorcio;
+      usingFallback = true;
+    }
+
     const dailyAvgSales = dayOfMonth > 0 ? monthSales / dayOfMonth : 0;
     const projectedSales = Math.round(dailyAvgSales * totalDays);
     const dailyAvgCpf = dayOfMonth > 0 ? monthCpf / dayOfMonth : 0;
@@ -144,8 +154,9 @@ export function ExecutiveSummary({
       projectedCpf,
       monthCpf,
       monthSales,
+      usingFallback,
     };
-  }, [leadsByDate]);
+  }, [leadsByDate, cpfAprovado, vendasFinanciamento, vendasConsorcio]);
 
   // ===== Detecta criativos em alta / queda (últimos 14 dias) =====
   const movers = useMemo(() => {
@@ -379,18 +390,19 @@ export function ExecutiveSummary({
             {movers.falling && (
               <button
                 onClick={() => onJumpTo?.("creatives")}
-                className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.08] to-transparent hover:border-amber-500/50 transition-all"
+                className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-border/40 bg-background/30 hover:border-border/70 hover:bg-background/50 transition-all"
               >
-                <div className="p-1.5 rounded-lg bg-amber-500/15 shrink-0">
-                  <ArrowDownRight className="h-3.5 w-3.5 text-amber-300" />
+                <div className="p-1.5 rounded-lg bg-muted/40 shrink-0">
+                  <ArrowDownRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-amber-300">
-                    Atenção · Avaliar pausa
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    Avaliar pausa
                   </p>
-                  <p className="text-xs text-foreground/90 mt-0.5 truncate">
-                    <span className="font-semibold">{shortenName(movers.falling.name)}</span> caiu{" "}
-                    <span className="text-amber-300 font-bold">{movers.falling.pct.toFixed(0)}%</span>{" "}
+                  <p className="text-xs text-foreground/80 mt-0.5 truncate">
+                    <span className="font-medium text-foreground/90">{shortenName(movers.falling.name)}</span>{" "}
+                    caiu{" "}
+                    <span className="text-foreground font-semibold">{movers.falling.pct.toFixed(0)}%</span>{" "}
                     vs semana anterior.
                   </p>
                 </div>
