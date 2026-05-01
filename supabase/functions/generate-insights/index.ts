@@ -1,5 +1,7 @@
 // Lovable AI: gera resumo executivo OU alertas/oportunidades a partir dos dados agregados da dashboard.
-// Public function (verify_jwt = false). Não acessa banco — recebe tudo já agregado do frontend.
+// Public function (verify_jwt = false). Cacheia por (cliente, período, mode) para retornar sempre o mesmo resultado.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +13,8 @@ const MODEL = "google/gemini-3-flash-preview";
 
 interface Payload {
   mode: "summary" | "alerts";
+  clientId?: string;
+  force?: boolean;
   clientName?: string;
   period: { since: string; until: string; label?: string };
   kpis: {
@@ -219,6 +223,37 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Cache lookup (only if we have clientId + valid period)
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase =
+      SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+    const canCache = !!(payload.clientId && payload.period?.since && payload.period?.until && supabase);
+
+    if (canCache && !payload.force) {
+      const { data: cached } = await supabase!
+        .from("ai_insights_cache")
+        .select("result, created_at")
+        .eq("client_id", payload.clientId!)
+        .eq("since", payload.period.since)
+        .eq("until", payload.period.until)
+        .eq("mode", payload.mode)
+        .maybeSingle();
+
+      if (cached?.result) {
+        return new Response(
+          JSON.stringify({
+            mode: payload.mode,
+            result: cached.result,
+            generatedAt: cached.created_at,
+            cached: true,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+    }
+
     const tool = payload.mode === "summary" ? summaryTool : alertsTool;
     const toolName = tool.function.name;
 
@@ -279,8 +314,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    const generatedAt = new Date().toISOString();
+
+    // Save to cache (upsert)
+    if (canCache) {
+      try {
+        await supabase!
+          .from("ai_insights_cache")
+          .upsert(
+            {
+              client_id: payload.clientId!,
+              since: payload.period.since,
+              until: payload.period.until,
+              mode: payload.mode,
+              payload_hash: "",
+              result: parsed as any,
+              created_at: generatedAt,
+            },
+            { onConflict: "client_id,since,until,mode" }
+          );
+      } catch (e) {
+        console.error("cache upsert failed:", e);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ mode: payload.mode, result: parsed, generatedAt: new Date().toISOString() }),
+      JSON.stringify({ mode: payload.mode, result: parsed, generatedAt, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (e) {

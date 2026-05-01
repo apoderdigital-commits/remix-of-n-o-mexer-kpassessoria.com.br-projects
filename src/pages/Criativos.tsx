@@ -332,6 +332,7 @@ export default function Index() {
         }
       : null;
     return {
+      clientId: activeClient,
       clientName: activeClientName,
       period: { since, until },
       kpis: {

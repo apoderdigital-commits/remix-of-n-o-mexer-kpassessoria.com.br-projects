@@ -2,6 +2,7 @@
 // Usado tanto pelo resumo executivo quanto pelo chat.
 
 export interface AIContext {
+  clientId?: string;
   clientName?: string;
   period: { since: string; until: string; label?: string };
   kpis: {

@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights_cache: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          mode: string
+          payload_hash: string
+          result: Json
+          since: string
+          until: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          mode: string
+          payload_hash: string
+          result: Json
+          since: string
+          until: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          mode?: string
+          payload_hash?: string
+          result?: Json
+          since?: string
+          until?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           created_at: string
