@@ -70,7 +70,7 @@ export function AlertBanner({
   if (visible.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-2">
       {visible.map((alert) => {
         const isCritical = alert.level === "critical";
         const Icon = isCritical ? AlertOctagon : AlertTriangle;
