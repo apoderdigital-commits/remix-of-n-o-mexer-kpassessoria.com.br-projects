@@ -1,5 +1,6 @@
 import { Activity, TrendingUp, TrendingDown, Minus, Sparkles, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { CreativePreviewDialog } from "./CreativePreviewDialog";
 
 interface ExecutiveSummaryProps {
   totalLeads: number;
@@ -58,6 +59,15 @@ export function ExecutiveSummary({
   leadsByDate = [],
   onJumpTo,
 }: ExecutiveSummaryProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const openPreview = (name: string) => {
+    if (!name) return;
+    setPreviewUrl(name);
+    setPreviewOpen(true);
+  };
+
   const monthName = useMemo(
     () => new Date().toLocaleDateString("pt-BR", { month: "long" }),
     []
@@ -171,7 +181,7 @@ export function ExecutiveSummary({
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {movers.rising && (
               <button
-                onClick={() => onJumpTo?.("creatives")}
+                onClick={() => openPreview(movers.rising!.name)}
                 className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-green-500/25 bg-gradient-to-br from-green-500/[0.08] to-transparent hover:border-green-500/50 transition-all"
               >
                 <div className="p-1.5 rounded-lg bg-green-500/15 shrink-0">
@@ -191,7 +201,7 @@ export function ExecutiveSummary({
             )}
             {movers.falling && (
               <button
-                onClick={() => onJumpTo?.("creatives")}
+                onClick={() => openPreview(movers.falling!.name)}
                 className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-border/40 bg-background/30 hover:border-border/70 hover:bg-background/50 transition-all"
               >
                 <div className="p-1.5 rounded-lg bg-muted/40 shrink-0">
@@ -213,6 +223,8 @@ export function ExecutiveSummary({
           </div>
         )}
       </div>
+
+      <CreativePreviewDialog url={previewUrl} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }
