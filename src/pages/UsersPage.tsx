@@ -166,6 +166,10 @@ export default function UsersPage() {
   const handleSave = async () => {
     if (!form.username.trim()) { toast.error("Usuário é obrigatório"); return; }
     if (!editingUserId && !form.password) { toast.error("Senha é obrigatória"); return; }
+    if (!editingUserId && !form.phone.trim()) {
+      toast.error("Telefone é obrigatório para enviar o código de verificação");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -196,15 +200,12 @@ export default function UsersPage() {
         }
 
         toast.success("Usuário atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+        setOpen(false);
+        resetForm();
       } else {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) {
-          toast.error("Sua sessão expirou. Faça login novamente para criar usuários.");
-          setSaving(false);
-          return;
-        }
-        const { data, error } = await supabase.functions.invoke("create-internal-user", {
+        // Request verification code via WhatsApp
+        const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
           body: {
             username: form.username.trim().toLowerCase(),
             password: form.password,
@@ -212,20 +213,72 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim() || null,
+            phone: form.phone.trim(),
           },
-          headers: { Authorization: `Bearer ${token}` },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        toast.success("Usuário criado!");
-      }
 
+        setVerificationId(data.verification_id);
+        setVerifyExpiresAt(data.expires_at);
+        setVerificationCode("");
+        setVerifyStep("code");
+        setResendCooldown(60);
+        toast.success("Código enviado para o WhatsApp");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar");
+    }
+    setSaving(false);
+  };
+
+  const handleConfirmCode = async () => {
+    if (!verificationId) return;
+    if (verificationCode.length !== 6) {
+      toast.error("Digite os 6 dígitos do código");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("confirm-user-creation-code", {
+        body: { verification_id: verificationId, code: verificationCode },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Usuário criado!");
       queryClient.invalidateQueries({ queryKey: ["admin_users"] });
       setOpen(false);
       resetForm();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar");
+      toast.error(err.message || "Código inválido");
+    }
+    setSaving(false);
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
+        body: {
+          username: form.username.trim().toLowerCase(),
+          password: form.password,
+          full_name: form.fullName,
+          role: form.role,
+          dashboard_keys: form.dashboards,
+          client_ids: form.clientIds,
+          phone: form.phone.trim(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setVerificationId(data.verification_id);
+      setVerifyExpiresAt(data.expires_at);
+      setVerificationCode("");
+      setResendCooldown(60);
+      toast.success("Novo código enviado");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reenviar");
     }
     setSaving(false);
   };
