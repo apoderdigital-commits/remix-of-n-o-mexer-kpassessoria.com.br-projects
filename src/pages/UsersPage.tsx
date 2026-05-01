@@ -545,9 +545,10 @@ export default function UsersPage() {
             </div>
 
             <Button onClick={handleSave} className="w-full" disabled={saving}>
-              {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Criar Usuário"}
+              {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
           </div>
+          )}
         </DialogContent>
       </Dialog>
 
