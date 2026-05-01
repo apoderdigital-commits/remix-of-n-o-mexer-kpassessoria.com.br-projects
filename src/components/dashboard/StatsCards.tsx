@@ -229,7 +229,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3 auto-rows-fr">
       {cards.map((card) => {
         const clickable = !!(card as any).scrollTarget && !!onScrollTo;
         const accent = (card as any).accent as string | undefined;
