@@ -212,6 +212,16 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
       scrollTarget: "financing" as const,
+      insight: ghlData && ghlAprovado > 0
+        ? (() => {
+            const target = Math.round(ghlAprovado * 0.2);
+            const diff = displayVendasFin - target;
+            const status = diff >= 0
+              ? `acima da meta em ${diff} vendas`
+              : `faltam ${Math.abs(diff)} para bater a meta`;
+            return `Atual: ${displayVendasFin} (${vendasFinancRate.toFixed(1)}%) · esperado: ${target} (20% dos CPFs aprovados). Estamos ${status}.`;
+          })()
+        : undefined,
     },
     {
       title: "Vendas Consórcio",
