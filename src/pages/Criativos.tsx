@@ -10,6 +10,7 @@ import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
 import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
+import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import {
@@ -38,6 +39,13 @@ export default function Index() {
     cpf: useRef<HTMLDivElement>(null),
     consortium: useRef<HTMLDivElement>(null),
     financing: useRef<HTMLDivElement>(null),
+  };
+  const funnelRef = useRef<HTMLDivElement>(null);
+
+  const scrollToFunnel = () => {
+    const el = funnelRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleScrollToRanking = (target: "cpf" | "consortium" | "financing") => {
@@ -389,6 +397,13 @@ export default function Index() {
               </span>
             </div>
           )}
+          <AlertBanner
+            totalLeads={totalLeads}
+            simulacoes={ghlData?.simulacoes ?? 0}
+            cpfAprovado={ghlData?.cpf_aprovado ?? planilhaCpfApproved}
+            vendasFinanciamento={(ghlData?.vendas_financiamento ?? 0) || (salesFinancing + salesLegacy)}
+            onScrollToFunnel={scrollToFunnel}
+          />
           <StatsCards
             totalLeads={totalLeads}
             totalSpent={totalSpent}
@@ -438,6 +453,7 @@ export default function Index() {
             </div>
           </div>
 
+          <div ref={funnelRef}>
           <GoalsFunnel
             totalLeads={totalLeads}
             ghlSimulacoes={ghlData?.simulacoes ?? 0}
@@ -446,6 +462,7 @@ export default function Index() {
             salesFinancing={salesFinancing + salesLegacy}
             onScrollTo={(t) => handleScrollToRanking(t)}
           />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SellerRanking
