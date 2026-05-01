@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   AreaChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -377,7 +378,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                     tickFormatter={formatDateLabel}
                   />
                   <YAxis tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }} />
-                  <Tooltip content={<CustomTooltip projectionEndIso={monthEndIso} />} />
+                  <Tooltip content={(props) => <CustomTooltip {...props} projectionEndIso={monthEndIso} />} />
 
                   {/* Realized series */}
                   {chartSeries.map((s) => (
@@ -396,25 +397,30 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                     />
                   ))}
 
-                  {/* Projection series (dashed, no fill) */}
+                  {/* Projection series (dashed) */}
                   {showProjection &&
                     chartSeries
                       .filter((s) => PROJECTION_KEYS.includes(s.key))
                       .map((s) => (
-                        <Area
+                        <Line
                           key={`proj-${s.key}`}
                           type="monotone"
                           dataKey={`proj_${s.key}`}
                           name={`${s.name} (projeção)`}
                           stroke={s.color}
-                          strokeWidth={2}
-                          strokeDasharray="5 4"
-                          fill="none"
+                          strokeWidth={2.5}
+                          strokeDasharray="7 5"
                           dot={false}
-                          activeDot={{ r: 4, strokeWidth: 2, stroke: "hsl(222 40% 10%)" }}
-                          connectNulls={false}
+                          activeDot={{
+                            r: 4,
+                            strokeWidth: 2,
+                            stroke: "hsl(var(--background))",
+                            fill: s.color,
+                          }}
+                          connectNulls
                           isAnimationActive={false}
                           legendType="none"
+                          strokeOpacity={0.95}
                         />
                       ))}
 
