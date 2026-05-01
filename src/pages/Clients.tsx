@@ -24,7 +24,6 @@ import { HealthBadge } from "@/components/clients/HealthBadge";
 import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
 const LEGACY_TOKEN_KEY = "default_meta_token";
-const TOKEN_PASSWORD = "tokenkp";
 
 const EMPTY_MAPPING: StageMapping = {
   cpf_aprovado: [],
@@ -90,9 +89,6 @@ export default function Clients() {
   const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
-  const [tokenUnlocked, setTokenUnlocked] = useState(false);
-  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
-  const [pwdInput, setPwdInput] = useState("");
   const [revealedTokenId, setRevealedTokenId] = useState<string | null>(null);
 
   // Tokens — load from DB
@@ -272,27 +268,18 @@ export default function Clients() {
   };
 
   // === Tokens da Meta ===
-  const requireUnlock = (after: () => void) => {
-    if (tokenUnlocked) { after(); return; }
-    setPwdDialogOpen(true);
-    pendingAfterUnlock.current = after;
-  };
-  const pendingAfterUnlock = useMemo(() => ({ current: null as null | (() => void) }), []);
+  // Access control is enforced server-side via RLS (admin-only on meta_tokens).
 
   const openCreateToken = () => {
-    requireUnlock(() => {
-      setEditingTokenId(null);
-      setTokenForm({ name: "", token: "" });
-      setTokenDialogOpen(true);
-    });
+    setEditingTokenId(null);
+    setTokenForm({ name: "", token: "" });
+    setTokenDialogOpen(true);
   };
 
   const openEditToken = (t: MetaToken) => {
-    requireUnlock(() => {
-      setEditingTokenId(t.id);
-      setTokenForm({ name: t.name, token: t.token });
-      setTokenDialogOpen(true);
-    });
+    setEditingTokenId(t.id);
+    setTokenForm({ name: t.name, token: t.token });
+    setTokenDialogOpen(true);
   };
 
   const saveToken = async () => {
@@ -341,21 +328,6 @@ export default function Clients() {
     setDeleteTokenTarget(null);
     refetchTokens();
     queryClient.invalidateQueries({ queryKey: ["clients"] });
-  };
-
-  const handleUnlockSubmit = () => {
-    if (pwdInput === TOKEN_PASSWORD) {
-      setTokenUnlocked(true);
-      setPwdDialogOpen(false);
-      setPwdInput("");
-      toast.success("Tokens desbloqueados");
-      const cb = pendingAfterUnlock.current;
-      pendingAfterUnlock.current = null;
-      if (cb) cb();
-    } else {
-      toast.error("Senha incorreta");
-      setPwdInput("");
-    }
   };
 
 
@@ -411,39 +383,17 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Tokens da Meta (lista, protegida) */}
+      {/* Tokens da Meta — acesso restrito a admins via RLS */}
       <Card className="glass-card border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <KeyRound className="h-4 w-4" />
               Tokens da Meta
-              <span
-                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                  tokenUnlocked
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                    : "border-primary/30 bg-primary/10 text-primary"
-                }`}
-              >
-                {tokenUnlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                {tokenUnlocked ? "Desbloqueado" : "Protegido"}
-              </span>
             </span>
-            <div className="flex gap-2">
-              {tokenUnlocked && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setTokenUnlocked(false); setRevealedTokenId(null); }}
-                  title="Bloquear novamente"
-                >
-                  <Lock className="h-4 w-4" />
-                </Button>
-              )}
-              <Button size="sm" className="gap-2" onClick={openCreateToken}>
-                <Plus className="h-4 w-4" /> Adicionar Token
-              </Button>
-            </div>
+            <Button size="sm" className="gap-2" onClick={openCreateToken}>
+              <Plus className="h-4 w-4" /> Adicionar Token
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -457,7 +407,7 @@ export default function Clients() {
           ) : (
             <div className="space-y-2">
               {metaTokens.map((t) => {
-                const isRevealed = tokenUnlocked && revealedTokenId === t.id;
+                const isRevealed = revealedTokenId === t.id;
                 return (
                   <div
                     key={t.id}
@@ -469,16 +419,14 @@ export default function Clients() {
                         {isRevealed ? t.token : "•".repeat(Math.min(40, t.token.length))}
                       </div>
                     </div>
-                    {tokenUnlocked && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
-                        title={isRevealed ? "Ocultar" : "Mostrar"}
-                      >
-                        {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRevealedTokenId(isRevealed ? null : t.id)}
+                      title={isRevealed ? "Ocultar" : "Mostrar"}
+                    >
+                      {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditToken(t)} title="Editar">
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -486,7 +434,7 @@ export default function Clients() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => requireUnlock(() => setDeleteTokenTarget(t))}
+                      onClick={() => setDeleteTokenTarget(t)}
                       title="Excluir"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -494,13 +442,6 @@ export default function Clients() {
                   </div>
                 );
               })}
-            </div>
-          )}
-          {!tokenUnlocked && (
-            <div className="mt-3">
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setPwdDialogOpen(true)}>
-                <Lock className="h-4 w-4" /> Desbloquear para ver/editar valores
-              </Button>
             </div>
           )}
         </CardContent>
@@ -562,30 +503,6 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* Password Dialog */}
-      <Dialog open={pwdDialogOpen} onOpenChange={(o) => { setPwdDialogOpen(o); if (!o) setPwdInput(""); }}>
-        <DialogContent className="bg-card border-border/50 max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Acesso restrito
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <Label className="text-xs text-muted-foreground">
-              Digite a senha para gerenciar os Tokens da Meta
-            </Label>
-            <Input
-              type="password"
-              autoFocus
-              value={pwdInput}
-              onChange={(e) => setPwdInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSubmit(); }}
-              placeholder="Senha"
-            />
-            <Button onClick={handleUnlockSubmit} className="w-full">Desbloquear</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Client Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
