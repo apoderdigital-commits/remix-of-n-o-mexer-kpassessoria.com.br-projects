@@ -503,30 +503,6 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* Password Dialog */}
-      <Dialog open={pwdDialogOpen} onOpenChange={(o) => { setPwdDialogOpen(o); if (!o) setPwdInput(""); }}>
-        <DialogContent className="bg-card border-border/50 max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Acesso restrito
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <Label className="text-xs text-muted-foreground">
-              Digite a senha para gerenciar os Tokens da Meta
-            </Label>
-            <Input
-              type="password"
-              autoFocus
-              value={pwdInput}
-              onChange={(e) => setPwdInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockSubmit(); }}
-              placeholder="Senha"
-            />
-            <Button onClick={handleUnlockSubmit} className="w-full">Desbloquear</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Client Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
