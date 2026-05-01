@@ -7,8 +7,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
-import { Activity, Users, CheckCircle2, Banknote, BarChart3 } from "lucide-react";
+import { Activity, Users, CheckCircle2, Banknote, BarChart3, TrendingUp } from "lucide-react";
 
 interface DataPoint {
   date: string;
@@ -30,7 +31,6 @@ interface SeriesDef {
   description: string;
   color: string;
   icon: typeof Users;
-  // metric of conversion: value / base * 100, with a target %
   goal?: { baseKey: SeriesKey; target: number; label: string };
 }
 
@@ -68,6 +68,8 @@ const SERIES: SeriesDef[] = [
   },
 ];
 
+const PROJECTION_KEYS: SeriesKey[] = ["leads", "simulacoes", "cpf"];
+
 function formatDateLabel(v: string) {
   const d = new Date(v + "T00:00:00");
   return `${d.getDate()}/${d.getMonth() + 1}`;
@@ -78,25 +80,58 @@ function formatFullDate(v: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function toIso(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function CustomTooltip({ active, payload, label, projectionEndIso }: any) {
   if (!active || !payload?.length) return null;
+  const isProjection = label > projectionEndIso ? false : label >= (payload[0]?.payload?.__projectionStartIso ?? "9999");
+  // Filter duplicate (real + proj at same date) — show only relevant ones
+  const filtered = payload.filter((p: any) => p.value !== null && p.value !== undefined);
   return (
-    <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-xl">
-      <p className="text-xs font-semibold text-foreground mb-2 capitalize">{formatFullDate(label)}</p>
+    <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-xl max-w-xs">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <p className="text-xs font-semibold text-foreground capitalize">{formatFullDate(label)}</p>
+        {isProjection && (
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-amber-300/90">
+            projeção
+          </span>
+        )}
+      </div>
       <div className="space-y-1.5">
-        {payload.map((p: any) => {
-          const meta = SERIES.find((s) => s.key === p.dataKey);
+        {filtered.map((p: any) => {
+          const baseKey = String(p.dataKey).replace(/^proj_/, "") as SeriesKey;
+          const meta = SERIES.find((s) => s.key === baseKey);
           const Icon = meta?.icon ?? Activity;
+          const isProj = String(p.dataKey).startsWith("proj_");
           return (
             <div key={p.dataKey} className="flex items-center gap-2 text-xs">
-              <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{
+                  background: p.color,
+                  boxShadow: isProj ? "none" : `0 0 6px ${p.color}`,
+                  opacity: isProj ? 0.7 : 1,
+                }}
+              />
               <Icon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">{meta?.name ?? p.name}:</span>
-              <span className="font-semibold text-foreground">{Number(p.value).toLocaleString("pt-BR")}</span>
+              <span className="text-muted-foreground">
+                {meta?.name ?? p.name}
+                {isProj ? " (proj.)" : ""}:
+              </span>
+              <span className="font-semibold text-foreground">
+                {Number(p.value).toLocaleString("pt-BR")}
+              </span>
             </div>
           );
         })}
       </div>
+      {isProjection && (
+        <p className="text-[10px] text-muted-foreground/80 mt-2 italic leading-snug">
+          Estimativa baseada na média dos últimos 7 dias. Pode variar.
+        </p>
+      )}
     </div>
   );
 }
@@ -104,7 +139,7 @@ function CustomTooltip({ active, payload, label }: any) {
 export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   const totalLeads = data.reduce((sum, d) => sum + d.leads, 0);
 
-  // Distribute total simulações proportionally to leads per day (approximation since GHL only provides total)
+  // Distribute total simulações proportionally to leads per day
   const dataWithSim = data.map((d) => ({
     ...d,
     simulacoes:
@@ -130,8 +165,100 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
     return { ...s, total, achievedPct };
   });
 
-  // Hide simulações series from chart if not provided
   const chartSeries = simulacoesTotal !== undefined ? SERIES : SERIES.filter((s) => s.key !== "simulacoes");
+
+  // ===== PROJECTION =====
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = toIso(today);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  monthEnd.setHours(0, 0, 0, 0);
+  const monthEndIso = toIso(monthEnd);
+
+  // Use last 7 available days from data (excluding today if present, since today is partial)
+  const sortedData = [...dataWithSim].sort((a, b) => a.date.localeCompare(b.date));
+  const completedDays = sortedData.filter((d) => d.date < todayIso);
+  const last7 = completedDays.slice(-7);
+  const avg = (key: SeriesKey) => {
+    if (last7.length === 0) return 0;
+    const sum = last7.reduce((s, d: any) => s + (Number(d[key]) || 0), 0);
+    return sum / last7.length;
+  };
+
+  const dailyAvg: Record<string, number> = {
+    leads: avg("leads"),
+    simulacoes: avg("simulacoes"),
+    cpf: avg("cpf"),
+  };
+
+  const lastRealDate = sortedData.length > 0 ? sortedData[sortedData.length - 1].date : todayIso;
+  // Project from the day AFTER the last real point through end of month
+  const projectionStart = new Date(Math.max(new Date(lastRealDate + "T00:00:00").getTime(), today.getTime()));
+  projectionStart.setDate(projectionStart.getDate() + (lastRealDate < todayIso ? 1 : 1));
+  const projectionStartIso = toIso(projectionStart);
+
+  // Build projection points (one per day until month end)
+  const projectionPoints: any[] = [];
+  if (projectionStart <= monthEnd && last7.length > 0) {
+    const cursor = new Date(projectionStart);
+    while (cursor <= monthEnd) {
+      const iso = toIso(cursor);
+      projectionPoints.push({
+        date: iso,
+        leads: null,
+        simulacoes: null,
+        cpf: null,
+        sales: null,
+        proj_leads: Math.round(dailyAvg.leads),
+        proj_simulacoes: Math.round(dailyAvg.simulacoes),
+        proj_cpf: Math.round(dailyAvg.cpf),
+        __projectionStartIso: projectionStartIso,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  // Add bridge point: the last real data point also carries proj_* values so lines connect
+  const dataWithProj = sortedData.map((d, idx) => {
+    const isLastReal = idx === sortedData.length - 1 && projectionPoints.length > 0;
+    return {
+      ...d,
+      proj_leads: isLastReal ? d.leads : null,
+      proj_simulacoes: isLastReal ? (d as any).simulacoes : null,
+      proj_cpf: isLastReal ? d.cpf : null,
+      __projectionStartIso: projectionStartIso,
+    };
+  });
+
+  const chartData = [...dataWithProj, ...projectionPoints];
+
+  // Days remaining in month (from tomorrow through month end)
+  const daysRemaining = projectionPoints.length;
+  const projectedTotals = {
+    leads: Math.round(dailyAvg.leads * daysRemaining),
+    simulacoes: Math.round(dailyAvg.simulacoes * daysRemaining),
+    cpf: Math.round(dailyAvg.cpf * daysRemaining),
+  };
+
+  // Realized so far this month (from data points within current month)
+  const monthStartIso = toIso(new Date(today.getFullYear(), today.getMonth(), 1));
+  const realizedThisMonth = sortedData
+    .filter((d) => d.date >= monthStartIso && d.date <= todayIso)
+    .reduce(
+      (acc, d: any) => ({
+        leads: acc.leads + (Number(d.leads) || 0),
+        simulacoes: acc.simulacoes + (Number(d.simulacoes) || 0),
+        cpf: acc.cpf + (Number(d.cpf) || 0),
+      }),
+      { leads: 0, simulacoes: 0, cpf: 0 }
+    );
+  const monthEstimate = {
+    leads: realizedThisMonth.leads + projectedTotals.leads,
+    simulacoes: realizedThisMonth.simulacoes + projectedTotals.simulacoes,
+    cpf: realizedThisMonth.cpf + projectedTotals.cpf,
+  };
+  const currentMonthName = today.toLocaleDateString("pt-BR", { month: "long" });
+  const showProjection = projectionPoints.length > 0 && last7.length > 0;
 
   return (
     <Card className="glass-card border-border/50">
@@ -203,10 +330,37 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
               })}
             </div>
 
+            {/* Projection summary */}
+            {showProjection && (
+              <div
+                className="rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.07] to-transparent p-3.5 flex items-start gap-3"
+                title="Estimativa baseada na média dos últimos 7 dias. Pode variar."
+              >
+                <div className="p-2 rounded-lg bg-amber-500/15 shrink-0">
+                  <TrendingUp className="h-4 w-4 text-amber-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-300/90">
+                    Projeção para {currentMonthName} · {daysRemaining} {daysRemaining === 1 ? "dia restante" : "dias restantes"}
+                  </p>
+                  <p className="text-sm text-foreground/90 mt-1 leading-snug">
+                    <span className="font-bold text-foreground">{monthEstimate.leads.toLocaleString("pt-BR")}</span> leads
+                    {" · "}
+                    <span className="font-bold text-foreground">{monthEstimate.simulacoes.toLocaleString("pt-BR")}</span> simulações
+                    {" · "}
+                    <span className="font-bold text-foreground">{monthEstimate.cpf.toLocaleString("pt-BR")}</span> CPFs aprovados
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-1 italic">
+                    Estimativa baseada na média diária dos últimos 7 dias ({Math.round(dailyAvg.leads)} leads/dia).
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Chart */}
             <div className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dataWithSim} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                   <defs>
                     {chartSeries.map((s) => (
                       <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -222,7 +376,9 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                     tickFormatter={formatDateLabel}
                   />
                   <YAxis tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip projectionEndIso={monthEndIso} />} />
+
+                  {/* Realized series */}
                   {chartSeries.map((s) => (
                     <Area
                       key={s.key}
@@ -234,30 +390,84 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                       fill={`url(#grad-${s.key})`}
                       dot={false}
                       activeDot={{ r: 5, strokeWidth: 2, stroke: "hsl(222 40% 10%)" }}
+                      connectNulls={false}
+                      isAnimationActive={false}
                     />
                   ))}
+
+                  {/* Projection series (dashed, no fill) */}
+                  {showProjection &&
+                    chartSeries
+                      .filter((s) => PROJECTION_KEYS.includes(s.key))
+                      .map((s) => (
+                        <Area
+                          key={`proj-${s.key}`}
+                          type="monotone"
+                          dataKey={`proj_${s.key}`}
+                          name={`${s.name} (projeção)`}
+                          stroke={s.color}
+                          strokeWidth={2}
+                          strokeDasharray="5 4"
+                          fill="none"
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: "hsl(222 40% 10%)" }}
+                          connectNulls={false}
+                          isAnimationActive={false}
+                          legendType="none"
+                        />
+                      ))}
+
+                  {/* Vertical "today" line */}
+                  {showProjection && (
+                    <ReferenceLine
+                      x={projectionStartIso}
+                      stroke="hsl(215 25% 60%)"
+                      strokeWidth={1}
+                      strokeDasharray="2 3"
+                      label={{
+                        value: "Hoje",
+                        position: "top",
+                        fill: "hsl(215 25% 70%)",
+                        fontSize: 10,
+                      }}
+                    />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             {/* Custom legend with descriptions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-border/30">
-              {chartSeries.map((s) => (
-                <div key={s.key} className="flex items-start gap-2 text-xs">
-                  <span
-                    className="mt-1 h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ background: s.color, boxShadow: `0 0 12px ${s.color}` }}
-                  />
-                  <div>
-                    <p className="font-semibold text-foreground">{s.name}</p>
-                    <p className="text-muted-foreground leading-snug">
-                      {s.key === "simulacoes"
-                        ? "Distribuído proporcional aos leads (total do GHL)"
-                        : s.description}
-                    </p>
+              {chartSeries.map((s) => {
+                const hasProj = showProjection && PROJECTION_KEYS.includes(s.key);
+                return (
+                  <div key={s.key} className="flex items-start gap-2 text-xs">
+                    <span
+                      className="mt-1 h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ background: s.color, boxShadow: `0 0 12px ${s.color}` }}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">{s.name}</p>
+                      <p className="text-muted-foreground leading-snug">
+                        {s.key === "simulacoes"
+                          ? "Distribuído proporcional aos leads (total do GHL)"
+                          : s.description}
+                      </p>
+                      {hasProj && (
+                        <p className="text-muted-foreground/80 leading-snug mt-0.5 inline-flex items-center gap-1.5">
+                          <span
+                            className="inline-block h-px w-5"
+                            style={{
+                              borderTop: `2px dashed ${s.color}`,
+                            }}
+                          />
+                          <span className="italic">— projeção</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
