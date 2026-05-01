@@ -445,6 +445,42 @@ export type Database = {
           },
         ]
       }
+      user_creation_verifications: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          payload: Json
+          phone: string
+          requested_by: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          payload: Json
+          phone: string
+          requested_by: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          payload?: Json
+          phone?: string
+          requested_by?: string
+        }
+        Relationships: []
+      }
       user_dashboard_access: {
         Row: {
           created_at: string

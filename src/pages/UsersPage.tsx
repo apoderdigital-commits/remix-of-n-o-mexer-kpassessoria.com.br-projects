@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard, ShieldCheck, ArrowLeft as BackIcon } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -94,6 +95,13 @@ export default function UsersPage() {
   });
   const [saving, setSaving] = useState(false);
 
+  // Verification step (for creating new users)
+  const [verifyStep, setVerifyStep] = useState<"form" | "code">("form");
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifyExpiresAt, setVerifyExpiresAt] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -103,9 +111,21 @@ export default function UsersPage() {
   const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
+  // Cooldown ticker
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
+
   const resetForm = () => {
     setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
+    setVerifyStep("form");
+    setVerificationId(null);
+    setVerificationCode("");
+    setVerifyExpiresAt(null);
+    setResendCooldown(0);
   };
 
   const openCreate = () => { resetForm(); setOpen(true); };
@@ -146,6 +166,10 @@ export default function UsersPage() {
   const handleSave = async () => {
     if (!form.username.trim()) { toast.error("Usuário é obrigatório"); return; }
     if (!editingUserId && !form.password) { toast.error("Senha é obrigatória"); return; }
+    if (!editingUserId && !form.phone.trim()) {
+      toast.error("Telefone é obrigatório para enviar o código de verificação");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -176,15 +200,12 @@ export default function UsersPage() {
         }
 
         toast.success("Usuário atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+        setOpen(false);
+        resetForm();
       } else {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) {
-          toast.error("Sua sessão expirou. Faça login novamente para criar usuários.");
-          setSaving(false);
-          return;
-        }
-        const { data, error } = await supabase.functions.invoke("create-internal-user", {
+        // Request verification code via WhatsApp
+        const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
           body: {
             username: form.username.trim().toLowerCase(),
             password: form.password,
@@ -192,20 +213,72 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim() || null,
+            phone: form.phone.trim(),
           },
-          headers: { Authorization: `Bearer ${token}` },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        toast.success("Usuário criado!");
-      }
 
+        setVerificationId(data.verification_id);
+        setVerifyExpiresAt(data.expires_at);
+        setVerificationCode("");
+        setVerifyStep("code");
+        setResendCooldown(60);
+        toast.success("Código enviado para o WhatsApp");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar");
+    }
+    setSaving(false);
+  };
+
+  const handleConfirmCode = async () => {
+    if (!verificationId) return;
+    if (verificationCode.length !== 6) {
+      toast.error("Digite os 6 dígitos do código");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("confirm-user-creation-code", {
+        body: { verification_id: verificationId, code: verificationCode },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Usuário criado!");
       queryClient.invalidateQueries({ queryKey: ["admin_users"] });
       setOpen(false);
       resetForm();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar");
+      toast.error(err.message || "Código inválido");
+    }
+    setSaving(false);
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
+        body: {
+          username: form.username.trim().toLowerCase(),
+          password: form.password,
+          full_name: form.fullName,
+          role: form.role,
+          dashboard_keys: form.dashboards,
+          client_ids: form.clientIds,
+          phone: form.phone.trim(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setVerificationId(data.verification_id);
+      setVerifyExpiresAt(data.expires_at);
+      setVerificationCode("");
+      setResendCooldown(60);
+      toast.success("Novo código enviado");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reenviar");
     }
     setSaving(false);
   };
@@ -309,10 +382,62 @@ export default function UsersPage() {
         <DialogContent className="bg-card border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UsersIcon className="h-5 w-5" />
-              {editingUserId ? "Editar Usuário" : "Criar Usuário"}
+              {verifyStep === "code" ? <ShieldCheck className="h-5 w-5 text-primary" /> : <UsersIcon className="h-5 w-5" />}
+              {editingUserId ? "Editar Usuário" : verifyStep === "code" ? "Verificação por WhatsApp" : "Criar Usuário"}
             </DialogTitle>
           </DialogHeader>
+          {verifyStep === "code" && !editingUserId ? (
+            <div className="space-y-5 mt-2">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm">
+                  Enviamos um código de 6 dígitos para o WhatsApp <strong className="text-foreground">{form.phone}</strong>.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O código expira em 10 minutos. Confira a mensagem e digite abaixo para confirmar a criação do usuário.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center gap-3">
+                <Label>Código de verificação</Label>
+                <InputOTP maxLength={6} value={verificationCode} onChange={setVerificationCode}>
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="hover:text-foreground inline-flex items-center gap-1"
+                  onClick={() => { setVerifyStep("form"); setVerificationCode(""); }}
+                >
+                  <BackIcon className="h-3 w-3" /> Voltar ao formulário
+                </button>
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || saving}
+                  className="hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleResendCode}
+                >
+                  {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
+                </button>
+              </div>
+
+              <Button
+                onClick={handleConfirmCode}
+                className="w-full"
+                disabled={saving || verificationCode.length !== 6}
+              >
+                {saving ? "Validando..." : "Confirmar e criar usuário"}
+              </Button>
+            </div>
+          ) : (
           <div className="space-y-5 mt-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -420,9 +545,10 @@ export default function UsersPage() {
             </div>
 
             <Button onClick={handleSave} className="w-full" disabled={saving}>
-              {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Criar Usuário"}
+              {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
           </div>
+          )}
         </DialogContent>
       </Dialog>
 
