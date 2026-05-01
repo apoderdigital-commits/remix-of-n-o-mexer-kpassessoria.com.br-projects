@@ -230,15 +230,32 @@ export default function Index() {
 
   const buildComparison = (key: "spent" | "leads" | "cpf") => {
     if (evolutionData.length === 0) return { today: 0, yesterday: 0, avg7d: 0 };
-    const last = evolutionData[evolutionData.length - 1];
-    const prev = evolutionData.length > 1 ? evolutionData[evolutionData.length - 2] : null;
-    const last7 = evolutionData.slice(-7);
-    const sum7 = last7.reduce((s, d) => s + (d as any)[key], 0);
-    return {
-      today: (last as any)[key] || 0,
-      yesterday: prev ? (prev as any)[key] || 0 : 0,
-      avg7d: last7.length > 0 ? sum7 / last7.length : 0,
+
+    // Index by date for O(1) lookup
+    const byDate = new Map<string, any>();
+    evolutionData.forEach((d: any) => byDate.set(d.date, d));
+
+    // Anchor "today" to the most recent date present in the data
+    const latestDateStr = evolutionData[evolutionData.length - 1].date;
+    const latest = new Date(latestDateStr + "T00:00:00");
+
+    const valueOn = (offsetDays: number) => {
+      const d = new Date(latest);
+      d.setDate(d.getDate() - offsetDays);
+      const key2 = d.toISOString().slice(0, 10);
+      const row = byDate.get(key2);
+      return row ? Number((row as any)[key]) || 0 : 0;
     };
+
+    const today = valueOn(0);
+    const yesterday = valueOn(1);
+
+    // Average over the 7 calendar days ending on latest (inclusive), counting zero days
+    let sum7 = 0;
+    for (let i = 0; i < 7; i++) sum7 += valueOn(i);
+    const avg7d = sum7 / 7;
+
+    return { today, yesterday, avg7d };
   };
 
   const comparisons = useMemo(() => ({
