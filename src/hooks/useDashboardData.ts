@@ -143,3 +143,134 @@ export function useSyncGoogleSheet(clientId: string | null) {
   };
   return { sync };
 }
+
+// ===== Comparativo período anterior (mesmo número de dias antes do "since") =====
+export function computePreviousPeriod(since: string, until: string) {
+  const start = new Date(since + "T00:00:00");
+  const end = new Date(until + "T00:00:00");
+  const days = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const prevEnd = new Date(start);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevStart.getDate() - (days - 1));
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { since: iso(prevStart), until: iso(prevEnd), days };
+}
+
+export function usePreviousPeriodData(
+  clientId: string | null,
+  since?: string,
+  until?: string,
+  enabled = true
+) {
+  const prev = since && until ? computePreviousPeriod(since, until) : null;
+  return useQuery({
+    queryKey: ["previous_period", clientId, prev?.since, prev?.until],
+    queryFn: async () => {
+      if (!clientId || !prev) return null;
+      const [campRes, leadsRes, ghlRes] = await Promise.all([
+        supabase
+          .from("meta_campaigns")
+          .select("amount_spent, leads_total, date")
+          .eq("client_id", clientId)
+          .gte("date", prev.since)
+          .lte("date", prev.until),
+        supabase
+          .from("qualified_leads")
+          .select("status, lead_date")
+          .eq("client_id", clientId)
+          .gte("lead_date", prev.since)
+          .lte("lead_date", prev.until),
+        supabase.functions
+          .invoke("fetch-ghl-pipeline", {
+            body: { client_id: clientId, since: prev.since, until: prev.until },
+          })
+          .catch(() => ({ data: null, error: null } as any)),
+      ]);
+      const campaigns = campRes.data || [];
+      const leads = leadsRes.data || [];
+      const ghl = (ghlRes as any)?.data ?? null;
+      const totalLeads = campaigns.reduce((s: number, c: any) => s + (c.leads_total || 0), 0);
+      const totalSpent = campaigns.reduce(
+        (s: number, c: any) => s + (Number(c.amount_spent) || 0),
+        0
+      );
+      const cpfApproved = leads.filter((l: any) => l.status === "cpf_approved").length;
+      const salesFinancing = leads.filter((l: any) => l.status === "sale_financing").length;
+      const salesConsortium = leads.filter((l: any) => l.status === "sale_consortium").length;
+      const salesLegacy = leads.filter((l: any) => l.status === "sale").length;
+      return {
+        period: prev,
+        totalLeads,
+        totalSpent,
+        cpl: totalLeads > 0 ? totalSpent / totalLeads : 0,
+        cpfApproved,
+        salesFinancing: salesFinancing + salesLegacy,
+        salesConsortium,
+        simulacoes: ghl?.simulacoes ?? 0,
+        ghlCpfAprovado: ghl?.cpf_aprovado ?? 0,
+        ghlVendasFinanciamento: ghl?.vendas_financiamento ?? 0,
+        ghlVendasConsorcio: ghl?.vendas_consorcio ?? 0,
+      };
+    },
+    enabled: !!clientId && !!prev && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ===== Tendência mensal (últimos 6 meses agregados a partir das tabelas) =====
+export function useMonthlyTrend(clientId: string | null, monthsBack = 6) {
+  return useQuery({
+    queryKey: ["monthly_trend", clientId, monthsBack],
+    queryFn: async () => {
+      if (!clientId) return [];
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth() - (monthsBack - 1), 1);
+      const startIso = start.toISOString().slice(0, 10);
+      const [campRes, leadsRes] = await Promise.all([
+        supabase
+          .from("meta_campaigns")
+          .select("date, amount_spent, leads_total")
+          .eq("client_id", clientId)
+          .gte("date", startIso),
+        supabase
+          .from("qualified_leads")
+          .select("lead_date, status")
+          .eq("client_id", clientId)
+          .gte("lead_date", startIso),
+      ]);
+      const months = new Map<
+        string,
+        { key: string; label: string; leads: number; spent: number; cpf: number; sales: number }
+      >();
+      for (let i = 0; i < monthsBack; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth() - (monthsBack - 1 - i), 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const label = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+        months.set(key, { key, label, leads: 0, spent: 0, cpf: 0, sales: 0 });
+      }
+      (campRes.data || []).forEach((c: any) => {
+        const key = c.date.slice(0, 7);
+        const row = months.get(key);
+        if (!row) return;
+        row.leads += c.leads_total || 0;
+        row.spent += Number(c.amount_spent) || 0;
+      });
+      (leadsRes.data || []).forEach((l: any) => {
+        const key = l.lead_date.slice(0, 7);
+        const row = months.get(key);
+        if (!row) return;
+        if (l.status === "cpf_approved") row.cpf += 1;
+        else if (
+          l.status === "sale_financing" ||
+          l.status === "sale_consortium" ||
+          l.status === "sale"
+        )
+          row.sales += 1;
+      });
+      return Array.from(months.values());
+    },
+    enabled: !!clientId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
