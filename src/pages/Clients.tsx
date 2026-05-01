@@ -362,9 +362,27 @@ export default function Clients() {
   const filteredClients = useMemo(() => {
     if (!clients) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c: any) => c.name?.toLowerCase().includes(q));
-  }, [clients, search]);
+    let list = q ? clients.filter((c: any) => c.name?.toLowerCase().includes(q)) : [...clients];
+
+    if (healthFilter !== "all" && healthMap) {
+      list = list.filter((c: any) => {
+        const lvl = healthMap[c.id]?.level;
+        if (healthFilter === "critical") return lvl === "red";
+        if (healthFilter === "attention") return lvl === "red" || lvl === "yellow";
+        return true;
+      });
+    }
+
+    const order: Record<HealthLevel | "none", number> = { red: 0, yellow: 1, green: 2, none: 3 };
+    list.sort((a: any, b: any) => {
+      const la = (healthMap?.[a.id]?.level ?? "none") as HealthLevel | "none";
+      const lb = (healthMap?.[b.id]?.level ?? "none") as HealthLevel | "none";
+      if (order[la] !== order[lb]) return order[la] - order[lb];
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+    return list;
+  }, [clients, search, healthFilter, healthMap]);
 
   return (
     <div className="min-h-screen p-6 space-y-6">
