@@ -131,23 +131,23 @@ export function ExecutiveSummary({
     : null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 via-card/60 to-background/60 backdrop-blur-sm p-5 sm:p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 via-card/60 to-background/60 backdrop-blur-sm p-4 sm:p-5">
       {/* glow */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -left-24 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-24 h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
       <div className="relative">
         {/* Header */}
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-fuchsia-600 shadow-lg shadow-primary/20">
-              <Sparkles className="h-4 w-4 text-white" />
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-fuchsia-600 shadow-lg shadow-primary/20">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground">
+              <p className="text-[9px] uppercase tracking-[0.18em] font-bold text-muted-foreground">
                 Destaques do período
               </p>
-              <h2 className="text-base sm:text-lg font-semibold text-foreground capitalize leading-tight">
+              <h2 className="text-sm sm:text-base font-semibold text-foreground capitalize leading-tight">
                 O que mudou · {monthName}
               </h2>
             </div>
@@ -155,15 +155,15 @@ export function ExecutiveSummary({
         </div>
 
         {/* vs período anterior */}
-        <div className="p-4 rounded-xl border border-border/40 bg-background/40">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="h-3.5 w-3.5 text-cyan-400" />
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+        <div className="p-3 rounded-xl border border-border/40 bg-background/40">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Activity className="h-3 w-3 text-cyan-400" />
+            <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
               vs período anterior
             </p>
           </div>
           {deltas ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
               <DeltaRow label="Leads" pct={deltas.leads} />
               <DeltaRow label="CPFs aprovados" pct={deltas.cpf} />
               <DeltaRow label="Vendas" pct={deltas.sales} />
