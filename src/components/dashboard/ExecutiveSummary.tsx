@@ -125,12 +125,22 @@ export function ExecutiveSummary({
     const dayOfMonth = today.getDate();
     const monthIso = monthStart.toISOString().slice(0, 7);
 
-    // Filtra leads do mês corrente
+    // Tenta primeiro pelos leadsByDate (precisa que o filtro inclua o mês corrente)
     const monthLeads = leadsByDate.filter((l) => l.lead_date?.slice(0, 7) === monthIso);
-    const monthCpf = monthLeads.filter((l) => l.status === "cpf_approved").length;
-    const monthSales = monthLeads.filter(
+    let monthCpf = monthLeads.filter((l) => l.status === "cpf_approved").length;
+    let monthSales = monthLeads.filter(
       (l) => l.status === "sale_financing" || l.status === "sale_consortium" || l.status === "sale"
     ).length;
+
+    // Fallback: se o filtro atual não cobre o mês corrente, usa os totais do período
+    // selecionado como aproximação (melhor que mostrar zero).
+    let usingFallback = false;
+    if (monthCpf === 0 && monthSales === 0) {
+      monthCpf = cpfAprovado;
+      monthSales = vendasFinanciamento + vendasConsorcio;
+      usingFallback = true;
+    }
+
     const dailyAvgSales = dayOfMonth > 0 ? monthSales / dayOfMonth : 0;
     const projectedSales = Math.round(dailyAvgSales * totalDays);
     const dailyAvgCpf = dayOfMonth > 0 ? monthCpf / dayOfMonth : 0;
@@ -144,8 +154,9 @@ export function ExecutiveSummary({
       projectedCpf,
       monthCpf,
       monthSales,
+      usingFallback,
     };
-  }, [leadsByDate]);
+  }, [leadsByDate, cpfAprovado, vendasFinanciamento, vendasConsorcio]);
 
   // ===== Detecta criativos em alta / queda (últimos 14 dias) =====
   const movers = useMemo(() => {
