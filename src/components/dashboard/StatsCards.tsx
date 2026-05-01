@@ -159,6 +159,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       icon: TrendingDown,
       color: "text-fuchsia-400",
       accent: "300 70% 65%",
+      insight: "Referência de mercado para CPL no setor é de R$ 6 a R$ 8. Quanto mais baixo, melhor o aproveitamento do investimento.",
     },
     {
       title: "Simulações",
