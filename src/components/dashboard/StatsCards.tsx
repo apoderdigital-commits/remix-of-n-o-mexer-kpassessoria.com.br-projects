@@ -229,7 +229,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3 auto-rows-fr">
       {cards.map((card) => {
         const clickable = !!(card as any).scrollTarget && !!onScrollTo;
         const accent = (card as any).accent as string | undefined;
@@ -246,7 +246,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               }
             } : undefined}
             style={accent ? { borderLeft: `3px solid hsl(${accent} / 0.7)` } : undefined}
-            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] ${
+            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] h-full flex flex-col ${
               clickable ? "cursor-pointer" : ""
             }`}
           >
@@ -257,22 +257,22 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 style={{ background: `hsl(${accent})` }}
               />
             )}
-            <CardContent className="relative p-4">
-              <div className="flex items-center gap-2 mb-2.5">
+            <CardContent className="relative p-3 flex flex-col h-full">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <div
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border transition-transform duration-300 group-hover:scale-110"
+                  className="flex h-6 w-6 items-center justify-center rounded-md border transition-transform duration-300 group-hover:scale-110"
                   style={accent ? {
                     background: `hsl(${accent} / 0.12)`,
                     borderColor: `hsl(${accent} / 0.3)`,
                   } : undefined}
                 >
-                  <card.icon className={`h-4 w-4 ${card.color}`} />
+                  <card.icon className={`h-3.5 w-3.5 ${card.color}`} />
                 </div>
-                <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
                   {card.title}
                 </span>
               </div>
-              <p className="text-xl font-bold tracking-tight text-foreground leading-none">{card.value}</p>
+              <p className="text-lg font-bold tracking-tight text-foreground leading-none">{card.value}</p>
               {(card as any).compare && (
                 <CompareLine {...(card as any).compare} />
               )}
