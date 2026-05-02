@@ -233,19 +233,19 @@ export default function UsersPage() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    try {
-      const { error } = await supabase.functions.invoke("create-internal-user", {
-        body: { action: "soft_delete", user_id: deleteTarget.id },
-      });
-      if (error) throw error;
-      toast.success(`"${deleteTarget.name}" enviado para a lixeira (7 dias)`);
-      queryClient.invalidateQueries({ queryKey: ["admin_users"] });
-      refetchTrash();
-      setDeleteTarget(null);
-      setDeleteConfirmText("");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir");
-    }
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+    setVerifyAction({
+      action: "delete_user",
+      payload: { user_id: target.id },
+      targetLabel: `Excluir usuário ${target.name}`,
+      successMessage: `"${target.name}" enviado para a lixeira`,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+        refetchTrash();
+      },
+    });
   };
 
   const handleRestore = async (u: UserRow) => {
@@ -269,18 +269,19 @@ export default function UsersPage() {
       toast.error('Digite "excluir" para confirmar');
       return;
     }
-    try {
-      const { error } = await supabase.functions.invoke("create-internal-user", {
-        body: { action: "purge", user_id: purgeTarget.id },
-      });
-      if (error) throw error;
-      toast.success(`"${purgeTarget.name}" excluído definitivamente`);
-      refetchTrash();
-      setPurgeTarget(null);
-      setPurgeConfirmText("");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir");
-    }
+    const target = purgeTarget;
+    setPurgeTarget(null);
+    setPurgeConfirmText("");
+    setVerifyAction({
+      action: "purge_user",
+      payload: { user_id: target.id },
+      targetLabel: `Excluir DEFINITIVAMENTE usuário ${target.name}`,
+      successMessage: `"${target.name}" excluído definitivamente`,
+      onSuccess: () => {
+        refetchTrash();
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+      },
+    });
   };
 
   const daysLeft = (deletedAt: string) => {
