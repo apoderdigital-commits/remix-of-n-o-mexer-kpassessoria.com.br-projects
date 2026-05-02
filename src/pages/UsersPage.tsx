@@ -95,12 +95,14 @@ export default function UsersPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Verification step (for creating new users)
-  const [verifyStep, setVerifyStep] = useState<"form" | "code">("form");
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [verifyExpiresAt, setVerifyExpiresAt] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // Generic action verification dialog
+  const [verifyAction, setVerifyAction] = useState<{
+    action: SensitiveAction;
+    payload: Record<string, any>;
+    targetLabel: string;
+    successMessage: string;
+    onSuccess?: () => void;
+  } | null>(null);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -110,13 +112,6 @@ export default function UsersPage() {
   const [trashOpen, setTrashOpen] = useState(false);
   const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
-
-  // Cooldown ticker
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [resendCooldown]);
 
   const resetForm = () => {
     setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
