@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClients } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard, ShieldCheck, ArrowLeft as BackIcon } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard } from "lucide-react";
+import { ActionVerificationDialog, type SensitiveAction } from "@/components/ActionVerificationDialog";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,12 +95,14 @@ export default function UsersPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Verification step (for creating new users)
-  const [verifyStep, setVerifyStep] = useState<"form" | "code">("form");
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [verifyExpiresAt, setVerifyExpiresAt] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // Generic action verification dialog
+  const [verifyAction, setVerifyAction] = useState<{
+    action: SensitiveAction;
+    payload: Record<string, any>;
+    targetLabel: string;
+    successMessage: string;
+    onSuccess?: () => void;
+  } | null>(null);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -111,21 +113,9 @@ export default function UsersPage() {
   const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
-  // Cooldown ticker
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [resendCooldown]);
-
   const resetForm = () => {
     setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
-    setVerifyStep("form");
-    setVerificationId(null);
-    setVerificationCode("");
-    setVerifyExpiresAt(null);
-    setResendCooldown(0);
   };
 
   const openCreate = () => { resetForm(); setOpen(true); };
@@ -167,7 +157,7 @@ export default function UsersPage() {
     if (!form.username.trim()) { toast.error("Usuário é obrigatório"); return; }
     if (!editingUserId && !form.password) { toast.error("Senha é obrigatória"); return; }
     if (!editingUserId && !form.phone.trim()) {
-      toast.error("Telefone é obrigatório para enviar o código de verificação");
+      toast.error("Telefone é obrigatório");
       return;
     }
 
@@ -204,9 +194,11 @@ export default function UsersPage() {
         setOpen(false);
         resetForm();
       } else {
-        // Request verification code via WhatsApp
-        const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
-          body: {
+        // Trigger verification flow
+        setOpen(false);
+        setVerifyAction({
+          action: "create_user",
+          payload: {
             username: form.username.trim().toLowerCase(),
             password: form.password,
             full_name: form.fullName,
@@ -215,70 +207,16 @@ export default function UsersPage() {
             client_ids: form.clientIds,
             phone: form.phone.trim(),
           },
+          targetLabel: `Criar usuário ${form.username}`,
+          successMessage: "Usuário criado!",
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+            resetForm();
+          },
         });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        setVerificationId(data.verification_id);
-        setVerifyExpiresAt(data.expires_at);
-        setVerificationCode("");
-        setVerifyStep("code");
-        setResendCooldown(60);
-        toast.success("Código enviado para o WhatsApp");
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar");
-    }
-    setSaving(false);
-  };
-
-  const handleConfirmCode = async () => {
-    if (!verificationId) return;
-    if (verificationCode.length !== 6) {
-      toast.error("Digite os 6 dígitos do código");
-      return;
-    }
-    setSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("confirm-user-creation-code", {
-        body: { verification_id: verificationId, code: verificationCode },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success("Usuário criado!");
-      queryClient.invalidateQueries({ queryKey: ["admin_users"] });
-      setOpen(false);
-      resetForm();
-    } catch (err: any) {
-      toast.error(err.message || "Código inválido");
-    }
-    setSaving(false);
-  };
-
-  const handleResendCode = async () => {
-    if (resendCooldown > 0) return;
-    setSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("request-user-creation-code", {
-        body: {
-          username: form.username.trim().toLowerCase(),
-          password: form.password,
-          full_name: form.fullName,
-          role: form.role,
-          dashboard_keys: form.dashboards,
-          client_ids: form.clientIds,
-          phone: form.phone.trim(),
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setVerificationId(data.verification_id);
-      setVerifyExpiresAt(data.expires_at);
-      setVerificationCode("");
-      setResendCooldown(60);
-      toast.success("Novo código enviado");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao reenviar");
     }
     setSaving(false);
   };
@@ -295,19 +233,19 @@ export default function UsersPage() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    try {
-      const { error } = await supabase.functions.invoke("create-internal-user", {
-        body: { action: "soft_delete", user_id: deleteTarget.id },
-      });
-      if (error) throw error;
-      toast.success(`"${deleteTarget.name}" enviado para a lixeira (7 dias)`);
-      queryClient.invalidateQueries({ queryKey: ["admin_users"] });
-      refetchTrash();
-      setDeleteTarget(null);
-      setDeleteConfirmText("");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir");
-    }
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+    setVerifyAction({
+      action: "delete_user",
+      payload: { user_id: target.id },
+      targetLabel: `Excluir usuário ${target.name}`,
+      successMessage: `"${target.name}" enviado para a lixeira`,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+        refetchTrash();
+      },
+    });
   };
 
   const handleRestore = async (u: UserRow) => {
@@ -331,18 +269,19 @@ export default function UsersPage() {
       toast.error('Digite "excluir" para confirmar');
       return;
     }
-    try {
-      const { error } = await supabase.functions.invoke("create-internal-user", {
-        body: { action: "purge", user_id: purgeTarget.id },
-      });
-      if (error) throw error;
-      toast.success(`"${purgeTarget.name}" excluído definitivamente`);
-      refetchTrash();
-      setPurgeTarget(null);
-      setPurgeConfirmText("");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir");
-    }
+    const target = purgeTarget;
+    setPurgeTarget(null);
+    setPurgeConfirmText("");
+    setVerifyAction({
+      action: "purge_user",
+      payload: { user_id: target.id },
+      targetLabel: `Excluir DEFINITIVAMENTE usuário ${target.name}`,
+      successMessage: `"${target.name}" excluído definitivamente`,
+      onSuccess: () => {
+        refetchTrash();
+        queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+      },
+    });
   };
 
   const daysLeft = (deletedAt: string) => {
@@ -382,62 +321,10 @@ export default function UsersPage() {
         <DialogContent className="bg-card border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {verifyStep === "code" ? <ShieldCheck className="h-5 w-5 text-primary" /> : <UsersIcon className="h-5 w-5" />}
-              {editingUserId ? "Editar Usuário" : verifyStep === "code" ? "Verificação por WhatsApp" : "Criar Usuário"}
+              <UsersIcon className="h-5 w-5" />
+              {editingUserId ? "Editar Usuário" : "Criar Usuário"}
             </DialogTitle>
           </DialogHeader>
-          {verifyStep === "code" && !editingUserId ? (
-            <div className="space-y-5 mt-2">
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
-                <p className="text-sm">
-                  Enviamos um código de 6 dígitos para o <strong className="text-foreground">seu WhatsApp</strong> (admin).
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  O código expira em 10 minutos. Confira a mensagem no seu celular e digite abaixo para confirmar a criação do usuário.
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center gap-3">
-                <Label>Código de verificação</Label>
-                <InputOTP maxLength={6} value={verificationCode} onChange={setVerificationCode}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <button
-                  type="button"
-                  className="hover:text-foreground inline-flex items-center gap-1"
-                  onClick={() => { setVerifyStep("form"); setVerificationCode(""); }}
-                >
-                  <BackIcon className="h-3 w-3" /> Voltar ao formulário
-                </button>
-                <button
-                  type="button"
-                  disabled={resendCooldown > 0 || saving}
-                  className="hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleResendCode}
-                >
-                  {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
-                </button>
-              </div>
-
-              <Button
-                onClick={handleConfirmCode}
-                className="w-full"
-                disabled={saving || verificationCode.length !== 6}
-              >
-                {saving ? "Validando..." : "Confirmar e criar usuário"}
-              </Button>
-            </div>
-          ) : (
           <div className="space-y-5 mt-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -548,7 +435,6 @@ export default function UsersPage() {
               {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
           </div>
-          )}
         </DialogContent>
       </Dialog>
 
@@ -826,6 +712,21 @@ export default function UsersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {verifyAction && (
+        <ActionVerificationDialog
+          open={!!verifyAction}
+          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          action={verifyAction.action}
+          payload={verifyAction.payload}
+          targetLabel={verifyAction.targetLabel}
+          successMessage={verifyAction.successMessage}
+          onSuccess={() => {
+            verifyAction.onSuccess?.();
+            setVerifyAction(null);
+          }}
+        />
+      )}
     </div>
   );
 }

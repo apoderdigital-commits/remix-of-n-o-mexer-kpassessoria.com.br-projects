@@ -23,6 +23,8 @@ import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/G
 import { HealthBadge } from "@/components/clients/HealthBadge";
 import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
+import { ActionVerificationDialog, type SensitiveAction } from "@/components/ActionVerificationDialog";
+
 const LEGACY_TOKEN_KEY = "default_meta_token";
 
 const EMPTY_MAPPING: StageMapping = {
@@ -83,6 +85,7 @@ export default function Clients() {
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginalTokenId, setEditingOriginalTokenId] = useState<string>("");
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
@@ -141,6 +144,15 @@ export default function Clients() {
   const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
+  // Generic action verification
+  const [verifyAction, setVerifyAction] = useState<{
+    action: SensitiveAction;
+    payload: Record<string, any>;
+    targetLabel: string;
+    successMessage: string;
+    onSuccess?: () => void;
+  } | null>(null);
+
   // Trash query (admins only via RLS)
   const { data: trashedClients, refetch: refetchTrash } = useQuery({
     queryKey: ["clients_trash"],
@@ -172,12 +184,19 @@ export default function Clients() {
       toast.error('Digite "excluir" para confirmar');
       return;
     }
-    const { error } = await supabase.from("clients").delete().eq("id", purgeTarget.id);
-    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`"${purgeTarget.name}" excluído definitivamente`);
+    const target = purgeTarget;
     setPurgeTarget(null);
     setPurgeConfirmText("");
-    refetchTrash();
+    setVerifyAction({
+      action: "purge_client",
+      payload: { client_id: target.id },
+      targetLabel: `Excluir DEFINITIVAMENTE cliente ${target.name}`,
+      successMessage: `"${target.name}" excluído definitivamente`,
+      onSuccess: () => {
+        refetchTrash();
+        queryClient.invalidateQueries({ queryKey: ["clients"] });
+      },
+    });
   };
 
   const daysLeft = (deletedAt: string) => {
@@ -190,12 +209,14 @@ export default function Clients() {
 
   const openCreate = () => {
     setEditingId(null);
+    setEditingOriginalTokenId("");
     setForm({ ...emptyForm });
     setOpen(true);
   };
 
   const openEdit = (c: any) => {
     setEditingId(c.id);
+    setEditingOriginalTokenId(c.meta_token_id || "");
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
@@ -210,16 +231,17 @@ export default function Clients() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      toast.error("Nome do cliente é obrigatório");
+      return;
+    }
 
     const selectedToken = metaTokens?.find((t) => t.id === form.metaTokenId);
 
-    const payload = {
+    const clientPayload = {
       name: form.name.trim(),
       meta_account_id: form.metaAccountId.trim() || null,
       meta_token_id: form.metaTokenId || null,
-      // Mantém o valor copiado em meta_access_token para compatibilidade
-      // com a edge function fetch-meta-data (que lê desse campo).
       meta_access_token: selectedToken?.token || null,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
@@ -228,20 +250,39 @@ export default function Clients() {
       ghl_stage_mapping: form.stageMapping,
     };
 
-    if (editingId) {
-      const { error } = await supabase.from("clients").update(payload).eq("id", editingId);
-      if (error) { toast.error("Erro ao atualizar: " + error.message); return; }
-      toast.success("Cliente atualizado!");
-    } else {
-      const { error } = await supabase.from("clients").insert(payload);
-      if (error) { toast.error("Erro ao criar: " + error.message); return; }
-      toast.success("Cliente criado!");
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    setForm(emptyForm);
-    setEditingId(null);
     setOpen(false);
+    if (editingId) {
+      const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
+      setVerifyAction({
+        action: tokenChanged ? "update_client_meta_token" : "update_client",
+        // For token changes, we use update_client so the full edit (including new token) is persisted.
+        // The "update_client_meta_token" action exists for the dedicated "swap token only" flow,
+        // but here in the edit form we always send the full payload.
+        payload: { client_id: editingId, client: clientPayload },
+        targetLabel: tokenChanged
+          ? `Atualizar cliente ${form.name} (inclui troca de token Meta)`
+          : `Atualizar cliente ${form.name}`,
+        successMessage: "Cliente atualizado!",
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["clients"] });
+          setForm(emptyForm);
+          setEditingId(null);
+          setEditingOriginalTokenId("");
+        },
+      });
+    } else {
+      setVerifyAction({
+        action: "create_client",
+        payload: { client: clientPayload },
+        targetLabel: `Criar cliente ${form.name}`,
+        successMessage: "Cliente criado!",
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["clients"] });
+          setForm(emptyForm);
+          setEditingId(null);
+        },
+      });
+    }
   };
 
   const requestDelete = (c: any) => {
@@ -255,16 +296,19 @@ export default function Clients() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    const { error } = await supabase
-      .from("clients")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", deleteTarget.id);
-    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`"${deleteTarget.name}" enviado para a lixeira (30 dias)`);
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
+    const target = deleteTarget;
     setDeleteTarget(null);
     setDeleteConfirmText("");
+    setVerifyAction({
+      action: "delete_client",
+      payload: { client_id: target.id },
+      targetLabel: `Excluir cliente ${target.name}`,
+      successMessage: `"${target.name}" enviado para a lixeira (30 dias)`,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["clients"] });
+        queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
+      },
+    });
   };
 
   // === Tokens da Meta ===
@@ -908,6 +952,21 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {verifyAction && (
+        <ActionVerificationDialog
+          open={!!verifyAction}
+          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          action={verifyAction.action}
+          payload={verifyAction.payload}
+          targetLabel={verifyAction.targetLabel}
+          successMessage={verifyAction.successMessage}
+          onSuccess={() => {
+            verifyAction.onSuccess?.();
+            setVerifyAction(null);
+          }}
+        />
+      )}
     </div>
   );
 }
