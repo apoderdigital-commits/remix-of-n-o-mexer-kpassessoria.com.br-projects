@@ -952,6 +952,21 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {verifyAction && (
+        <ActionVerificationDialog
+          open={!!verifyAction}
+          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          action={verifyAction.action}
+          payload={verifyAction.payload}
+          targetLabel={verifyAction.targetLabel}
+          successMessage={verifyAction.successMessage}
+          onSuccess={() => {
+            verifyAction.onSuccess?.();
+            setVerifyAction(null);
+          }}
+        />
+      )}
     </div>
   );
 }
