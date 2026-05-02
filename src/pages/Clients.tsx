@@ -85,6 +85,7 @@ export default function Clients() {
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginalTokenId, setEditingOriginalTokenId] = useState<string>("");
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
@@ -201,12 +202,14 @@ export default function Clients() {
 
   const openCreate = () => {
     setEditingId(null);
+    setEditingOriginalTokenId("");
     setForm({ ...emptyForm });
     setOpen(true);
   };
 
   const openEdit = (c: any) => {
     setEditingId(c.id);
+    setEditingOriginalTokenId(c.meta_token_id || "");
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
@@ -221,16 +224,17 @@ export default function Clients() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      toast.error("Nome do cliente é obrigatório");
+      return;
+    }
 
     const selectedToken = metaTokens?.find((t) => t.id === form.metaTokenId);
 
-    const payload = {
+    const clientPayload = {
       name: form.name.trim(),
       meta_account_id: form.metaAccountId.trim() || null,
       meta_token_id: form.metaTokenId || null,
-      // Mantém o valor copiado em meta_access_token para compatibilidade
-      // com a edge function fetch-meta-data (que lê desse campo).
       meta_access_token: selectedToken?.token || null,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
@@ -239,20 +243,61 @@ export default function Clients() {
       ghl_stage_mapping: form.stageMapping,
     };
 
-    if (editingId) {
-      const { error } = await supabase.from("clients").update(payload).eq("id", editingId);
-      if (error) { toast.error("Erro ao atualizar: " + error.message); return; }
-      toast.success("Cliente atualizado!");
-    } else {
-      const { error } = await supabase.from("clients").insert(payload);
-      if (error) { toast.error("Erro ao criar: " + error.message); return; }
-      toast.success("Cliente criado!");
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    setForm(emptyForm);
-    setEditingId(null);
     setOpen(false);
+    if (editingId) {
+      const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
+      setVerifyAction({
+        action: tokenChanged ? "update_client_meta_token" : "update_client",
+        payload: tokenChanged
+          ? {
+              client_id: editingId,
+              meta_token_id: form.metaTokenId || null,
+              meta_access_token: selectedToken?.token || null,
+              ...{ client: clientPayload, full_update: true },
+              // Note: confirm-action-code's update_client_meta_token only updates token fields.
+              // To also persist other edits, we use update_client when token didn't change,
+              // and apply token update separately via update_client (full payload) when changed.
+            }
+          : { client_id: editingId, client: clientPayload },
+        targetLabel: tokenChanged
+          ? `Atualizar token Meta do cliente ${form.name}`
+          : `Atualizar cliente ${form.name}`,
+        successMessage: "Cliente atualizado!",
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["clients"] });
+          setForm(emptyForm);
+          setEditingId(null);
+          setEditingOriginalTokenId("");
+        },
+      });
+      // If token changed, we want full update too — switch to update_client which writes everything
+      if (tokenChanged) {
+        setVerifyAction({
+          action: "update_client",
+          payload: { client_id: editingId, client: clientPayload },
+          targetLabel: `Atualizar cliente ${form.name} (inclui troca de token Meta)`,
+          successMessage: "Cliente atualizado!",
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["clients"] });
+            setForm(emptyForm);
+            setEditingId(null);
+            setEditingOriginalTokenId("");
+          },
+        });
+      }
+    } else {
+      setVerifyAction({
+        action: "create_client",
+        payload: { client: clientPayload },
+        targetLabel: `Criar cliente ${form.name}`,
+        successMessage: "Cliente criado!",
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["clients"] });
+          setForm(emptyForm);
+          setEditingId(null);
+        },
+      });
+    }
   };
 
   const requestDelete = (c: any) => {
@@ -266,16 +311,19 @@ export default function Clients() {
       toast.error('Digite "confirmar" para excluir');
       return;
     }
-    const { error } = await supabase
-      .from("clients")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", deleteTarget.id);
-    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`"${deleteTarget.name}" enviado para a lixeira (30 dias)`);
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
+    const target = deleteTarget;
     setDeleteTarget(null);
     setDeleteConfirmText("");
+    setVerifyAction({
+      action: "delete_client",
+      payload: { client_id: target.id },
+      targetLabel: `Excluir cliente ${target.name}`,
+      successMessage: `"${target.name}" enviado para a lixeira (30 dias)`,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["clients"] });
+        queryClient.invalidateQueries({ queryKey: ["clients_trash"] });
+      },
+    });
   };
 
   // === Tokens da Meta ===
