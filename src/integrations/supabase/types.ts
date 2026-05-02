@@ -447,6 +447,7 @@ export type Database = {
       }
       user_creation_verifications: {
         Row: {
+          action: string
           attempts: number
           code_hash: string
           consumed_at: string | null
@@ -458,6 +459,7 @@ export type Database = {
           requested_by: string
         }
         Insert: {
+          action: string
           attempts?: number
           code_hash: string
           consumed_at?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           requested_by: string
         }
         Update: {
+          action?: string
           attempts?: number
           code_hash?: string
           consumed_at?: string | null
