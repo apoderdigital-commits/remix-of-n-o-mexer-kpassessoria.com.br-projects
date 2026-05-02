@@ -184,12 +184,19 @@ export default function Clients() {
       toast.error('Digite "excluir" para confirmar');
       return;
     }
-    const { error } = await supabase.from("clients").delete().eq("id", purgeTarget.id);
-    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
-    toast.success(`"${purgeTarget.name}" excluído definitivamente`);
+    const target = purgeTarget;
     setPurgeTarget(null);
     setPurgeConfirmText("");
-    refetchTrash();
+    setVerifyAction({
+      action: "purge_client",
+      payload: { client_id: target.id },
+      targetLabel: `Excluir DEFINITIVAMENTE cliente ${target.name}`,
+      successMessage: `"${target.name}" excluído definitivamente`,
+      onSuccess: () => {
+        refetchTrash();
+        queryClient.invalidateQueries({ queryKey: ["clients"] });
+      },
+    });
   };
 
   const daysLeft = (deletedAt: string) => {
