@@ -248,19 +248,12 @@ export default function Clients() {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
       setVerifyAction({
         action: tokenChanged ? "update_client_meta_token" : "update_client",
-        payload: tokenChanged
-          ? {
-              client_id: editingId,
-              meta_token_id: form.metaTokenId || null,
-              meta_access_token: selectedToken?.token || null,
-              ...{ client: clientPayload, full_update: true },
-              // Note: confirm-action-code's update_client_meta_token only updates token fields.
-              // To also persist other edits, we use update_client when token didn't change,
-              // and apply token update separately via update_client (full payload) when changed.
-            }
-          : { client_id: editingId, client: clientPayload },
+        // For token changes, we use update_client so the full edit (including new token) is persisted.
+        // The "update_client_meta_token" action exists for the dedicated "swap token only" flow,
+        // but here in the edit form we always send the full payload.
+        payload: { client_id: editingId, client: clientPayload },
         targetLabel: tokenChanged
-          ? `Atualizar token Meta do cliente ${form.name}`
+          ? `Atualizar cliente ${form.name} (inclui troca de token Meta)`
           : `Atualizar cliente ${form.name}`,
         successMessage: "Cliente atualizado!",
         onSuccess: () => {
@@ -270,21 +263,6 @@ export default function Clients() {
           setEditingOriginalTokenId("");
         },
       });
-      // If token changed, we want full update too — switch to update_client which writes everything
-      if (tokenChanged) {
-        setVerifyAction({
-          action: "update_client",
-          payload: { client_id: editingId, client: clientPayload },
-          targetLabel: `Atualizar cliente ${form.name} (inclui troca de token Meta)`,
-          successMessage: "Cliente atualizado!",
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["clients"] });
-            setForm(emptyForm);
-            setEditingId(null);
-            setEditingOriginalTokenId("");
-          },
-        });
-      }
     } else {
       setVerifyAction({
         action: "create_client",
