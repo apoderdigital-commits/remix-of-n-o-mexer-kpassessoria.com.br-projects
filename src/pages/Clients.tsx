@@ -23,6 +23,8 @@ import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/G
 import { HealthBadge } from "@/components/clients/HealthBadge";
 import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
+import { ActionVerificationDialog, type SensitiveAction } from "@/components/ActionVerificationDialog";
+
 const LEGACY_TOKEN_KEY = "default_meta_token";
 
 const EMPTY_MAPPING: StageMapping = {
@@ -140,6 +142,15 @@ export default function Clients() {
   const [trashOpen, setTrashOpen] = useState(false);
   const [purgeTarget, setPurgeTarget] = useState<{ id: string; name: string } | null>(null);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
+
+  // Generic action verification
+  const [verifyAction, setVerifyAction] = useState<{
+    action: SensitiveAction;
+    payload: Record<string, any>;
+    targetLabel: string;
+    successMessage: string;
+    onSuccess?: () => void;
+  } | null>(null);
 
   // Trash query (admins only via RLS)
   const { data: trashedClients, refetch: refetchTrash } = useQuery({
