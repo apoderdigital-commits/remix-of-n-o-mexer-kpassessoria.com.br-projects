@@ -320,62 +320,10 @@ export default function UsersPage() {
         <DialogContent className="bg-card border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {verifyStep === "code" ? <ShieldCheck className="h-5 w-5 text-primary" /> : <UsersIcon className="h-5 w-5" />}
-              {editingUserId ? "Editar Usuário" : verifyStep === "code" ? "Verificação por WhatsApp" : "Criar Usuário"}
+              <UsersIcon className="h-5 w-5" />
+              {editingUserId ? "Editar Usuário" : "Criar Usuário"}
             </DialogTitle>
           </DialogHeader>
-          {verifyStep === "code" && !editingUserId ? (
-            <div className="space-y-5 mt-2">
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
-                <p className="text-sm">
-                  Enviamos um código de 6 dígitos para o <strong className="text-foreground">seu WhatsApp</strong> (admin).
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  O código expira em 10 minutos. Confira a mensagem no seu celular e digite abaixo para confirmar a criação do usuário.
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center gap-3">
-                <Label>Código de verificação</Label>
-                <InputOTP maxLength={6} value={verificationCode} onChange={setVerificationCode}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <button
-                  type="button"
-                  className="hover:text-foreground inline-flex items-center gap-1"
-                  onClick={() => { setVerifyStep("form"); setVerificationCode(""); }}
-                >
-                  <BackIcon className="h-3 w-3" /> Voltar ao formulário
-                </button>
-                <button
-                  type="button"
-                  disabled={resendCooldown > 0 || saving}
-                  className="hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleResendCode}
-                >
-                  {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
-                </button>
-              </div>
-
-              <Button
-                onClick={handleConfirmCode}
-                className="w-full"
-                disabled={saving || verificationCode.length !== 6}
-              >
-                {saving ? "Validando..." : "Confirmar e criar usuário"}
-              </Button>
-            </div>
-          ) : (
           <div className="space-y-5 mt-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
