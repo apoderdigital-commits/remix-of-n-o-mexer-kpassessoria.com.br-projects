@@ -434,7 +434,6 @@ export default function UsersPage() {
               {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
           </div>
-          )}
         </DialogContent>
       </Dialog>
 
