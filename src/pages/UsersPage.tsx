@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClients } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard, ShieldCheck, ArrowLeft as BackIcon } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard } from "lucide-react";
 import { ActionVerificationDialog, type SensitiveAction } from "@/components/ActionVerificationDialog";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -712,6 +712,21 @@ export default function UsersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {verifyAction && (
+        <ActionVerificationDialog
+          open={!!verifyAction}
+          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          action={verifyAction.action}
+          payload={verifyAction.payload}
+          targetLabel={verifyAction.targetLabel}
+          successMessage={verifyAction.successMessage}
+          onSuccess={() => {
+            verifyAction.onSuccess?.();
+            setVerifyAction(null);
+          }}
+        />
+      )}
     </div>
   );
 }
