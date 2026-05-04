@@ -105,6 +105,9 @@ export default function Squad() {
   const [clients, setClients] = useState<SquadClient[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [churns, setChurns] = useState<Churn[]>([]);
+  const [nps, setNps] = useState<Nps[]>([]);
+  const [engagement, setEngagement] = useState<Engagement[]>([]);
+  const [agenda, setAgenda] = useState<Agenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<SquadClient> | null>(null);
   const [open, setOpen] = useState(false);
@@ -112,6 +115,12 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
+  const [openNps, setOpenNps] = useState(false);
+  const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
+  const [openEng, setOpenEng] = useState(false);
+  const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
+  const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
