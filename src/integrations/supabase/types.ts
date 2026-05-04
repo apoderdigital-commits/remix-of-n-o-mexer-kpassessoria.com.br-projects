@@ -490,6 +490,39 @@ export type Database = {
           },
         ]
       }
+      squad_daily_notes: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note_date: string
+          squad_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_date?: string
+          squad_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_date?: string
+          squad_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       squad_members: {
         Row: {
           added_by: string | null
