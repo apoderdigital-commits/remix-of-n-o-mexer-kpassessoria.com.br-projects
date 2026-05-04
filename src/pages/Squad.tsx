@@ -139,7 +139,7 @@ export default function Squad() {
       renewal_60d: !!editing.renewal_60d,
       curve_abc: editing.curve_abc || null,
       sprint: editing.sprint || null,
-      prioritization: editing.prioritization || null,
+      prioritization: computePrio(editing.curve_abc, editing.sprint),
       bm_verified: !!editing.bm_verified,
       invested_tp: editing.invested_tp || null,
       observations: editing.observations || null,
