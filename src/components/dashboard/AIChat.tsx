@@ -228,7 +228,25 @@ export function AIChat({ buildContext, disabled }: AIChatProps) {
                 >
                   {m.role === "assistant" ? (
                     <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                      <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          a: ({ href, children, ...props }) => {
+                            if (href?.startsWith("send-whatsapp:")) {
+                              const identifier = decodeURIComponent(href.slice("send-whatsapp:".length));
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => sendCreativeToWhatsApp(identifier)}
+                                  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-xs font-medium transition no-underline"
+                                >
+                                  {children}
+                                </button>
+                              );
+                            }
+                            return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
+                          },
+                        }}
+                      >{m.content || "…"}</ReactMarkdown>
                     </div>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>
