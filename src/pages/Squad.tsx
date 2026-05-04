@@ -1224,17 +1224,17 @@ export default function Squad() {
       {/* Agenda dialog */}
       <Dialog open={openAg} onOpenChange={setOpenAg}>
         <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle className="text-xl">{editingAg?.id ? "Editar Alinhamento Mensal" : "Novo Alinhamento Mensal"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              {editingAg?.id ? "Editar Alinhamento Mensal" : "Novo Alinhamento Mensal"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Reunião mensal de alinhamento com o cliente.
+            </p>
+          </DialogHeader>
           {editingAg && (
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div>
-                <Label>Categoria</Label>
-                <Select value={editingAg.category || ""} onValueChange={(v) => setEditingAg({ ...editingAg, category: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{["A","B","C"].map((x)=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="col-span-2">
                 <Label>Cliente *</Label>
                 <Select
@@ -1248,18 +1248,38 @@ export default function Squad() {
                     });
                   }}
                 >
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Responsável</Label><Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} /></div>
-              <div><Label>Data</Label><Input type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} /></div>
-              <div><Label>Hora</Label><Input type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} /></div>
-              <div className="flex items-center gap-2 mt-6">
-                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked, not_done_reason: e.target.checked ? null : editingAg.not_done_reason })} />
-                <Label htmlFor="agdone">Realizada</Label>
+              <div>
+                <Label>Mês de referência *</Label>
+                <Input className="h-11" type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} />
+              </div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={editingAg.category || ""} onValueChange={(v) => setEditingAg({ ...editingAg, category: v })}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Auto pela Curva ABC" /></SelectTrigger>
+                  <SelectContent>{["A","B","C"].map((x)=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Data da reunião</Label>
+                <Input className="h-11 text-base font-semibold" type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Hora</Label>
+                <Input className="h-11 text-base font-semibold tabular-nums" type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} />
+              </div>
+              <div className="col-span-2">
+                <Label>Responsável</Label>
+                <Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} />
+              </div>
+              <div className="col-span-2 flex items-center gap-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2.5">
+                <input id="agdone" type="checkbox" className="h-4 w-4" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked, not_done_reason: e.target.checked ? null : editingAg.not_done_reason })} />
+                <Label htmlFor="agdone" className="cursor-pointer">Reunião realizada</Label>
               </div>
               {!editingAg.done && (
                 <div className="col-span-2">
@@ -1276,7 +1296,7 @@ export default function Squad() {
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpenAg(false)}>Cancelar</Button>
-            <Button onClick={saveAg}>Salvar</Button>
+            <Button onClick={saveAg} className="bg-gradient-to-r from-primary to-fuchsia-600">Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
