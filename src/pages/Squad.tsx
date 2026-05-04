@@ -284,6 +284,15 @@ export default function Squad() {
             </SelectContent>
           </Select>
           <div className="flex-1" />
+          {squadId && (
+            <Button
+              variant="outline"
+              onClick={() => setReportOpen(true)}
+              className="gap-1.5"
+            >
+              <FileText className="h-4 w-4" /> Relatório
+            </Button>
+          )}
           {squadId && clients.length > 0 && (
             <Button
               onClick={() => setDailyOpen(true)}
@@ -299,6 +308,11 @@ export default function Squad() {
           onClose={() => setDailyOpen(false)}
           squadId={squadId}
           clients={clients}
+        />
+        <SquadDailyReport
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          squadId={squadId}
         />
 
         {loading ? (
