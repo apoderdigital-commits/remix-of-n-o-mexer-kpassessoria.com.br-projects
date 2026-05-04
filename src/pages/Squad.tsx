@@ -1218,7 +1218,7 @@ export default function Squad() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
+              
               <div>
                 <Label>Curva ABC</Label>
                 <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
