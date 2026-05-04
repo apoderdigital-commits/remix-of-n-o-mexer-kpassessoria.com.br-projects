@@ -997,15 +997,49 @@ export default function Squad() {
           {editingAg && (
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div><Label>Categoria</Label><Input placeholder="Consultoria, Call, etc." value={editingAg.category || ""} onChange={(e) => setEditingAg({ ...editingAg, category: e.target.value })} /></div>
-              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingAg.client_name || ""} onChange={(e) => setEditingAg({ ...editingAg, client_name: e.target.value })} /></div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={editingAg.category || ""} onValueChange={(v) => setEditingAg({ ...editingAg, category: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A","B","C"].map((x)=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label>Cliente *</Label>
+                <Select
+                  value={editingAg.client_name || ""}
+                  onValueChange={(v) => {
+                    const c = clients.find((x) => x.name === v);
+                    setEditingAg({
+                      ...editingAg,
+                      client_name: v,
+                      category: editingAg.category || c?.curve_abc || null,
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Responsável</Label><Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} /></div>
               <div><Label>Data</Label><Input type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} /></div>
               <div><Label>Hora</Label><Input type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} /></div>
               <div className="flex items-center gap-2 mt-6">
-                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked })} />
+                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked, not_done_reason: e.target.checked ? null : editingAg.not_done_reason })} />
                 <Label htmlFor="agdone">Realizada</Label>
               </div>
+              {!editingAg.done && (
+                <div className="col-span-2">
+                  <Label>Motivo de não realizada</Label>
+                  <Input
+                    placeholder="Ex.: Próximo mês, cliente cancelou..."
+                    value={editingAg.not_done_reason || ""}
+                    onChange={(e) => setEditingAg({ ...editingAg, not_done_reason: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingAg.observations || ""} onChange={(e) => setEditingAg({ ...editingAg, observations: e.target.value })} /></div>
             </div>
           )}
