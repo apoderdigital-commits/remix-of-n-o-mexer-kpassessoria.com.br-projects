@@ -684,7 +684,166 @@ export default function Squad() {
                 </Table>
               </div>
             </TabsContent>
-          </Tabs>
+
+            {/* NPS */}
+            <TabsContent value="nps" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingNps({ period: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenNps(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo NPS
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Período</TableHead>
+                      <TableHead className="text-center">Clientes</TableHead>
+                      <TableHead className="text-center">Respostas</TableHead>
+                      <TableHead className="text-center">Detratores</TableHead>
+                      <TableHead className="text-center">Neutros</TableHead>
+                      <TableHead className="text-center">Promotores</TableHead>
+                      <TableHead className="text-center">NPS</TableHead>
+                      <TableHead className="text-center">Engaj. médio</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nps.length === 0 ? (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum NPS registrado.</TableCell></TableRow>
+                    ) : nps.map((n) => {
+                      const score = n.nps_score == null ? null : Number(n.nps_score);
+                      const scoreClass = score == null ? "" : score >= 75 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : score >= 50 ? "bg-sky-500/20 text-sky-300 border-sky-500/40" : score >= 0 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-red-500/20 text-red-300 border-red-500/40";
+                      return (
+                        <TableRow key={n.id} className="border-border/20">
+                          <TableCell className="font-semibold">{formatMonth(n.period)}</TableCell>
+                          <TableCell className="text-center">{n.total_clients ?? "-"}</TableCell>
+                          <TableCell className="text-center">{n.responses ?? "-"}</TableCell>
+                          <TableCell className="text-center text-red-300">{n.detractors ?? "-"}</TableCell>
+                          <TableCell className="text-center text-amber-300">{n.neutrals ?? "-"}</TableCell>
+                          <TableCell className="text-center text-emerald-300">{n.promoters ?? "-"}</TableCell>
+                          <TableCell className="text-center">
+                            {score != null ? <Badge variant="outline" className={`font-bold ${scoreClass}`}>{score.toFixed(0)}</Badge> : "-"}
+                          </TableCell>
+                          <TableCell className="text-center">{n.avg_engagement != null ? Number(n.avg_engagement).toFixed(1) : "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="icon" variant="ghost" onClick={() => { setEditingNps(n); setOpenNps(true); }}><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => removeNps(n.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* ENGAJAMENTO */}
+            <TabsContent value="engagement" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingEng({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenEng(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo registro
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Mês</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead className="text-center">ABC</TableHead>
+                      <TableHead className="text-center">Sprint</TableHead>
+                      <TableHead className="text-center">Engaj. (1-5)</TableHead>
+                      <TableHead className="text-center">NPS</TableHead>
+                      <TableHead>Observação</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {engagement.length === 0 ? (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum registro de engajamento.</TableCell></TableRow>
+                    ) : engagement.map((e) => (
+                      <TableRow key={e.id} className="border-border/20">
+                        <TableCell className="font-semibold">{formatMonth(e.reference_month)}</TableCell>
+                        <TableCell className="font-semibold">{e.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{e.contact || "-"}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}>{e.curve_abc || "-"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}>{e.sprint || "-"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {e.engagement_score != null ? (
+                            <span className="inline-flex items-center gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                              ))}
+                            </span>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="text-center">{e.nps_individual ?? "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => removeEng(e.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* AGENDA */}
+            <TabsContent value="agenda" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo compromisso
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead className="text-center">OK</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Hora</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead>Mês ref.</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agenda.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso agendado.</TableCell></TableRow>
+                    ) : agenda.map((a) => (
+                      <TableRow key={a.id} className="border-border/20">
+                        <TableCell className="text-center">
+                          <button onClick={() => toggleAgDone(a)} title="Marcar como realizada">
+                            {a.done
+                              ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                              : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
+                          </button>
+                        </TableCell>
+                        <TableCell className="font-semibold">{a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
+                        <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
+                        <TableCell className="font-semibold">{a.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatMonth(a.reference_month)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditingAg(a); setOpenAg(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => removeAg(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
         )}
       </main>
 
