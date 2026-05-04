@@ -26,6 +26,10 @@ import {
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  LineChart, Line, Legend, Cell,
+} from "recharts";
 
 type Squad = { id: string; name: string; color: string | null; description: string | null };
 type SquadClient = {
