@@ -37,12 +37,14 @@ const highlights = [
 ];
 
 export default function Portal() {
-  const { isAdmin, signOut, user, dashboards } = useAuth();
+  const { isAdmin, signOut, user, dashboards, squadCount } = useAuth();
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
 
   const visibleProjects = isAdmin
     ? allProjects
     : allProjects.filter((p) => dashboards.includes(p.key));
+
+  const showSquadCard = isAdmin || squadCount > 0;
 
   return (
     <div className="min-h-[100dvh] flex relative overflow-hidden">
