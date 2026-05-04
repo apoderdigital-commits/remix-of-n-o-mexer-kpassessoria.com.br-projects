@@ -947,6 +947,92 @@ export default function Squad() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* NPS dialog */}
+      <Dialog open={openNps} onOpenChange={setOpenNps}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingNps?.id ? "Editar NPS" : "Novo NPS"}</DialogTitle></DialogHeader>
+          {editingNps && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2"><Label>Período (mês) *</Label><Input type="month" value={editingNps.period?.slice(0, 7) || ""} onChange={(e) => setEditingNps({ ...editingNps, period: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Total de clientes</Label><Input type="number" value={editingNps.total_clients ?? ""} onChange={(e) => setEditingNps({ ...editingNps, total_clients: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Engajamento médio</Label><Input type="number" step="0.1" value={editingNps.avg_engagement ?? ""} onChange={(e) => setEditingNps({ ...editingNps, avg_engagement: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Detratores (0-6)</Label><Input type="number" value={editingNps.detractors ?? ""} onChange={(e) => setEditingNps({ ...editingNps, detractors: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Neutros (7-8)</Label><Input type="number" value={editingNps.neutrals ?? ""} onChange={(e) => setEditingNps({ ...editingNps, neutrals: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Promotores (9-10)</Label><Input type="number" value={editingNps.promoters ?? ""} onChange={(e) => setEditingNps({ ...editingNps, promoters: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingNps.observations || ""} onChange={(e) => setEditingNps({ ...editingNps, observations: e.target.value })} /></div>
+              <div className="col-span-2 text-xs text-muted-foreground bg-muted/20 rounded-lg p-2.5">
+                NPS calculado automaticamente: <strong>(Promotores − Detratores) ÷ Respostas × 100</strong>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenNps(false)}>Cancelar</Button>
+            <Button onClick={saveNps}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Engagement dialog */}
+      <Dialog open={openEng} onOpenChange={setOpenEng}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingEng?.id ? "Editar engajamento" : "Novo registro"}</DialogTitle></DialogHeader>
+          {editingEng && (
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Mês *</Label><Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Cliente *</Label><Input value={editingEng.client_name || ""} onChange={(e) => setEditingEng({ ...editingEng, client_name: e.target.value })} /></div>
+              <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
+              <div>
+                <Label>Curva ABC</Label>
+                <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Sprint</Label>
+                <Select value={editingEng.sprint || ""} onValueChange={(v) => setEditingEng({ ...editingEng, sprint: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Engajamento (1-5)</Label><Input type="number" min="1" max="5" value={editingEng.engagement_score ?? ""} onChange={(e) => setEditingEng({ ...editingEng, engagement_score: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>NPS individual (0-10)</Label><Input type="number" min="0" max="10" value={editingEng.nps_individual ?? ""} onChange={(e) => setEditingEng({ ...editingEng, nps_individual: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Observação</Label><Textarea rows={2} value={editingEng.observation || ""} onChange={(e) => setEditingEng({ ...editingEng, observation: e.target.value })} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenEng(false)}>Cancelar</Button>
+            <Button onClick={saveEng}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agenda dialog */}
+      <Dialog open={openAg} onOpenChange={setOpenAg}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingAg?.id ? "Editar compromisso" : "Novo compromisso"}</DialogTitle></DialogHeader>
+          {editingAg && (
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Categoria</Label><Input placeholder="Consultoria, Call, etc." value={editingAg.category || ""} onChange={(e) => setEditingAg({ ...editingAg, category: e.target.value })} /></div>
+              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingAg.client_name || ""} onChange={(e) => setEditingAg({ ...editingAg, client_name: e.target.value })} /></div>
+              <div><Label>Responsável</Label><Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} /></div>
+              <div><Label>Data</Label><Input type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} /></div>
+              <div><Label>Hora</Label><Input type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} /></div>
+              <div className="flex items-center gap-2 mt-6">
+                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked })} />
+                <Label htmlFor="agdone">Realizada</Label>
+              </div>
+              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingAg.observations || ""} onChange={(e) => setEditingAg({ ...editingAg, observations: e.target.value })} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenAg(false)}>Cancelar</Button>
+            <Button onClick={saveAg}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
