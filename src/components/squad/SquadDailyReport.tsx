@@ -399,7 +399,7 @@ export function SquadDailyReport({
                           </Badge>
                           <span className="font-mono tabular-nums">{s.total_seconds ? fmtMinSec(s.total_seconds) : "—"}</span>
                           <div className="flex gap-1">
-                            {showTrash ? (
+                            {showTrash && (
                               <>
                                 <Button size="sm" variant="ghost" onClick={() => restoreSession(s.id)} className="h-7 gap-1">
                                   <RotateCcw className="h-3 w-3" /> Restaurar
@@ -408,10 +408,6 @@ export function SquadDailyReport({
                                   <Ban className="h-3 w-3" /> Excluir definitivo
                                 </Button>
                               </>
-                            ) : (
-                              <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-muted-foreground hover:text-red-300">
-                                <Trash2 className="h-3 w-3" /> Lixeira
-                              </Button>
                             )}
                           </div>
                         </div>
