@@ -844,6 +844,7 @@ export default function Squad() {
                 </Table>
               </div>
             </TabsContent>
+          </Tabs>
         )}
       </main>
 
