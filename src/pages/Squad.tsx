@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
+  Smile, CalendarDays, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
@@ -56,6 +57,23 @@ type Churn = {
   entry_month: string | null; churn_month: string | null;
   reason: string | null; months_active: string | null; observations: string | null;
 };
+type Nps = {
+  id: string; squad_id: string; period: string;
+  total_clients: number | null; responses: number | null;
+  detractors: number | null; neutrals: number | null; promoters: number | null;
+  nps_score: number | null; avg_engagement: number | null; observations: string | null;
+};
+type Engagement = {
+  id: string; squad_id: string; reference_month: string;
+  client_name: string; contact: string | null;
+  curve_abc: string | null; sprint: string | null;
+  engagement_score: number | null; nps_individual: number | null; observation: string | null;
+};
+type Agenda = {
+  id: string; squad_id: string; reference_month: string;
+  category: string | null; client_name: string; responsible: string | null;
+  meeting_date: string | null; meeting_time: string | null; done: boolean; observations: string | null;
+};
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
@@ -87,6 +105,9 @@ export default function Squad() {
   const [clients, setClients] = useState<SquadClient[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [churns, setChurns] = useState<Churn[]>([]);
+  const [nps, setNps] = useState<Nps[]>([]);
+  const [engagement, setEngagement] = useState<Engagement[]>([]);
+  const [agenda, setAgenda] = useState<Agenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<SquadClient> | null>(null);
   const [open, setOpen] = useState(false);
@@ -94,6 +115,12 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
+  const [openNps, setOpenNps] = useState(false);
+  const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
+  const [openEng, setOpenEng] = useState(false);
+  const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
+  const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -109,17 +136,26 @@ export default function Squad() {
   }
 
   async function loadAll(sid: string) {
-    const [c, m, ch] = await Promise.all([
+    const [c, m, ch, n, e, a] = await Promise.all([
       supabase.from("squad_clients").select("*").eq("squad_id", sid)
         .order("priority_score").order("name"),
       supabase.from("squad_monthly_metrics").select("*").eq("squad_id", sid)
         .order("reference_month", { ascending: false }),
       supabase.from("squad_churn").select("*").eq("squad_id", sid)
         .order("churn_month", { ascending: false }),
+      (supabase as any).from("squad_nps").select("*").eq("squad_id", sid)
+        .order("period", { ascending: false }),
+      (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
+        .order("reference_month", { ascending: false }).order("client_name"),
+      (supabase as any).from("squad_agenda").select("*").eq("squad_id", sid)
+        .order("meeting_date", { ascending: true }),
     ]);
     setClients((c.data as SquadClient[]) || []);
     setMetrics((m.data as Metric[]) || []);
     setChurns((ch.data as Churn[]) || []);
+    setNps((n.data as Nps[]) || []);
+    setEngagement((e.data as Engagement[]) || []);
+    setAgenda((a.data as Agenda[]) || []);
   }
 
   // ---------- CLIENTS ----------
@@ -218,6 +254,100 @@ export default function Squad() {
     if (!confirm("Remover este registro de churn?")) return;
     const { error } = await supabase.from("squad_churn").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    void loadAll(squadId);
+  }
+
+  // ---------- NPS ----------
+  async function saveNps() {
+    if (!editingNps?.period) return toast.error("Período obrigatório");
+    const det = Number(editingNps.detractors || 0);
+    const neu = Number(editingNps.neutrals || 0);
+    const pro = Number(editingNps.promoters || 0);
+    const resp = det + neu + pro;
+    const score = resp > 0 ? ((pro - det) / resp) * 100 : null;
+    const payload: any = {
+      squad_id: squadId,
+      period: editingNps.period,
+      total_clients: editingNps.total_clients ?? null,
+      responses: resp || (editingNps.responses ?? null),
+      detractors: det, neutrals: neu, promoters: pro,
+      nps_score: score,
+      avg_engagement: editingNps.avg_engagement ?? null,
+      observations: editingNps.observations || null,
+    };
+    const res = editingNps.id
+      ? await (supabase as any).from("squad_nps").update(payload).eq("id", editingNps.id)
+      : await (supabase as any).from("squad_nps").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("NPS salvo");
+    setOpenNps(false);
+    void loadAll(squadId);
+  }
+  async function removeNps(id: string) {
+    if (!confirm("Remover este NPS?")) return;
+    await (supabase as any).from("squad_nps").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+
+  // ---------- ENGAGEMENT ----------
+  async function saveEng() {
+    if (!editingEng?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
+    const payload: any = {
+      squad_id: squadId,
+      reference_month: editingEng.reference_month,
+      client_name: editingEng.client_name.trim(),
+      contact: editingEng.contact || null,
+      curve_abc: editingEng.curve_abc?.toUpperCase() || null,
+      sprint: editingEng.sprint?.toUpperCase() || null,
+      engagement_score: editingEng.engagement_score ?? null,
+      nps_individual: editingEng.nps_individual ?? null,
+      observation: editingEng.observation || null,
+    };
+    const res = editingEng.id
+      ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
+      : await (supabase as any).from("squad_engagement").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("Engajamento salvo");
+    setOpenEng(false);
+    void loadAll(squadId);
+  }
+  async function removeEng(id: string) {
+    if (!confirm("Remover este registro?")) return;
+    await (supabase as any).from("squad_engagement").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+
+  // ---------- AGENDA ----------
+  async function saveAg() {
+    if (!editingAg?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    if (!editingAg?.reference_month) return toast.error("Mês obrigatório");
+    const payload: any = {
+      squad_id: squadId,
+      reference_month: editingAg.reference_month,
+      category: editingAg.category || null,
+      client_name: editingAg.client_name.trim(),
+      responsible: editingAg.responsible || null,
+      meeting_date: editingAg.meeting_date || null,
+      meeting_time: editingAg.meeting_time || null,
+      done: !!editingAg.done,
+      observations: editingAg.observations || null,
+    };
+    const res = editingAg.id
+      ? await (supabase as any).from("squad_agenda").update(payload).eq("id", editingAg.id)
+      : await (supabase as any).from("squad_agenda").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("Agenda salva");
+    setOpenAg(false);
+    void loadAll(squadId);
+  }
+  async function removeAg(id: string) {
+    if (!confirm("Remover este compromisso?")) return;
+    await (supabase as any).from("squad_agenda").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+  async function toggleAgDone(a: Agenda) {
+    await (supabase as any).from("squad_agenda").update({ done: !a.done }).eq("id", a.id);
     void loadAll(squadId);
   }
 
@@ -329,6 +459,9 @@ export default function Squad() {
               <TabsTrigger value="matrix" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Matriz</TabsTrigger>
               <TabsTrigger value="metrics" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Métricas dos Projetos</TabsTrigger>
               <TabsTrigger value="churn" className="gap-1.5"><TrendingDown className="h-3.5 w-3.5" /> Churn</TabsTrigger>
+              <TabsTrigger value="nps" className="gap-1.5"><Smile className="h-3.5 w-3.5" /> NPS</TabsTrigger>
+              <TabsTrigger value="engagement" className="gap-1.5"><Star className="h-3.5 w-3.5" /> Engajamento</TabsTrigger>
+              <TabsTrigger value="agenda" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agenda</TabsTrigger>
             </TabsList>
 
             {/* CLIENTES */}
@@ -551,6 +684,166 @@ export default function Squad() {
                 </Table>
               </div>
             </TabsContent>
+
+            {/* NPS */}
+            <TabsContent value="nps" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingNps({ period: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenNps(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo NPS
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Período</TableHead>
+                      <TableHead className="text-center">Clientes</TableHead>
+                      <TableHead className="text-center">Respostas</TableHead>
+                      <TableHead className="text-center">Detratores</TableHead>
+                      <TableHead className="text-center">Neutros</TableHead>
+                      <TableHead className="text-center">Promotores</TableHead>
+                      <TableHead className="text-center">NPS</TableHead>
+                      <TableHead className="text-center">Engaj. médio</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nps.length === 0 ? (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum NPS registrado.</TableCell></TableRow>
+                    ) : nps.map((n) => {
+                      const score = n.nps_score == null ? null : Number(n.nps_score);
+                      const scoreClass = score == null ? "" : score >= 75 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : score >= 50 ? "bg-sky-500/20 text-sky-300 border-sky-500/40" : score >= 0 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-red-500/20 text-red-300 border-red-500/40";
+                      return (
+                        <TableRow key={n.id} className="border-border/20">
+                          <TableCell className="font-semibold">{formatMonth(n.period)}</TableCell>
+                          <TableCell className="text-center">{n.total_clients ?? "-"}</TableCell>
+                          <TableCell className="text-center">{n.responses ?? "-"}</TableCell>
+                          <TableCell className="text-center text-red-300">{n.detractors ?? "-"}</TableCell>
+                          <TableCell className="text-center text-amber-300">{n.neutrals ?? "-"}</TableCell>
+                          <TableCell className="text-center text-emerald-300">{n.promoters ?? "-"}</TableCell>
+                          <TableCell className="text-center">
+                            {score != null ? <Badge variant="outline" className={`font-bold ${scoreClass}`}>{score.toFixed(0)}</Badge> : "-"}
+                          </TableCell>
+                          <TableCell className="text-center">{n.avg_engagement != null ? Number(n.avg_engagement).toFixed(1) : "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="icon" variant="ghost" onClick={() => { setEditingNps(n); setOpenNps(true); }}><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => removeNps(n.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* ENGAJAMENTO */}
+            <TabsContent value="engagement" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingEng({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenEng(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo registro
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Mês</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead className="text-center">ABC</TableHead>
+                      <TableHead className="text-center">Sprint</TableHead>
+                      <TableHead className="text-center">Engaj. (1-5)</TableHead>
+                      <TableHead className="text-center">NPS</TableHead>
+                      <TableHead>Observação</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {engagement.length === 0 ? (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum registro de engajamento.</TableCell></TableRow>
+                    ) : engagement.map((e) => (
+                      <TableRow key={e.id} className="border-border/20">
+                        <TableCell className="font-semibold">{formatMonth(e.reference_month)}</TableCell>
+                        <TableCell className="font-semibold">{e.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{e.contact || "-"}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}>{e.curve_abc || "-"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}>{e.sprint || "-"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {e.engagement_score != null ? (
+                            <span className="inline-flex items-center gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                              ))}
+                            </span>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="text-center">{e.nps_individual ?? "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => removeEng(e.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* AGENDA */}
+            <TabsContent value="agenda" className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo compromisso
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead className="text-center">OK</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Hora</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead>Mês ref.</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agenda.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso agendado.</TableCell></TableRow>
+                    ) : agenda.map((a) => (
+                      <TableRow key={a.id} className="border-border/20">
+                        <TableCell className="text-center">
+                          <button onClick={() => toggleAgDone(a)} title="Marcar como realizada">
+                            {a.done
+                              ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                              : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
+                          </button>
+                        </TableCell>
+                        <TableCell className="font-semibold">{a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
+                        <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
+                        <TableCell className="font-semibold">{a.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatMonth(a.reference_month)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditingAg(a); setOpenAg(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => removeAg(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
           </Tabs>
         )}
       </main>
@@ -651,6 +944,92 @@ export default function Squad() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpenChurn(false)}>Cancelar</Button>
             <Button onClick={saveChurn}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NPS dialog */}
+      <Dialog open={openNps} onOpenChange={setOpenNps}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingNps?.id ? "Editar NPS" : "Novo NPS"}</DialogTitle></DialogHeader>
+          {editingNps && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2"><Label>Período (mês) *</Label><Input type="month" value={editingNps.period?.slice(0, 7) || ""} onChange={(e) => setEditingNps({ ...editingNps, period: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Total de clientes</Label><Input type="number" value={editingNps.total_clients ?? ""} onChange={(e) => setEditingNps({ ...editingNps, total_clients: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Engajamento médio</Label><Input type="number" step="0.1" value={editingNps.avg_engagement ?? ""} onChange={(e) => setEditingNps({ ...editingNps, avg_engagement: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Detratores (0-6)</Label><Input type="number" value={editingNps.detractors ?? ""} onChange={(e) => setEditingNps({ ...editingNps, detractors: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>Neutros (7-8)</Label><Input type="number" value={editingNps.neutrals ?? ""} onChange={(e) => setEditingNps({ ...editingNps, neutrals: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Promotores (9-10)</Label><Input type="number" value={editingNps.promoters ?? ""} onChange={(e) => setEditingNps({ ...editingNps, promoters: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingNps.observations || ""} onChange={(e) => setEditingNps({ ...editingNps, observations: e.target.value })} /></div>
+              <div className="col-span-2 text-xs text-muted-foreground bg-muted/20 rounded-lg p-2.5">
+                NPS calculado automaticamente: <strong>(Promotores − Detratores) ÷ Respostas × 100</strong>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenNps(false)}>Cancelar</Button>
+            <Button onClick={saveNps}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Engagement dialog */}
+      <Dialog open={openEng} onOpenChange={setOpenEng}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingEng?.id ? "Editar engajamento" : "Novo registro"}</DialogTitle></DialogHeader>
+          {editingEng && (
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Mês *</Label><Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Cliente *</Label><Input value={editingEng.client_name || ""} onChange={(e) => setEditingEng({ ...editingEng, client_name: e.target.value })} /></div>
+              <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
+              <div>
+                <Label>Curva ABC</Label>
+                <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Sprint</Label>
+                <Select value={editingEng.sprint || ""} onValueChange={(v) => setEditingEng({ ...editingEng, sprint: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Engajamento (1-5)</Label><Input type="number" min="1" max="5" value={editingEng.engagement_score ?? ""} onChange={(e) => setEditingEng({ ...editingEng, engagement_score: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div><Label>NPS individual (0-10)</Label><Input type="number" min="0" max="10" value={editingEng.nps_individual ?? ""} onChange={(e) => setEditingEng({ ...editingEng, nps_individual: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+              <div className="col-span-2"><Label>Observação</Label><Textarea rows={2} value={editingEng.observation || ""} onChange={(e) => setEditingEng({ ...editingEng, observation: e.target.value })} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenEng(false)}>Cancelar</Button>
+            <Button onClick={saveEng}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agenda dialog */}
+      <Dialog open={openAg} onOpenChange={setOpenAg}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editingAg?.id ? "Editar compromisso" : "Novo compromisso"}</DialogTitle></DialogHeader>
+          {editingAg && (
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
+              <div><Label>Categoria</Label><Input placeholder="Consultoria, Call, etc." value={editingAg.category || ""} onChange={(e) => setEditingAg({ ...editingAg, category: e.target.value })} /></div>
+              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingAg.client_name || ""} onChange={(e) => setEditingAg({ ...editingAg, client_name: e.target.value })} /></div>
+              <div><Label>Responsável</Label><Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} /></div>
+              <div><Label>Data</Label><Input type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} /></div>
+              <div><Label>Hora</Label><Input type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} /></div>
+              <div className="flex items-center gap-2 mt-6">
+                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked })} />
+                <Label htmlFor="agdone">Realizada</Label>
+              </div>
+              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingAg.observations || ""} onChange={(e) => setEditingAg({ ...editingAg, observations: e.target.value })} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenAg(false)}>Cancelar</Button>
+            <Button onClick={saveAg}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
