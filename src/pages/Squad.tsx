@@ -1370,7 +1370,7 @@ function AgendaPanel({
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button onClick={onNew} className="gap-1.5"><Plus className="h-4 w-4" /> Novo compromisso</Button>
+        <Button onClick={onNew} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"><Plus className="h-4 w-4" /> Novo Alinhamento Mensal</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
