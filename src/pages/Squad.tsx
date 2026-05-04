@@ -20,10 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
-  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play,
+  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
+import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
 
 type Squad = { id: string; name: string; color: string | null; description: string | null };
 type SquadClient = {
@@ -94,6 +95,7 @@ export default function Squad() {
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
@@ -282,6 +284,15 @@ export default function Squad() {
             </SelectContent>
           </Select>
           <div className="flex-1" />
+          {squadId && (
+            <Button
+              variant="outline"
+              onClick={() => setReportOpen(true)}
+              className="gap-1.5"
+            >
+              <FileText className="h-4 w-4" /> Relatório
+            </Button>
+          )}
           {squadId && clients.length > 0 && (
             <Button
               onClick={() => setDailyOpen(true)}
@@ -297,6 +308,11 @@ export default function Squad() {
           onClose={() => setDailyOpen(false)}
           squadId={squadId}
           clients={clients}
+        />
+        <SquadDailyReport
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          squadId={squadId}
         />
 
         {loading ? (

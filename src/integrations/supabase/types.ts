@@ -523,6 +523,110 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_daily_session_clients: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          position: number | null
+          prioritization: string | null
+          seconds_spent: number
+          session_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          position?: number | null
+          prioritization?: string | null
+          seconds_spent?: number
+          session_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          position?: number | null
+          prioritization?: string | null
+          seconds_spent?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_daily_session_clients_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "squad_daily_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_daily_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delay_seconds: number
+          ended_at: string | null
+          id: string
+          on_time: boolean
+          session_date: string
+          squad_id: string
+          started_at: string
+          total_seconds: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delay_seconds?: number
+          ended_at?: string | null
+          id?: string
+          on_time?: boolean
+          session_date?: string
+          squad_id: string
+          started_at?: string
+          total_seconds?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delay_seconds?: number
+          ended_at?: string | null
+          id?: string
+          on_time?: boolean
+          session_date?: string
+          squad_id?: string
+          started_at?: string
+          total_seconds?: number | null
+        }
+        Relationships: []
+      }
+      squad_daily_skips: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string
+          skip_date: string
+          squad_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string
+          skip_date: string
+          squad_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string
+          skip_date?: string
+          squad_id?: string
+        }
+        Relationships: []
+      }
       squad_members: {
         Row: {
           added_by: string | null
