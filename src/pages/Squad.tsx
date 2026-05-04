@@ -93,6 +93,7 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [dailyOpen, setDailyOpen] = useState(false);
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
