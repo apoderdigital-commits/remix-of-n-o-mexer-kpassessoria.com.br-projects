@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
 import type { AIContext } from "@/lib/aiContext";
 
 interface Msg {
@@ -38,6 +39,29 @@ export function AIChat({ buildContext, disabled }: AIChatProps) {
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
+
+  const sendCreativeToWhatsApp = async (identifier: string) => {
+    const ctx = buildContext();
+    const top = ctx?.topCreatives?.find((c) => c.name === identifier);
+    const tid = toast.loading("Enviando para seu WhatsApp...");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-creative-whatsapp", {
+        body: {
+          creative_url: identifier,
+          period_since: ctx?.period?.since ?? null,
+          period_until: ctx?.period?.until ?? null,
+          category: top ? "Top criativo (CPF aprovado)" : null,
+          count: top?.count ?? null,
+          percentage: top?.pct ?? null,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Enviado! Confira seu WhatsApp.", { id: tid });
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao enviar para o WhatsApp", { id: tid });
+    }
+  };
 
   const send = async (text: string) => {
     const value = text.trim();
@@ -227,7 +251,25 @@ export function AIChat({ buildContext, disabled }: AIChatProps) {
                 >
                   {m.role === "assistant" ? (
                     <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                      <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          a: ({ href, children, ...props }) => {
+                            if (href?.startsWith("send-whatsapp:")) {
+                              const identifier = decodeURIComponent(href.slice("send-whatsapp:".length));
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => sendCreativeToWhatsApp(identifier)}
+                                  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-xs font-medium transition no-underline"
+                                >
+                                  {children}
+                                </button>
+                              );
+                            }
+                            return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
+                          },
+                        }}
+                      >{m.content || "…"}</ReactMarkdown>
                     </div>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>
