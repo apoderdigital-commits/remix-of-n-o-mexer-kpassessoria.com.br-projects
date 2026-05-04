@@ -409,6 +409,33 @@ export default function Squad() {
     renew: clients.filter((c) => c.renewal_60d).length,
   }), [clients]);
 
+  const serviceCounts = useMemo(() => {
+    const counts = { TP: 0, CRM: 0, COM: 0 };
+    for (const c of clients) {
+      for (const s of parseServices(c.services)) {
+        if (s in counts) counts[s as keyof typeof counts]++;
+      }
+    }
+    return counts;
+  }, [clients]);
+
+  const incompleteClients = useMemo(() => {
+    return clients
+      .map((c) => {
+        const missing: string[] = [];
+        if (!c.name?.trim()) missing.push("nome");
+        if (parseMoney(c.invested_tp) == null) missing.push("valor TP");
+        if (parseServices(c.services).length === 0) missing.push("serviços");
+        if (!c.curve_abc) missing.push("Curva ABC");
+        if (!c.sprint) missing.push("Sprint");
+        return { client: c, missing };
+      })
+      .filter((x) => x.missing.length > 0);
+  }, [clients]);
+
+  const [showIncomplete, setShowIncomplete] = useState(false);
+
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/30 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
