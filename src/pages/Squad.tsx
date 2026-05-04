@@ -162,10 +162,15 @@ export default function Squad() {
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
+  const [engShowTrash, setEngShowTrash] = useState(false);
+  const [engTrash, setEngTrash] = useState<Engagement[]>([]);
+  const [purgeMonth, setPurgeMonth] = useState<string | null>(null); // YYYY-MM-DD
   const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [newMonthOpen, setNewMonthOpen] = useState(false);
+  const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
