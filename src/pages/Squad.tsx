@@ -1010,10 +1010,57 @@ export default function Squad() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={() => { setEditingEng({ reference_month: `${(engMonth !== "all" ? engMonth : new Date().toISOString().slice(0, 7))}-01` }); setOpenEng(true); }} className="gap-1.5">
-                      <Plus className="h-4 w-4" /> Novo registro
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button variant="outline" onClick={() => setEngShowTrash((v) => !v)} className="gap-1.5">
+                        <Trash2 className="h-4 w-4" />
+                        {engShowTrash ? `Voltar (${engTrash.length})` : `Lixeira (${engTrash.length})`}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setEditingEng({ reference_month: `${(engMonth !== "all" ? engMonth : new Date().toISOString().slice(0, 7))}-01` }); setOpenEng(true); }} className="gap-1.5">
+                        <Plus className="h-4 w-4" /> Novo cliente
+                      </Button>
+                      <Button onClick={() => { setNewMonthValue(new Date().toISOString().slice(0, 7)); setNewMonthOpen(true); }} className="gap-1.5">
+                        <CalendarDays className="h-4 w-4" /> Novo mês
+                      </Button>
+                    </div>
                   </div>
+
+              {engShowTrash ? (
+                engTrash.length === 0 ? (
+                  <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
+                    Lixeira vazia. Itens excluídos há mais de 30 dias são removidos definitivamente.
+                  </div>
+                ) : (
+                  Array.from(
+                    engTrash.reduce((map, e) => {
+                      const k = (e.reference_month || "").slice(0, 7) || "—";
+                      if (!map.has(k)) map.set(k, [] as Engagement[]);
+                      map.get(k)!.push(e);
+                      return map;
+                    }, new Map<string, Engagement[]>())
+                  ).sort(([a], [b]) => b.localeCompare(a)).map(([month, list]) => (
+                    <div key={month} className="rounded-2xl border border-red-500/30 bg-red-500/5 overflow-hidden">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Trash2 className="h-4 w-4 text-red-400" />
+                          <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/40">{list.length} registros</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => restoreMonth(month)}>Restaurar mês</Button>
+                          <Button size="sm" variant="outline" className="text-red-400 hover:text-red-300" onClick={() => setPurgeMonth(`${month}-01`)}>
+                            Excluir definitivo (token)
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 text-xs text-muted-foreground">
+                        {list.map((e) => e.client_name).join(" · ")}
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : null}
+
+              {!engShowTrash && (
 
               {filtered.length === 0 ? (
                 <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
