@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   CheckCircle2, Clock, AlertTriangle, CalendarX, FileText, Save,
+  Trash2, RotateCcw, Ban, ChevronLeft, ChevronRight, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 
 type Session = {
   id: string;
@@ -19,6 +21,7 @@ type Session = {
   delay_seconds: number;
   on_time: boolean;
   total_seconds: number | null;
+  deleted_at: string | null;
 };
 type SessionClient = {
   id: string;
@@ -28,6 +31,8 @@ type SessionClient = {
   seconds_spent: number;
 };
 type Skip = { id: string; squad_id: string; skip_date: string; reason: string };
+
+const ON_TIME_THRESHOLD = 5 * 60; // <= 5min delay = on time
 
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function fmtMinSec(sec: number) {
@@ -40,24 +45,19 @@ function fmtMinSec(sec: number) {
 function brtToday() {
   return new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
 }
-function monthRange() {
-  const today = brtToday();
-  const start = today.slice(0, 7) + "-01";
-  return { start, end: today };
-}
 function isWeekday(iso: string) {
-  // 0=sun, 6=sat — base local doesn't matter for day-of-week
   const d = new Date(iso + "T12:00:00Z").getUTCDay();
   return d >= 1 && d <= 5;
 }
-function listWeekdays(start: string, end: string): string[] {
+function isWeekend(iso: string) {
+  const d = new Date(iso + "T12:00:00Z").getUTCDay();
+  return d === 0 || d === 6;
+}
+function listAllDays(year: number, month0: number): string[] {
   const out: string[] = [];
-  const d = new Date(start + "T12:00:00Z");
-  const e = new Date(end + "T12:00:00Z");
-  while (d <= e) {
-    const iso = d.toISOString().slice(0, 10);
-    if (isWeekday(iso)) out.push(iso);
-    d.setUTCDate(d.getUTCDate() + 1);
+  const last = new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
+  for (let d = 1; d <= last; d++) {
+    out.push(`${year}-${pad(month0 + 1)}-${pad(d)}`);
   }
   return out;
 }
@@ -65,20 +65,30 @@ function listWeekdays(start: string, end: string): string[] {
 export function SquadDailyReport({
   open, onClose, squadId,
 }: { open: boolean; onClose: () => void; squadId: string }) {
+  const today = brtToday();
+  const [cursor, setCursor] = useState<{ y: number; m: number }>(() => {
+    const [y, m] = today.split("-").map(Number);
+    return { y, m: m - 1 };
+  });
   const [sessions, setSessions] = useState<Session[]>([]);
   const [scs, setScs] = useState<SessionClient[]>([]);
   const [skips, setSkips] = useState<Skip[]>([]);
   const [loading, setLoading] = useState(false);
   const [reasonDraft, setReasonDraft] = useState<Record<string, string>>({});
+  const [showTrash, setShowTrash] = useState(false);
+  const [verif, setVerif] = useState<{ id: string; date: string } | null>(null);
 
   useEffect(() => {
     if (!open || !squadId) return;
     void load();
-  }, [open, squadId]);
+  }, [open, squadId, cursor]);
 
   async function load() {
     setLoading(true);
-    const { start, end } = monthRange();
+    const start = `${cursor.y}-${pad(cursor.m + 1)}-01`;
+    const lastDay = new Date(Date.UTC(cursor.y, cursor.m + 1, 0)).getUTCDate();
+    const end = `${cursor.y}-${pad(cursor.m + 1)}-${pad(lastDay)}`;
+
     const [sRes, skRes] = await Promise.all([
       (supabase as any).from("squad_daily_sessions")
         .select("*").eq("squad_id", squadId)
@@ -92,35 +102,55 @@ export function SquadDailyReport({
     setSessions(sList);
     setSkips((skRes.data || []) as Skip[]);
     if (sList.length > 0) {
-      const ids = sList.map((s) => s.id);
-      const { data } = await (supabase as any).from("squad_daily_session_clients")
-        .select("*").in("session_id", ids);
-      setScs((data || []) as SessionClient[]);
+      const ids = sList.filter((s) => !s.deleted_at).map((s) => s.id);
+      if (ids.length) {
+        const { data } = await (supabase as any).from("squad_daily_session_clients")
+          .select("*").in("session_id", ids);
+        setScs((data || []) as SessionClient[]);
+      } else {
+        setScs([]);
+      }
     } else {
       setScs([]);
     }
     setLoading(false);
   }
 
+  const monthLabel = useMemo(
+    () => new Date(Date.UTC(cursor.y, cursor.m, 1)).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+    [cursor],
+  );
+
+  const allDays = useMemo(() => listAllDays(cursor.y, cursor.m), [cursor]);
+  const activeSessions = useMemo(() => sessions.filter((s) => !s.deleted_at), [sessions]);
+  const trashedSessions = useMemo(() => sessions.filter((s) => s.deleted_at), [sessions]);
+
+  // Map date -> best session (active, latest-started)
+  const sessionByDate = useMemo(() => {
+    const m = new Map<string, Session>();
+    activeSessions.forEach((s) => {
+      const cur = m.get(s.session_date);
+      if (!cur || new Date(s.started_at) > new Date(cur.started_at)) m.set(s.session_date, s);
+    });
+    return m;
+  }, [activeSessions]);
+  const skipByDate = useMemo(() => new Map(skips.map((s) => [s.skip_date, s])), [skips]);
+
   const stats = useMemo(() => {
-    const { start, end } = monthRange();
-    const weekdays = listWeekdays(start, end);
-    const doneDates = new Set(sessions.map((s) => s.session_date));
-    const skippedDates = new Set(skips.map((s) => s.skip_date));
-    const done = weekdays.filter((d) => doneDates.has(d));
-    const missing = weekdays.filter((d) => !doneDates.has(d) && d <= end);
-    const onTime = sessions.filter((s) => s.on_time).length;
-    const late = sessions.filter((s) => !s.on_time).length;
-    const totalDelay = sessions.reduce((a, s) => a + (s.delay_seconds || 0), 0);
-    const avgDelay = sessions.length ? Math.floor(totalDelay / sessions.length) : 0;
-    const avgDuration = sessions.filter((s) => s.total_seconds).length
-      ? Math.floor(
-          sessions.filter((s) => s.total_seconds).reduce((a, s) => a + (s.total_seconds || 0), 0) /
-          sessions.filter((s) => s.total_seconds).length,
-        )
+    const weekdays = allDays.filter(isWeekday);
+    const upToToday = weekdays.filter((d) => d <= today);
+    const done = upToToday.filter((d) => sessionByDate.has(d));
+    const missing = upToToday.filter((d) => !sessionByDate.has(d));
+    const sessList = Array.from(sessionByDate.values());
+    const onTime = sessList.filter((s) => (s.delay_seconds || 0) <= ON_TIME_THRESHOLD).length;
+    const late = sessList.length - onTime;
+    const totalDelay = sessList.reduce((a, s) => a + (s.delay_seconds || 0), 0);
+    const avgDelay = sessList.length ? Math.floor(totalDelay / sessList.length) : 0;
+    const finished = sessList.filter((s) => s.total_seconds);
+    const avgDuration = finished.length
+      ? Math.floor(finished.reduce((a, s) => a + (s.total_seconds || 0), 0) / finished.length)
       : 0;
 
-    // by priority
     const byPrio: Record<string, { total: number; count: number }> = {};
     scs.forEach((c) => {
       const k = c.prioritization || "—";
@@ -136,20 +166,19 @@ export function SquadDailyReport({
       weekdaysCount: weekdays.length,
       done: done.length,
       missing,
-      skippedDates,
       onTime,
       late,
       avgDelay,
       avgDuration,
       prioRows,
     };
-  }, [sessions, scs, skips]);
+  }, [allDays, sessionByDate, scs, today]);
 
   async function saveSkip(date: string) {
     const reason = (reasonDraft[date] || "").trim();
     if (!reason) { toast.error("Informe o motivo"); return; }
     const { data: u } = await supabase.auth.getUser();
-    const existing = skips.find((s) => s.skip_date === date);
+    const existing = skipByDate.get(date);
     if (existing) {
       await (supabase as any).from("squad_daily_skips").update({ reason }).eq("id", existing.id);
     } else {
@@ -161,27 +190,119 @@ export function SquadDailyReport({
     void load();
   }
 
+  async function trashSession(id: string) {
+    if (!confirm("Mover esta daily para a lixeira? (será excluída em 30 dias)")) return;
+    const { error } = await (supabase as any)
+      .from("squad_daily_sessions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Movida para lixeira");
+    void load();
+  }
+  async function restoreSession(id: string) {
+    const { error } = await (supabase as any)
+      .from("squad_daily_sessions").update({ deleted_at: null }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Restaurada");
+    void load();
+  }
+  function askPurge(s: Session) {
+    setVerif({ id: s.id, date: s.session_date });
+  }
+
+  function dayClass(d: string): { bg: string; label: string; tooltip: string } {
+    if (isWeekend(d)) return { bg: "bg-muted/20 text-muted-foreground/50", label: "—", tooltip: "Bloqueado (fim de semana)" };
+    const sess = sessionByDate.get(d);
+    if (sess) {
+      if ((sess.delay_seconds || 0) <= ON_TIME_THRESHOLD) {
+        return { bg: "bg-emerald-500/30 text-emerald-200 border-emerald-500/50", label: "✓", tooltip: `Feita no horário · ${fmtMinSec(sess.total_seconds || 0)}` };
+      }
+      return { bg: "bg-amber-500/30 text-amber-200 border-amber-500/50", label: "⏱", tooltip: `Atraso ${fmtMinSec(sess.delay_seconds)} · ${fmtMinSec(sess.total_seconds || 0)}` };
+    }
+    if (d > today) return { bg: "bg-card/40 text-muted-foreground border-border/30", label: "", tooltip: "Futuro" };
+    const skip = skipByDate.get(d);
+    if (skip) return { bg: "bg-sky-500/20 text-sky-200 border-sky-500/40", label: "!", tooltip: `Justificada: ${skip.reason}` };
+    return { bg: "bg-red-500/30 text-red-200 border-red-500/50 animate-pulse", label: "✕", tooltip: "Não realizada — sem justificativa" };
+  }
+
+  // Calendar grid (Mon-Sun)
+  const firstDow = new Date(Date.UTC(cursor.y, cursor.m, 1)).getUTCDay(); // 0=Sun
+  const padStart = (firstDow + 6) % 7; // shift so Mon=0
+
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-background border-border/40">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" /> Relatório de Dailys — Mês atual
+            <FileText className="h-5 w-5 text-primary" /> Relatório de Dailys
           </DialogTitle>
         </DialogHeader>
+
+        {/* Month navigator */}
+        <div className="flex items-center justify-between mb-2">
+          <Button variant="ghost" size="sm" onClick={() => setCursor((c) => ({ y: c.m === 0 ? c.y - 1 : c.y, m: c.m === 0 ? 11 : c.m - 1 }))}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-bold capitalize">{monthLabel}</div>
+          <Button variant="ghost" size="sm" onClick={() => setCursor((c) => ({ y: c.m === 11 ? c.y + 1 : c.y, m: c.m === 11 ? 0 : c.m + 1 }))}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
 
         {loading ? (
           <p className="text-muted-foreground">Carregando...</p>
         ) : (
           <div className="space-y-5">
+            {/* KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Stat label="Realizadas no mês" value={`${stats.done}`} sub={`de ${stats.weekdaysCount} dias úteis`} icon={CheckCircle2} color="from-emerald-500 to-teal-600" />
-              <Stat label="Faltando" value={`${stats.missing.length}`} sub="dias úteis" icon={CalendarX} color="from-red-500 to-orange-600" warn={stats.missing.filter((d) => !stats.skippedDates.has(d)).length > 0} />
+              <Stat label="Realizadas" value={`${stats.done}`} sub={`de ${stats.weekdaysCount} dias úteis`} icon={CheckCircle2} color="from-emerald-500 to-teal-600" />
+              <Stat label="Faltando" value={`${stats.missing.length}`} sub="dias úteis" icon={CalendarX} color="from-red-500 to-orange-600" warn={stats.missing.some((d) => !skipByDate.has(d))} />
               <Stat label="No horário" value={`${stats.onTime}`} sub={`atrasadas: ${stats.late}`} icon={Clock} color="from-primary to-fuchsia-600" />
               <Stat label="Duração média" value={fmtMinSec(stats.avgDuration)} sub={`atraso médio: ${fmtMinSec(stats.avgDelay)}`} icon={AlertTriangle} color="from-amber-500 to-orange-600" />
             </div>
 
-            {/* Faltando — pisca */}
+            {/* Calendar */}
+            <Card className="bg-card/40 border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h3 className="text-sm font-bold">Calendário do mês</h3>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+                    <Legend color="bg-emerald-500/40 border-emerald-500/60" label="Feita no horário" />
+                    <Legend color="bg-amber-500/40 border-amber-500/60" label="Feita com atraso" />
+                    <Legend color="bg-red-500/40 border-red-500/60" label="Não feita" />
+                    <Legend color="bg-sky-500/30 border-sky-500/60" label="Justificada" />
+                    <Legend color="bg-muted/30 border-muted/60" label="Bloqueado" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-1.5 text-center">
+                  {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
+                    <div key={d} className="text-[10px] text-muted-foreground font-semibold py-1">{d}</div>
+                  ))}
+                  {Array.from({ length: padStart }).map((_, i) => <div key={`p${i}`} />)}
+                  {allDays.map((d) => {
+                    const c = dayClass(d);
+                    const day = Number(d.slice(8));
+                    const isToday = d === today;
+                    const blocked = isWeekend(d);
+                    return (
+                      <div
+                        key={d}
+                        title={c.tooltip}
+                        className={`relative rounded-lg border p-1.5 min-h-[52px] flex flex-col items-center justify-center text-xs ${c.bg} ${isToday ? "ring-2 ring-primary" : ""}`}
+                      >
+                        <div className="text-[11px] font-bold">{day}</div>
+                        <div className="text-base leading-none">{c.label}</div>
+                        {blocked && <Lock className="absolute top-1 right-1 h-2.5 w-2.5 opacity-50" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Faltando — justificar */}
             <Card className="bg-card/40 border-border/40">
               <CardContent className="p-5">
                 <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
@@ -193,14 +314,14 @@ export function SquadDailyReport({
                 ) : (
                   <div className="space-y-2">
                     {stats.missing.map((d) => {
-                      const skip = skips.find((s) => s.skip_date === d);
+                      const skip = skipByDate.get(d);
                       const justified = !!skip;
                       return (
                         <div
                           key={d}
                           className={`rounded-lg border p-3 flex items-start gap-3 flex-wrap ${justified ? "border-border/40 bg-background/40" : "border-red-500/40 bg-red-500/10 animate-pulse"}`}
                         >
-                          <div className="flex items-center gap-2 min-w-[140px]">
+                          <div className="flex items-center gap-2 min-w-[160px]">
                             {!justified && <span className="h-2.5 w-2.5 rounded-full bg-red-400 animate-ping" />}
                             <span className="text-sm font-semibold">
                               {new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
@@ -227,7 +348,7 @@ export function SquadDailyReport({
               </CardContent>
             </Card>
 
-            {/* Tempo médio por priorização */}
+            {/* Por priorização */}
             <Card className="bg-card/40 border-border/40">
               <CardContent className="p-5">
                 <h3 className="text-sm font-bold mb-3">Tempo médio por nível de priorização</h3>
@@ -249,28 +370,53 @@ export function SquadDailyReport({
               </CardContent>
             </Card>
 
-            {/* Histórico recente */}
+            {/* Sessões + lixeira */}
             <Card className="bg-card/40 border-border/40">
               <CardContent className="p-5">
-                <h3 className="text-sm font-bold mb-3">Sessões do mês</h3>
-                {sessions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nenhuma daily registrada.</p>
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h3 className="text-sm font-bold">{showTrash ? "Lixeira (auto-exclusão em 30 dias)" : "Sessões do mês"}</h3>
+                  <Button size="sm" variant="outline" onClick={() => setShowTrash((v) => !v)} className="gap-1.5">
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {showTrash ? `Ver ativas (${activeSessions.length})` : `Ver lixeira (${trashedSessions.length})`}
+                  </Button>
+                </div>
+                {(showTrash ? trashedSessions : activeSessions).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{showTrash ? "Lixeira vazia." : "Nenhuma daily registrada."}</p>
                 ) : (
                   <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                    {sessions.map((s) => (
-                      <div key={s.id} className="flex items-center justify-between rounded-md bg-background/40 border border-border/30 px-3 py-2 text-xs">
-                        <span className="font-semibold">
-                          {new Date(s.session_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                        </span>
-                        <span className="text-muted-foreground">
-                          Início {new Date(s.started_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        <Badge variant="outline" className={s.on_time ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" : "bg-red-500/15 text-red-300 border-red-500/40"}>
-                          {s.on_time ? "No horário" : `Atraso ${fmtMinSec(s.delay_seconds)}`}
-                        </Badge>
-                        <span className="font-mono tabular-nums">{s.total_seconds ? fmtMinSec(s.total_seconds) : "—"}</span>
-                      </div>
-                    ))}
+                    {(showTrash ? trashedSessions : activeSessions).map((s) => {
+                      const onTime = (s.delay_seconds || 0) <= ON_TIME_THRESHOLD;
+                      return (
+                        <div key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-background/40 border border-border/30 px-3 py-2 text-xs flex-wrap">
+                          <span className="font-semibold min-w-[80px]">
+                            {new Date(s.session_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                          </span>
+                          <span className="text-muted-foreground">
+                            Início {new Date(s.started_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          <Badge variant="outline" className={onTime ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" : "bg-amber-500/15 text-amber-300 border-amber-500/40"}>
+                            {onTime ? "No horário" : `Atraso ${fmtMinSec(s.delay_seconds)}`}
+                          </Badge>
+                          <span className="font-mono tabular-nums">{s.total_seconds ? fmtMinSec(s.total_seconds) : "—"}</span>
+                          <div className="flex gap-1">
+                            {showTrash ? (
+                              <>
+                                <Button size="sm" variant="ghost" onClick={() => restoreSession(s.id)} className="h-7 gap-1">
+                                  <RotateCcw className="h-3 w-3" /> Restaurar
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => askPurge(s)} className="h-7 gap-1 text-red-400 hover:text-red-300">
+                                  <Ban className="h-3 w-3" /> Excluir definitivo
+                                </Button>
+                              </>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-muted-foreground hover:text-red-300">
+                                <Trash2 className="h-3 w-3" /> Lixeira
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -279,6 +425,28 @@ export function SquadDailyReport({
         )}
       </DialogContent>
     </Dialog>
+
+    {verif && (
+      <ActionVerificationDialog
+        open={!!verif}
+        onOpenChange={(o) => !o && setVerif(null)}
+        action="purge_squad_daily_session"
+        payload={{ session_id: verif.id }}
+        targetLabel={`Daily de ${verif.date}`}
+        title="Excluir definitivamente"
+        successMessage="Daily excluída"
+        onSuccess={() => { setVerif(null); void load(); }}
+      />
+    )}
+    </>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className={`inline-block h-3 w-3 rounded border ${color}`} /> {label}
+    </span>
   );
 }
 
