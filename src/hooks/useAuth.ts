@@ -86,12 +86,18 @@ export function useAuth() {
           }
         }
 
+        // Squad membership count (any user)
+        const { count: squadCount } = await supabase
+          .from("squad_members")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds });
+        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0 });
       } catch (error) {
         console.error("Erro ao carregar autenticação:", error);
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
+        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
       }
     };
 
