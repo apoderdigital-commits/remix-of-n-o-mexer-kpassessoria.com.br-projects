@@ -1,6 +1,11 @@
 import { MessageCircle } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 export function SupportWhatsAppButton() {
+  const { pathname } = useLocation();
+  // Hide on squad dashboard (and admin)
+  if (pathname.startsWith("/squad")) return null;
+
   const href = "https://w.app/kpassessoriadashsuporte";
 
   return (
