@@ -61,8 +61,8 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
         { label: "Token Meta", ok: !!selected.meta_access_token },
         { label: "Sheet", ok: !!selected.google_sheet_id },
         { label: "Ticket", ok: !!selected.ticket_medio },
-        { label: "GHL Key", ok: !!selected.ghl_api_key },
-        { label: "Subconta GHL", ok: !!selected.ghl_location_id },
+        { label: "CRM Key", ok: !!selected.ghl_api_key },
+        { label: "Subconta CRM", ok: !!selected.ghl_location_id },
       ]
     : [];
   const okCount = checks.filter((c) => c.ok).length;

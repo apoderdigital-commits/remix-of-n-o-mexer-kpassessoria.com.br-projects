@@ -161,9 +161,9 @@ export default function Index() {
     setSyncingGhl(true);
     try {
       queryClient.invalidateQueries({ queryKey: ["ghl_pipeline", activeClient] });
-      toast.success("Dados do GHL sincronizados!");
+      toast.success("Dados do CRM sincronizados!");
     } catch {
-      toast.error("Erro ao sincronizar GHL");
+      toast.error("Erro ao sincronizar CRM");
     }
     setSyncingGhl(false);
   };
@@ -498,7 +498,7 @@ export default function Index() {
                       className="justify-start gap-2"
                     >
                       <Activity className={`h-4 w-4 ${syncingGhl ? "animate-spin" : ""}`} />
-                      GHL Pipeline
+                      CRM Pipeline
                     </Button>
                   </div>
                 </PopoverContent>
@@ -534,7 +534,7 @@ export default function Index() {
         <>
           {ghlData && ghlData.mapping_complete === false && ghlData.missing_metrics?.length > 0 && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs">
-              <span className="text-amber-400 font-medium">⚠ Mapeamento GHL incompleto</span>
+              <span className="text-amber-400 font-medium">⚠ Mapeamento CRM incompleto</span>
               <span className="text-muted-foreground">
                 Configure as etapas em <strong>Clientes → Editar</strong> para:{" "}
                 {ghlData.missing_metrics.join(", ")}

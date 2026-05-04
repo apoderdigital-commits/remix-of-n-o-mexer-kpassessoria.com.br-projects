@@ -44,7 +44,7 @@ export function GhlStageMappingEditor({ clientId, ghlApiKey, ghlLocationId, valu
 
   const fetchStages = async () => {
     if (!ghlApiKey.trim() || !ghlLocationId.trim()) {
-      toast.error("Preencha a GHL API Key e o Location ID primeiro");
+      toast.error("Preencha a CRM API Key e o Location ID primeiro");
       return;
     }
     setLoading(true);
@@ -84,7 +84,7 @@ export function GhlStageMappingEditor({ clientId, ghlApiKey, ghlLocationId, valu
     <div className="space-y-3 rounded-lg border border-border/50 bg-secondary/40 p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <Label className="text-sm">Mapeamento de Etapas (GHL)</Label>
+          <Label className="text-sm">Mapeamento de Etapas (CRM)</Label>
           <p className="text-xs text-muted-foreground mt-0.5">
             {loaded
               ? `Pipeline: ${pipelineName} · ${stages.length} etapas`

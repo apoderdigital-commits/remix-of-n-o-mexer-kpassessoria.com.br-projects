@@ -602,12 +602,12 @@ export default function Clients() {
               <p className="text-xs text-muted-foreground">Usado no Funil de Projeção de Vendas</p>
             </div>
             <div className="space-y-2">
-              <Label>GHL API Key</Label>
+              <Label>CRM API Key</Label>
               <Input type="password" value={form.ghlApiKey} onChange={set("ghlApiKey")} placeholder="Ex: pit-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
               <p className="text-xs text-muted-foreground">API Key do GoHighLevel para integração com pipeline</p>
             </div>
             <div className="space-y-2">
-              <Label>GHL Location ID (Subconta)</Label>
+              <Label>CRM Location ID (Subconta)</Label>
               <Input value={form.ghlLocationId} onChange={set("ghlLocationId")} placeholder="Ex: T6S5cO1s72adtbDovjdX" />
               <p className="text-xs text-muted-foreground">ID da subconta no GoHighLevel</p>
             </div>
@@ -697,8 +697,8 @@ export default function Clients() {
                     { label: "Token Meta", ok: !!c.meta_access_token },
                     { label: "Sheet", ok: !!c.google_sheet_id },
                     { label: "Ticket", ok: !!c.ticket_medio },
-                    { label: "GHL Key", ok: !!c.ghl_api_key },
-                    { label: "Subconta GHL", ok: !!c.ghl_location_id },
+                    { label: "CRM Key", ok: !!c.ghl_api_key },
+                    { label: "Subconta CRM", ok: !!c.ghl_location_id },
                   ];
                   const okCount = checks.filter((x) => x.ok).length;
                   const total = checks.length;
