@@ -282,7 +282,22 @@ export default function Squad() {
             </SelectContent>
           </Select>
           <div className="flex-1" />
+          {squadId && clients.length > 0 && (
+            <Button
+              onClick={() => setDailyOpen(true)}
+              className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"
+            >
+              <Play className="h-4 w-4" /> Começar Daily
+            </Button>
+          )}
         </div>
+
+        <SquadDaily
+          open={dailyOpen}
+          onClose={() => setDailyOpen(false)}
+          squadId={squadId}
+          clients={clients}
+        />
 
         {loading ? (
           <p className="text-muted-foreground">Carregando...</p>
