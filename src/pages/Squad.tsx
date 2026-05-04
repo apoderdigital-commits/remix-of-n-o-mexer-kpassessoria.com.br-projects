@@ -242,7 +242,13 @@ export default function Squad() {
                     <TableCell className="text-muted-foreground">{c.services}</TableCell>
                     <TableCell><Badge variant="outline">{c.curve_abc || "-"}</Badge></TableCell>
                     <TableCell><Badge variant="outline">{c.sprint || "-"}</Badge></TableCell>
-                    <TableCell><Badge variant="outline">{c.prioritization || "-"}</Badge></TableCell>
+                    <TableCell>
+                      {c.prioritization ? (
+                        <Badge title={PRIO_LABELS[c.prioritization]} className={PRIO_COLORS[c.prioritization] + " border"}>
+                          {c.prioritization}
+                        </Badge>
+                      ) : <span className="text-muted-foreground text-xs">-</span>}
+                    </TableCell>
                     <TableCell>
                       {c.bm_verified
                         ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30">Sim</Badge>
