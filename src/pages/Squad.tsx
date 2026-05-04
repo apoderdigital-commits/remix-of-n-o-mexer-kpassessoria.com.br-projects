@@ -99,6 +99,43 @@ const CURVE_COLORS: Record<string, string> = {
   C: "bg-slate-500/20 text-slate-300 border-slate-500/40",
 };
 
+const SERVICE_OPTIONS = [
+  { code: "TP", label: "Tráfego Pago" },
+  { code: "CRM", label: "CRM" },
+  { code: "COM", label: "Acomp. Comercial" },
+] as const;
+
+const SERVICE_COLORS: Record<string, string> = {
+  TP: "bg-primary/20 text-primary border-primary/40",
+  CRM: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
+  COM: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+};
+
+function parseServices(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,;/|]+/)
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => SERVICE_OPTIONS.some((o) => o.code === s));
+}
+
+function parseMoney(raw: string | null | undefined): number | null {
+  if (raw == null) return null;
+  const s = String(raw).trim().toUpperCase();
+  if (!s || s === "-") return null;
+  const m = s.match(/([\d.,]+)\s*(K|MIL)?/);
+  if (!m) return null;
+  let n = parseFloat(m[1].replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+  if (isNaN(n)) return null;
+  if (m[2]) n *= 1000;
+  return n;
+}
+
+function formatBRL(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return "—";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
 export default function Squad() {
   const { isAdmin } = useAuth();
   const [squads, setSquads] = useState<Squad[]>([]);
@@ -372,6 +409,33 @@ export default function Squad() {
     renew: clients.filter((c) => c.renewal_60d).length,
   }), [clients]);
 
+  const serviceCounts = useMemo(() => {
+    const counts = { TP: 0, CRM: 0, COM: 0 };
+    for (const c of clients) {
+      for (const s of parseServices(c.services)) {
+        if (s in counts) counts[s as keyof typeof counts]++;
+      }
+    }
+    return counts;
+  }, [clients]);
+
+  const incompleteClients = useMemo(() => {
+    return clients
+      .map((c) => {
+        const missing: string[] = [];
+        if (!c.name?.trim()) missing.push("nome");
+        if (parseMoney(c.invested_tp) == null) missing.push("valor TP");
+        if (parseServices(c.services).length === 0) missing.push("serviços");
+        if (!c.curve_abc) missing.push("Curva ABC");
+        if (!c.sprint) missing.push("Sprint");
+        return { client: c, missing };
+      })
+      .filter((x) => x.missing.length > 0);
+  }, [clients]);
+
+  const [showIncomplete, setShowIncomplete] = useState(false);
+
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/30 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
@@ -422,7 +486,7 @@ export default function Squad() {
               onClick={() => setReportOpen(true)}
               className="gap-1.5"
             >
-              <FileText className="h-4 w-4" /> Relatório
+              <FileText className="h-4 w-4" /> Relatório das Dailys
             </Button>
           )}
           {squadId && clients.length > 0 && (
@@ -468,6 +532,37 @@ export default function Squad() {
 
             {/* CLIENTES */}
             <TabsContent value="clients" className="space-y-4">
+              {incompleteClients.length > 0 && (
+                <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 shadow-lg shadow-red-500/10 alert-blink">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-300 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-red-200">
+                        {incompleteClients.length} cliente{incompleteClients.length > 1 ? "s" : ""} com informações faltando
+                      </p>
+                      <p className="text-xs text-red-200/70 mt-0.5">
+                        Campos essenciais: nome, valor TP, serviços, Curva ABC e Sprint.
+                      </p>
+                      {showIncomplete && (
+                        <ul className="mt-3 space-y-1 max-h-44 overflow-y-auto text-xs">
+                          {incompleteClients.map(({ client, missing }) => (
+                            <li key={client.id} className="flex items-center justify-between gap-3 bg-background/30 rounded-lg px-2.5 py-1.5">
+                              <button onClick={() => openEdit(client)} className="font-semibold text-foreground hover:text-primary truncate text-left">
+                                {client.name || "(sem nome)"}
+                              </button>
+                              <span className="text-red-300/80 shrink-0">faltando: {missing.join(", ")}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <Button size="sm" variant="outline" className="border-red-500/40 hover:bg-red-500/10" onClick={() => setShowIncomplete((v) => !v)}>
+                      {showIncomplete ? "Ocultar" : "Ver lista"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
@@ -503,7 +598,15 @@ export default function Squad() {
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
                         <TableCell className="font-semibold">{c.name}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{c.niche}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.services}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {parseServices(c.services).length === 0 ? (
+                              <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                            ) : parseServices(c.services).map((s) => (
+                              <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>{s}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className={CURVE_COLORS[c.curve_abc || ""] || "border-border/40 text-muted-foreground"}>
                             {c.curve_abc || "-"}
@@ -524,7 +627,11 @@ export default function Squad() {
                             ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30 gap-1"><CheckCircle2 className="h-3 w-3" /> Sim</Badge>
                             : <Badge className="bg-red-500/20 text-red-300 border-red-500/30 gap-1"><XCircle className="h-3 w-3" /> Não</Badge>}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.invested_tp}</TableCell>
+                        <TableCell className="text-xs font-semibold">
+                          {parseMoney(c.invested_tp) == null
+                            ? <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                            : <span className="text-emerald-300">{formatBRL(parseMoney(c.invested_tp))}</span>}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -547,7 +654,25 @@ export default function Squad() {
                     Atualizada automaticamente a partir da Curva ABC e Sprint de cada cliente.
                   </p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl border border-border/30 bg-background/30 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Serviços contratados</p>
+                      <p className="text-2xl font-bold mt-1">{serviceCounts.TP + serviceCounts.CRM + serviceCounts.COM}</p>
+                    </div>
+                    <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-primary/80">Tráfego Pago (TP)</p>
+                      <p className="text-2xl font-bold mt-1 text-primary">{serviceCounts.TP}</p>
+                    </div>
+                    <div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-fuchsia-300/80">CRM</p>
+                      <p className="text-2xl font-bold mt-1 text-fuchsia-300">{serviceCounts.CRM}</p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-emerald-300/80">Acomp. Comercial (COM)</p>
+                      <p className="text-2xl font-bold mt-1 text-emerald-300">{serviceCounts.COM}</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2">
                     <div />
                     {["A", "B", "C"].map((s) => (
@@ -819,7 +944,40 @@ export default function Squad() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2"><Label>Cliente *</Label><Input value={editing.name || ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div><Label>Nicho</Label><Input value={editing.niche || ""} onChange={(e) => setEditing({ ...editing, niche: e.target.value })} /></div>
-              <div><Label>Serviços</Label><Input placeholder="TP, CRM, COM" value={editing.services || ""} onChange={(e) => setEditing({ ...editing, services: e.target.value })} /></div>
+              <div className="col-span-2">
+                <Label>Serviços contratados</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                  {SERVICE_OPTIONS.map((opt) => {
+                    const selected = parseServices(editing.services).includes(opt.code);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.code}
+                        onClick={() => {
+                          const cur = parseServices(editing.services);
+                          const next = selected ? cur.filter((s) => s !== opt.code) : [...cur, opt.code];
+                          setEditing({ ...editing, services: next.join(", ") });
+                        }}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
+                          selected
+                            ? `${SERVICE_COLORS[opt.code]} ring-2 ring-offset-0 ring-current/40`
+                            : "border-border/40 bg-background/30 hover:bg-background/50 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center ${selected ? "bg-current/20 border-current" : "border-border/60"}`}>
+                            {selected && <CheckCircle2 className="h-3 w-3" />}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold leading-tight">{opt.code}</div>
+                            <div className="text-[10px] opacity-80 leading-tight">{opt.label}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div><Label>Data entrada</Label><Input type="date" value={editing.entry_date || ""} onChange={(e) => setEditing({ ...editing, entry_date: e.target.value })} /></div>
               <div><Label>Data vencimento</Label><Input type="date" value={editing.due_date || ""} onChange={(e) => setEditing({ ...editing, due_date: e.target.value })} /></div>
               <div>
@@ -836,7 +994,25 @@ export default function Squad() {
                   <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Valor investido TP</Label><Input value={editing.invested_tp || ""} onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })} /></div>
+              <div>
+                <Label>Valor investido TP (mensal)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.invested_tp ?? ""}
+                    onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })}
+                  />
+                </div>
+                {parseMoney(editing.invested_tp) != null && (
+                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
                 <Label htmlFor="bm">BM Verificada</Label>
