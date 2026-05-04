@@ -486,7 +486,7 @@ export default function Squad() {
               onClick={() => setReportOpen(true)}
               className="gap-1.5"
             >
-              <FileText className="h-4 w-4" /> Relatório
+              <FileText className="h-4 w-4" /> Relatório das Dailys
             </Button>
           )}
           {squadId && clients.length > 0 && (
