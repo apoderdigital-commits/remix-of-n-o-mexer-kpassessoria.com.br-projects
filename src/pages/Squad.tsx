@@ -944,7 +944,40 @@ export default function Squad() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2"><Label>Cliente *</Label><Input value={editing.name || ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div><Label>Nicho</Label><Input value={editing.niche || ""} onChange={(e) => setEditing({ ...editing, niche: e.target.value })} /></div>
-              <div><Label>Serviços</Label><Input placeholder="TP, CRM, COM" value={editing.services || ""} onChange={(e) => setEditing({ ...editing, services: e.target.value })} /></div>
+              <div className="col-span-2">
+                <Label>Serviços contratados</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                  {SERVICE_OPTIONS.map((opt) => {
+                    const selected = parseServices(editing.services).includes(opt.code);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.code}
+                        onClick={() => {
+                          const cur = parseServices(editing.services);
+                          const next = selected ? cur.filter((s) => s !== opt.code) : [...cur, opt.code];
+                          setEditing({ ...editing, services: next.join(", ") });
+                        }}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
+                          selected
+                            ? `${SERVICE_COLORS[opt.code]} ring-2 ring-offset-0 ring-current/40`
+                            : "border-border/40 bg-background/30 hover:bg-background/50 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center ${selected ? "bg-current/20 border-current" : "border-border/60"}`}>
+                            {selected && <CheckCircle2 className="h-3 w-3" />}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold leading-tight">{opt.code}</div>
+                            <div className="text-[10px] opacity-80 leading-tight">{opt.label}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div><Label>Data entrada</Label><Input type="date" value={editing.entry_date || ""} onChange={(e) => setEditing({ ...editing, entry_date: e.target.value })} /></div>
               <div><Label>Data vencimento</Label><Input type="date" value={editing.due_date || ""} onChange={(e) => setEditing({ ...editing, due_date: e.target.value })} /></div>
               <div>
