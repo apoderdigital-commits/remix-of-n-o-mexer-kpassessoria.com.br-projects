@@ -294,7 +294,7 @@ export default function Squad() {
             <TabsList className="bg-card/40 backdrop-blur-sm border border-border/30">
               <TabsTrigger value="clients" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Clientes</TabsTrigger>
               <TabsTrigger value="matrix" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Matriz</TabsTrigger>
-              <TabsTrigger value="metrics" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Métricas CS</TabsTrigger>
+              <TabsTrigger value="metrics" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Métricas dos Projetos</TabsTrigger>
               <TabsTrigger value="churn" className="gap-1.5"><TrendingDown className="h-3.5 w-3.5" /> Churn</TabsTrigger>
             </TabsList>
 
