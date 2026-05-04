@@ -799,52 +799,13 @@ export default function Squad() {
 
             {/* AGENDA */}
             <TabsContent value="agenda" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo compromisso
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead className="text-center">OK</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Hora</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Mês ref.</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agenda.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso agendado.</TableCell></TableRow>
-                    ) : agenda.map((a) => (
-                      <TableRow key={a.id} className="border-border/20">
-                        <TableCell className="text-center">
-                          <button onClick={() => toggleAgDone(a)} title="Marcar como realizada">
-                            {a.done
-                              ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                              : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-semibold">{a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
-                        <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
-                        <TableCell className="font-semibold">{a.client_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(a.reference_month)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingAg(a); setOpenAg(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeAg(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <AgendaPanel
+                agenda={agenda}
+                onNew={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }}
+                onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
+                onRemove={removeAg}
+                onToggleDone={toggleAgDone}
+              />
             </TabsContent>
           </Tabs>
         )}
