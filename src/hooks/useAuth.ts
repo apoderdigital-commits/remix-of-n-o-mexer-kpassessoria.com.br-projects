@@ -37,7 +37,7 @@ export function useAuth() {
       if (!isMounted) return;
 
       if (!user) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
+        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
         return;
       }
 
