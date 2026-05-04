@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -388,8 +388,8 @@ export default function Squad() {
                       </div>
                     ))}
                     {(["A", "B", "C"] as const).map((curve) => (
-                      <>
-                        <div key={`l-${curve}`} className="flex items-center justify-center text-xs font-semibold text-muted-foreground pr-2">
+                      <Fragment key={`row-${curve}`}>
+                        <div className="flex items-center justify-center text-xs font-semibold text-muted-foreground pr-2">
                           ABC {curve}
                         </div>
                         {(["A", "B", "C"] as const).map((sprint) => {
@@ -412,7 +412,7 @@ export default function Squad() {
                             </div>
                           );
                         })}
-                      </>
+                      </Fragment>
                     ))}
                   </div>
                 </CardContent>
