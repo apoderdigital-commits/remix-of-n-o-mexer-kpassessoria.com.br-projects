@@ -161,6 +161,7 @@ export default function Squad() {
   const [openNps, setOpenNps] = useState(false);
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
   const [openEng, setOpenEng] = useState(false);
+  const [engMonth, setEngMonth] = useState<string>("all");
   const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
