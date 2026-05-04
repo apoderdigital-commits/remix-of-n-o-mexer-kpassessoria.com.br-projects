@@ -20,9 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
-  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle,
+  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SquadDaily } from "@/components/squad/SquadDaily";
 
 type Squad = { id: string; name: string; color: string | null; description: string | null };
 type SquadClient = {
