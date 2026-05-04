@@ -43,45 +43,6 @@ const empty: Partial<SquadClient> = {
   renewal_60d: false, bm_verified: false,
 };
 
-const PRIO_ORDER = ["AA","AB","AC","BA","BB","BC","CA","CB","CC"];
-const PRIO_LABELS: Record<string,string> = {
-  AA: "Prioridade absoluta",
-  AB: "Prioridade, mas pode esperar",
-  AC: "Prioridade, mas o resultado já tá validado",
-  BA: "Prioridade mediana, mas está em validação",
-  BB: "Prioridade mediana, mas pode melhorar",
-  BC: "Prioridade mediana, mas a gente sabe do resultado",
-  CA: "Prioridade mínima, está em validação",
-  CB: "Prioridade mínima, mas pode melhorar",
-  CC: "Prioridade mínima, só que foda-se",
-};
-const PRIO_COLORS: Record<string,string> = {
-  AA: "bg-red-500/20 text-red-300 border-red-500/40",
-  AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-  AC: "bg-amber-500/20 text-amber-300 border-amber-500/40",
-  BA: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
-  BB: "bg-lime-500/20 text-lime-300 border-lime-500/40",
-  BC: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-  CA: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-  CB: "bg-sky-500/20 text-sky-300 border-sky-500/40",
-  CC: "bg-slate-500/20 text-slate-300 border-slate-500/40",
-};
-
-function computePrio(curve?: string | null, sprint?: string | null): string | null {
-  if (!curve || !sprint) return null;
-  const p = `${curve}${sprint}`.toUpperCase();
-  return PRIO_ORDER.includes(p) ? p : null;
-}
-
-function sortByPrio<T extends { prioritization: string | null; name: string }>(arr: T[]): T[] {
-  return [...arr].sort((a, b) => {
-    const ai = a.prioritization ? PRIO_ORDER.indexOf(a.prioritization) : 99;
-    const bi = b.prioritization ? PRIO_ORDER.indexOf(b.prioritization) : 99;
-    if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    return a.name.localeCompare(b.name);
-  });
-}
-
 export default function Squad() {
   const { isAdmin } = useAuth();
   const [squads, setSquads] = useState<Squad[]>([]);
@@ -111,8 +72,9 @@ export default function Squad() {
     const { data } = await supabase
       .from("squad_clients")
       .select("*")
-      .eq("squad_id", sid);
-    setClients(sortByPrio(data || []));
+      .eq("squad_id", sid)
+      .order("name");
+    setClients(data || []);
   }
 
   function openNew() {
@@ -139,7 +101,7 @@ export default function Squad() {
       renewal_60d: !!editing.renewal_60d,
       curve_abc: editing.curve_abc || null,
       sprint: editing.sprint || null,
-      prioritization: computePrio(editing.curve_abc, editing.sprint),
+      prioritization: editing.prioritization || null,
       bm_verified: !!editing.bm_verified,
       invested_tp: editing.invested_tp || null,
       observations: editing.observations || null,
@@ -242,13 +204,7 @@ export default function Squad() {
                     <TableCell className="text-muted-foreground">{c.services}</TableCell>
                     <TableCell><Badge variant="outline">{c.curve_abc || "-"}</Badge></TableCell>
                     <TableCell><Badge variant="outline">{c.sprint || "-"}</Badge></TableCell>
-                    <TableCell>
-                      {c.prioritization ? (
-                        <Badge title={PRIO_LABELS[c.prioritization]} className={PRIO_COLORS[c.prioritization] + " border"}>
-                          {c.prioritization}
-                        </Badge>
-                      ) : <span className="text-muted-foreground text-xs">-</span>}
-                    </TableCell>
+                    <TableCell><Badge variant="outline">{c.prioritization || "-"}</Badge></TableCell>
                     <TableCell>
                       {c.bm_verified
                         ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30">Sim</Badge>
@@ -282,37 +238,9 @@ export default function Squad() {
               <div><Label>Serviços</Label><Input placeholder="TP, CRM, COM" value={editing.services || ""} onChange={(e) => setEditing({ ...editing, services: e.target.value })} /></div>
               <div><Label>Data entrada</Label><Input type="date" value={editing.entry_date || ""} onChange={(e) => setEditing({ ...editing, entry_date: e.target.value })} /></div>
               <div><Label>Data vencimento</Label><Input type="date" value={editing.due_date || ""} onChange={(e) => setEditing({ ...editing, due_date: e.target.value })} /></div>
-              <div>
-                <Label>Curva ABC</Label>
-                <Select value={editing.curve_abc || ""} onValueChange={(v) => setEditing({ ...editing, curve_abc: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">A — Estratégico, maior impacto</SelectItem>
-                    <SelectItem value="B">B — Estratégico, impacto menor</SelectItem>
-                    <SelectItem value="C">C — Ainda não gera tanto impacto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Sprint</Label>
-                <Select value={editing.sprint || ""} onValueChange={(v) => setEditing({ ...editing, sprint: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">A — Precisa de muita atenção</SelectItem>
-                    <SelectItem value="B">B — Resultado mediano</SelectItem>
-                    <SelectItem value="C">C — Satisfeito e validado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Priorização (automática)</Label>
-                {(() => {
-                  const p = computePrio(editing.curve_abc, editing.sprint);
-                  return p
-                    ? <div className="h-10 flex items-center"><Badge className={PRIO_COLORS[p] + " border"}>{p} — {PRIO_LABELS[p]}</Badge></div>
-                    : <div className="h-10 flex items-center text-xs text-muted-foreground">Defina Curva ABC e Sprint</div>;
-                })()}
-              </div>
+              <div><Label>Curva ABC</Label><Input value={editing.curve_abc || ""} onChange={(e) => setEditing({ ...editing, curve_abc: e.target.value })} /></div>
+              <div><Label>Sprint</Label><Input value={editing.sprint || ""} onChange={(e) => setEditing({ ...editing, sprint: e.target.value })} /></div>
+              <div><Label>Priorização</Label><Input value={editing.prioritization || ""} onChange={(e) => setEditing({ ...editing, prioritization: e.target.value })} /></div>
               <div><Label>Valor investido TP</Label><Input value={editing.invested_tp || ""} onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })} /></div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
