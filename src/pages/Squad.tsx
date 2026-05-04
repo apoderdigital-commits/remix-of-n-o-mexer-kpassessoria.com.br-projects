@@ -20,9 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
-  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle,
+  Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SquadDaily } from "@/components/squad/SquadDaily";
 
 type Squad = { id: string; name: string; color: string | null; description: string | null };
 type SquadClient = {
@@ -92,6 +93,7 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [dailyOpen, setDailyOpen] = useState(false);
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
@@ -280,7 +282,22 @@ export default function Squad() {
             </SelectContent>
           </Select>
           <div className="flex-1" />
+          {squadId && clients.length > 0 && (
+            <Button
+              onClick={() => setDailyOpen(true)}
+              className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"
+            >
+              <Play className="h-4 w-4" /> Começar Daily
+            </Button>
+          )}
         </div>
+
+        <SquadDaily
+          open={dailyOpen}
+          onClose={() => setDailyOpen(false)}
+          squadId={squadId}
+          clients={clients}
+        />
 
         {loading ? (
           <p className="text-muted-foreground">Carregando...</p>
