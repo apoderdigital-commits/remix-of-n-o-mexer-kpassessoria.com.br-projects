@@ -910,19 +910,37 @@ export default function Squad() {
 
             {/* ENGAJAMENTO — agrupado por mês */}
             <TabsContent value="engagement" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingEng({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenEng(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo registro
-                </Button>
-              </div>
+              {(() => {
+                const months = Array.from(new Set(engagement.map((e) => (e.reference_month || "").slice(0, 7)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+                const filtered = engMonth === "all" ? engagement : engagement.filter((e) => (e.reference_month || "").slice(0, 7) === engMonth);
+                return (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-primary" />
+                      <Label className="text-xs text-muted-foreground">Mês:</Label>
+                      <Select value={engMonth} onValueChange={setEngMonth}>
+                        <SelectTrigger className="w-[200px] bg-card/40 border-border/40"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os meses</SelectItem>
+                          {months.map((m) => (
+                            <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={() => { setEditingEng({ reference_month: `${(engMonth !== "all" ? engMonth : new Date().toISOString().slice(0, 7))}-01` }); setOpenEng(true); }} className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Novo registro
+                    </Button>
+                  </div>
 
-              {engagement.length === 0 ? (
+              {filtered.length === 0 ? (
                 <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
-                  Nenhum registro de engajamento.
+                  Nenhum registro de engajamento{engMonth !== "all" ? " neste mês" : ""}.
                 </div>
               ) : (
                 Array.from(
-                  engagement.reduce((map, e) => {
+                  filtered.reduce((map, e) => {
                     const k = (e.reference_month || "").slice(0, 7) || "—";
                     if (!map.has(k)) map.set(k, [] as Engagement[]);
                     map.get(k)!.push(e);
