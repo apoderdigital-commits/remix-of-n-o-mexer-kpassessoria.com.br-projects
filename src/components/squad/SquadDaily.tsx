@@ -271,6 +271,36 @@ export function SquadDaily({
   const monthStart = todayISO().slice(0, 7) + "-01";
   const monthNotes = history.filter((n) => n.note_date >= monthStart && n.note_date !== todayISO());
 
+  // Countdown screen before daily begins
+  if (open && !startedAt) {
+    return (
+      <Dialog open={open} onOpenChange={(o) => !o && (closedRef.current = true, onClose())}>
+        <DialogContent className="max-w-md p-0 overflow-hidden bg-background border-border/40">
+          <div className="px-8 py-12 text-center bg-gradient-to-br from-primary/15 via-fuchsia-500/10 to-emerald-500/10">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">A daily começa em</p>
+            <div className={`mx-auto h-44 w-44 rounded-full flex items-center justify-center text-7xl font-black tabular-nums shadow-2xl border-4 transition-all ${paused ? "border-amber-500/60 bg-amber-500/10 text-amber-300" : "border-primary/60 bg-primary/10 text-primary animate-pulse"}`}>
+              {countdown}
+            </div>
+            <p className="text-sm text-muted-foreground mt-5">
+              Prepare-se. {paused ? "Contagem pausada." : "Iniciando automaticamente..."}
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <Button variant="outline" onClick={() => setPaused((p) => !p)} className="gap-1.5">
+                {paused ? <><Play className="h-4 w-4" /> Continuar</> : <><Pause className="h-4 w-4" /> Pausar</>}
+              </Button>
+              <Button variant="outline" onClick={() => { closedRef.current = true; onClose(); }} className="gap-1.5">
+                <X className="h-4 w-4" /> Encerrar
+              </Button>
+              <Button onClick={() => { setCountdown(0); }} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600">
+                <Play className="h-4 w-4" /> Começar agora
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
