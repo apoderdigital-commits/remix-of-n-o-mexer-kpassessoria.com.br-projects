@@ -383,6 +383,45 @@ export type Database = {
           },
         ]
       }
+      squad_churn: {
+        Row: {
+          churn_month: string | null
+          client_name: string
+          created_at: string
+          entry_month: string | null
+          id: string
+          months_active: string | null
+          observations: string | null
+          reason: string | null
+          squad_id: string
+          updated_at: string
+        }
+        Insert: {
+          churn_month?: string | null
+          client_name: string
+          created_at?: string
+          entry_month?: string | null
+          id?: string
+          months_active?: string | null
+          observations?: string | null
+          reason?: string | null
+          squad_id: string
+          updated_at?: string
+        }
+        Update: {
+          churn_month?: string | null
+          client_name?: string
+          created_at?: string
+          entry_month?: string | null
+          id?: string
+          months_active?: string | null
+          observations?: string | null
+          reason?: string | null
+          squad_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       squad_clients: {
         Row: {
           bm_verified: boolean | null
@@ -396,6 +435,7 @@ export type Database = {
           niche: string | null
           observations: string | null
           prioritization: string | null
+          priority_score: number
           renewal_60d: boolean | null
           services: string | null
           sprint: string | null
@@ -414,6 +454,7 @@ export type Database = {
           niche?: string | null
           observations?: string | null
           prioritization?: string | null
+          priority_score?: number
           renewal_60d?: boolean | null
           services?: string | null
           sprint?: string | null
@@ -432,6 +473,7 @@ export type Database = {
           niche?: string | null
           observations?: string | null
           prioritization?: string | null
+          priority_score?: number
           renewal_60d?: boolean | null
           services?: string | null
           sprint?: string | null
@@ -479,6 +521,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      squad_monthly_metrics: {
+        Row: {
+          active_clients: number | null
+          calls_delivered_pct: number | null
+          churn_count: number | null
+          churn_reason: string | null
+          created_at: string
+          id: string
+          lifetime: string | null
+          monthly_clients: number | null
+          new_clients: number | null
+          observations: string | null
+          out_of_target: number | null
+          reference_month: string
+          renewals: number | null
+          squad_id: string
+          updated_at: string
+          upsell_amount: string | null
+        }
+        Insert: {
+          active_clients?: number | null
+          calls_delivered_pct?: number | null
+          churn_count?: number | null
+          churn_reason?: string | null
+          created_at?: string
+          id?: string
+          lifetime?: string | null
+          monthly_clients?: number | null
+          new_clients?: number | null
+          observations?: string | null
+          out_of_target?: number | null
+          reference_month: string
+          renewals?: number | null
+          squad_id: string
+          updated_at?: string
+          upsell_amount?: string | null
+        }
+        Update: {
+          active_clients?: number | null
+          calls_delivered_pct?: number | null
+          churn_count?: number | null
+          churn_reason?: string | null
+          created_at?: string
+          id?: string
+          lifetime?: string | null
+          monthly_clients?: number | null
+          new_clients?: number | null
+          observations?: string | null
+          out_of_target?: number | null
+          reference_month?: string
+          renewals?: number | null
+          squad_id?: string
+          updated_at?: string
+          upsell_amount?: string | null
+        }
+        Relationships: []
       }
       squads: {
         Row: {
