@@ -1519,43 +1519,108 @@ function SummaryStat({ label, value, tone }: { label: string; value: number | st
   );
 }
 
-// ===== ServiceFunnel: trapezoidal SVG funnel =====
-function ServiceFunnel({ data }: { data: { label: string; count: number; pct: number }[] }) {
+// ===== ServiceFunnel: pretty trapezoidal funnel with details per bucket =====
+type FunnelRow = {
+  bucket: 1 | 2 | 3;
+  label: string;
+  count: number;
+  pct: number;
+  clients: { name: string; services: string[] }[];
+  svcCounts: Record<string, number>;
+};
+function ServiceFunnel({ data }: { data: FunnelRow[] }) {
   const max = Math.max(1, ...data.map((d) => d.count));
-  const W = 480, H = 180, gap = 6;
-  const rowH = (H - gap * (data.length - 1)) / data.length;
-  const palette = ["hsl(263 70% 58%)", "hsl(280 70% 60%)", "hsl(160 70% 45%)"];
-  const widths = data.map((d) => Math.max(60, (d.count / max) * W));
+  const W = 560, rowH = 92, gap = 4;
+  const H = data.length * (rowH + gap);
+  const palette: Record<number, { stroke: string; from: string; to: string; tag: string }> = {
+    1: { stroke: "263 70% 58%", from: "263 70% 62%", to: "263 80% 45%", tag: "text-primary" },
+    2: { stroke: "295 70% 60%", from: "295 75% 65%", to: "295 80% 48%", tag: "text-fuchsia-300" },
+    3: { stroke: "160 70% 45%", from: "160 65% 52%", to: "160 75% 38%", tag: "text-emerald-300" },
+  };
+  const widths = data.map((d) => Math.max(140, (d.count / max) * (W - 40) + 80));
+
   return (
-    <div className="flex flex-col lg:flex-row items-center gap-6">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-md">
-        {data.map((d, i) => {
-          const w = widths[i];
-          const next = widths[i + 1] ?? Math.max(40, w * 0.55);
-          const x1 = (W - w) / 2;
-          const x2 = (W - next) / 2;
-          const y = i * (rowH + gap);
-          const path = `M${x1},${y} L${x1 + w},${y} L${x2 + next},${y + rowH} L${x2},${y + rowH} Z`;
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      {/* SVG funnel */}
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+          <defs>
+            {data.map((d) => (
+              <linearGradient key={`g${d.bucket}`} id={`grad-${d.bucket}`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={`hsl(${palette[d.bucket].from})`} stopOpacity="0.95" />
+                <stop offset="100%" stopColor={`hsl(${palette[d.bucket].to})`} stopOpacity="0.95" />
+              </linearGradient>
+            ))}
+          </defs>
+          {data.map((d, i) => {
+            const w = widths[i];
+            const next = widths[i + 1] ?? Math.max(80, w * 0.6);
+            const x1 = (W - w) / 2;
+            const x2 = (W - next) / 2;
+            const y = i * (rowH + gap);
+            const path = `M${x1},${y} L${x1 + w},${y} L${x2 + next},${y + rowH} L${x2},${y + rowH} Z`;
+            return (
+              <g key={d.bucket}>
+                <path d={path} fill={`url(#grad-${d.bucket})`} stroke={`hsl(${palette[d.bucket].stroke})`} strokeWidth={1.5} />
+                <text x={W / 2} y={y + rowH / 2 - 6} textAnchor="middle" className="fill-white" style={{ fontSize: 16, fontWeight: 800, letterSpacing: 0.3 }}>
+                  {d.label}
+                </text>
+                <text x={W / 2} y={y + rowH / 2 + 18} textAnchor="middle" className="fill-white/85" style={{ fontSize: 13, fontWeight: 600 }}>
+                  {d.count} cliente{d.count === 1 ? "" : "s"} · {d.pct}%
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Side details */}
+      <div className="space-y-3">
+        {data.map((d) => {
+          const p = palette[d.bucket];
           return (
-            <g key={d.label}>
-              <path d={path} fill={palette[i] || palette[0]} opacity={0.85} />
-              <text x={W / 2} y={y + rowH / 2 + 5} textAnchor="middle" className="fill-white" style={{ fontSize: 13, fontWeight: 700 }}>
-                {d.label} • {d.count} ({d.pct}%)
-              </text>
-            </g>
+            <div key={d.bucket} className="rounded-xl border bg-card/60 backdrop-blur-sm p-3 shadow-sm" style={{ borderColor: `hsl(${p.stroke} / 0.4)` }}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: `hsl(${p.from})` }} />
+                  <span className="text-sm font-bold">{d.label}</span>
+                </div>
+                <span className={`text-xs font-bold ${p.tag}`}>{d.count} ({d.pct}%)</span>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {(["TP", "CRM", "COM"] as const).map((s) => (
+                  d.svcCounts[s] ? (
+                    <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>
+                      {s} · {d.svcCounts[s]}
+                    </Badge>
+                  ) : null
+                ))}
+                {Object.values(d.svcCounts).every((v) => !v) && (
+                  <span className="text-[11px] text-muted-foreground">Sem serviços neste grupo</span>
+                )}
+              </div>
+              {d.clients.length > 0 && (
+                <details className="mt-2 group">
+                  <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition">
+                    Ver clientes ({d.clients.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto pr-1">
+                    {d.clients.map((c, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 text-[11px] bg-background/50 rounded px-2 py-1">
+                        <span className="font-medium truncate" title={c.name}>{c.name}</span>
+                        <span className="flex gap-0.5 shrink-0">
+                          {c.services.map((s) => (
+                            <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[9px] px-1 py-0`}>{s}</Badge>
+                          ))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
           );
         })}
-      </svg>
-      <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:min-w-[180px]">
-        {data.map((d, i) => (
-          <div key={d.label} className="rounded-lg border border-border/30 bg-background/40 px-3 py-2">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: palette[i] }} />
-              <span className="text-xs font-semibold">{d.label}</span>
-            </div>
-            <p className="text-lg font-bold mt-0.5">{d.count} <span className="text-xs text-muted-foreground font-normal">({d.pct}%)</span></p>
-          </div>
-        ))}
       </div>
     </div>
   );
