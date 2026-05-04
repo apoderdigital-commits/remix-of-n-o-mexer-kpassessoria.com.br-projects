@@ -422,7 +422,7 @@ export default function Squad() {
             {/* MÉTRICAS */}
             <TabsContent value="metrics" className="space-y-4">
               <div className="flex justify-end">
-                <Button onClick={() => { setEditingMetric({ reference_month: new Date().toISOString().slice(0, 10) }); setOpenMetric(true); }} className="gap-1.5">
+                <Button onClick={() => { setEditingMetric({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenMetric(true); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Nova métrica mensal
                 </Button>
               </div>
@@ -580,7 +580,7 @@ export default function Squad() {
           <DialogHeader><DialogTitle>{editingMetric?.id ? "Editar métrica" : "Nova métrica mensal"}</DialogTitle></DialogHeader>
           {editingMetric && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><Label>Mês de referência *</Label><Input type="date" value={editingMetric.reference_month?.slice(0, 10) || ""} onChange={(e) => setEditingMetric({ ...editingMetric, reference_month: e.target.value })} /></div>
+              <div className="col-span-2"><Label>Mês de referência *</Label><Input type="month" value={editingMetric.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingMetric({ ...editingMetric, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
               <div><Label>Clientes ativos</Label><Input type="number" value={editingMetric.active_clients ?? ""} onChange={(e) => setEditingMetric({ ...editingMetric, active_clients: e.target.value === "" ? null : Number(e.target.value) })} /></div>
               <div><Label>Fora da meta</Label><Input type="number" value={editingMetric.out_of_target ?? ""} onChange={(e) => setEditingMetric({ ...editingMetric, out_of_target: e.target.value === "" ? null : Number(e.target.value) })} /></div>
               <div><Label>Churn</Label><Input type="number" value={editingMetric.churn_count ?? ""} onChange={(e) => setEditingMetric({ ...editingMetric, churn_count: e.target.value === "" ? null : Number(e.target.value) })} /></div>
