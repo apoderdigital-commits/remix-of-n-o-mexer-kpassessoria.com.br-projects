@@ -627,7 +627,11 @@ export default function Squad() {
                             ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30 gap-1"><CheckCircle2 className="h-3 w-3" /> Sim</Badge>
                             : <Badge className="bg-red-500/20 text-red-300 border-red-500/30 gap-1"><XCircle className="h-3 w-3" /> Não</Badge>}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.invested_tp}</TableCell>
+                        <TableCell className="text-xs font-semibold">
+                          {parseMoney(c.invested_tp) == null
+                            ? <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                            : <span className="text-emerald-300">{formatBRL(parseMoney(c.invested_tp))}</span>}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
