@@ -332,6 +332,7 @@ export default function Squad() {
       meeting_date: editingAg.meeting_date || null,
       meeting_time: editingAg.meeting_time || null,
       done: !!editingAg.done,
+      not_done_reason: editingAg.not_done_reason || null,
       observations: editingAg.observations || null,
     };
     const res = editingAg.id
