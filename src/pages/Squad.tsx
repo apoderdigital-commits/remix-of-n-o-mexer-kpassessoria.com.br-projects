@@ -423,44 +423,77 @@ export default function Squad() {
     return counts;
   }, [clients]);
 
-  // Funil: quantos clientes com 1, 2, 3 serviços contratados
+  // Funil: clientes com 1, 2, 3 serviços + nomes/serviços por bucket
   const serviceFunnel = useMemo(() => {
-    const buckets = { 1: 0, 2: 0, 3: 0 };
+    const buckets: Record<1 | 2 | 3, { clients: { name: string; services: string[] }[] }> = {
+      1: { clients: [] }, 2: { clients: [] }, 3: { clients: [] },
+    };
     let withAny = 0;
     for (const c of clients) {
-      const n = parseServices(c.services).length;
+      const svcs = parseServices(c.services);
+      const n = svcs.length;
       if (n >= 1) withAny++;
-      if (n === 1) buckets[1]++;
-      else if (n === 2) buckets[2]++;
-      else if (n >= 3) buckets[3]++;
+      const k = (n === 1 ? 1 : n === 2 ? 2 : n >= 3 ? 3 : 0) as 0 | 1 | 2 | 3;
+      if (k) buckets[k].clients.push({ name: c.name || "(sem nome)", services: svcs });
     }
     const base = withAny || 1;
-    return [
-      { label: "1 serviço", count: buckets[1], pct: Math.round((buckets[1] / base) * 100) },
-      { label: "2 serviços", count: buckets[2], pct: Math.round((buckets[2] / base) * 100) },
-      { label: "3 serviços", count: buckets[3], pct: Math.round((buckets[3] / base) * 100) },
-    ];
+    return ([1, 2, 3] as const).map((k) => {
+      const list = buckets[k].clients;
+      const svcCounts = { TP: 0, CRM: 0, COM: 0 } as Record<string, number>;
+      list.forEach((c) => c.services.forEach((s) => { svcCounts[s] = (svcCounts[s] || 0) + 1; }));
+      return {
+        bucket: k,
+        label: `${k} serviço${k > 1 ? "s" : ""}`,
+        count: list.length,
+        pct: Math.round((list.length / base) * 100),
+        clients: list,
+        svcCounts,
+      };
+    });
   }, [clients]);
 
   // NPS distribuição a partir do engajamento (nps_individual)
+  // Categorias (regra do squad): acima de 8, igual a 10, abaixo de 7
   const npsDistribution = useMemo(() => {
     const scores = engagement.map((e) => e.nps_individual).filter((v): v is number => v != null);
     const total = scores.length;
     const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
     scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
-    const above = (n: number) => scores.filter((s) => s >= n).length;
-    const promoters = scores.filter((s) => s >= 9).length;
-    const detractors = scores.filter((s) => s <= 6).length;
-    const neutrals = total - promoters - detractors;
-    const npsScore = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0;
+    const above8 = scores.filter((s) => s > 8).length;
+    const tens = scores.filter((s) => s === 10).length;
+    const below7 = scores.filter((s) => s < 7).length;
+    const middle = total - above8 - below7;
+    const npsScore = total > 0 ? Math.round(((above8 - below7) / total) * 100) : 0;
     const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
+
+    const byMonth = new Map<string, number[]>();
+    engagement.forEach((e) => {
+      if (e.nps_individual == null || !e.reference_month) return;
+      const k = e.reference_month.slice(0, 7);
+      if (!byMonth.has(k)) byMonth.set(k, []);
+      byMonth.get(k)!.push(e.nps_individual);
+    });
+    const monthly = Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, arr]) => {
+        const t = arr.length;
+        const ab8 = arr.filter((s) => s > 8).length;
+        const bl7 = arr.filter((s) => s < 7).length;
+        return {
+          mes: formatMonth(`${k}-01`),
+          mediaNota: Number((arr.reduce((s, n) => s + n, 0) / t).toFixed(1)),
+          pctAcima8: Math.round((ab8 / t) * 100),
+          nps: Math.round(((ab8 - bl7) / t) * 100),
+        };
+      });
+
     return {
-      total,
-      buckets,
-      pctAbove8: total > 0 ? Math.round((above(8) / total) * 100) : 0,
-      pctAbove6: total > 0 ? Math.round((above(6) / total) * 100) : 0,
-      pctAbove9: total > 0 ? Math.round((above(9) / total) * 100) : 0,
-      promoters, detractors, neutrals, npsScore, avg,
+      total, buckets,
+      pctAbove8: total > 0 ? Math.round((above8 / total) * 100) : 0,
+      pctTen: total > 0 ? Math.round((tens / total) * 100) : 0,
+      pctBelow7: total > 0 ? Math.round((below7 / total) * 100) : 0,
+      above8, tens, below7, middle,
+      npsScore, avg, monthly,
     };
   }, [engagement]);
 
@@ -866,115 +899,106 @@ export default function Squad() {
               </div>
             </TabsContent>
 
-            {/* NPS */}
+            {/* NPS — somente leitura, alimentado pelo Engajamento */}
             <TabsContent value="nps" className="space-y-4">
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Os dados desta aba são gerados automaticamente a partir das notas de NPS lançadas em <strong className="text-primary">Engajamento</strong>. Não é necessário cadastrar duas vezes.
+              </div>
               <NpsChart dist={npsDistribution} />
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingNps({ period: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenNps(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo NPS
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Período</TableHead>
-                      <TableHead className="text-center">Clientes</TableHead>
-                      <TableHead className="text-center">Respostas</TableHead>
-                      <TableHead className="text-center">Detratores</TableHead>
-                      <TableHead className="text-center">Neutros</TableHead>
-                      <TableHead className="text-center">Promotores</TableHead>
-                      <TableHead className="text-center">NPS</TableHead>
-                      <TableHead className="text-center">Engaj. médio</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {nps.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum NPS registrado.</TableCell></TableRow>
-                    ) : nps.map((n) => {
-                      const score = n.nps_score == null ? null : Number(n.nps_score);
-                      const scoreClass = score == null ? "" : score >= 75 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : score >= 50 ? "bg-sky-500/20 text-sky-300 border-sky-500/40" : score >= 0 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-red-500/20 text-red-300 border-red-500/40";
-                      return (
-                        <TableRow key={n.id} className="border-border/20">
-                          <TableCell className="font-semibold">{formatMonth(n.period)}</TableCell>
-                          <TableCell className="text-center">{n.total_clients ?? "-"}</TableCell>
-                          <TableCell className="text-center">{n.responses ?? "-"}</TableCell>
-                          <TableCell className="text-center text-red-300">{n.detractors ?? "-"}</TableCell>
-                          <TableCell className="text-center text-amber-300">{n.neutrals ?? "-"}</TableCell>
-                          <TableCell className="text-center text-emerald-300">{n.promoters ?? "-"}</TableCell>
-                          <TableCell className="text-center">
-                            {score != null ? <Badge variant="outline" className={`font-bold ${scoreClass}`}>{score.toFixed(0)}</Badge> : "-"}
-                          </TableCell>
-                          <TableCell className="text-center">{n.avg_engagement != null ? Number(n.avg_engagement).toFixed(1) : "-"}</TableCell>
-                          <TableCell className="text-right">
-                            <Button size="icon" variant="ghost" onClick={() => { setEditingNps(n); setOpenNps(true); }}><Pencil className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => removeNps(n.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
             </TabsContent>
 
-            {/* ENGAJAMENTO */}
+            {/* ENGAJAMENTO — agrupado por mês */}
             <TabsContent value="engagement" className="space-y-4">
               <div className="flex justify-end">
                 <Button onClick={() => { setEditingEng({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenEng(true); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Novo registro
                 </Button>
               </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Mês</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead className="text-center">ABC</TableHead>
-                      <TableHead className="text-center">Sprint</TableHead>
-                      <TableHead className="text-center">Engaj. (1-5)</TableHead>
-                      <TableHead className="text-center">NPS</TableHead>
-                      <TableHead>Observação</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {engagement.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum registro de engajamento.</TableCell></TableRow>
-                    ) : engagement.map((e) => (
-                      <TableRow key={e.id} className="border-border/20">
-                        <TableCell className="font-semibold">{formatMonth(e.reference_month)}</TableCell>
-                        <TableCell className="font-semibold">{e.client_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{e.contact || "-"}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}>{e.curve_abc || "-"}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}>{e.sprint || "-"}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {e.engagement_score != null ? (
-                            <span className="inline-flex items-center gap-0.5">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+
+              {engagement.length === 0 ? (
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
+                  Nenhum registro de engajamento.
+                </div>
+              ) : (
+                Array.from(
+                  engagement.reduce((map, e) => {
+                    const k = (e.reference_month || "").slice(0, 7) || "—";
+                    if (!map.has(k)) map.set(k, [] as Engagement[]);
+                    map.get(k)!.push(e);
+                    return map;
+                  }, new Map<string, Engagement[]>())
+                )
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([month, list]) => {
+                    const npsList = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
+                    const avgNps = npsList.length ? (npsList.reduce((s, n) => s + n, 0) / npsList.length).toFixed(1) : "—";
+                    return (
+                      <div key={month} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-hidden shadow-xl">
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-fuchsia-500/5 border-b border-border/30 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-primary" />
+                            <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="hover:bg-transparent border-border/30">
+                                <TableHead>Cliente</TableHead>
+                                <TableHead className="text-center">ABC</TableHead>
+                                <TableHead className="text-center">Sprint</TableHead>
+                                <TableHead className="text-center">Engaj. (1-5)</TableHead>
+                                <TableHead className="text-center">NPS</TableHead>
+                                <TableHead>Observação</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {list.map((e) => (
+                                <TableRow key={e.id} className="border-border/20">
+                                  <TableCell className="font-semibold">{e.client_name}</TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}>{e.curve_abc || "-"}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}>{e.sprint || "-"}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {e.engagement_score != null ? (
+                                      <span className="inline-flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                          <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                                        ))}
+                                      </span>
+                                    ) : "-"}
+                                  </TableCell>
+                                  <TableCell className="text-center font-bold">
+                                    {e.nps_individual != null ? (
+                                      <Badge variant="outline" className={
+                                        e.nps_individual > 8 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" :
+                                        e.nps_individual < 7 ? "bg-red-500/15 text-red-300 border-red-500/40" :
+                                        "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                                      }>{e.nps_individual}</Badge>
+                                    ) : "-"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => removeEng(e.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  </TableCell>
+                                </TableRow>
                               ))}
-                            </span>
-                          ) : "-"}
-                        </TableCell>
-                        <TableCell className="text-center">{e.nps_individual ?? "-"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeEng(e.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </TabsContent>
 
             {/* AGENDA */}
@@ -1194,7 +1218,7 @@ export default function Squad() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
+              
               <div>
                 <Label>Curva ABC</Label>
                 <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
@@ -1495,43 +1519,108 @@ function SummaryStat({ label, value, tone }: { label: string; value: number | st
   );
 }
 
-// ===== ServiceFunnel: trapezoidal SVG funnel =====
-function ServiceFunnel({ data }: { data: { label: string; count: number; pct: number }[] }) {
+// ===== ServiceFunnel: pretty trapezoidal funnel with details per bucket =====
+type FunnelRow = {
+  bucket: 1 | 2 | 3;
+  label: string;
+  count: number;
+  pct: number;
+  clients: { name: string; services: string[] }[];
+  svcCounts: Record<string, number>;
+};
+function ServiceFunnel({ data }: { data: FunnelRow[] }) {
   const max = Math.max(1, ...data.map((d) => d.count));
-  const W = 480, H = 180, gap = 6;
-  const rowH = (H - gap * (data.length - 1)) / data.length;
-  const palette = ["hsl(263 70% 58%)", "hsl(280 70% 60%)", "hsl(160 70% 45%)"];
-  const widths = data.map((d) => Math.max(60, (d.count / max) * W));
+  const W = 560, rowH = 92, gap = 4;
+  const H = data.length * (rowH + gap);
+  const palette: Record<number, { stroke: string; from: string; to: string; tag: string }> = {
+    1: { stroke: "263 70% 58%", from: "263 70% 62%", to: "263 80% 45%", tag: "text-primary" },
+    2: { stroke: "295 70% 60%", from: "295 75% 65%", to: "295 80% 48%", tag: "text-fuchsia-300" },
+    3: { stroke: "160 70% 45%", from: "160 65% 52%", to: "160 75% 38%", tag: "text-emerald-300" },
+  };
+  const widths = data.map((d) => Math.max(140, (d.count / max) * (W - 40) + 80));
+
   return (
-    <div className="flex flex-col lg:flex-row items-center gap-6">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-md">
-        {data.map((d, i) => {
-          const w = widths[i];
-          const next = widths[i + 1] ?? Math.max(40, w * 0.55);
-          const x1 = (W - w) / 2;
-          const x2 = (W - next) / 2;
-          const y = i * (rowH + gap);
-          const path = `M${x1},${y} L${x1 + w},${y} L${x2 + next},${y + rowH} L${x2},${y + rowH} Z`;
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      {/* SVG funnel */}
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+          <defs>
+            {data.map((d) => (
+              <linearGradient key={`g${d.bucket}`} id={`grad-${d.bucket}`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={`hsl(${palette[d.bucket].from})`} stopOpacity="0.95" />
+                <stop offset="100%" stopColor={`hsl(${palette[d.bucket].to})`} stopOpacity="0.95" />
+              </linearGradient>
+            ))}
+          </defs>
+          {data.map((d, i) => {
+            const w = widths[i];
+            const next = widths[i + 1] ?? Math.max(80, w * 0.6);
+            const x1 = (W - w) / 2;
+            const x2 = (W - next) / 2;
+            const y = i * (rowH + gap);
+            const path = `M${x1},${y} L${x1 + w},${y} L${x2 + next},${y + rowH} L${x2},${y + rowH} Z`;
+            return (
+              <g key={d.bucket}>
+                <path d={path} fill={`url(#grad-${d.bucket})`} stroke={`hsl(${palette[d.bucket].stroke})`} strokeWidth={1.5} />
+                <text x={W / 2} y={y + rowH / 2 - 6} textAnchor="middle" className="fill-white" style={{ fontSize: 16, fontWeight: 800, letterSpacing: 0.3 }}>
+                  {d.label}
+                </text>
+                <text x={W / 2} y={y + rowH / 2 + 18} textAnchor="middle" className="fill-white/85" style={{ fontSize: 13, fontWeight: 600 }}>
+                  {d.count} cliente{d.count === 1 ? "" : "s"} · {d.pct}%
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Side details */}
+      <div className="space-y-3">
+        {data.map((d) => {
+          const p = palette[d.bucket];
           return (
-            <g key={d.label}>
-              <path d={path} fill={palette[i] || palette[0]} opacity={0.85} />
-              <text x={W / 2} y={y + rowH / 2 + 5} textAnchor="middle" className="fill-white" style={{ fontSize: 13, fontWeight: 700 }}>
-                {d.label} • {d.count} ({d.pct}%)
-              </text>
-            </g>
+            <div key={d.bucket} className="rounded-xl border bg-card/60 backdrop-blur-sm p-3 shadow-sm" style={{ borderColor: `hsl(${p.stroke} / 0.4)` }}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: `hsl(${p.from})` }} />
+                  <span className="text-sm font-bold">{d.label}</span>
+                </div>
+                <span className={`text-xs font-bold ${p.tag}`}>{d.count} ({d.pct}%)</span>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {(["TP", "CRM", "COM"] as const).map((s) => (
+                  d.svcCounts[s] ? (
+                    <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>
+                      {s} · {d.svcCounts[s]}
+                    </Badge>
+                  ) : null
+                ))}
+                {Object.values(d.svcCounts).every((v) => !v) && (
+                  <span className="text-[11px] text-muted-foreground">Sem serviços neste grupo</span>
+                )}
+              </div>
+              {d.clients.length > 0 && (
+                <details className="mt-2 group">
+                  <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition">
+                    Ver clientes ({d.clients.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto pr-1">
+                    {d.clients.map((c, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 text-[11px] bg-background/50 rounded px-2 py-1">
+                        <span className="font-medium truncate" title={c.name}>{c.name}</span>
+                        <span className="flex gap-0.5 shrink-0">
+                          {c.services.map((s) => (
+                            <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[9px] px-1 py-0`}>{s}</Badge>
+                          ))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
           );
         })}
-      </svg>
-      <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:min-w-[180px]">
-        {data.map((d, i) => (
-          <div key={d.label} className="rounded-lg border border-border/30 bg-background/40 px-3 py-2">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: palette[i] }} />
-              <span className="text-xs font-semibold">{d.label}</span>
-            </div>
-            <p className="text-lg font-bold mt-0.5">{d.count} <span className="text-xs text-muted-foreground font-normal">({d.pct}%)</span></p>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -1617,13 +1706,15 @@ function MetricsOverview({ metrics }: { metrics: Metric[] }) {
 // ===== NpsChart: distribution of engagement NPS individual scores =====
 function NpsChart({ dist }: { dist: {
   total: number; buckets: { score: number; count: number }[];
-  pctAbove8: number; pctAbove6: number; pctAbove9: number;
-  promoters: number; detractors: number; neutrals: number; npsScore: number; avg: number;
+  pctAbove8: number; pctTen: number; pctBelow7: number;
+  above8: number; tens: number; below7: number; middle: number;
+  npsScore: number; avg: number;
+  monthly: { mes: string; mediaNota: number; pctAcima8: number; nps: number }[];
 } }) {
   const data = dist.buckets.map((b) => ({
     nota: b.score.toString(),
     Respostas: b.count,
-    color: b.score >= 9 ? "hsl(160 70% 45%)" : b.score >= 7 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)",
+    color: b.score === 10 ? "hsl(160 75% 38%)" : b.score > 8 ? "hsl(160 70% 50%)" : b.score < 7 ? "hsl(0 84% 60%)" : "hsl(38 92% 55%)",
   }));
   return (
     <div className="space-y-4">
@@ -1631,15 +1722,16 @@ function NpsChart({ dist }: { dist: {
         <SummaryStat label="Notas coletadas" value={dist.total} tone="primary" />
         <SummaryStat label="Média das notas" value={dist.total ? dist.avg.toFixed(1) : "—"} tone="sky" />
         <SummaryStat label="% acima de 8" value={`${dist.pctAbove8}%`} tone="emerald" />
-        <SummaryStat label="% acima de 6" value={`${dist.pctAbove6}%`} tone="amber" />
+        <SummaryStat label="% nota 10" value={`${dist.pctTen}%`} tone="amber" />
       </div>
+
       <Card className="bg-card/40 backdrop-blur-sm border-border/30">
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <Smile className="h-4 w-4 text-primary" /> % de NPS — distribuição das notas (Engajamento)
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Detratores (0-6) · Neutros (7-8) · Promotores (9-10). Meta: nota acima de <strong>8</strong>.
+            Categorias: <strong className="text-emerald-300">Acima de 8</strong> · <strong className="text-emerald-400">Nota 10</strong> · <strong className="text-red-300">Abaixo de 7</strong>. Meta: nota acima de <strong>8</strong>.
           </p>
         </CardHeader>
         <CardContent>
@@ -1663,32 +1755,58 @@ function NpsChart({ dist }: { dist: {
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-                  <p className="text-[11px] uppercase text-red-300/80">Detratores</p>
-                  <p className="text-xl font-bold text-red-300">{dist.detractors}</p>
-                </div>
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                  <p className="text-[11px] uppercase text-amber-300/80">Neutros</p>
-                  <p className="text-xl font-bold text-amber-300">{dist.neutrals}</p>
-                </div>
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <p className="text-[11px] uppercase text-emerald-300/80">Promotores</p>
-                  <p className="text-xl font-bold text-emerald-300">{dist.promoters}</p>
+                  <p className="text-[11px] uppercase text-emerald-300/80">Acima de 8</p>
+                  <p className="text-xl font-bold text-emerald-300">{dist.above8} <span className="text-xs font-normal text-emerald-300/60">({dist.pctAbove8}%)</span></p>
+                </div>
+                <div className="rounded-lg border border-emerald-600/40 bg-emerald-600/10 p-3">
+                  <p className="text-[11px] uppercase text-emerald-300/80">Nota 10</p>
+                  <p className="text-xl font-bold text-emerald-300">{dist.tens} <span className="text-xs font-normal text-emerald-300/60">({dist.pctTen}%)</span></p>
+                </div>
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                  <p className="text-[11px] uppercase text-red-300/80">Abaixo de 7</p>
+                  <p className="text-xl font-bold text-red-300">{dist.below7} <span className="text-xs font-normal text-red-300/60">({dist.pctBelow7}%)</span></p>
                 </div>
               </div>
-              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-primary/80">NPS final</p>
                   <p className="text-3xl font-bold text-primary mt-0.5">{dist.npsScore}</p>
                 </div>
                 <p className="text-xs text-muted-foreground max-w-xs text-right">
-                  (Promotores − Detratores) ÷ Total × 100
+                  (Acima de 8 − Abaixo de 7) ÷ Total × 100
                 </p>
               </div>
             </>
           )}
         </CardContent>
       </Card>
+
+      {dist.monthly.length > 0 && (
+        <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> Evolução mensal do NPS
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dist.monthly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="mediaNota" name="Média da nota" stroke="hsl(263 70% 58%)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="pctAcima8" name="% acima de 8" stroke="hsl(160 70% 45%)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="nps" name="NPS" stroke="hsl(38 92% 55%)" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
