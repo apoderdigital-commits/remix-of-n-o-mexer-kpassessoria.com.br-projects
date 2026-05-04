@@ -282,9 +282,37 @@ export default function Squad() {
               <div><Label>Serviços</Label><Input placeholder="TP, CRM, COM" value={editing.services || ""} onChange={(e) => setEditing({ ...editing, services: e.target.value })} /></div>
               <div><Label>Data entrada</Label><Input type="date" value={editing.entry_date || ""} onChange={(e) => setEditing({ ...editing, entry_date: e.target.value })} /></div>
               <div><Label>Data vencimento</Label><Input type="date" value={editing.due_date || ""} onChange={(e) => setEditing({ ...editing, due_date: e.target.value })} /></div>
-              <div><Label>Curva ABC</Label><Input value={editing.curve_abc || ""} onChange={(e) => setEditing({ ...editing, curve_abc: e.target.value })} /></div>
-              <div><Label>Sprint</Label><Input value={editing.sprint || ""} onChange={(e) => setEditing({ ...editing, sprint: e.target.value })} /></div>
-              <div><Label>Priorização</Label><Input value={editing.prioritization || ""} onChange={(e) => setEditing({ ...editing, prioritization: e.target.value })} /></div>
+              <div>
+                <Label>Curva ABC</Label>
+                <Select value={editing.curve_abc || ""} onValueChange={(v) => setEditing({ ...editing, curve_abc: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">A — Estratégico, maior impacto</SelectItem>
+                    <SelectItem value="B">B — Estratégico, impacto menor</SelectItem>
+                    <SelectItem value="C">C — Ainda não gera tanto impacto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Sprint</Label>
+                <Select value={editing.sprint || ""} onValueChange={(v) => setEditing({ ...editing, sprint: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">A — Precisa de muita atenção</SelectItem>
+                    <SelectItem value="B">B — Resultado mediano</SelectItem>
+                    <SelectItem value="C">C — Satisfeito e validado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Priorização (automática)</Label>
+                {(() => {
+                  const p = computePrio(editing.curve_abc, editing.sprint);
+                  return p
+                    ? <div className="h-10 flex items-center"><Badge className={PRIO_COLORS[p] + " border"}>{p} — {PRIO_LABELS[p]}</Badge></div>
+                    : <div className="h-10 flex items-center text-xs text-muted-foreground">Defina Curva ABC e Sprint</div>;
+                })()}
+              </div>
               <div><Label>Valor investido TP</Label><Input value={editing.invested_tp || ""} onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })} /></div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
