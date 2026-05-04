@@ -383,6 +383,130 @@ export type Database = {
           },
         ]
       }
+      squad_clients: {
+        Row: {
+          bm_verified: boolean | null
+          created_at: string
+          curve_abc: string | null
+          due_date: string | null
+          entry_date: string | null
+          id: string
+          invested_tp: string | null
+          name: string
+          niche: string | null
+          observations: string | null
+          prioritization: string | null
+          renewal_60d: boolean | null
+          services: string | null
+          sprint: string | null
+          squad_id: string
+          updated_at: string
+        }
+        Insert: {
+          bm_verified?: boolean | null
+          created_at?: string
+          curve_abc?: string | null
+          due_date?: string | null
+          entry_date?: string | null
+          id?: string
+          invested_tp?: string | null
+          name: string
+          niche?: string | null
+          observations?: string | null
+          prioritization?: string | null
+          renewal_60d?: boolean | null
+          services?: string | null
+          sprint?: string | null
+          squad_id: string
+          updated_at?: string
+        }
+        Update: {
+          bm_verified?: boolean | null
+          created_at?: string
+          curve_abc?: string | null
+          due_date?: string | null
+          entry_date?: string | null
+          id?: string
+          invested_tp?: string | null
+          name?: string
+          niche?: string | null
+          observations?: string | null
+          prioritization?: string | null
+          renewal_60d?: boolean | null
+          services?: string | null
+          sprint?: string | null
+          squad_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_clients_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          squad_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          squad_id: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          squad_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_members_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squads: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_client_access: {
         Row: {
           client_id: string
@@ -522,9 +646,10 @@ export type Database = {
         Returns: boolean
       }
       user_can_access_client: { Args: { _client_id: string }; Returns: boolean }
+      user_in_squad: { Args: { _squad_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "manager" | "client"
+      app_role: "admin" | "manager" | "client" | "collaborator"
       lead_status:
         | "cpf_approved"
         | "sale"
@@ -657,7 +782,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager", "client"],
+      app_role: ["admin", "manager", "client", "collaborator"],
       lead_status: [
         "cpf_approved",
         "sale",

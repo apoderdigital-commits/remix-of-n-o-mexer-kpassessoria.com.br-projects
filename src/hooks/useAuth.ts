@@ -9,6 +9,7 @@ interface AuthState {
   clientId: string | null;
   dashboards: string[];
   accessibleClientIds: string[];
+  squadCount: number;
 }
 
 const INACTIVITY_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours in ms
@@ -26,6 +27,7 @@ export function useAuth() {
     clientId: null,
     dashboards: [],
     accessibleClientIds: [],
+    squadCount: 0,
   });
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function useAuth() {
       if (!isMounted) return;
 
       if (!user) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
+        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
         return;
       }
 
@@ -84,12 +86,18 @@ export function useAuth() {
           }
         }
 
+        // Squad membership count (any user)
+        const { count: squadCount } = await supabase
+          .from("squad_members")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds });
+        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0 });
       } catch (error) {
         console.error("Erro ao carregar autenticação:", error);
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [] });
+        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
       }
     };
 

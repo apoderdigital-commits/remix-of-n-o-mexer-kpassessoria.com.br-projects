@@ -9,6 +9,8 @@ import Criativos from "./pages/Criativos.tsx";
 import Projecao from "./pages/Projecao.tsx";
 import Clients from "./pages/Clients.tsx";
 import UsersPage from "./pages/UsersPage.tsx";
+import Squad from "./pages/Squad.tsx";
+import SquadAdmin from "./pages/SquadAdmin.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
@@ -58,6 +60,8 @@ const AppRoutes = () => (
     <Route path="/projecao" element={<ProtectedRoute dashboardKey="projecao"><Projecao /></ProtectedRoute>} />
     <Route path="/clients" element={<ProtectedRoute adminOnly><Clients /></ProtectedRoute>} />
     <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
+    <Route path="/squad" element={<ProtectedRoute><Squad /></ProtectedRoute>} />
+    <Route path="/squad/admin" element={<ProtectedRoute adminOnly><SquadAdmin /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
