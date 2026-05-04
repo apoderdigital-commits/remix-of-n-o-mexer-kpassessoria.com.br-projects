@@ -1422,8 +1422,21 @@ function AgendaPanel({
                   <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
                   <TableCell className="font-semibold">{a.client_name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
-                  <TableCell className="text-xs">{d ? d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : <span className="text-muted-foreground">-</span>}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
+                  <TableCell>
+                    {d ? (
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-base font-bold text-foreground">{d.toLocaleDateString("pt-BR", { day: "2-digit" })}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}</span>
+                      </div>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {a.meeting_time ? (
+                      <span className="inline-block rounded-md bg-primary/10 border border-primary/20 px-2 py-1 text-sm font-bold text-primary tabular-nums">
+                        {a.meeting_time.slice(0, 5)}
+                      </span>
+                    ) : <span className="text-muted-foreground text-xs">-</span>}
+                  </TableCell>
                   <TableCell className="text-xs">
                     {a.done ? (
                       <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
