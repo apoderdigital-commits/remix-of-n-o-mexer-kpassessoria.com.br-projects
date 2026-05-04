@@ -749,6 +749,18 @@ export default function Squad() {
                       </Fragment>
                     ))}
                   </div>
+
+                  <div className="rounded-2xl border border-border/30 bg-background/30 p-5">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-bold flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-primary" /> Funil de serviços contratados
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Distribuição dos clientes por quantidade de serviços (1 → 3).
+                      </p>
+                    </div>
+                    <ServiceFunnel data={serviceFunnel} />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
