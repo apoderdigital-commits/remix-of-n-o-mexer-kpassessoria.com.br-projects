@@ -95,6 +95,7 @@ export default function Squad() {
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
