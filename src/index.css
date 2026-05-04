@@ -77,3 +77,11 @@
   animation: ranking-highlight 1.6s ease-out;
 }
 
+@keyframes alert-blink {
+  0%, 100% { background-color: hsl(0 84% 60% / 0.15); box-shadow: 0 0 0 0 hsl(0 84% 60% / 0); }
+  50% { background-color: hsl(0 84% 60% / 0.4); box-shadow: 0 0 0 3px hsl(0 84% 60% / 0.35); }
+}
+.alert-blink {
+  animation: alert-blink 1.4s ease-in-out infinite;
+}
+
