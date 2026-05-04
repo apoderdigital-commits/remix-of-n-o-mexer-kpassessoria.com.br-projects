@@ -1474,3 +1474,201 @@ function SummaryStat({ label, value, tone }: { label: string; value: number | st
     </div>
   );
 }
+
+// ===== ServiceFunnel: trapezoidal SVG funnel =====
+function ServiceFunnel({ data }: { data: { label: string; count: number; pct: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.count));
+  const W = 480, H = 180, gap = 6;
+  const rowH = (H - gap * (data.length - 1)) / data.length;
+  const palette = ["hsl(263 70% 58%)", "hsl(280 70% 60%)", "hsl(160 70% 45%)"];
+  const widths = data.map((d) => Math.max(60, (d.count / max) * W));
+  return (
+    <div className="flex flex-col lg:flex-row items-center gap-6">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-md">
+        {data.map((d, i) => {
+          const w = widths[i];
+          const next = widths[i + 1] ?? Math.max(40, w * 0.55);
+          const x1 = (W - w) / 2;
+          const x2 = (W - next) / 2;
+          const y = i * (rowH + gap);
+          const path = `M${x1},${y} L${x1 + w},${y} L${x2 + next},${y + rowH} L${x2},${y + rowH} Z`;
+          return (
+            <g key={d.label}>
+              <path d={path} fill={palette[i] || palette[0]} opacity={0.85} />
+              <text x={W / 2} y={y + rowH / 2 + 5} textAnchor="middle" className="fill-white" style={{ fontSize: 13, fontWeight: 700 }}>
+                {d.label} • {d.count} ({d.pct}%)
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:min-w-[180px]">
+        {data.map((d, i) => (
+          <div key={d.label} className="rounded-lg border border-border/30 bg-background/40 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: palette[i] }} />
+              <span className="text-xs font-semibold">{d.label}</span>
+            </div>
+            <p className="text-lg font-bold mt-0.5">{d.count} <span className="text-xs text-muted-foreground font-normal">({d.pct}%)</span></p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ===== MetricsOverview: charts for monthly metrics =====
+function MetricsOverview({ metrics }: { metrics: Metric[] }) {
+  if (!metrics.length) return null;
+  const sorted = [...metrics].sort((a, b) => (a.reference_month || "").localeCompare(b.reference_month || ""));
+  const data = sorted.map((m) => ({
+    mes: formatMonth(m.reference_month),
+    Ativos: m.active_clients ?? 0,
+    Churn: m.churn_count ?? 0,
+    Entradas: m.new_clients ?? 0,
+    Renov: m.renewals ?? 0,
+    Mensais: m.monthly_clients ?? 0,
+    Calls: m.calls_delivered_pct != null ? Math.round(Number(m.calls_delivered_pct) * 100) : 0,
+  }));
+  const last = sorted[sorted.length - 1];
+  const totals = {
+    ativos: last.active_clients ?? 0,
+    churn: sorted.reduce((s, m) => s + (m.churn_count ?? 0), 0),
+    entradas: sorted.reduce((s, m) => s + (m.new_clients ?? 0), 0),
+    callsMedia: Math.round(
+      (sorted.reduce((s, m) => s + (m.calls_delivered_pct != null ? Number(m.calls_delivered_pct) : 0), 0) /
+        sorted.length) * 100
+    ),
+  };
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <SummaryStat label="Ativos (último mês)" value={totals.ativos} tone="emerald" />
+        <SummaryStat label="Entradas (acum.)" value={`+${totals.entradas}`} tone="primary" />
+        <SummaryStat label="Churn (acum.)" value={totals.churn} tone="amber" />
+        <SummaryStat label="% Calls (média)" value={`${totals.callsMedia}%`} tone="sky" />
+      </div>
+      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4 text-primary" /> Evolução mensal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Legend />
+                <Line type="monotone" dataKey="Ativos" stroke="hsl(160 70% 45%)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Mensais" stroke="hsl(263 70% 58%)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Churn" stroke="hsl(0 84% 60%)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Entradas" stroke="hsl(199 89% 48%)" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> % Calls entregues por mês</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} unit="%" />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Bar dataKey="Calls" radius={[6, 6, 0, 0]}>
+                  {data.map((_, i) => <Cell key={i} fill="hsl(263 70% 58%)" />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ===== NpsChart: distribution of engagement NPS individual scores =====
+function NpsChart({ dist }: { dist: {
+  total: number; buckets: { score: number; count: number }[];
+  pctAbove8: number; pctAbove6: number; pctAbove9: number;
+  promoters: number; detractors: number; neutrals: number; npsScore: number; avg: number;
+} }) {
+  const data = dist.buckets.map((b) => ({
+    nota: b.score.toString(),
+    Respostas: b.count,
+    color: b.score >= 9 ? "hsl(160 70% 45%)" : b.score >= 7 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)",
+  }));
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <SummaryStat label="Notas coletadas" value={dist.total} tone="primary" />
+        <SummaryStat label="Média das notas" value={dist.total ? dist.avg.toFixed(1) : "—"} tone="sky" />
+        <SummaryStat label="% acima de 8" value={`${dist.pctAbove8}%`} tone="emerald" />
+        <SummaryStat label="% acima de 6" value={`${dist.pctAbove6}%`} tone="amber" />
+      </div>
+      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Smile className="h-4 w-4 text-primary" /> % de NPS — distribuição das notas (Engajamento)
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Detratores (0-6) · Neutros (7-8) · Promotores (9-10). Meta: nota acima de <strong>8</strong>.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {dist.total === 0 ? (
+            <p className="text-sm text-muted-foreground py-12 text-center">
+              Sem notas registradas. Adicione NPS individuais na aba Engajamento.
+            </p>
+          ) : (
+            <>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                    <XAxis dataKey="nota" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                    <Bar dataKey="Respostas" radius={[6, 6, 0, 0]}>
+                      {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                  <p className="text-[11px] uppercase text-red-300/80">Detratores</p>
+                  <p className="text-xl font-bold text-red-300">{dist.detractors}</p>
+                </div>
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-[11px] uppercase text-amber-300/80">Neutros</p>
+                  <p className="text-xl font-bold text-amber-300">{dist.neutrals}</p>
+                </div>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <p className="text-[11px] uppercase text-emerald-300/80">Promotores</p>
+                  <p className="text-xl font-bold text-emerald-300">{dist.promoters}</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-primary/80">NPS final</p>
+                  <p className="text-3xl font-bold text-primary mt-0.5">{dist.npsScore}</p>
+                </div>
+                <p className="text-xs text-muted-foreground max-w-xs text-right">
+                  (Promotores − Detratores) ÷ Total × 100
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
