@@ -767,6 +767,7 @@ export default function Squad() {
 
             {/* MÉTRICAS */}
             <TabsContent value="metrics" className="space-y-4">
+              <MetricsOverview metrics={metrics} />
               <div className="flex justify-end">
                 <Button onClick={() => { setEditingMetric({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenMetric(true); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Nova métrica mensal
