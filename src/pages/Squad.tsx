@@ -994,7 +994,25 @@ export default function Squad() {
                   <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Valor investido TP</Label><Input value={editing.invested_tp || ""} onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })} /></div>
+              <div>
+                <Label>Valor investido TP (mensal)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.invested_tp ?? ""}
+                    onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })}
+                  />
+                </div>
+                {parseMoney(editing.invested_tp) != null && (
+                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
                 <Label htmlFor="bm">BM Verificada</Label>
