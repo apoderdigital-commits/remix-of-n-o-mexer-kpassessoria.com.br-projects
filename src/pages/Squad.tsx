@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
-  Smile, CalendarDays, Star,
+  Smile, CalendarDays, Star, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
@@ -72,7 +72,8 @@ type Engagement = {
 type Agenda = {
   id: string; squad_id: string; reference_month: string;
   category: string | null; client_name: string; responsible: string | null;
-  meeting_date: string | null; meeting_time: string | null; done: boolean; observations: string | null;
+  meeting_date: string | null; meeting_time: string | null; done: boolean;
+  observations: string | null; not_done_reason: string | null;
 };
 
 const emptyClient: Partial<SquadClient> = {
@@ -331,6 +332,7 @@ export default function Squad() {
       meeting_date: editingAg.meeting_date || null,
       meeting_time: editingAg.meeting_time || null,
       done: !!editingAg.done,
+      not_done_reason: editingAg.not_done_reason || null,
       observations: editingAg.observations || null,
     };
     const res = editingAg.id
@@ -797,52 +799,13 @@ export default function Squad() {
 
             {/* AGENDA */}
             <TabsContent value="agenda" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo compromisso
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead className="text-center">OK</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Hora</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Mês ref.</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agenda.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso agendado.</TableCell></TableRow>
-                    ) : agenda.map((a) => (
-                      <TableRow key={a.id} className="border-border/20">
-                        <TableCell className="text-center">
-                          <button onClick={() => toggleAgDone(a)} title="Marcar como realizada">
-                            {a.done
-                              ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                              : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-semibold">{a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
-                        <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
-                        <TableCell className="font-semibold">{a.client_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(a.reference_month)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingAg(a); setOpenAg(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeAg(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <AgendaPanel
+                agenda={agenda}
+                onNew={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }}
+                onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
+                onRemove={removeAg}
+                onToggleDone={toggleAgDone}
+              />
             </TabsContent>
           </Tabs>
         )}
@@ -980,7 +943,26 @@ export default function Squad() {
           {editingEng && (
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Mês *</Label><Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div><Label>Cliente *</Label><Input value={editingEng.client_name || ""} onChange={(e) => setEditingEng({ ...editingEng, client_name: e.target.value })} /></div>
+              <div>
+                <Label>Cliente *</Label>
+                <Select
+                  value={editingEng.client_name || ""}
+                  onValueChange={(v) => {
+                    const c = clients.find((x) => x.name === v);
+                    setEditingEng({
+                      ...editingEng,
+                      client_name: v,
+                      curve_abc: editingEng.curve_abc || c?.curve_abc || null,
+                      sprint: editingEng.sprint || c?.sprint || null,
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
               <div>
                 <Label>Curva ABC</Label>
@@ -1015,15 +997,49 @@ export default function Squad() {
           {editingAg && (
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div><Label>Categoria</Label><Input placeholder="Consultoria, Call, etc." value={editingAg.category || ""} onChange={(e) => setEditingAg({ ...editingAg, category: e.target.value })} /></div>
-              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingAg.client_name || ""} onChange={(e) => setEditingAg({ ...editingAg, client_name: e.target.value })} /></div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={editingAg.category || ""} onValueChange={(v) => setEditingAg({ ...editingAg, category: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{["A","B","C"].map((x)=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label>Cliente *</Label>
+                <Select
+                  value={editingAg.client_name || ""}
+                  onValueChange={(v) => {
+                    const c = clients.find((x) => x.name === v);
+                    setEditingAg({
+                      ...editingAg,
+                      client_name: v,
+                      category: editingAg.category || c?.curve_abc || null,
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Responsável</Label><Input value={editingAg.responsible || ""} onChange={(e) => setEditingAg({ ...editingAg, responsible: e.target.value })} /></div>
               <div><Label>Data</Label><Input type="date" value={editingAg.meeting_date || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_date: e.target.value })} /></div>
               <div><Label>Hora</Label><Input type="time" value={editingAg.meeting_time?.slice(0, 5) || ""} onChange={(e) => setEditingAg({ ...editingAg, meeting_time: e.target.value })} /></div>
               <div className="flex items-center gap-2 mt-6">
-                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked })} />
+                <input id="agdone" type="checkbox" checked={!!editingAg.done} onChange={(e) => setEditingAg({ ...editingAg, done: e.target.checked, not_done_reason: e.target.checked ? null : editingAg.not_done_reason })} />
                 <Label htmlFor="agdone">Realizada</Label>
               </div>
+              {!editingAg.done && (
+                <div className="col-span-2">
+                  <Label>Motivo de não realizada</Label>
+                  <Input
+                    placeholder="Ex.: Próximo mês, cliente cancelou..."
+                    value={editingAg.not_done_reason || ""}
+                    onChange={(e) => setEditingAg({ ...editingAg, not_done_reason: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingAg.observations || ""} onChange={(e) => setEditingAg({ ...editingAg, observations: e.target.value })} /></div>
             </div>
           )}
@@ -1058,4 +1074,159 @@ function formatMonth(d: string | null | undefined): string {
   const date = new Date(d);
   if (isNaN(date.getTime())) return d;
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+}
+
+function AgendaPanel({
+  agenda, onNew, onEdit, onRemove, onToggleDone,
+}: {
+  agenda: Agenda[];
+  onNew: () => void;
+  onEdit: (a: Agenda) => void;
+  onRemove: (id: string) => void;
+  onToggleDone: (a: Agenda) => void;
+}) {
+  const months = useMemo(() => {
+    const set = new Set<string>();
+    agenda.forEach((a) => a.reference_month && set.add(a.reference_month.slice(0, 7)));
+    const cur = new Date().toISOString().slice(0, 7);
+    set.add(cur);
+    return Array.from(set).sort().reverse();
+  }, [agenda]);
+
+  const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
+  useEffect(() => {
+    if (!months.includes(month) && months[0]) setMonth(months[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [months.join(",")]);
+
+  const filtered = useMemo(
+    () => agenda.filter((a) => a.reference_month?.startsWith(month)),
+    [agenda, month]
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const stats = useMemo(() => {
+    const total = filtered.length;
+    const done = filtered.filter((a) => a.done).length;
+    const justified = filtered.filter((a) => !a.done && (a.not_done_reason || "").trim().length > 0).length;
+    const scheduled = filtered.filter((a) => !a.done && !!a.meeting_date).length;
+    const overdueUnjustified = filtered.filter((a) => {
+      if (a.done) return false;
+      if ((a.not_done_reason || "").trim().length > 0) return false;
+      if (!a.meeting_date) return true; // sem data e não justificada
+      const d = new Date(a.meeting_date + "T12:00:00Z");
+      return d < today;
+    }).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { total, done, justified, scheduled, overdueUnjustified, pct };
+  }, [filtered]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={month} onValueChange={setMonth}>
+          <SelectTrigger className="w-56 bg-card/40 backdrop-blur-sm">
+            <SelectValue placeholder="Mês de referência" />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m} value={m}>
+                {new Date(m + "-01T12:00:00Z").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex-1" />
+        <Button onClick={onNew} className="gap-1.5"><Plus className="h-4 w-4" /> Novo compromisso</Button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <SummaryStat label="Marcadas" value={stats.total} tone="primary" />
+        <SummaryStat label="Realizadas" value={stats.done} tone="emerald" />
+        <SummaryStat label="A fazer" value={stats.scheduled} tone="sky" />
+        <SummaryStat label="Justificadas" value={stats.justified} tone="amber" />
+        <SummaryStat label="% Calls" value={`${stats.pct}%`} tone="primary" />
+      </div>
+
+      {stats.overdueUnjustified > 0 && (
+        <div className="alert-blink rounded-xl border border-red-500/40 px-4 py-3 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-300" />
+          <p className="text-sm">
+            <strong>{stats.overdueUnjustified}</strong> mensal{stats.overdueUnjustified > 1 ? "is" : ""} sem realizar e sem justificativa neste mês de referência.
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-border/30">
+              <TableHead className="text-center">OK</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Responsável</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Hora</TableHead>
+              <TableHead>Status / Motivo</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso neste mês.</TableCell></TableRow>
+            ) : filtered.map((a) => {
+              const d = a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z") : null;
+              const overdue = !a.done && (!a.not_done_reason || !a.not_done_reason.trim()) && (!d || d < today);
+              return (
+                <TableRow key={a.id} className={`border-border/20 ${overdue ? "alert-blink" : ""}`}>
+                  <TableCell className="text-center">
+                    <button onClick={() => onToggleDone(a)} title="Marcar como realizada">
+                      {a.done
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
+                    </button>
+                  </TableCell>
+                  <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
+                  <TableCell className="font-semibold">{a.client_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
+                  <TableCell className="text-xs">{d ? d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
+                  <TableCell className="text-xs">
+                    {a.done ? (
+                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
+                    ) : a.not_done_reason ? (
+                      <span className="text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
+                    ) : (
+                      <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => onEdit(a)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => onRemove(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value, tone }: { label: string; value: number | string; tone: "primary" | "emerald" | "sky" | "amber" }) {
+  const cls = {
+    primary: "from-primary to-fuchsia-600",
+    emerald: "from-emerald-500 to-teal-600",
+    sky: "from-sky-500 to-blue-600",
+    amber: "from-amber-500 to-orange-600",
+  }[tone];
+  return (
+    <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 shadow-lg">
+      <p className="text-xs text-muted-foreground font-medium">{label}</p>
+      <p className={`text-2xl font-bold mt-1 bg-gradient-to-r ${cls} bg-clip-text text-transparent`}>{value}</p>
+    </div>
+  );
 }

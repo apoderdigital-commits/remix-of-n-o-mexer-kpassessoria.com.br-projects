@@ -392,6 +392,7 @@ export type Database = {
           id: string
           meeting_date: string | null
           meeting_time: string | null
+          not_done_reason: string | null
           observations: string | null
           reference_month: string
           responsible: string | null
@@ -406,6 +407,7 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           meeting_time?: string | null
+          not_done_reason?: string | null
           observations?: string | null
           reference_month: string
           responsible?: string | null
@@ -420,6 +422,7 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           meeting_time?: string | null
+          not_done_reason?: string | null
           observations?: string | null
           reference_month?: string
           responsible?: string | null
