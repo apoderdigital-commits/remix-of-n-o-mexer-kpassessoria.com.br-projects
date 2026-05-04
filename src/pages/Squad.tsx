@@ -43,6 +43,45 @@ const empty: Partial<SquadClient> = {
   renewal_60d: false, bm_verified: false,
 };
 
+const PRIO_ORDER = ["AA","AB","AC","BA","BB","BC","CA","CB","CC"];
+const PRIO_LABELS: Record<string,string> = {
+  AA: "Prioridade absoluta",
+  AB: "Prioridade, mas pode esperar",
+  AC: "Prioridade, mas o resultado já tá validado",
+  BA: "Prioridade mediana, mas está em validação",
+  BB: "Prioridade mediana, mas pode melhorar",
+  BC: "Prioridade mediana, mas a gente sabe do resultado",
+  CA: "Prioridade mínima, está em validação",
+  CB: "Prioridade mínima, mas pode melhorar",
+  CC: "Prioridade mínima, só que foda-se",
+};
+const PRIO_COLORS: Record<string,string> = {
+  AA: "bg-red-500/20 text-red-300 border-red-500/40",
+  AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
+  AC: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  BA: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
+  BB: "bg-lime-500/20 text-lime-300 border-lime-500/40",
+  BC: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  CA: "bg-teal-500/20 text-teal-300 border-teal-500/40",
+  CB: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+  CC: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+};
+
+function computePrio(curve?: string | null, sprint?: string | null): string | null {
+  if (!curve || !sprint) return null;
+  const p = `${curve}${sprint}`.toUpperCase();
+  return PRIO_ORDER.includes(p) ? p : null;
+}
+
+function sortByPrio<T extends { prioritization: string | null; name: string }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => {
+    const ai = a.prioritization ? PRIO_ORDER.indexOf(a.prioritization) : 99;
+    const bi = b.prioritization ? PRIO_ORDER.indexOf(b.prioritization) : 99;
+    if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export default function Squad() {
   const { isAdmin } = useAuth();
   const [squads, setSquads] = useState<Squad[]>([]);
