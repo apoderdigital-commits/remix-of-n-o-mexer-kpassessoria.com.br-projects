@@ -532,6 +532,37 @@ export default function Squad() {
 
             {/* CLIENTES */}
             <TabsContent value="clients" className="space-y-4">
+              {incompleteClients.length > 0 && (
+                <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 shadow-lg shadow-red-500/10 alert-blink">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-300 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-red-200">
+                        {incompleteClients.length} cliente{incompleteClients.length > 1 ? "s" : ""} com informações faltando
+                      </p>
+                      <p className="text-xs text-red-200/70 mt-0.5">
+                        Campos essenciais: nome, valor TP, serviços, Curva ABC e Sprint.
+                      </p>
+                      {showIncomplete && (
+                        <ul className="mt-3 space-y-1 max-h-44 overflow-y-auto text-xs">
+                          {incompleteClients.map(({ client, missing }) => (
+                            <li key={client.id} className="flex items-center justify-between gap-3 bg-background/30 rounded-lg px-2.5 py-1.5">
+                              <button onClick={() => openEdit(client)} className="font-semibold text-foreground hover:text-primary truncate text-left">
+                                {client.name || "(sem nome)"}
+                              </button>
+                              <span className="text-red-300/80 shrink-0">faltando: {missing.join(", ")}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <Button size="sm" variant="outline" className="border-red-500/40 hover:bg-red-500/10" onClick={() => setShowIncomplete((v) => !v)}>
+                      {showIncomplete ? "Ocultar" : "Ver lista"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
