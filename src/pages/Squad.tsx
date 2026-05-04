@@ -868,6 +868,7 @@ export default function Squad() {
 
             {/* NPS */}
             <TabsContent value="nps" className="space-y-4">
+              <NpsChart dist={npsDistribution} />
               <div className="flex justify-end">
                 <Button onClick={() => { setEditingNps({ period: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenNps(true); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Novo NPS
