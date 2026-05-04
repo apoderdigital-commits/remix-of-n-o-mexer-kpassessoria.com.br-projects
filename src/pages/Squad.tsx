@@ -939,43 +939,107 @@ export default function Squad() {
                           <TableCell className="text-center">
                             {score != null ? <Badge variant="outline" className={`font-bold ${scoreClass}`}>{score.toFixed(0)}</Badge> : "-"}
                           </TableCell>
-                          <TableCell className="text-center">{n.avg_engagement != null ? Number(n.avg_engagement).toFixed(1) : "-"}</TableCell>
-                          <TableCell className="text-right">
-                            <Button size="icon" variant="ghost" onClick={() => { setEditingNps(n); setOpenNps(true); }}><Pencil className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => removeNps(n.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+            {/* NPS — somente leitura, alimentado pelo Engajamento */}
+            <TabsContent value="nps" className="space-y-4">
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Os dados desta aba são gerados automaticamente a partir das notas de NPS lançadas em <strong className="text-primary">Engajamento</strong>. Não é necessário cadastrar duas vezes.
               </div>
+              <NpsChart dist={npsDistribution} />
             </TabsContent>
 
-            {/* ENGAJAMENTO */}
+            {/* ENGAJAMENTO — agrupado por mês */}
             <TabsContent value="engagement" className="space-y-4">
               <div className="flex justify-end">
                 <Button onClick={() => { setEditingEng({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenEng(true); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Novo registro
                 </Button>
               </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Mês</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead className="text-center">ABC</TableHead>
-                      <TableHead className="text-center">Sprint</TableHead>
-                      <TableHead className="text-center">Engaj. (1-5)</TableHead>
-                      <TableHead className="text-center">NPS</TableHead>
-                      <TableHead>Observação</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {engagement.length === 0 ? (
+
+              {engagement.length === 0 ? (
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
+                  Nenhum registro de engajamento.
+                </div>
+              ) : (
+                Array.from(
+                  engagement.reduce((map, e) => {
+                    const k = (e.reference_month || "").slice(0, 7) || "—";
+                    if (!map.has(k)) map.set(k, [] as Engagement[]);
+                    map.get(k)!.push(e);
+                    return map;
+                  }, new Map<string, Engagement[]>())
+                )
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([month, list]) => {
+                    const npsList = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
+                    const avgNps = npsList.length ? (npsList.reduce((s, n) => s + n, 0) / npsList.length).toFixed(1) : "—";
+                    return (
+                      <div key={month} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-hidden shadow-xl">
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-fuchsia-500/5 border-b border-border/30 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-primary" />
+                            <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="hover:bg-transparent border-border/30">
+                                <TableHead>Cliente</TableHead>
+                                <TableHead className="text-center">ABC</TableHead>
+                                <TableHead className="text-center">Sprint</TableHead>
+                                <TableHead className="text-center">Engaj. (1-5)</TableHead>
+                                <TableHead className="text-center">NPS</TableHead>
+                                <TableHead>Observação</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {list.map((e) => (
+                                <TableRow key={e.id} className="border-border/20">
+                                  <TableCell className="font-semibold">{e.client_name}</TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}>{e.curve_abc || "-"}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}>{e.sprint || "-"}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {e.engagement_score != null ? (
+                                      <span className="inline-flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                          <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                                        ))}
+                                      </span>
+                                    ) : "-"}
+                                  </TableCell>
+                                  <TableCell className="text-center font-bold">
+                                    {e.nps_individual != null ? (
+                                      <Badge variant="outline" className={
+                                        e.nps_individual > 8 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" :
+                                        e.nps_individual < 7 ? "bg-red-500/15 text-red-300 border-red-500/40" :
+                                        "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                                      }>{e.nps_individual}</Badge>
+                                    ) : "-"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => removeEng(e.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </TabsContent>
                       <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">Nenhum registro de engajamento.</TableCell></TableRow>
                     ) : engagement.map((e) => (
                       <TableRow key={e.id} className="border-border/20">
