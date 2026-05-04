@@ -1075,3 +1075,158 @@ function formatMonth(d: string | null | undefined): string {
   if (isNaN(date.getTime())) return d;
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 }
+
+function AgendaPanel({
+  agenda, onNew, onEdit, onRemove, onToggleDone,
+}: {
+  agenda: Agenda[];
+  onNew: () => void;
+  onEdit: (a: Agenda) => void;
+  onRemove: (id: string) => void;
+  onToggleDone: (a: Agenda) => void;
+}) {
+  const months = useMemo(() => {
+    const set = new Set<string>();
+    agenda.forEach((a) => a.reference_month && set.add(a.reference_month.slice(0, 7)));
+    const cur = new Date().toISOString().slice(0, 7);
+    set.add(cur);
+    return Array.from(set).sort().reverse();
+  }, [agenda]);
+
+  const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
+  useEffect(() => {
+    if (!months.includes(month) && months[0]) setMonth(months[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [months.join(",")]);
+
+  const filtered = useMemo(
+    () => agenda.filter((a) => a.reference_month?.startsWith(month)),
+    [agenda, month]
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const stats = useMemo(() => {
+    const total = filtered.length;
+    const done = filtered.filter((a) => a.done).length;
+    const justified = filtered.filter((a) => !a.done && (a.not_done_reason || "").trim().length > 0).length;
+    const scheduled = filtered.filter((a) => !a.done && !!a.meeting_date).length;
+    const overdueUnjustified = filtered.filter((a) => {
+      if (a.done) return false;
+      if ((a.not_done_reason || "").trim().length > 0) return false;
+      if (!a.meeting_date) return true; // sem data e não justificada
+      const d = new Date(a.meeting_date + "T12:00:00Z");
+      return d < today;
+    }).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { total, done, justified, scheduled, overdueUnjustified, pct };
+  }, [filtered]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={month} onValueChange={setMonth}>
+          <SelectTrigger className="w-56 bg-card/40 backdrop-blur-sm">
+            <SelectValue placeholder="Mês de referência" />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m} value={m}>
+                {new Date(m + "-01T12:00:00Z").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex-1" />
+        <Button onClick={onNew} className="gap-1.5"><Plus className="h-4 w-4" /> Novo compromisso</Button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <SummaryStat label="Marcadas" value={stats.total} tone="primary" />
+        <SummaryStat label="Realizadas" value={stats.done} tone="emerald" />
+        <SummaryStat label="A fazer" value={stats.scheduled} tone="sky" />
+        <SummaryStat label="Justificadas" value={stats.justified} tone="amber" />
+        <SummaryStat label="% Calls" value={`${stats.pct}%`} tone="primary" />
+      </div>
+
+      {stats.overdueUnjustified > 0 && (
+        <div className="alert-blink rounded-xl border border-red-500/40 px-4 py-3 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-300" />
+          <p className="text-sm">
+            <strong>{stats.overdueUnjustified}</strong> mensal{stats.overdueUnjustified > 1 ? "is" : ""} sem realizar e sem justificativa neste mês de referência.
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-border/30">
+              <TableHead className="text-center">OK</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Responsável</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Hora</TableHead>
+              <TableHead>Status / Motivo</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">Nenhum compromisso neste mês.</TableCell></TableRow>
+            ) : filtered.map((a) => {
+              const d = a.meeting_date ? new Date(a.meeting_date + "T12:00:00Z") : null;
+              const overdue = !a.done && (!a.not_done_reason || !a.not_done_reason.trim()) && (!d || d < today);
+              return (
+                <TableRow key={a.id} className={`border-border/20 ${overdue ? "alert-blink" : ""}`}>
+                  <TableCell className="text-center">
+                    <button onClick={() => onToggleDone(a)} title="Marcar como realizada">
+                      {a.done
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
+                    </button>
+                  </TableCell>
+                  <TableCell><Badge variant="outline" className="bg-muted/40">{a.category || "-"}</Badge></TableCell>
+                  <TableCell className="font-semibold">{a.client_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{a.responsible || "-"}</TableCell>
+                  <TableCell className="text-xs">{d ? d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{a.meeting_time?.slice(0, 5) || "-"}</TableCell>
+                  <TableCell className="text-xs">
+                    {a.done ? (
+                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
+                    ) : a.not_done_reason ? (
+                      <span className="text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
+                    ) : (
+                      <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => onEdit(a)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => onRemove(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value, tone }: { label: string; value: number | string; tone: "primary" | "emerald" | "sky" | "amber" }) {
+  const cls = {
+    primary: "from-primary to-fuchsia-600",
+    emerald: "from-emerald-500 to-teal-600",
+    sky: "from-sky-500 to-blue-600",
+    amber: "from-amber-500 to-orange-600",
+  }[tone];
+  return (
+    <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 shadow-lg">
+      <p className="text-xs text-muted-foreground font-medium">{label}</p>
+      <p className={`text-2xl font-bold mt-1 bg-gradient-to-r ${cls} bg-clip-text text-transparent`}>{value}</p>
+    </div>
+  );
+}
