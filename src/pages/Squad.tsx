@@ -1368,8 +1368,9 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 
 function formatMonth(d: string | null | undefined): string {
   if (!d) return "-";
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return d;
+  const m = String(d).match(/^(\d{4})-(\d{2})/);
+  const date = m ? new Date(Number(m[1]), Number(m[2]) - 1, 1) : new Date(d);
+  if (isNaN(date.getTime())) return String(d);
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 }
 
