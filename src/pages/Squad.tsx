@@ -1018,6 +1018,9 @@ export default function Squad() {
                     );
                   })
               )}
+                </>
+                );
+              })()}
             </TabsContent>
 
             {/* AGENDA */}
