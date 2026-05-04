@@ -684,6 +684,7 @@ export type Database = {
           contact: string | null
           created_at: string
           curve_abc: string | null
+          deleted_at: string | null
           engagement_score: number | null
           id: string
           nps_individual: number | null
@@ -698,6 +699,7 @@ export type Database = {
           contact?: string | null
           created_at?: string
           curve_abc?: string | null
+          deleted_at?: string | null
           engagement_score?: number | null
           id?: string
           nps_individual?: number | null
@@ -712,6 +714,7 @@ export type Database = {
           contact?: string | null
           created_at?: string
           curve_abc?: string | null
+          deleted_at?: string | null
           engagement_score?: number | null
           id?: string
           nps_individual?: number | null
@@ -1026,6 +1029,7 @@ export type Database = {
         Returns: boolean
       }
       purge_old_squad_daily_sessions: { Args: never; Returns: undefined }
+      purge_old_squad_engagement: { Args: never; Returns: undefined }
       user_can_access_client: { Args: { _client_id: string }; Returns: boolean }
       user_in_squad: { Args: { _squad_id: string }; Returns: boolean }
     }

@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
+import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   LineChart, Line, Legend, Cell,
@@ -162,10 +163,15 @@ export default function Squad() {
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
+  const [engShowTrash, setEngShowTrash] = useState(false);
+  const [engTrash, setEngTrash] = useState<Engagement[]>([]);
+  const [purgeMonth, setPurgeMonth] = useState<string | null>(null); // YYYY-MM-DD
   const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [newMonthOpen, setNewMonthOpen] = useState(false);
+  const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => { void loadSquads(); }, []);
   useEffect(() => { if (squadId) void loadAll(squadId); }, [squadId]);
@@ -179,7 +185,7 @@ export default function Squad() {
   }
 
   async function loadAll(sid: string) {
-    const [c, m, ch, n, e, a] = await Promise.all([
+    const [c, m, ch, n, e, a, et] = await Promise.all([
       supabase.from("squad_clients").select("*").eq("squad_id", sid)
         .order("priority_score").order("name"),
       supabase.from("squad_monthly_metrics").select("*").eq("squad_id", sid)
@@ -189,15 +195,20 @@ export default function Squad() {
       (supabase as any).from("squad_nps").select("*").eq("squad_id", sid)
         .order("period", { ascending: false }),
       (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
+        .is("deleted_at", null)
         .order("reference_month", { ascending: false }).order("client_name"),
       (supabase as any).from("squad_agenda").select("*").eq("squad_id", sid)
         .order("meeting_date", { ascending: true }),
+      (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false }),
     ]);
     setClients((c.data as SquadClient[]) || []);
     setMetrics((m.data as Metric[]) || []);
     setChurns((ch.data as Churn[]) || []);
     setNps((n.data as Nps[]) || []);
     setEngagement((e.data as Engagement[]) || []);
+    setEngTrash((et?.data as Engagement[]) || []);
     setAgenda((a.data as Agenda[]) || []);
   }
 
@@ -336,13 +347,15 @@ export default function Squad() {
   async function saveEng() {
     if (!editingEng?.client_name?.trim()) return toast.error("Cliente obrigatório");
     if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
+    const curve = editingEng.curve_abc?.toUpperCase() || null;
+    const sprint = editingEng.sprint?.toUpperCase() || null;
     const payload: any = {
       squad_id: squadId,
       reference_month: editingEng.reference_month,
       client_name: editingEng.client_name.trim(),
       contact: editingEng.contact || null,
-      curve_abc: editingEng.curve_abc?.toUpperCase() || null,
-      sprint: editingEng.sprint?.toUpperCase() || null,
+      curve_abc: curve,
+      sprint: sprint,
       engagement_score: editingEng.engagement_score ?? null,
       nps_individual: editingEng.nps_individual ?? null,
       observation: editingEng.observation || null,
@@ -351,13 +364,82 @@ export default function Squad() {
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
       : await (supabase as any).from("squad_engagement").insert(payload);
     if (res.error) return toast.error(res.error.message);
+
+    // Sync ABC/Sprint back to squad_clients (single source of truth per client)
+    const matchClient = clients.find((c) => c.name.trim().toLowerCase() === payload.client_name.toLowerCase());
+    if (matchClient && (curve || sprint)) {
+      const updates: any = {};
+      if (curve && curve !== matchClient.curve_abc) updates.curve_abc = curve;
+      if (sprint && sprint !== matchClient.sprint) updates.sprint = sprint;
+      if (Object.keys(updates).length) {
+        await supabase.from("squad_clients").update(updates).eq("id", matchClient.id);
+      }
+    }
+
     toast.success("Engajamento salvo");
     setOpenEng(false);
     void loadAll(squadId);
   }
   async function removeEng(id: string) {
-    if (!confirm("Remover este registro?")) return;
-    await (supabase as any).from("squad_engagement").delete().eq("id", id);
+    if (!confirm("Mover este registro para a lixeira?")) return;
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    void loadAll(squadId);
+  }
+  async function restoreEng(id: string) {
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: null }).eq("id", id);
+    toast.success("Restaurado");
+    void loadAll(squadId);
+  }
+  async function createMonthFromClients(month: string) {
+    // month = "YYYY-MM"
+    const ref = `${month}-01`;
+    if (!clients.length) return toast.error("Cadastre clientes primeiro");
+    // Skip clients already in the month
+    const { data: existing } = await (supabase as any).from("squad_engagement")
+      .select("client_name").eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
+    const have = new Set((existing || []).map((r: any) => String(r.client_name).trim().toLowerCase()));
+    const rows = clients
+      .filter((c) => !have.has(c.name.trim().toLowerCase()))
+      .map((c) => ({
+        squad_id: squadId,
+        reference_month: ref,
+        client_name: c.name,
+        curve_abc: c.curve_abc || null,
+        sprint: c.sprint || null,
+        engagement_score: null,
+        nps_individual: null,
+        observation: null,
+      }));
+    if (!rows.length) {
+      toast.info("Todos os clientes já têm registro neste mês");
+    } else {
+      const { error } = await (supabase as any).from("squad_engagement").insert(rows);
+      if (error) return toast.error(error.message);
+      toast.success(`${rows.length} cliente(s) carregado(s) em ${month}`);
+    }
+    setNewMonthOpen(false);
+    setEngMonth(month);
+    void loadAll(squadId);
+  }
+  async function trashMonth(month: string) {
+    // month = "YYYY-MM"
+    const ref = `${month}-01`;
+    if (!confirm(`Mover TODOS os registros de ${month} para a lixeira?`)) return;
+    const { error } = await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
+    if (error) return toast.error(error.message);
+    toast.success("Mês movido para a lixeira");
+    void loadAll(squadId);
+  }
+  async function restoreMonth(month: string) {
+    const ref = `${month}-01`;
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: null })
+      .eq("squad_id", squadId).eq("reference_month", ref).not("deleted_at", "is", null);
+    toast.success("Mês restaurado");
     void loadAll(squadId);
   }
 
@@ -929,14 +1011,59 @@ export default function Squad() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={() => { setEditingEng({ reference_month: `${(engMonth !== "all" ? engMonth : new Date().toISOString().slice(0, 7))}-01` }); setOpenEng(true); }} className="gap-1.5">
-                      <Plus className="h-4 w-4" /> Novo registro
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button variant="outline" onClick={() => setEngShowTrash((v) => !v)} className="gap-1.5">
+                        <Trash2 className="h-4 w-4" />
+                        {engShowTrash ? `Voltar (${engTrash.length})` : `Lixeira (${engTrash.length})`}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setEditingEng({ reference_month: `${(engMonth !== "all" ? engMonth : new Date().toISOString().slice(0, 7))}-01` }); setOpenEng(true); }} className="gap-1.5">
+                        <Plus className="h-4 w-4" /> Novo cliente
+                      </Button>
+                      <Button onClick={() => { setNewMonthValue(new Date().toISOString().slice(0, 7)); setNewMonthOpen(true); }} className="gap-1.5">
+                        <CalendarDays className="h-4 w-4" /> Novo mês
+                      </Button>
+                    </div>
                   </div>
 
-              {filtered.length === 0 ? (
+              {engShowTrash ? (
+                engTrash.length === 0 ? (
+                  <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
+                    Lixeira vazia. Itens excluídos há mais de 30 dias são removidos definitivamente.
+                  </div>
+                ) : (
+                  Array.from(
+                    engTrash.reduce((map, e) => {
+                      const k = (e.reference_month || "").slice(0, 7) || "—";
+                      if (!map.has(k)) map.set(k, [] as Engagement[]);
+                      map.get(k)!.push(e);
+                      return map;
+                    }, new Map<string, Engagement[]>())
+                  ).sort(([a], [b]) => b.localeCompare(a)).map(([month, list]) => (
+                    <div key={month} className="rounded-2xl border border-red-500/30 bg-red-500/5 overflow-hidden">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Trash2 className="h-4 w-4 text-red-400" />
+                          <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/40">{list.length} registros</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => restoreMonth(month)}>Restaurar mês</Button>
+                          <Button size="sm" variant="outline" className="text-red-400 hover:text-red-300" onClick={() => setPurgeMonth(`${month}-01`)}>
+                            Excluir definitivo (token)
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 text-xs text-muted-foreground">
+                        {list.map((e) => e.client_name).join(" · ")}
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : null}
+
+              {!engShowTrash && (filtered.length === 0 ? (
                 <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
-                  Nenhum registro de engajamento{engMonth !== "all" ? " neste mês" : ""}.
+                  Nenhum registro de engajamento{engMonth !== "all" ? " neste mês" : ""}. Use <strong>Novo mês</strong> para carregar todos os clientes automaticamente.
                 </div>
               ) : (
                 Array.from(
@@ -958,9 +1085,12 @@ export default function Squad() {
                             <CalendarDays className="h-4 w-4 text-primary" />
                             <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-red-400 hover:text-red-300" onClick={() => trashMonth(month)}>
+                              <Trash2 className="h-3.5 w-3.5" /> Excluir mês
+                            </Button>
                           </div>
                         </div>
                         <div className="overflow-x-auto">
@@ -1017,7 +1147,7 @@ export default function Squad() {
                       </div>
                     );
                   })
-              )}
+              ))}
                 </>
                 );
               })()}
@@ -1346,6 +1476,46 @@ export default function Squad() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Novo mês de engajamento */}
+      <Dialog open={newMonthOpen} onOpenChange={setNewMonthOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" /> Novo mês de engajamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Vamos criar um registro para <strong className="text-primary">cada cliente cadastrado</strong> ({clients.length}) neste mês.
+              Você só vai precisar editar ABC, Sprint, engajamento e NPS de cada um.
+            </p>
+            <div>
+              <Label>Mês *</Label>
+              <Input type="month" value={newMonthValue} onChange={(e) => setNewMonthValue(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewMonthOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createMonthFromClients(newMonthValue)} className="bg-gradient-to-r from-primary to-fuchsia-600">
+              Carregar {clients.length} clientes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {purgeMonth && (
+        <ActionVerificationDialog
+          open={!!purgeMonth}
+          onOpenChange={(o) => !o && setPurgeMonth(null)}
+          action="purge_squad_engagement_month"
+          payload={{ squad_id: squadId, reference_month: purgeMonth }}
+          targetLabel={`Engajamento de ${formatMonth(purgeMonth)}`}
+          title="Excluir mês definitivamente"
+          successMessage="Mês excluído"
+          onSuccess={() => { setPurgeMonth(null); void loadAll(squadId); }}
+        />
+      )}
     </div>
   );
 }

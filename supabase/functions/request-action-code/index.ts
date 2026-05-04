@@ -17,7 +17,8 @@ type Action =
   | "update_client_meta_token"
   | "delete_client"
   | "purge_client"
-  | "purge_squad_daily_session";
+  | "purge_squad_daily_session"
+  | "purge_squad_engagement_month";
 
 const ACTION_LABELS: Record<Action, string> = {
   create_user: "criar usuário",
@@ -29,10 +30,11 @@ const ACTION_LABELS: Record<Action, string> = {
   delete_client: "excluir cliente",
   purge_client: "excluir cliente definitivamente",
   purge_squad_daily_session: "excluir daily definitivamente",
+  purge_squad_engagement_month: "excluir mês de engajamento definitivamente",
 };
 
 // Actions that any signed-in user can request (not admin-only)
-const NON_ADMIN_ACTIONS: Set<Action> = new Set(["purge_squad_daily_session"]);
+const NON_ADMIN_ACTIONS: Set<Action> = new Set(["purge_squad_daily_session", "purge_squad_engagement_month"]);
 
 async function sha256(text: string): Promise<string> {
   const buf = new TextEncoder().encode(text);

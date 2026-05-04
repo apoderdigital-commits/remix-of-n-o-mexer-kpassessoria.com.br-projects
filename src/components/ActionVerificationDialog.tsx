@@ -16,7 +16,8 @@ export type SensitiveAction =
   | "update_client_meta_token"
   | "delete_client"
   | "purge_client"
-  | "purge_squad_daily_session";
+  | "purge_squad_daily_session"
+  | "purge_squad_engagement_month";
 
 interface ActionVerificationDialogProps {
   open: boolean;

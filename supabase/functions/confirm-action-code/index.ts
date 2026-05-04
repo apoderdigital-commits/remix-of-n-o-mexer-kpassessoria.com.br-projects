@@ -112,7 +112,16 @@ async function execPurgeSquadDailySession(admin: SupabaseClient, payload: any) {
   return { session_id };
 }
 
-const NON_ADMIN_ACTIONS = new Set(["purge_squad_daily_session"]);
+async function execPurgeSquadEngagementMonth(admin: SupabaseClient, payload: any) {
+  const { squad_id, reference_month } = payload;
+  if (!squad_id || !reference_month) throw new Error("squad_id e reference_month obrigatórios");
+  const { error } = await admin.from("squad_engagement").delete()
+    .eq("squad_id", squad_id).eq("reference_month", reference_month);
+  if (error) throw new Error(error.message);
+  return { squad_id, reference_month };
+}
+
+const NON_ADMIN_ACTIONS = new Set(["purge_squad_daily_session", "purge_squad_engagement_month"]);
 
 const EXECUTORS: Record<string, (a: SupabaseClient, p: any) => Promise<any>> = {
   create_user: execCreateUser,
@@ -124,6 +133,7 @@ const EXECUTORS: Record<string, (a: SupabaseClient, p: any) => Promise<any>> = {
   delete_client: execDeleteClient,
   purge_client: execPurgeClient,
   purge_squad_daily_session: execPurgeSquadDailySession,
+  purge_squad_engagement_month: execPurgeSquadEngagementMonth,
 };
 
 Deno.serve(async (req) => {
