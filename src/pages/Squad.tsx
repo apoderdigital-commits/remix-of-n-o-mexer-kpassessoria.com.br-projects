@@ -419,6 +419,47 @@ export default function Squad() {
     return counts;
   }, [clients]);
 
+  // Funil: quantos clientes com 1, 2, 3 serviços contratados
+  const serviceFunnel = useMemo(() => {
+    const buckets = { 1: 0, 2: 0, 3: 0 };
+    let withAny = 0;
+    for (const c of clients) {
+      const n = parseServices(c.services).length;
+      if (n >= 1) withAny++;
+      if (n === 1) buckets[1]++;
+      else if (n === 2) buckets[2]++;
+      else if (n >= 3) buckets[3]++;
+    }
+    const base = withAny || 1;
+    return [
+      { label: "1 serviço", count: buckets[1], pct: Math.round((buckets[1] / base) * 100) },
+      { label: "2 serviços", count: buckets[2], pct: Math.round((buckets[2] / base) * 100) },
+      { label: "3 serviços", count: buckets[3], pct: Math.round((buckets[3] / base) * 100) },
+    ];
+  }, [clients]);
+
+  // NPS distribuição a partir do engajamento (nps_individual)
+  const npsDistribution = useMemo(() => {
+    const scores = engagement.map((e) => e.nps_individual).filter((v): v is number => v != null);
+    const total = scores.length;
+    const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
+    scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
+    const above = (n: number) => scores.filter((s) => s >= n).length;
+    const promoters = scores.filter((s) => s >= 9).length;
+    const detractors = scores.filter((s) => s <= 6).length;
+    const neutrals = total - promoters - detractors;
+    const npsScore = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0;
+    const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
+    return {
+      total,
+      buckets,
+      pctAbove8: total > 0 ? Math.round((above(8) / total) * 100) : 0,
+      pctAbove6: total > 0 ? Math.round((above(6) / total) * 100) : 0,
+      pctAbove9: total > 0 ? Math.round((above(9) / total) * 100) : 0,
+      promoters, detractors, neutrals, npsScore, avg,
+    };
+  }, [engagement]);
+
   const incompleteClients = useMemo(() => {
     return clients
       .map((c) => {
