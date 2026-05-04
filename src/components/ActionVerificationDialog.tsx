@@ -15,7 +15,8 @@ export type SensitiveAction =
   | "update_client"
   | "update_client_meta_token"
   | "delete_client"
-  | "purge_client";
+  | "purge_client"
+  | "purge_squad_daily_session";
 
 interface ActionVerificationDialogProps {
   open: boolean;
@@ -118,7 +119,7 @@ export function ActionVerificationDialog({
             <p className="text-sm">
               {requesting
                 ? "Enviando código para o seu WhatsApp..."
-                : <>Enviamos um código de 6 dígitos para o <strong>seu WhatsApp</strong> (admin).</>}
+                : <>Enviamos um código de 6 dígitos para o <strong>seu WhatsApp</strong>.</>}
             </p>
             {targetLabel && (
               <p className="text-xs text-muted-foreground">

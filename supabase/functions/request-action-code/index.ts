@@ -16,7 +16,8 @@ type Action =
   | "update_client"
   | "update_client_meta_token"
   | "delete_client"
-  | "purge_client";
+  | "purge_client"
+  | "purge_squad_daily_session";
 
 const ACTION_LABELS: Record<Action, string> = {
   create_user: "criar usuário",
@@ -27,7 +28,11 @@ const ACTION_LABELS: Record<Action, string> = {
   update_client_meta_token: "atualizar token Meta do cliente",
   delete_client: "excluir cliente",
   purge_client: "excluir cliente definitivamente",
+  purge_squad_daily_session: "excluir daily definitivamente",
 };
+
+// Actions that any signed-in user can request (not admin-only)
+const NON_ADMIN_ACTIONS: Set<Action> = new Set(["purge_squad_daily_session"]);
 
 async function sha256(text: string): Promise<string> {
   const buf = new TextEncoder().encode(text);
@@ -68,13 +73,6 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceKey);
-    const { data: roles } = await adminClient
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
-    if (!roles?.length) {
-      return new Response(JSON.stringify({ error: "Apenas admins" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const body = await req.json();
     const action = body.action as Action;
@@ -87,6 +85,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (!NON_ADMIN_ACTIONS.has(action)) {
+      const { data: roles } = await adminClient
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
+      if (!roles?.length) {
+        return new Response(JSON.stringify({ error: "Apenas admins" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Get admin phone
     const { data: adminProfile } = await adminClient
       .from("profiles").select("full_name, email, phone").eq("user_id", user.id).maybeSingle();
@@ -94,7 +102,7 @@ Deno.serve(async (req) => {
     const adminPhoneDigits = String(adminProfile?.phone ?? "").replace(/\D/g, "");
     if (adminPhoneDigits.length < 10) {
       return new Response(JSON.stringify({
-        error: "Seu perfil de admin não tem telefone cadastrado. Atualize seu telefone antes de executar esta ação."
+        error: "Seu perfil não tem telefone cadastrado. Atualize seu telefone antes de executar esta ação."
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

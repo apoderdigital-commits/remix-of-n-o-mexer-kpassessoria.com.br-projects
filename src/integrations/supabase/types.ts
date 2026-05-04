@@ -566,6 +566,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           delay_seconds: number
+          deleted_at: string | null
           ended_at: string | null
           id: string
           on_time: boolean
@@ -578,6 +579,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delay_seconds?: number
+          deleted_at?: string | null
           ended_at?: string | null
           id?: string
           on_time?: boolean
@@ -590,6 +592,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delay_seconds?: number
+          deleted_at?: string | null
           ended_at?: string | null
           id?: string
           on_time?: boolean
@@ -881,6 +884,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_old_squad_daily_sessions: { Args: never; Returns: undefined }
       user_can_access_client: { Args: { _client_id: string }; Returns: boolean }
       user_in_squad: { Args: { _squad_id: string }; Returns: boolean }
     }

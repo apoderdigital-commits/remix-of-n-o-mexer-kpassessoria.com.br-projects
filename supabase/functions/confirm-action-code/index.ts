@@ -104,6 +104,16 @@ async function execPurgeClient(admin: SupabaseClient, payload: any) {
   return { client_id };
 }
 
+async function execPurgeSquadDailySession(admin: SupabaseClient, payload: any) {
+  const { session_id } = payload;
+  if (!session_id) throw new Error("session_id obrigatório");
+  const { error } = await admin.from("squad_daily_sessions").delete().eq("id", session_id);
+  if (error) throw new Error(error.message);
+  return { session_id };
+}
+
+const NON_ADMIN_ACTIONS = new Set(["purge_squad_daily_session"]);
+
 const EXECUTORS: Record<string, (a: SupabaseClient, p: any) => Promise<any>> = {
   create_user: execCreateUser,
   delete_user: execDeleteUser,
@@ -113,6 +123,7 @@ const EXECUTORS: Record<string, (a: SupabaseClient, p: any) => Promise<any>> = {
   update_client_meta_token: execUpdateClientMetaToken,
   delete_client: execDeleteClient,
   purge_client: execPurgeClient,
+  purge_squad_daily_session: execPurgeSquadDailySession,
 };
 
 Deno.serve(async (req) => {
@@ -141,13 +152,6 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceKey);
-    const { data: roles } = await adminClient
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
-    if (!roles?.length) {
-      return new Response(JSON.stringify({ error: "Apenas admins" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { verification_id, code } = await req.json();
     if (!verification_id || !code) {
