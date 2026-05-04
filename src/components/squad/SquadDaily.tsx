@@ -64,7 +64,7 @@ function getDelayFrom9AM(start: Date): number {
   const d = new Date(brasiliaMs);
   const target = new Date(d);
   target.setUTCHours(9, 0, 0, 0);
-  return brasiliaMs - target.getUTCMinutes ? brasiliaMs - target.getTime() : 0;
+  return brasiliaMs - target.getTime();
 }
 
 function fmtBrasiliaTime(date: Date) {
