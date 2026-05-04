@@ -598,7 +598,15 @@ export default function Squad() {
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
                         <TableCell className="font-semibold">{c.name}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{c.niche}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.services}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {parseServices(c.services).length === 0 ? (
+                              <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                            ) : parseServices(c.services).map((s) => (
+                              <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>{s}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className={CURVE_COLORS[c.curve_abc || ""] || "border-border/40 text-muted-foreground"}>
                             {c.curve_abc || "-"}
