@@ -383,6 +383,51 @@ export type Database = {
           },
         ]
       }
+      squad_agenda: {
+        Row: {
+          category: string | null
+          client_name: string
+          created_at: string
+          done: boolean
+          id: string
+          meeting_date: string | null
+          meeting_time: string | null
+          observations: string | null
+          reference_month: string
+          responsible: string | null
+          squad_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          client_name: string
+          created_at?: string
+          done?: boolean
+          id?: string
+          meeting_date?: string | null
+          meeting_time?: string | null
+          observations?: string | null
+          reference_month: string
+          responsible?: string | null
+          squad_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          client_name?: string
+          created_at?: string
+          done?: boolean
+          id?: string
+          meeting_date?: string | null
+          meeting_time?: string | null
+          observations?: string | null
+          reference_month?: string
+          responsible?: string | null
+          squad_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       squad_churn: {
         Row: {
           churn_month: string | null
@@ -630,6 +675,51 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_engagement: {
+        Row: {
+          client_name: string
+          contact: string | null
+          created_at: string
+          curve_abc: string | null
+          engagement_score: number | null
+          id: string
+          nps_individual: number | null
+          observation: string | null
+          reference_month: string
+          sprint: string | null
+          squad_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          contact?: string | null
+          created_at?: string
+          curve_abc?: string | null
+          engagement_score?: number | null
+          id?: string
+          nps_individual?: number | null
+          observation?: string | null
+          reference_month: string
+          sprint?: string | null
+          squad_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          contact?: string | null
+          created_at?: string
+          curve_abc?: string | null
+          engagement_score?: number | null
+          id?: string
+          nps_individual?: number | null
+          observation?: string | null
+          reference_month?: string
+          sprint?: string | null
+          squad_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       squad_members: {
         Row: {
           added_by: string | null
@@ -716,6 +806,54 @@ export type Database = {
           squad_id?: string
           updated_at?: string
           upsell_amount?: string | null
+        }
+        Relationships: []
+      }
+      squad_nps: {
+        Row: {
+          avg_engagement: number | null
+          created_at: string
+          detractors: number | null
+          id: string
+          neutrals: number | null
+          nps_score: number | null
+          observations: string | null
+          period: string
+          promoters: number | null
+          responses: number | null
+          squad_id: string
+          total_clients: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_engagement?: number | null
+          created_at?: string
+          detractors?: number | null
+          id?: string
+          neutrals?: number | null
+          nps_score?: number | null
+          observations?: string | null
+          period: string
+          promoters?: number | null
+          responses?: number | null
+          squad_id: string
+          total_clients?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_engagement?: number | null
+          created_at?: string
+          detractors?: number | null
+          id?: string
+          neutrals?: number | null
+          nps_score?: number | null
+          observations?: string | null
+          period?: string
+          promoters?: number | null
+          responses?: number | null
+          squad_id?: string
+          total_clients?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
