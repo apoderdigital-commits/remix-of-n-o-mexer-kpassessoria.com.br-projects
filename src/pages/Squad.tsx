@@ -1060,11 +1060,9 @@ export default function Squad() {
                 )
               ) : null}
 
-              {!engShowTrash && (
-
-              {filtered.length === 0 ? (
+              {!engShowTrash && (filtered.length === 0 ? (
                 <div className="rounded-2xl border border-border/30 bg-card/40 p-12 text-center text-muted-foreground">
-                  Nenhum registro de engajamento{engMonth !== "all" ? " neste mês" : ""}.
+                  Nenhum registro de engajamento{engMonth !== "all" ? " neste mês" : ""}. Use <strong>Novo mês</strong> para carregar todos os clientes automaticamente.
                 </div>
               ) : (
                 Array.from(
@@ -1086,9 +1084,12 @@ export default function Squad() {
                             <CalendarDays className="h-4 w-4 text-primary" />
                             <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-red-400 hover:text-red-300" onClick={() => trashMonth(month)}>
+                              <Trash2 className="h-3.5 w-3.5" /> Excluir mês
+                            </Button>
                           </div>
                         </div>
                         <div className="overflow-x-auto">
@@ -1145,7 +1146,7 @@ export default function Squad() {
                       </div>
                     );
                   })
-              )}
+              ))}
                 </>
                 );
               })()}
