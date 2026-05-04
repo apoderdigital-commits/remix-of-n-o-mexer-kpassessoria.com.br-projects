@@ -423,23 +423,33 @@ export default function Squad() {
     return counts;
   }, [clients]);
 
-  // Funil: quantos clientes com 1, 2, 3 serviços contratados
+  // Funil: clientes com 1, 2, 3 serviços + nomes/serviços por bucket
   const serviceFunnel = useMemo(() => {
-    const buckets = { 1: 0, 2: 0, 3: 0 };
+    const buckets: Record<1 | 2 | 3, { clients: { name: string; services: string[] }[] }> = {
+      1: { clients: [] }, 2: { clients: [] }, 3: { clients: [] },
+    };
     let withAny = 0;
     for (const c of clients) {
-      const n = parseServices(c.services).length;
+      const svcs = parseServices(c.services);
+      const n = svcs.length;
       if (n >= 1) withAny++;
-      if (n === 1) buckets[1]++;
-      else if (n === 2) buckets[2]++;
-      else if (n >= 3) buckets[3]++;
+      const k = (n === 1 ? 1 : n === 2 ? 2 : n >= 3 ? 3 : 0) as 0 | 1 | 2 | 3;
+      if (k) buckets[k].clients.push({ name: c.name || "(sem nome)", services: svcs });
     }
     const base = withAny || 1;
-    return [
-      { label: "1 serviço", count: buckets[1], pct: Math.round((buckets[1] / base) * 100) },
-      { label: "2 serviços", count: buckets[2], pct: Math.round((buckets[2] / base) * 100) },
-      { label: "3 serviços", count: buckets[3], pct: Math.round((buckets[3] / base) * 100) },
-    ];
+    return ([1, 2, 3] as const).map((k) => {
+      const list = buckets[k].clients;
+      const svcCounts = { TP: 0, CRM: 0, COM: 0 } as Record<string, number>;
+      list.forEach((c) => c.services.forEach((s) => { svcCounts[s] = (svcCounts[s] || 0) + 1; }));
+      return {
+        bucket: k,
+        label: `${k} serviço${k > 1 ? "s" : ""}`,
+        count: list.length,
+        pct: Math.round((list.length / base) * 100),
+        clients: list,
+        svcCounts,
+      };
+    });
   }, [clients]);
 
   // NPS distribuição a partir do engajamento (nps_individual)
