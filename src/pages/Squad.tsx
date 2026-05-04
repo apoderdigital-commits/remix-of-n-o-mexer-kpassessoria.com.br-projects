@@ -346,13 +346,15 @@ export default function Squad() {
   async function saveEng() {
     if (!editingEng?.client_name?.trim()) return toast.error("Cliente obrigatório");
     if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
+    const curve = editingEng.curve_abc?.toUpperCase() || null;
+    const sprint = editingEng.sprint?.toUpperCase() || null;
     const payload: any = {
       squad_id: squadId,
       reference_month: editingEng.reference_month,
       client_name: editingEng.client_name.trim(),
       contact: editingEng.contact || null,
-      curve_abc: editingEng.curve_abc?.toUpperCase() || null,
-      sprint: editingEng.sprint?.toUpperCase() || null,
+      curve_abc: curve,
+      sprint: sprint,
       engagement_score: editingEng.engagement_score ?? null,
       nps_individual: editingEng.nps_individual ?? null,
       observation: editingEng.observation || null,
@@ -361,13 +363,82 @@ export default function Squad() {
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
       : await (supabase as any).from("squad_engagement").insert(payload);
     if (res.error) return toast.error(res.error.message);
+
+    // Sync ABC/Sprint back to squad_clients (single source of truth per client)
+    const matchClient = clients.find((c) => c.name.trim().toLowerCase() === payload.client_name.toLowerCase());
+    if (matchClient && (curve || sprint)) {
+      const updates: any = {};
+      if (curve && curve !== matchClient.curve_abc) updates.curve_abc = curve;
+      if (sprint && sprint !== matchClient.sprint) updates.sprint = sprint;
+      if (Object.keys(updates).length) {
+        await supabase.from("squad_clients").update(updates).eq("id", matchClient.id);
+      }
+    }
+
     toast.success("Engajamento salvo");
     setOpenEng(false);
     void loadAll(squadId);
   }
   async function removeEng(id: string) {
-    if (!confirm("Remover este registro?")) return;
-    await (supabase as any).from("squad_engagement").delete().eq("id", id);
+    if (!confirm("Mover este registro para a lixeira?")) return;
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    void loadAll(squadId);
+  }
+  async function restoreEng(id: string) {
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: null }).eq("id", id);
+    toast.success("Restaurado");
+    void loadAll(squadId);
+  }
+  async function createMonthFromClients(month: string) {
+    // month = "YYYY-MM"
+    const ref = `${month}-01`;
+    if (!clients.length) return toast.error("Cadastre clientes primeiro");
+    // Skip clients already in the month
+    const { data: existing } = await (supabase as any).from("squad_engagement")
+      .select("client_name").eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
+    const have = new Set((existing || []).map((r: any) => String(r.client_name).trim().toLowerCase()));
+    const rows = clients
+      .filter((c) => !have.has(c.name.trim().toLowerCase()))
+      .map((c) => ({
+        squad_id: squadId,
+        reference_month: ref,
+        client_name: c.name,
+        curve_abc: c.curve_abc || null,
+        sprint: c.sprint || null,
+        engagement_score: null,
+        nps_individual: null,
+        observation: null,
+      }));
+    if (!rows.length) {
+      toast.info("Todos os clientes já têm registro neste mês");
+    } else {
+      const { error } = await (supabase as any).from("squad_engagement").insert(rows);
+      if (error) return toast.error(error.message);
+      toast.success(`${rows.length} cliente(s) carregado(s) em ${month}`);
+    }
+    setNewMonthOpen(false);
+    setEngMonth(month);
+    void loadAll(squadId);
+  }
+  async function trashMonth(month: string) {
+    // month = "YYYY-MM"
+    const ref = `${month}-01`;
+    if (!confirm(`Mover TODOS os registros de ${month} para a lixeira?`)) return;
+    const { error } = await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
+    if (error) return toast.error(error.message);
+    toast.success("Mês movido para a lixeira");
+    void loadAll(squadId);
+  }
+  async function restoreMonth(month: string) {
+    const ref = `${month}-01`;
+    await (supabase as any).from("squad_engagement")
+      .update({ deleted_at: null })
+      .eq("squad_id", squadId).eq("reference_month", ref).not("deleted_at", "is", null);
+    toast.success("Mês restaurado");
     void loadAll(squadId);
   }
 
