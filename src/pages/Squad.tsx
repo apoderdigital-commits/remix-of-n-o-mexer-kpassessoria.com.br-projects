@@ -654,7 +654,25 @@ export default function Squad() {
                     Atualizada automaticamente a partir da Curva ABC e Sprint de cada cliente.
                   </p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl border border-border/30 bg-background/30 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Serviços contratados</p>
+                      <p className="text-2xl font-bold mt-1">{serviceCounts.TP + serviceCounts.CRM + serviceCounts.COM}</p>
+                    </div>
+                    <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-primary/80">Tráfego Pago (TP)</p>
+                      <p className="text-2xl font-bold mt-1 text-primary">{serviceCounts.TP}</p>
+                    </div>
+                    <div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-fuchsia-300/80">CRM</p>
+                      <p className="text-2xl font-bold mt-1 text-fuchsia-300">{serviceCounts.CRM}</p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-emerald-300/80">Acomp. Comercial (COM)</p>
+                      <p className="text-2xl font-bold mt-1 text-emerald-300">{serviceCounts.COM}</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2">
                     <div />
                     {["A", "B", "C"].map((s) => (
