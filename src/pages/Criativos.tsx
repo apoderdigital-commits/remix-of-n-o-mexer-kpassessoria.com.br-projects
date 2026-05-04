@@ -563,8 +563,6 @@ export default function Index() {
             </div>
           </div>
 
-          <AIInsights buildContext={buildAIContext} disabled={!activeClient} />
-
           <div ref={funnelRef}>
           <GoalsFunnel
             totalLeads={totalLeads}
