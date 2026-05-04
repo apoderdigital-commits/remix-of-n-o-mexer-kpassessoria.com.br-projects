@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     const adminPhoneDigits = String(adminProfile?.phone ?? "").replace(/\D/g, "");
     if (adminPhoneDigits.length < 10) {
       return new Response(JSON.stringify({
-        error: "Seu perfil de admin não tem telefone cadastrado. Atualize seu telefone antes de executar esta ação."
+        error: "Seu perfil não tem telefone cadastrado. Atualize seu telefone antes de executar esta ação."
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
