@@ -57,6 +57,23 @@ type Churn = {
   entry_month: string | null; churn_month: string | null;
   reason: string | null; months_active: string | null; observations: string | null;
 };
+type Nps = {
+  id: string; squad_id: string; period: string;
+  total_clients: number | null; responses: number | null;
+  detractors: number | null; neutrals: number | null; promoters: number | null;
+  nps_score: number | null; avg_engagement: number | null; observations: string | null;
+};
+type Engagement = {
+  id: string; squad_id: string; reference_month: string;
+  client_name: string; contact: string | null;
+  curve_abc: string | null; sprint: string | null;
+  engagement_score: number | null; nps_individual: number | null; observation: string | null;
+};
+type Agenda = {
+  id: string; squad_id: string; reference_month: string;
+  category: string | null; client_name: string; responsible: string | null;
+  meeting_date: string | null; meeting_time: string | null; done: boolean; observations: string | null;
+};
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
