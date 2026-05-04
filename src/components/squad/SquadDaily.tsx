@@ -219,12 +219,25 @@ export function SquadDaily({
 
   async function go(delta: number) {
     await saveNote(false);
+    if (current) await logClientTime(current);
     const next = Math.min(Math.max(idx + delta, 0), ordered.length - 1);
     setIdx(next);
   }
 
   function handleClose() {
-    void saveNote(false).finally(() => onClose());
+    if (closedRef.current) { onClose(); return; }
+    closedRef.current = true;
+    void (async () => {
+      await saveNote(false);
+      if (current) await logClientTime(current);
+      if (sessionIdRef.current && startedAt) {
+        const totalSec = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+        await (supabase as any).from("squad_daily_sessions")
+          .update({ ended_at: new Date().toISOString(), total_seconds: totalSec })
+          .eq("id", sessionIdRef.current);
+      }
+      onClose();
+    })();
   }
 
   if (!current) return null;
