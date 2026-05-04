@@ -172,7 +172,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label="Simulações (GHL)"
+          label="Simulações (CRM)"
           icon={Calculator}
           value={ghlSimulacoes}
           baseValue={totalLeads}
@@ -184,7 +184,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label="CPFs Aprovados (GHL)"
+          label="CPFs Aprovados (CRM)"
           icon={CheckCircle2}
           value={ghlCpfApproved}
           baseValue={ghlSimulacoes}
@@ -195,7 +195,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           extra={
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => setShowCpfCompare(true)}>
-                <Eye className="h-3.5 w-3.5" /> GHL × Planilha
+                <Eye className="h-3.5 w-3.5" /> CRM × Planilha
               </Button>
               <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => onScrollTo("cpf")}>
                 <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de CPF Aprovado
@@ -226,12 +226,12 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
       <Dialog open={showCpfCompare} onOpenChange={setShowCpfCompare}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>CPFs Aprovados | GHL × Planilha</DialogTitle>
+            <DialogTitle>CPFs Aprovados | CRM × Planilha</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               <div>
-                <p className="text-xs uppercase tracking-wide text-emerald-400">GHL</p>
+                <p className="text-xs uppercase tracking-wide text-emerald-400">CRM</p>
                 <p className="text-xs text-muted-foreground">Pipeline automático</p>
               </div>
               <p className="text-2xl font-bold text-emerald-300">{formatNumber(ghlCpfApproved)}</p>
@@ -246,7 +246,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/30">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Diferença</p>
-                <p className="text-xs text-primary-foreground">GHL | Planilha</p>
+                <p className="text-xs text-primary-foreground">CRM | Planilha</p>
               </div>
               <p className={`text-2xl font-bold ${ghlCpfApproved - planilhaCpfApproved >= 0 ? "text-foreground" : "text-amber-300"}`}>
                 {ghlCpfApproved - planilhaCpfApproved >= 0 ? "+" : ""}{formatNumber(ghlCpfApproved - planilhaCpfApproved)}

@@ -47,7 +47,7 @@ const SERIES: SeriesDef[] = [
   {
     key: "simulacoes",
     name: "Simulações",
-    description: "Simulações de crédito registradas no GHL",
+    description: "Simulações de crédito registradas no CRM",
     color: "hsl(190 80% 55%)",
     icon: BarChart3,
     goal: { baseKey: "leads", target: 60, label: "Sim/Leads" },
@@ -518,7 +518,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                       <p className="font-semibold text-foreground">{s.name}</p>
                       <p className="text-muted-foreground leading-snug">
                         {s.key === "simulacoes"
-                          ? "Distribuído proporcional aos leads (total do GHL)"
+                          ? "Distribuído proporcional aos leads (total do CRM)"
                           : s.description}
                       </p>
                       {hasProj && (
