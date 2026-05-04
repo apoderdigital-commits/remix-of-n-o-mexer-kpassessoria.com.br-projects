@@ -155,7 +155,7 @@ export default function Portal() {
                     </div>
                   </Link>
                 )}
-                {visibleProjects.length === 0 ? (
+                {visibleProjects.length === 0 && !showSquadCard ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Nenhum dashboard disponível para seu usuário.</p>
                     <p className="text-xs text-muted-foreground/60 mt-2">Entre em contato com o administrador.</p>
