@@ -106,13 +106,36 @@ export function SquadDaily({
   const [history, setHistory] = useState<DailyNote[]>([]);
   const [saving, setSaving] = useState(false);
   const noteIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const clientStartRef = useRef<number>(Date.now());
+  const closedRef = useRef<boolean>(false);
 
   const current = ordered[idx];
 
   useEffect(() => {
     if (!open) return;
     setIdx(0);
-    setStartedAt(new Date());
+    const start = new Date();
+    setStartedAt(start);
+    closedRef.current = false;
+    clientStartRef.current = start.getTime();
+    // create session
+    void (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const delaySec = Math.max(0, Math.floor(getDelayFrom9AM(start) / 1000));
+      const { data, error } = await (supabase as any)
+        .from("squad_daily_sessions")
+        .insert({
+          squad_id: squadId,
+          session_date: todayISO(),
+          started_at: start.toISOString(),
+          delay_seconds: delaySec,
+          on_time: delaySec <= 5 * 60,
+          created_by: u?.user?.id,
+        })
+        .select().single();
+      if (!error && data) sessionIdRef.current = data.id;
+    })();
   }, [open]);
 
   useEffect(() => {
@@ -120,6 +143,20 @@ export function SquadDaily({
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, [open]);
+
+  async function logClientTime(client: Client) {
+    if (!sessionIdRef.current) return;
+    const seconds = Math.max(0, Math.floor((Date.now() - clientStartRef.current) / 1000));
+    if (seconds < 1) return;
+    await (supabase as any).from("squad_daily_session_clients").insert({
+      session_id: sessionIdRef.current,
+      client_id: client.id,
+      prioritization: client.prioritization,
+      seconds_spent: seconds,
+      position: ordered.findIndex((c) => c.id === client.id),
+    });
+    clientStartRef.current = Date.now();
+  }
 
   // Carrega nota do dia + histórico (7 dias e do mês) para o cliente atual
   useEffect(() => {
