@@ -72,7 +72,8 @@ type Engagement = {
 type Agenda = {
   id: string; squad_id: string; reference_month: string;
   category: string | null; client_name: string; responsible: string | null;
-  meeting_date: string | null; meeting_time: string | null; done: boolean; observations: string | null;
+  meeting_date: string | null; meeting_time: string | null; done: boolean;
+  observations: string | null; not_done_reason: string | null;
 };
 
 const emptyClient: Partial<SquadClient> = {
