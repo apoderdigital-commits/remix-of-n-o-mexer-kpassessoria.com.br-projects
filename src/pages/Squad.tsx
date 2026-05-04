@@ -111,9 +111,8 @@ export default function Squad() {
     const { data } = await supabase
       .from("squad_clients")
       .select("*")
-      .eq("squad_id", sid)
-      .order("name");
-    setClients(data || []);
+      .eq("squad_id", sid);
+    setClients(sortByPrio(data || []));
   }
 
   function openNew() {
