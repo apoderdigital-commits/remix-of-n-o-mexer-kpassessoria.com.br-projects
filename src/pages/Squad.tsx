@@ -943,7 +943,26 @@ export default function Squad() {
           {editingEng && (
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Mês *</Label><Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div><Label>Cliente *</Label><Input value={editingEng.client_name || ""} onChange={(e) => setEditingEng({ ...editingEng, client_name: e.target.value })} /></div>
+              <div>
+                <Label>Cliente *</Label>
+                <Select
+                  value={editingEng.client_name || ""}
+                  onValueChange={(v) => {
+                    const c = clients.find((x) => x.name === v);
+                    setEditingEng({
+                      ...editingEng,
+                      client_name: v,
+                      curve_abc: editingEng.curve_abc || c?.curve_abc || null,
+                      sprint: editingEng.sprint || c?.sprint || null,
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="col-span-2"><Label>Ponto de contato</Label><Input value={editingEng.contact || ""} onChange={(e) => setEditingEng({ ...editingEng, contact: e.target.value })} /></div>
               <div>
                 <Label>Curva ABC</Label>
