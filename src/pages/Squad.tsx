@@ -257,6 +257,100 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
+  // ---------- NPS ----------
+  async function saveNps() {
+    if (!editingNps?.period) return toast.error("Período obrigatório");
+    const det = Number(editingNps.detractors || 0);
+    const neu = Number(editingNps.neutrals || 0);
+    const pro = Number(editingNps.promoters || 0);
+    const resp = det + neu + pro;
+    const score = resp > 0 ? ((pro - det) / resp) * 100 : null;
+    const payload: any = {
+      squad_id: squadId,
+      period: editingNps.period,
+      total_clients: editingNps.total_clients ?? null,
+      responses: resp || (editingNps.responses ?? null),
+      detractors: det, neutrals: neu, promoters: pro,
+      nps_score: score,
+      avg_engagement: editingNps.avg_engagement ?? null,
+      observations: editingNps.observations || null,
+    };
+    const res = editingNps.id
+      ? await (supabase as any).from("squad_nps").update(payload).eq("id", editingNps.id)
+      : await (supabase as any).from("squad_nps").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("NPS salvo");
+    setOpenNps(false);
+    void loadAll(squadId);
+  }
+  async function removeNps(id: string) {
+    if (!confirm("Remover este NPS?")) return;
+    await (supabase as any).from("squad_nps").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+
+  // ---------- ENGAGEMENT ----------
+  async function saveEng() {
+    if (!editingEng?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
+    const payload: any = {
+      squad_id: squadId,
+      reference_month: editingEng.reference_month,
+      client_name: editingEng.client_name.trim(),
+      contact: editingEng.contact || null,
+      curve_abc: editingEng.curve_abc?.toUpperCase() || null,
+      sprint: editingEng.sprint?.toUpperCase() || null,
+      engagement_score: editingEng.engagement_score ?? null,
+      nps_individual: editingEng.nps_individual ?? null,
+      observation: editingEng.observation || null,
+    };
+    const res = editingEng.id
+      ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
+      : await (supabase as any).from("squad_engagement").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("Engajamento salvo");
+    setOpenEng(false);
+    void loadAll(squadId);
+  }
+  async function removeEng(id: string) {
+    if (!confirm("Remover este registro?")) return;
+    await (supabase as any).from("squad_engagement").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+
+  // ---------- AGENDA ----------
+  async function saveAg() {
+    if (!editingAg?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    if (!editingAg?.reference_month) return toast.error("Mês obrigatório");
+    const payload: any = {
+      squad_id: squadId,
+      reference_month: editingAg.reference_month,
+      category: editingAg.category || null,
+      client_name: editingAg.client_name.trim(),
+      responsible: editingAg.responsible || null,
+      meeting_date: editingAg.meeting_date || null,
+      meeting_time: editingAg.meeting_time || null,
+      done: !!editingAg.done,
+      observations: editingAg.observations || null,
+    };
+    const res = editingAg.id
+      ? await (supabase as any).from("squad_agenda").update(payload).eq("id", editingAg.id)
+      : await (supabase as any).from("squad_agenda").insert(payload);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("Agenda salva");
+    setOpenAg(false);
+    void loadAll(squadId);
+  }
+  async function removeAg(id: string) {
+    if (!confirm("Remover este compromisso?")) return;
+    await (supabase as any).from("squad_agenda").delete().eq("id", id);
+    void loadAll(squadId);
+  }
+  async function toggleAgDone(a: Agenda) {
+    await (supabase as any).from("squad_agenda").update({ done: !a.done }).eq("id", a.id);
+    void loadAll(squadId);
+  }
+
   const currentSquad = squads.find((s) => s.id === squadId);
 
   // Priority matrix (3x3)
