@@ -99,6 +99,43 @@ const CURVE_COLORS: Record<string, string> = {
   C: "bg-slate-500/20 text-slate-300 border-slate-500/40",
 };
 
+const SERVICE_OPTIONS = [
+  { code: "TP", label: "Tráfego Pago" },
+  { code: "CRM", label: "CRM" },
+  { code: "COM", label: "Acomp. Comercial" },
+] as const;
+
+const SERVICE_COLORS: Record<string, string> = {
+  TP: "bg-primary/20 text-primary border-primary/40",
+  CRM: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
+  COM: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+};
+
+function parseServices(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,;/|]+/)
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => SERVICE_OPTIONS.some((o) => o.code === s));
+}
+
+function parseMoney(raw: string | null | undefined): number | null {
+  if (raw == null) return null;
+  const s = String(raw).trim().toUpperCase();
+  if (!s || s === "-") return null;
+  const m = s.match(/([\d.,]+)\s*(K|MIL)?/);
+  if (!m) return null;
+  let n = parseFloat(m[1].replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+  if (isNaN(n)) return null;
+  if (m[2]) n *= 1000;
+  return n;
+}
+
+function formatBRL(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return "—";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
 export default function Squad() {
   const { isAdmin } = useAuth();
   const [squads, setSquads] = useState<Squad[]>([]);
