@@ -1475,6 +1475,46 @@ export default function Squad() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Novo mês de engajamento */}
+      <Dialog open={newMonthOpen} onOpenChange={setNewMonthOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" /> Novo mês de engajamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Vamos criar um registro para <strong className="text-primary">cada cliente cadastrado</strong> ({clients.length}) neste mês.
+              Você só vai precisar editar ABC, Sprint, engajamento e NPS de cada um.
+            </p>
+            <div>
+              <Label>Mês *</Label>
+              <Input type="month" value={newMonthValue} onChange={(e) => setNewMonthValue(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewMonthOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createMonthFromClients(newMonthValue)} className="bg-gradient-to-r from-primary to-fuchsia-600">
+              Carregar {clients.length} clientes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {purgeMonth && (
+        <ActionVerificationDialog
+          open={!!purgeMonth}
+          onOpenChange={(o) => !o && setPurgeMonth(null)}
+          action="purge_squad_engagement_month"
+          payload={{ squad_id: squadId, reference_month: purgeMonth }}
+          targetLabel={`Engajamento de ${formatMonth(purgeMonth)}`}
+          title="Excluir mês definitivamente"
+          successMessage="Mês excluído"
+          onSuccess={() => { setPurgeMonth(null); void loadAll(squadId); }}
+        />
+      )}
     </div>
   );
 }
