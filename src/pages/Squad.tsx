@@ -184,7 +184,7 @@ export default function Squad() {
   }
 
   async function loadAll(sid: string) {
-    const [c, m, ch, n, e, a] = await Promise.all([
+    const [c, m, ch, n, e, a, et] = await Promise.all([
       supabase.from("squad_clients").select("*").eq("squad_id", sid)
         .order("priority_score").order("name"),
       supabase.from("squad_monthly_metrics").select("*").eq("squad_id", sid)
@@ -194,15 +194,20 @@ export default function Squad() {
       (supabase as any).from("squad_nps").select("*").eq("squad_id", sid)
         .order("period", { ascending: false }),
       (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
+        .is("deleted_at", null)
         .order("reference_month", { ascending: false }).order("client_name"),
       (supabase as any).from("squad_agenda").select("*").eq("squad_id", sid)
         .order("meeting_date", { ascending: true }),
+      (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false }),
     ]);
     setClients((c.data as SquadClient[]) || []);
     setMetrics((m.data as Metric[]) || []);
     setChurns((ch.data as Churn[]) || []);
     setNps((n.data as Nps[]) || []);
     setEngagement((e.data as Engagement[]) || []);
+    setEngTrash((et?.data as Engagement[]) || []);
     setAgenda((a.data as Agenda[]) || []);
   }
 
