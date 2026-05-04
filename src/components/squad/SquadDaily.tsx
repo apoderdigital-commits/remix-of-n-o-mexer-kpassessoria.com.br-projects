@@ -105,6 +105,8 @@ export function SquadDaily({
   const [content, setContent] = useState("");
   const [history, setHistory] = useState<DailyNote[]>([]);
   const [saving, setSaving] = useState(false);
+  const [countdown, setCountdown] = useState<number>(10);
+  const [paused, setPaused] = useState(false);
   const noteIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const clientStartRef = useRef<number>(Date.now());
@@ -112,31 +114,46 @@ export function SquadDaily({
 
   const current = ordered[idx];
 
+  // Reset when opening
   useEffect(() => {
     if (!open) return;
     setIdx(0);
+    setStartedAt(null);
+    setCountdown(10);
+    setPaused(false);
+    closedRef.current = false;
+  }, [open]);
+
+  // Countdown tick
+  useEffect(() => {
+    if (!open || startedAt || paused) return;
+    if (countdown <= 0) {
+      void beginSession();
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [open, startedAt, paused, countdown]);
+
+  async function beginSession() {
     const start = new Date();
     setStartedAt(start);
-    closedRef.current = false;
     clientStartRef.current = start.getTime();
-    // create session
-    void (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const delaySec = Math.max(0, Math.floor(getDelayFrom9AM(start) / 1000));
-      const { data, error } = await (supabase as any)
-        .from("squad_daily_sessions")
-        .insert({
-          squad_id: squadId,
-          session_date: todayISO(),
-          started_at: start.toISOString(),
-          delay_seconds: delaySec,
-          on_time: delaySec <= 5 * 60,
-          created_by: u?.user?.id,
-        })
-        .select().single();
-      if (!error && data) sessionIdRef.current = data.id;
-    })();
-  }, [open]);
+    const { data: u } = await supabase.auth.getUser();
+    const delaySec = Math.max(0, Math.floor(getDelayFrom9AM(start) / 1000));
+    const { data, error } = await (supabase as any)
+      .from("squad_daily_sessions")
+      .insert({
+        squad_id: squadId,
+        session_date: todayISO(),
+        started_at: start.toISOString(),
+        delay_seconds: delaySec,
+        on_time: delaySec <= 5 * 60,
+        created_by: u?.user?.id,
+      })
+      .select().single();
+    if (!error && data) sessionIdRef.current = data.id;
+  }
 
   useEffect(() => {
     if (!open) return;
