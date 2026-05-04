@@ -1224,7 +1224,7 @@ export default function Squad() {
       {/* Agenda dialog */}
       <Dialog open={openAg} onOpenChange={setOpenAg}>
         <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>{editingAg?.id ? "Editar compromisso" : "Novo compromisso"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl">{editingAg?.id ? "Editar Alinhamento Mensal" : "Novo Alinhamento Mensal"}</DialogTitle></DialogHeader>
           {editingAg && (
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Mês de referência *</Label><Input type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
