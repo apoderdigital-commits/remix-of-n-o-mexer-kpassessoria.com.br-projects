@@ -40,6 +40,29 @@ export function AIChat({ buildContext, disabled }: AIChatProps) {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
 
+  const sendCreativeToWhatsApp = async (identifier: string) => {
+    const ctx = buildContext();
+    const top = ctx?.topCreatives?.find((c) => c.name === identifier);
+    const tid = toast.loading("Enviando para seu WhatsApp...");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-creative-whatsapp", {
+        body: {
+          creative_url: identifier,
+          period_since: ctx?.period?.since ?? null,
+          period_until: ctx?.period?.until ?? null,
+          category: top ? "Top criativo (CPF aprovado)" : null,
+          count: top?.count ?? null,
+          percentage: top?.pct ?? null,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Enviado! Confira seu WhatsApp.", { id: tid });
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao enviar para o WhatsApp", { id: tid });
+    }
+  };
+
   const send = async (text: string) => {
     const value = text.trim();
     if (!value || streaming) return;
