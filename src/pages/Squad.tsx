@@ -570,9 +570,9 @@ export default function Squad() {
               <TabsTrigger value="matrix" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Matriz</TabsTrigger>
               <TabsTrigger value="metrics" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Métricas dos Projetos</TabsTrigger>
               <TabsTrigger value="churn" className="gap-1.5"><TrendingDown className="h-3.5 w-3.5" /> Churn</TabsTrigger>
-              <TabsTrigger value="nps" className="gap-1.5"><Smile className="h-3.5 w-3.5" /> NPS</TabsTrigger>
+              <TabsTrigger value="nps" className="gap-1.5"><Smile className="h-3.5 w-3.5" /> % de NPS</TabsTrigger>
               <TabsTrigger value="engagement" className="gap-1.5"><Star className="h-3.5 w-3.5" /> Engajamento</TabsTrigger>
-              <TabsTrigger value="agenda" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agenda</TabsTrigger>
+              <TabsTrigger value="agenda" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agenda das Mensais</TabsTrigger>
             </TabsList>
 
             {/* CLIENTES */}
