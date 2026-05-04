@@ -1706,13 +1706,15 @@ function MetricsOverview({ metrics }: { metrics: Metric[] }) {
 // ===== NpsChart: distribution of engagement NPS individual scores =====
 function NpsChart({ dist }: { dist: {
   total: number; buckets: { score: number; count: number }[];
-  pctAbove8: number; pctAbove6: number; pctAbove9: number;
-  promoters: number; detractors: number; neutrals: number; npsScore: number; avg: number;
+  pctAbove8: number; pctTen: number; pctBelow7: number;
+  above8: number; tens: number; below7: number; middle: number;
+  npsScore: number; avg: number;
+  monthly: { mes: string; mediaNota: number; pctAcima8: number; nps: number }[];
 } }) {
   const data = dist.buckets.map((b) => ({
     nota: b.score.toString(),
     Respostas: b.count,
-    color: b.score >= 9 ? "hsl(160 70% 45%)" : b.score >= 7 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)",
+    color: b.score === 10 ? "hsl(160 75% 38%)" : b.score > 8 ? "hsl(160 70% 50%)" : b.score < 7 ? "hsl(0 84% 60%)" : "hsl(38 92% 55%)",
   }));
   return (
     <div className="space-y-4">
@@ -1720,15 +1722,16 @@ function NpsChart({ dist }: { dist: {
         <SummaryStat label="Notas coletadas" value={dist.total} tone="primary" />
         <SummaryStat label="Média das notas" value={dist.total ? dist.avg.toFixed(1) : "—"} tone="sky" />
         <SummaryStat label="% acima de 8" value={`${dist.pctAbove8}%`} tone="emerald" />
-        <SummaryStat label="% acima de 6" value={`${dist.pctAbove6}%`} tone="amber" />
+        <SummaryStat label="% nota 10" value={`${dist.pctTen}%`} tone="amber" />
       </div>
+
       <Card className="bg-card/40 backdrop-blur-sm border-border/30">
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <Smile className="h-4 w-4 text-primary" /> % de NPS — distribuição das notas (Engajamento)
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Detratores (0-6) · Neutros (7-8) · Promotores (9-10). Meta: nota acima de <strong>8</strong>.
+            Categorias: <strong className="text-emerald-300">Acima de 8</strong> · <strong className="text-emerald-400">Nota 10</strong> · <strong className="text-red-300">Abaixo de 7</strong>. Meta: nota acima de <strong>8</strong>.
           </p>
         </CardHeader>
         <CardContent>
@@ -1752,32 +1755,58 @@ function NpsChart({ dist }: { dist: {
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-                  <p className="text-[11px] uppercase text-red-300/80">Detratores</p>
-                  <p className="text-xl font-bold text-red-300">{dist.detractors}</p>
-                </div>
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                  <p className="text-[11px] uppercase text-amber-300/80">Neutros</p>
-                  <p className="text-xl font-bold text-amber-300">{dist.neutrals}</p>
-                </div>
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <p className="text-[11px] uppercase text-emerald-300/80">Promotores</p>
-                  <p className="text-xl font-bold text-emerald-300">{dist.promoters}</p>
+                  <p className="text-[11px] uppercase text-emerald-300/80">Acima de 8</p>
+                  <p className="text-xl font-bold text-emerald-300">{dist.above8} <span className="text-xs font-normal text-emerald-300/60">({dist.pctAbove8}%)</span></p>
+                </div>
+                <div className="rounded-lg border border-emerald-600/40 bg-emerald-600/10 p-3">
+                  <p className="text-[11px] uppercase text-emerald-300/80">Nota 10</p>
+                  <p className="text-xl font-bold text-emerald-300">{dist.tens} <span className="text-xs font-normal text-emerald-300/60">({dist.pctTen}%)</span></p>
+                </div>
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                  <p className="text-[11px] uppercase text-red-300/80">Abaixo de 7</p>
+                  <p className="text-xl font-bold text-red-300">{dist.below7} <span className="text-xs font-normal text-red-300/60">({dist.pctBelow7}%)</span></p>
                 </div>
               </div>
-              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-primary/80">NPS final</p>
                   <p className="text-3xl font-bold text-primary mt-0.5">{dist.npsScore}</p>
                 </div>
                 <p className="text-xs text-muted-foreground max-w-xs text-right">
-                  (Promotores − Detratores) ÷ Total × 100
+                  (Acima de 8 − Abaixo de 7) ÷ Total × 100
                 </p>
               </div>
             </>
           )}
         </CardContent>
       </Card>
+
+      {dist.monthly.length > 0 && (
+        <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> Evolução mensal do NPS
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dist.monthly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="mediaNota" name="Média da nota" stroke="hsl(263 70% 58%)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="pctAcima8" name="% acima de 8" stroke="hsl(160 70% 45%)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="nps" name="NPS" stroke="hsl(38 92% 55%)" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
