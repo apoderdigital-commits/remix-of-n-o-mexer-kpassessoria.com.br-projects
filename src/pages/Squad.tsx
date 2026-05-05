@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
+import { SquadNotesReport } from "@/components/squad/SquadNotesReport";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
