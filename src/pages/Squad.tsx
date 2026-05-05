@@ -663,14 +663,20 @@ export default function Squad() {
 
         <SquadDaily
           open={dailyOpen}
-          onClose={() => setDailyOpen(false)}
+          onClose={() => { setDailyOpen(false); setResumeSession(null); }}
           squadId={squadId}
           clients={clients}
+          resumeSession={resumeSession}
         />
         <SquadDailyReport
           open={reportOpen}
           onClose={() => setReportOpen(false)}
           squadId={squadId}
+          onResume={(s) => {
+            setReportOpen(false);
+            setResumeSession({ id: s.id, started_at: s.started_at });
+            setDailyOpen(true);
+          }}
         />
 
         {loading ? (
