@@ -117,15 +117,27 @@ export function SquadDaily({
 
   const current = ordered[idx];
 
-  // Reset when opening
+  // Reset when opening / handle resume
   useEffect(() => {
     if (!open) return;
-    setIdx(0);
-    setStartedAt(null);
-    setCountdown(10);
-    setPaused(false);
     closedRef.current = false;
-  }, [open]);
+    setConfirmClose(false);
+    if (resumeSession) {
+      setIdx(0);
+      const st = new Date(resumeSession.started_at);
+      setStartedAt(st);
+      clientStartRef.current = Date.now();
+      sessionIdRef.current = resumeSession.id;
+      setCountdown(0);
+      setPaused(false);
+    } else {
+      setIdx(0);
+      setStartedAt(null);
+      sessionIdRef.current = null;
+      setCountdown(10);
+      setPaused(false);
+    }
+  }, [open, resumeSession?.id]);
 
   // Countdown tick
   useEffect(() => {
