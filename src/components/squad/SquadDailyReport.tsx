@@ -409,9 +409,16 @@ export function SquadDailyReport({
                                 </Button>
                               </>
                             ) : (
-                              <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-red-400 hover:text-red-300">
-                                <Trash2 className="h-3 w-3" /> Excluir
-                              </Button>
+                              <>
+                                {!s.ended_at && onResume && (
+                                  <Button size="sm" variant="ghost" onClick={() => onResume(s)} className="h-7 gap-1 text-emerald-400 hover:text-emerald-300">
+                                    <Play className="h-3 w-3" /> Continuar
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-red-400 hover:text-red-300">
+                                  <Trash2 className="h-3 w-3" /> Excluir
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>
