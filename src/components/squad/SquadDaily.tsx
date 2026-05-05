@@ -335,7 +335,8 @@ export function SquadDaily({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && requestClose()}>
+    <>
+    <Dialog open={open && !confirmClose} onOpenChange={(o) => !o && requestClose()}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
         {/* Header timer */}
         <div className="px-6 py-4 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-emerald-500/10 border-b border-border/30">
