@@ -109,6 +109,7 @@ export function SquadDaily({
   const [saving, setSaving] = useState(false);
   const [countdown, setCountdown] = useState<number>(10);
   const [paused, setPaused] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const noteIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const clientStartRef = useRef<number>(Date.now());
