@@ -476,7 +476,7 @@ export function SquadDaily({
               Próximo <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={requestClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
+            <Button onClick={finalizeClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
               Finalizar daily
             </Button>
           )}
