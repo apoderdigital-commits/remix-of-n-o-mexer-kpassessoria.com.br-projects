@@ -484,6 +484,36 @@ export function SquadDaily({
         </div>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={confirmClose} onOpenChange={(o) => !o && setConfirmClose(false)}>
+      <DialogContent className="max-w-md bg-background border-border/40">
+        <div className="p-2">
+          <h3 className="text-lg font-bold mb-1">Encerrar a daily?</h3>
+          <p className="text-sm text-muted-foreground mb-5">
+            A daily ainda está em andamento. O que deseja fazer?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => { setConfirmClose(false); }} variant="outline" className="gap-1.5">
+              <Play className="h-4 w-4" /> Continuar a daily
+            </Button>
+            <Button
+              onClick={() => { setConfirmClose(false); pauseAndExit(); }}
+              variant="outline"
+              className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            >
+              <Pause className="h-4 w-4" /> Pausar e continuar depois
+            </Button>
+            <Button
+              onClick={() => { setConfirmClose(false); finalizeClose(); }}
+              className="gap-1.5 bg-gradient-to-r from-red-500 to-orange-600"
+            >
+              <X className="h-4 w-4" /> Encerrar daily agora
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
