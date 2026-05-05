@@ -21,11 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
-  Smile, CalendarDays, Star, AlertCircle,
+  Smile, CalendarDays, Star, AlertCircle, NotebookPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
+import { SquadNotesReport } from "@/components/squad/SquadNotesReport";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -170,6 +171,7 @@ export default function Squad() {
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [notesReportOpen, setNotesReportOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
   const [newMonthOpen, setNewMonthOpen] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
@@ -651,6 +653,15 @@ export default function Squad() {
               <FileText className="h-4 w-4" /> Relatório das Dailys
             </Button>
           )}
+          {squadId && (
+            <Button
+              variant="outline"
+              onClick={() => setNotesReportOpen(true)}
+              className="gap-1.5"
+            >
+              <NotebookPen className="h-4 w-4" /> Relatório de Anotações
+            </Button>
+          )}
           {squadId && clients.length > 0 && (
             <Button
               onClick={() => setDailyOpen(true)}
@@ -677,6 +688,12 @@ export default function Squad() {
             setResumeSession({ id: s.id, started_at: s.started_at });
             setDailyOpen(true);
           }}
+        />
+        <SquadNotesReport
+          open={notesReportOpen}
+          onClose={() => setNotesReportOpen(false)}
+          squadId={squadId}
+          clients={clients.map((c) => ({ id: c.id, name: c.name }))}
         />
 
         {loading ? (
