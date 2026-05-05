@@ -170,6 +170,7 @@ export default function Squad() {
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
   const [newMonthOpen, setNewMonthOpen] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
