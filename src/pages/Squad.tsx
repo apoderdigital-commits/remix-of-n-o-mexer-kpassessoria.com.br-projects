@@ -170,6 +170,7 @@ export default function Squad() {
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
   const [newMonthOpen, setNewMonthOpen] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
@@ -662,14 +663,20 @@ export default function Squad() {
 
         <SquadDaily
           open={dailyOpen}
-          onClose={() => setDailyOpen(false)}
+          onClose={() => { setDailyOpen(false); setResumeSession(null); }}
           squadId={squadId}
           clients={clients}
+          resumeSession={resumeSession}
         />
         <SquadDailyReport
           open={reportOpen}
           onClose={() => setReportOpen(false)}
           squadId={squadId}
+          onResume={(s) => {
+            setReportOpen(false);
+            setResumeSession({ id: s.id, started_at: s.started_at });
+            setDailyOpen(true);
+          }}
         />
 
         {loading ? (

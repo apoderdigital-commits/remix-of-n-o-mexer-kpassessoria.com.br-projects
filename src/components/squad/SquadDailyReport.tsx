@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   CheckCircle2, Clock, AlertTriangle, CalendarX, FileText, Save,
-  Trash2, RotateCcw, Ban, ChevronLeft, ChevronRight, Lock,
+  Trash2, RotateCcw, Ban, ChevronLeft, ChevronRight, Lock, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
@@ -63,8 +63,8 @@ function listAllDays(year: number, month0: number): string[] {
 }
 
 export function SquadDailyReport({
-  open, onClose, squadId,
-}: { open: boolean; onClose: () => void; squadId: string }) {
+  open, onClose, squadId, onResume,
+}: { open: boolean; onClose: () => void; squadId: string; onResume?: (s: Session) => void }) {
   const today = brtToday();
   const [cursor, setCursor] = useState<{ y: number; m: number }>(() => {
     const [y, m] = today.split("-").map(Number);
@@ -409,9 +409,16 @@ export function SquadDailyReport({
                                 </Button>
                               </>
                             ) : (
-                              <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-red-400 hover:text-red-300">
-                                <Trash2 className="h-3 w-3" /> Excluir
-                              </Button>
+                              <>
+                                {!s.ended_at && onResume && (
+                                  <Button size="sm" variant="ghost" onClick={() => onResume(s)} className="h-7 gap-1 text-emerald-400 hover:text-emerald-300">
+                                    <Play className="h-3 w-3" /> Continuar
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => trashSession(s.id)} className="h-7 gap-1 text-red-400 hover:text-red-300">
+                                  <Trash2 className="h-3 w-3" /> Excluir
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>

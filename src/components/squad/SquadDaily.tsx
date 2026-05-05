@@ -86,11 +86,13 @@ export function SquadDaily({
   onClose,
   squadId,
   clients,
+  resumeSession,
 }: {
   open: boolean;
   onClose: () => void;
   squadId: string;
   clients: Client[];
+  resumeSession?: { id: string; started_at: string } | null;
 }) {
   // Ordem: do menor para o maior nível de priorização (AA = mais crítico).
   // priority_score: AA=0 ... CC=8. "menor priorização" = score maior.
@@ -107,6 +109,7 @@ export function SquadDaily({
   const [saving, setSaving] = useState(false);
   const [countdown, setCountdown] = useState<number>(10);
   const [paused, setPaused] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const noteIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const clientStartRef = useRef<number>(Date.now());
@@ -114,15 +117,27 @@ export function SquadDaily({
 
   const current = ordered[idx];
 
-  // Reset when opening
+  // Reset when opening / handle resume
   useEffect(() => {
     if (!open) return;
-    setIdx(0);
-    setStartedAt(null);
-    setCountdown(10);
-    setPaused(false);
     closedRef.current = false;
-  }, [open]);
+    setConfirmClose(false);
+    if (resumeSession) {
+      setIdx(0);
+      const st = new Date(resumeSession.started_at);
+      setStartedAt(st);
+      clientStartRef.current = Date.now();
+      sessionIdRef.current = resumeSession.id;
+      setCountdown(0);
+      setPaused(false);
+    } else {
+      setIdx(0);
+      setStartedAt(null);
+      sessionIdRef.current = null;
+      setCountdown(10);
+      setPaused(false);
+    }
+  }, [open, resumeSession?.id]);
 
   // Countdown tick
   useEffect(() => {
@@ -241,7 +256,25 @@ export function SquadDaily({
     setIdx(next);
   }
 
-  function handleClose() {
+  function requestClose() {
+    if (closedRef.current) { onClose(); return; }
+    // If still in countdown phase, just close without prompt
+    if (!startedAt) { closedRef.current = true; onClose(); return; }
+    setConfirmClose(true);
+  }
+
+  function pauseAndExit() {
+    // Save state but DO NOT mark session as ended — allows resuming later
+    if (closedRef.current) { onClose(); return; }
+    closedRef.current = true;
+    void (async () => {
+      await saveNote(false);
+      if (current) await logClientTime(current);
+      onClose();
+    })();
+  }
+
+  function finalizeClose() {
     if (closedRef.current) { onClose(); return; }
     closedRef.current = true;
     void (async () => {
@@ -302,7 +335,8 @@ export function SquadDaily({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+    <>
+    <Dialog open={open && !confirmClose} onOpenChange={(o) => !o && requestClose()}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
         {/* Header timer */}
         <div className="px-6 py-4 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-emerald-500/10 border-b border-border/30">
@@ -319,7 +353,7 @@ export function SquadDaily({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleClose} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={requestClose} className="gap-1.5">
                 <X className="h-4 w-4" /> Encerrar
               </Button>
             </div>
@@ -443,13 +477,43 @@ export function SquadDaily({
               Próximo <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
+            <Button onClick={finalizeClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
               Finalizar daily
             </Button>
           )}
         </div>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={confirmClose} onOpenChange={(o) => !o && setConfirmClose(false)}>
+      <DialogContent className="max-w-md bg-background border-border/40">
+        <div className="p-2">
+          <h3 className="text-lg font-bold mb-1">Encerrar a daily?</h3>
+          <p className="text-sm text-muted-foreground mb-5">
+            A daily ainda está em andamento. O que deseja fazer?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => { setConfirmClose(false); }} variant="outline" className="gap-1.5">
+              <Play className="h-4 w-4" /> Continuar a daily
+            </Button>
+            <Button
+              onClick={() => { setConfirmClose(false); pauseAndExit(); }}
+              variant="outline"
+              className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            >
+              <Pause className="h-4 w-4" /> Pausar e continuar depois
+            </Button>
+            <Button
+              onClick={() => { setConfirmClose(false); finalizeClose(); }}
+              className="gap-1.5 bg-gradient-to-r from-red-500 to-orange-600"
+            >
+              <X className="h-4 w-4" /> Encerrar daily agora
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
