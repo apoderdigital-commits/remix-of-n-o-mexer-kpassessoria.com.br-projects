@@ -335,7 +335,7 @@ export function SquadDaily({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && requestClose()}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
         {/* Header timer */}
         <div className="px-6 py-4 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-emerald-500/10 border-b border-border/30">
@@ -352,7 +352,7 @@ export function SquadDaily({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleClose} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={requestClose} className="gap-1.5">
                 <X className="h-4 w-4" /> Encerrar
               </Button>
             </div>
@@ -476,7 +476,7 @@ export function SquadDaily({
               Próximo <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
+            <Button onClick={requestClose} className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600">
               Finalizar daily
             </Button>
           )}
