@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   CheckCircle2, Clock, AlertTriangle, CalendarX, FileText, Save,
-  Trash2, RotateCcw, Ban, ChevronLeft, ChevronRight, Lock,
+  Trash2, RotateCcw, Ban, ChevronLeft, ChevronRight, Lock, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
