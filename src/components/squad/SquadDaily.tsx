@@ -86,11 +86,13 @@ export function SquadDaily({
   onClose,
   squadId,
   clients,
+  resumeSession,
 }: {
   open: boolean;
   onClose: () => void;
   squadId: string;
   clients: Client[];
+  resumeSession?: { id: string; started_at: string } | null;
 }) {
   // Ordem: do menor para o maior nível de priorização (AA = mais crítico).
   // priority_score: AA=0 ... CC=8. "menor priorização" = score maior.
