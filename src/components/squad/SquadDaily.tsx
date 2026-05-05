@@ -256,7 +256,25 @@ export function SquadDaily({
     setIdx(next);
   }
 
-  function handleClose() {
+  function requestClose() {
+    if (closedRef.current) { onClose(); return; }
+    // If still in countdown phase, just close without prompt
+    if (!startedAt) { closedRef.current = true; onClose(); return; }
+    setConfirmClose(true);
+  }
+
+  function pauseAndExit() {
+    // Save state but DO NOT mark session as ended — allows resuming later
+    if (closedRef.current) { onClose(); return; }
+    closedRef.current = true;
+    void (async () => {
+      await saveNote(false);
+      if (current) await logClientTime(current);
+      onClose();
+    })();
+  }
+
+  function finalizeClose() {
     if (closedRef.current) { onClose(); return; }
     closedRef.current = true;
     void (async () => {
