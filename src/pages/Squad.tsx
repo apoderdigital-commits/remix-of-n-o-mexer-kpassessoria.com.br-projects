@@ -689,6 +689,12 @@ export default function Squad() {
             setDailyOpen(true);
           }}
         />
+        <SquadNotesReport
+          open={notesReportOpen}
+          onClose={() => setNotesReportOpen(false)}
+          squadId={squadId}
+          clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+        />
 
         {loading ? (
           <p className="text-muted-foreground">Carregando...</p>
