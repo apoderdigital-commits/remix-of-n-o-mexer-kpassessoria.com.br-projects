@@ -63,8 +63,8 @@ function listAllDays(year: number, month0: number): string[] {
 }
 
 export function SquadDailyReport({
-  open, onClose, squadId,
-}: { open: boolean; onClose: () => void; squadId: string }) {
+  open, onClose, squadId, onResume,
+}: { open: boolean; onClose: () => void; squadId: string; onResume?: (s: Session) => void }) {
   const today = brtToday();
   const [cursor, setCursor] = useState<{ y: number; m: number }>(() => {
     const [y, m] = today.split("-").map(Number);
