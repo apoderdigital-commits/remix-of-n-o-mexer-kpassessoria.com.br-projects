@@ -653,6 +653,15 @@ export default function Squad() {
               <FileText className="h-4 w-4" /> Relatório das Dailys
             </Button>
           )}
+          {squadId && (
+            <Button
+              variant="outline"
+              onClick={() => setNotesReportOpen(true)}
+              className="gap-1.5"
+            >
+              <NotebookPen className="h-4 w-4" /> Relatório de Anotações
+            </Button>
+          )}
           {squadId && clients.length > 0 && (
             <Button
               onClick={() => setDailyOpen(true)}
