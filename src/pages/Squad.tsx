@@ -299,19 +299,27 @@ export default function Squad() {
   // ---------- CHURN ----------
   async function saveChurn() {
     if (!editingChurn?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    const months = monthsBetween(editingChurn.entry_month, editingChurn.churn_month);
     const payload: any = {
       squad_id: squadId,
       client_name: editingChurn.client_name.trim(),
       entry_month: editingChurn.entry_month || null,
       churn_month: editingChurn.churn_month || null,
       reason: editingChurn.reason || null,
-      months_active: editingChurn.months_active || null,
+      months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
       observations: editingChurn.observations || null,
     };
     const res = editingChurn.id
       ? await supabase.from("squad_churn").update(payload).eq("id", editingChurn.id)
       : await supabase.from("squad_churn").insert(payload);
     if (res.error) return toast.error(res.error.message);
+
+    if (pendingClientDelete) {
+      const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", pendingClientDelete);
+      if (delErr) toast.error(`Churn salvo, mas falhou ao remover cliente: ${delErr.message}`);
+      setPendingClientDelete(null);
+    }
+
     toast.success("Churn salvo");
     setOpenChurn(false);
     void loadAll(squadId);
