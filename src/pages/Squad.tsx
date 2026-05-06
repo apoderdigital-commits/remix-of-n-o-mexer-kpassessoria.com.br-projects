@@ -2057,3 +2057,126 @@ function NpsChart({ dist }: { dist: {
     </div>
   );
 }
+
+function ChurnPanel({
+  churns, activeClientsCount, onNew, onEdit, onRemove,
+}: {
+  churns: Churn[];
+  activeClientsCount: number;
+  onNew: () => void;
+  onEdit: (c: Churn) => void;
+  onRemove: (id: string) => void;
+}) {
+  // Group churns by churn_month (YYYY-MM)
+  const grouped = useMemo(() => {
+    const map = new Map<string, Churn[]>();
+    for (const c of churns) {
+      const key = c.churn_month ? c.churn_month.slice(0, 7) : "sem-data";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [churns]);
+
+  // Compute active base per month: current active + churns occurring on/after that month
+  const totalChurns = churns.length;
+  const baselineActive = activeClientsCount; // current active
+
+  const totalRate = baselineActive + totalChurns > 0
+    ? (totalChurns / (baselineActive + totalChurns)) * 100
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
+            <p className="text-3xl font-bold mt-1">{activeClientsCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de churns</p>
+            <p className="text-3xl font-bold text-red-300 mt-1">{totalChurns}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Taxa acumulada</p>
+            <p className="text-3xl font-bold text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={onNew} className="gap-1.5">
+          <Plus className="h-4 w-4" /> Novo churn
+        </Button>
+      </div>
+
+      {grouped.length === 0 ? (
+        <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-12 text-center text-muted-foreground">
+          Nenhum churn registrado.
+        </div>
+      ) : grouped.map(([monthKey, items], idx) => {
+        // Active base for that month = current active + churns from that month onward (back in time)
+        const churnsFromThisMonthOnward = churns.filter((c) => {
+          const k = c.churn_month?.slice(0, 7) || "";
+          return k && k >= monthKey;
+        }).length;
+        const baseForMonth = baselineActive + churnsFromThisMonthOnward;
+        const rate = baseForMonth > 0 ? (items.length / baseForMonth) * 100 : 0;
+        const rateColor = rate >= 10 ? "text-red-300 bg-red-500/15 border-red-500/30"
+          : rate >= 5 ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
+          : "text-emerald-300 bg-emerald-500/15 border-emerald-500/30";
+
+        return (
+          <div key={monthKey} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border/30 bg-muted/10">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold capitalize">{formatMonth(`${monthKey}-01`)}</span>
+                <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/30">
+                  {items.length} {items.length === 1 ? "churn" : "churns"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Taxa de churn</span>
+                <Badge className={rateColor}>{rate.toFixed(1)}%</Badge>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/30">
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Mês entrada</TableHead>
+                    <TableHead>Meses vigentes</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Observações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((c) => (
+                    <TableRow key={c.id} className="border-border/20">
+                      <TableCell className="font-semibold">{c.client_name}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
+                      <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
+                      <TableCell className="text-xs">{c.reason || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
