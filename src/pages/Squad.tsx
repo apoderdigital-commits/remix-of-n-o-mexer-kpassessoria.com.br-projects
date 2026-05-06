@@ -1586,6 +1586,15 @@ function formatMonth(d: string | null | undefined): string {
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 }
 
+function monthsBetween(a: string | null | undefined, b: string | null | undefined): number | null {
+  if (!a || !b) return null;
+  const ma = String(a).match(/^(\d{4})-(\d{2})/);
+  const mb = String(b).match(/^(\d{4})-(\d{2})/);
+  if (!ma || !mb) return null;
+  const diff = (Number(mb[1]) - Number(ma[1])) * 12 + (Number(mb[2]) - Number(ma[2]));
+  return Math.max(0, diff);
+}
+
 function AgendaPanel({
   agenda, onNew, onEdit, onRemove, onToggleDone,
 }: {
