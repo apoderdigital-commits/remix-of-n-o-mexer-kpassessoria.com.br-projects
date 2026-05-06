@@ -244,12 +244,21 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function remove(id: string) {
-    if (!confirm("Remover este cliente do squad?")) return;
-    const { error } = await supabase.from("squad_clients").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Removido");
-    void loadAll(squadId);
+  function remove(id: string) {
+    const c = clients.find((x) => x.id === id);
+    if (!c) return;
+    // Open churn dialog with prefilled data; deletion happens after churn is saved
+    const entryYM = c.entry_date ? c.entry_date.slice(0, 7) : "";
+    const todayYM = new Date().toISOString().slice(0, 7);
+    setEditingChurn({
+      client_name: c.name,
+      entry_month: entryYM ? `${entryYM}-01` : null,
+      churn_month: `${todayYM}-01`,
+      reason: "",
+      observations: "",
+    });
+    setPendingClientDelete(id);
+    setOpenChurn(true);
   }
 
   // ---------- METRICS ----------
