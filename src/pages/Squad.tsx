@@ -1340,21 +1340,53 @@ export default function Squad() {
       </Dialog>
 
       {/* Churn dialog */}
-      <Dialog open={openChurn} onOpenChange={setOpenChurn}>
+      <Dialog open={openChurn} onOpenChange={(o) => { setOpenChurn(o); if (!o) setPendingClientDelete(null); }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingChurn?.id ? "Editar churn" : "Novo churn"}</DialogTitle></DialogHeader>
-          {editingChurn && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingChurn.client_name || ""} onChange={(e) => setEditingChurn({ ...editingChurn, client_name: e.target.value })} /></div>
-              <div><Label>Mês de entrada</Label><Input type="date" value={editingChurn.entry_month?.slice(0, 10) || ""} onChange={(e) => setEditingChurn({ ...editingChurn, entry_month: e.target.value })} /></div>
-              <div><Label>Mês do churn</Label><Input type="date" value={editingChurn.churn_month?.slice(0, 10) || ""} onChange={(e) => setEditingChurn({ ...editingChurn, churn_month: e.target.value })} /></div>
-              <div><Label>Meses vigentes</Label><Input placeholder="ex: 4 MESES" value={editingChurn.months_active || ""} onChange={(e) => setEditingChurn({ ...editingChurn, months_active: e.target.value })} /></div>
-              <div><Label>Motivo</Label><Input value={editingChurn.reason || ""} onChange={(e) => setEditingChurn({ ...editingChurn, reason: e.target.value })} /></div>
-              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingChurn.observations || ""} onChange={(e) => setEditingChurn({ ...editingChurn, observations: e.target.value })} /></div>
-            </div>
-          )}
+          <DialogHeader>
+            <DialogTitle>{editingChurn?.id ? "Editar churn" : "Novo churn"}</DialogTitle>
+            {pendingClientDelete && (
+              <p className="text-xs text-amber-300 mt-1">
+                O cliente será removido da lista após salvar o churn.
+              </p>
+            )}
+          </DialogHeader>
+          {editingChurn && (() => {
+            const entryYM = editingChurn.entry_month ? editingChurn.entry_month.slice(0, 7) : "";
+            const churnYM = editingChurn.churn_month ? editingChurn.churn_month.slice(0, 7) : "";
+            const months = monthsBetween(editingChurn.entry_month, editingChurn.churn_month);
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Cliente *</Label>
+                  <Input value={editingChurn.client_name || ""} onChange={(e) => setEditingChurn({ ...editingChurn, client_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Mês de entrada</Label>
+                  <Input type="month" value={entryYM} onChange={(e) => setEditingChurn({ ...editingChurn, entry_month: e.target.value ? `${e.target.value}-01` : null })} />
+                </div>
+                <div>
+                  <Label>Mês do churn</Label>
+                  <Input type="month" value={churnYM} onChange={(e) => setEditingChurn({ ...editingChurn, churn_month: e.target.value ? `${e.target.value}-01` : null })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Meses vigentes (calculado)</Label>
+                  <div className="h-9 px-3 py-2 rounded-md border border-border/40 bg-muted/30 text-sm flex items-center">
+                    {months != null ? `${months} ${months === 1 ? "mês" : "meses"}` : "—"}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label>Motivo</Label>
+                  <Input value={editingChurn.reason || ""} onChange={(e) => setEditingChurn({ ...editingChurn, reason: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Observações</Label>
+                  <Textarea rows={2} value={editingChurn.observations || ""} onChange={(e) => setEditingChurn({ ...editingChurn, observations: e.target.value })} />
+                </div>
+              </div>
+            );
+          })()}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenChurn(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { setOpenChurn(false); setPendingClientDelete(null); }}>Cancelar</Button>
             <Button onClick={saveChurn}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
