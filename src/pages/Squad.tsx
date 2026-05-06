@@ -986,42 +986,13 @@ export default function Squad() {
 
             {/* CHURN */}
             <TabsContent value="churn" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingChurn({}); setOpenChurn(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo churn
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Mês entrada</TableHead>
-                      <TableHead>Mês churn</TableHead>
-                      <TableHead>Meses vigentes</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {churns.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">Nenhum churn registrado.</TableCell></TableRow>
-                    ) : churns.map((c) => (
-                      <TableRow key={c.id} className="border-border/20">
-                        <TableCell className="font-semibold">{c.client_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.churn_month)}</TableCell>
-                        <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.reason}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingChurn(c); setOpenChurn(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeChurn(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <ChurnPanel
+                churns={churns}
+                activeClientsCount={clients.length}
+                onNew={() => { setEditingChurn({ churn_month: `${new Date().toISOString().slice(0, 7)}-01` }); setPendingClientDelete(null); setOpenChurn(true); }}
+                onEdit={(c) => { setEditingChurn(c); setPendingClientDelete(null); setOpenChurn(true); }}
+                onRemove={removeChurn}
+              />
             </TabsContent>
 
             {/* NPS — somente leitura, alimentado pelo Engajamento */}
