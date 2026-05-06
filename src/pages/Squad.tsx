@@ -159,6 +159,7 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [pendingClientDelete, setPendingClientDelete] = useState<string | null>(null);
   const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
   const [openNps, setOpenNps] = useState(false);
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
@@ -244,12 +245,21 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function remove(id: string) {
-    if (!confirm("Remover este cliente do squad?")) return;
-    const { error } = await supabase.from("squad_clients").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Removido");
-    void loadAll(squadId);
+  function remove(id: string) {
+    const c = clients.find((x) => x.id === id);
+    if (!c) return;
+    // Open churn dialog with prefilled data; deletion happens after churn is saved
+    const entryYM = c.entry_date ? c.entry_date.slice(0, 7) : "";
+    const todayYM = new Date().toISOString().slice(0, 7);
+    setEditingChurn({
+      client_name: c.name,
+      entry_month: entryYM ? `${entryYM}-01` : null,
+      churn_month: `${todayYM}-01`,
+      reason: "",
+      observations: "",
+    });
+    setPendingClientDelete(id);
+    setOpenChurn(true);
   }
 
   // ---------- METRICS ----------
@@ -289,19 +299,27 @@ export default function Squad() {
   // ---------- CHURN ----------
   async function saveChurn() {
     if (!editingChurn?.client_name?.trim()) return toast.error("Cliente obrigatório");
+    const months = monthsBetween(editingChurn.entry_month, editingChurn.churn_month);
     const payload: any = {
       squad_id: squadId,
       client_name: editingChurn.client_name.trim(),
       entry_month: editingChurn.entry_month || null,
       churn_month: editingChurn.churn_month || null,
       reason: editingChurn.reason || null,
-      months_active: editingChurn.months_active || null,
+      months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
       observations: editingChurn.observations || null,
     };
     const res = editingChurn.id
       ? await supabase.from("squad_churn").update(payload).eq("id", editingChurn.id)
       : await supabase.from("squad_churn").insert(payload);
     if (res.error) return toast.error(res.error.message);
+
+    if (pendingClientDelete) {
+      const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", pendingClientDelete);
+      if (delErr) toast.error(`Churn salvo, mas falhou ao remover cliente: ${delErr.message}`);
+      setPendingClientDelete(null);
+    }
+
     toast.success("Churn salvo");
     setOpenChurn(false);
     void loadAll(squadId);
@@ -968,42 +986,13 @@ export default function Squad() {
 
             {/* CHURN */}
             <TabsContent value="churn" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingChurn({}); setOpenChurn(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo churn
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Mês entrada</TableHead>
-                      <TableHead>Mês churn</TableHead>
-                      <TableHead>Meses vigentes</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {churns.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">Nenhum churn registrado.</TableCell></TableRow>
-                    ) : churns.map((c) => (
-                      <TableRow key={c.id} className="border-border/20">
-                        <TableCell className="font-semibold">{c.client_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.churn_month)}</TableCell>
-                        <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.reason}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingChurn(c); setOpenChurn(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeChurn(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <ChurnPanel
+                churns={churns}
+                activeClientsCount={clients.length}
+                onNew={() => { setEditingChurn({ churn_month: `${new Date().toISOString().slice(0, 7)}-01` }); setPendingClientDelete(null); setOpenChurn(true); }}
+                onEdit={(c) => { setEditingChurn(c); setPendingClientDelete(null); setOpenChurn(true); }}
+                onRemove={removeChurn}
+              />
             </TabsContent>
 
             {/* NPS — somente leitura, alimentado pelo Engajamento */}
@@ -1322,21 +1311,53 @@ export default function Squad() {
       </Dialog>
 
       {/* Churn dialog */}
-      <Dialog open={openChurn} onOpenChange={setOpenChurn}>
+      <Dialog open={openChurn} onOpenChange={(o) => { setOpenChurn(o); if (!o) setPendingClientDelete(null); }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingChurn?.id ? "Editar churn" : "Novo churn"}</DialogTitle></DialogHeader>
-          {editingChurn && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><Label>Cliente *</Label><Input value={editingChurn.client_name || ""} onChange={(e) => setEditingChurn({ ...editingChurn, client_name: e.target.value })} /></div>
-              <div><Label>Mês de entrada</Label><Input type="date" value={editingChurn.entry_month?.slice(0, 10) || ""} onChange={(e) => setEditingChurn({ ...editingChurn, entry_month: e.target.value })} /></div>
-              <div><Label>Mês do churn</Label><Input type="date" value={editingChurn.churn_month?.slice(0, 10) || ""} onChange={(e) => setEditingChurn({ ...editingChurn, churn_month: e.target.value })} /></div>
-              <div><Label>Meses vigentes</Label><Input placeholder="ex: 4 MESES" value={editingChurn.months_active || ""} onChange={(e) => setEditingChurn({ ...editingChurn, months_active: e.target.value })} /></div>
-              <div><Label>Motivo</Label><Input value={editingChurn.reason || ""} onChange={(e) => setEditingChurn({ ...editingChurn, reason: e.target.value })} /></div>
-              <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={editingChurn.observations || ""} onChange={(e) => setEditingChurn({ ...editingChurn, observations: e.target.value })} /></div>
-            </div>
-          )}
+          <DialogHeader>
+            <DialogTitle>{editingChurn?.id ? "Editar churn" : "Novo churn"}</DialogTitle>
+            {pendingClientDelete && (
+              <p className="text-xs text-amber-300 mt-1">
+                O cliente será removido da lista após salvar o churn.
+              </p>
+            )}
+          </DialogHeader>
+          {editingChurn && (() => {
+            const entryYM = editingChurn.entry_month ? editingChurn.entry_month.slice(0, 7) : "";
+            const churnYM = editingChurn.churn_month ? editingChurn.churn_month.slice(0, 7) : "";
+            const months = monthsBetween(editingChurn.entry_month, editingChurn.churn_month);
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Cliente *</Label>
+                  <Input value={editingChurn.client_name || ""} onChange={(e) => setEditingChurn({ ...editingChurn, client_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Mês de entrada</Label>
+                  <Input type="month" value={entryYM} onChange={(e) => setEditingChurn({ ...editingChurn, entry_month: e.target.value ? `${e.target.value}-01` : null })} />
+                </div>
+                <div>
+                  <Label>Mês do churn</Label>
+                  <Input type="month" value={churnYM} onChange={(e) => setEditingChurn({ ...editingChurn, churn_month: e.target.value ? `${e.target.value}-01` : null })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Meses vigentes (calculado)</Label>
+                  <div className="h-9 px-3 py-2 rounded-md border border-border/40 bg-muted/30 text-sm flex items-center">
+                    {months != null ? `${months} ${months === 1 ? "mês" : "meses"}` : "—"}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label>Motivo</Label>
+                  <Input value={editingChurn.reason || ""} onChange={(e) => setEditingChurn({ ...editingChurn, reason: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Observações</Label>
+                  <Textarea rows={2} value={editingChurn.observations || ""} onChange={(e) => setEditingChurn({ ...editingChurn, observations: e.target.value })} />
+                </div>
+              </div>
+            );
+          })()}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenChurn(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { setOpenChurn(false); setPendingClientDelete(null); }}>Cancelar</Button>
             <Button onClick={saveChurn}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
@@ -1566,6 +1587,15 @@ function formatMonth(d: string | null | undefined): string {
   const date = m ? new Date(Number(m[1]), Number(m[2]) - 1, 1) : new Date(d);
   if (isNaN(date.getTime())) return String(d);
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+}
+
+function monthsBetween(a: string | null | undefined, b: string | null | undefined): number | null {
+  if (!a || !b) return null;
+  const ma = String(a).match(/^(\d{4})-(\d{2})/);
+  const mb = String(b).match(/^(\d{4})-(\d{2})/);
+  if (!ma || !mb) return null;
+  const diff = (Number(mb[1]) - Number(ma[1])) * 12 + (Number(mb[2]) - Number(ma[2]));
+  return Math.max(0, diff);
 }
 
 function AgendaPanel({
@@ -2024,6 +2054,129 @@ function NpsChart({ dist }: { dist: {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function ChurnPanel({
+  churns, activeClientsCount, onNew, onEdit, onRemove,
+}: {
+  churns: Churn[];
+  activeClientsCount: number;
+  onNew: () => void;
+  onEdit: (c: Churn) => void;
+  onRemove: (id: string) => void;
+}) {
+  // Group churns by churn_month (YYYY-MM)
+  const grouped = useMemo(() => {
+    const map = new Map<string, Churn[]>();
+    for (const c of churns) {
+      const key = c.churn_month ? c.churn_month.slice(0, 7) : "sem-data";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [churns]);
+
+  // Compute active base per month: current active + churns occurring on/after that month
+  const totalChurns = churns.length;
+  const baselineActive = activeClientsCount; // current active
+
+  const totalRate = baselineActive + totalChurns > 0
+    ? (totalChurns / (baselineActive + totalChurns)) * 100
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
+            <p className="text-3xl font-bold mt-1">{activeClientsCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de churns</p>
+            <p className="text-3xl font-bold text-red-300 mt-1">{totalChurns}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Taxa acumulada</p>
+            <p className="text-3xl font-bold text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={onNew} className="gap-1.5">
+          <Plus className="h-4 w-4" /> Novo churn
+        </Button>
+      </div>
+
+      {grouped.length === 0 ? (
+        <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-12 text-center text-muted-foreground">
+          Nenhum churn registrado.
+        </div>
+      ) : grouped.map(([monthKey, items], idx) => {
+        // Active base for that month = current active + churns from that month onward (back in time)
+        const churnsFromThisMonthOnward = churns.filter((c) => {
+          const k = c.churn_month?.slice(0, 7) || "";
+          return k && k >= monthKey;
+        }).length;
+        const baseForMonth = baselineActive + churnsFromThisMonthOnward;
+        const rate = baseForMonth > 0 ? (items.length / baseForMonth) * 100 : 0;
+        const rateColor = rate >= 10 ? "text-red-300 bg-red-500/15 border-red-500/30"
+          : rate >= 5 ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
+          : "text-emerald-300 bg-emerald-500/15 border-emerald-500/30";
+
+        return (
+          <div key={monthKey} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border/30 bg-muted/10">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold capitalize">{formatMonth(`${monthKey}-01`)}</span>
+                <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/30">
+                  {items.length} {items.length === 1 ? "churn" : "churns"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Taxa de churn</span>
+                <Badge className={rateColor}>{rate.toFixed(1)}%</Badge>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/30">
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Mês entrada</TableHead>
+                    <TableHead>Meses vigentes</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Observações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((c) => (
+                    <TableRow key={c.id} className="border-border/20">
+                      <TableCell className="font-semibold">{c.client_name}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
+                      <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
+                      <TableCell className="text-xs">{c.reason || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
