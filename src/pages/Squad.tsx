@@ -159,6 +159,7 @@ export default function Squad() {
   const [openMetric, setOpenMetric] = useState(false);
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
+  const [pendingClientDelete, setPendingClientDelete] = useState<string | null>(null);
   const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
   const [openNps, setOpenNps] = useState(false);
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
