@@ -164,6 +164,7 @@ export default function Squad() {
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
   const [pendingClientDelete, setPendingClientDelete] = useState<string | null>(null);
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState<SquadClient | null>(null);
   const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
   const [openNps, setOpenNps] = useState(false);
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
