@@ -245,21 +245,33 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  function remove(id: string) {
+  async function remove(id: string) {
     const c = clients.find((x) => x.id === id);
     if (!c) return;
-    // Open churn dialog with prefilled data; deletion happens after churn is saved
+    if (!confirm(`Excluir "${c.name}"? Um registro de churn será criado automaticamente com o mês atual. Você poderá editar o motivo na aba Churn.`)) return;
+
     const entryYM = c.entry_date ? c.entry_date.slice(0, 7) : "";
     const todayYM = new Date().toISOString().slice(0, 7);
-    setEditingChurn({
+    const entryMonth = entryYM ? `${entryYM}-01` : null;
+    const churnMonth = `${todayYM}-01`;
+    const months = monthsBetween(entryMonth, churnMonth);
+
+    const { error: chErr } = await supabase.from("squad_churn").insert({
+      squad_id: squadId,
       client_name: c.name,
-      entry_month: entryYM ? `${entryYM}-01` : null,
-      churn_month: `${todayYM}-01`,
-      reason: "",
-      observations: "",
+      entry_month: entryMonth,
+      churn_month: churnMonth,
+      reason: null,
+      months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
+      observations: null,
     });
-    setPendingClientDelete(id);
-    setOpenChurn(true);
+    if (chErr) return toast.error(`Falha ao criar churn: ${chErr.message}`);
+
+    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", id);
+    if (delErr) return toast.error(`Churn criado, mas falhou ao remover cliente: ${delErr.message}`);
+
+    toast.success("Cliente movido para Churn — edite o motivo na aba Churn");
+    void loadAll(squadId);
   }
 
   // ---------- METRICS ----------
