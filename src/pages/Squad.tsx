@@ -2120,9 +2120,17 @@ function ChurnPanel({
     ? (totalChurns / (baselineActive + totalChurns)) * 100
     : 0;
 
+  // Average lifetime (in months) of churned clients
+  const lifetimes = churns
+    .map((c) => monthsBetween(c.entry_month, c.churn_month))
+    .filter((n): n is number => n != null && n >= 0);
+  const avgLifetime = lifetimes.length > 0
+    ? lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length
+    : null;
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
@@ -2139,6 +2147,17 @@ function ChurnPanel({
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Taxa acumulada</p>
             <p className="text-3xl font-bold text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Lifetime médio</p>
+            <p className="text-3xl font-bold text-emerald-300 mt-1">
+              {avgLifetime != null ? `${avgLifetime.toFixed(1)} ${avgLifetime === 1 ? "mês" : "meses"}` : "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Média de meses ativos dos {lifetimes.length} {lifetimes.length === 1 ? "churn" : "churns"} com datas
+            </p>
           </CardContent>
         </Card>
       </div>
