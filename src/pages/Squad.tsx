@@ -250,10 +250,16 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function remove(id: string) {
+  function remove(id: string) {
     const c = clients.find((x) => x.id === id);
     if (!c) return;
-    if (!confirm(`Excluir "${c.name}"? Um registro de churn será criado automaticamente com o mês atual. Você poderá editar o motivo na aba Churn.`)) return;
+    setConfirmDeleteClient(c);
+  }
+
+  async function performClientDelete() {
+    const c = confirmDeleteClient;
+    if (!c) return;
+    setConfirmDeleteClient(null);
 
     const entryYM = c.entry_date ? c.entry_date.slice(0, 7) : "";
     const todayYM = new Date().toISOString().slice(0, 7);
@@ -272,7 +278,7 @@ export default function Squad() {
     });
     if (chErr) return toast.error(`Falha ao criar churn: ${chErr.message}`);
 
-    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", id);
+    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", c.id);
     if (delErr) return toast.error(`Churn criado, mas falhou ao remover cliente: ${delErr.message}`);
 
     toast.success("Cliente movido para Churn — edite o motivo na aba Churn");
