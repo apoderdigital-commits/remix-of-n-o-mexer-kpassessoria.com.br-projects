@@ -1584,6 +1584,25 @@ export default function Squad() {
           onSuccess={() => { setPurgeMonth(null); void loadAll(squadId); }}
         />
       )}
+
+      <AlertDialog open={!!confirmDeleteClient} onOpenChange={(o) => !o && setConfirmDeleteClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDeleteClient
+                ? `"${confirmDeleteClient.name}" será movido para a aba Churn com o mês atual. Você poderá editar o motivo lá.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={performClientDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir e mover para Churn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
