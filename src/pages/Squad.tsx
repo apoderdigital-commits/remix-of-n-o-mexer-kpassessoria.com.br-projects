@@ -13,6 +13,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -160,6 +164,7 @@ export default function Squad() {
   const [editingChurn, setEditingChurn] = useState<Partial<Churn> | null>(null);
   const [openChurn, setOpenChurn] = useState(false);
   const [pendingClientDelete, setPendingClientDelete] = useState<string | null>(null);
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState<SquadClient | null>(null);
   const [editingNps, setEditingNps] = useState<Partial<Nps> | null>(null);
   const [openNps, setOpenNps] = useState(false);
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
@@ -245,10 +250,16 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function remove(id: string) {
+  function remove(id: string) {
     const c = clients.find((x) => x.id === id);
     if (!c) return;
-    if (!confirm(`Excluir "${c.name}"? Um registro de churn será criado automaticamente com o mês atual. Você poderá editar o motivo na aba Churn.`)) return;
+    setConfirmDeleteClient(c);
+  }
+
+  async function performClientDelete() {
+    const c = confirmDeleteClient;
+    if (!c) return;
+    setConfirmDeleteClient(null);
 
     const entryYM = c.entry_date ? c.entry_date.slice(0, 7) : "";
     const todayYM = new Date().toISOString().slice(0, 7);
@@ -267,7 +278,7 @@ export default function Squad() {
     });
     if (chErr) return toast.error(`Falha ao criar churn: ${chErr.message}`);
 
-    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", id);
+    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", c.id);
     if (delErr) return toast.error(`Churn criado, mas falhou ao remover cliente: ${delErr.message}`);
 
     toast.success("Cliente movido para Churn — edite o motivo na aba Churn");
@@ -1573,6 +1584,25 @@ export default function Squad() {
           onSuccess={() => { setPurgeMonth(null); void loadAll(squadId); }}
         />
       )}
+
+      <AlertDialog open={!!confirmDeleteClient} onOpenChange={(o) => !o && setConfirmDeleteClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDeleteClient
+                ? `"${confirmDeleteClient.name}" será movido para a aba Churn com o mês atual. Você poderá editar o motivo lá.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={performClientDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir e mover para Churn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
