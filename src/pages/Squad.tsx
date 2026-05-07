@@ -256,7 +256,7 @@ export default function Squad() {
     setConfirmDeleteClient(c);
   }
 
-  async function performClientDelete() {
+  function performClientDelete() {
     const c = confirmDeleteClient;
     if (!c) return;
     setConfirmDeleteClient(null);
@@ -265,24 +265,16 @@ export default function Squad() {
     const todayYM = new Date().toISOString().slice(0, 7);
     const entryMonth = entryYM ? `${entryYM}-01` : null;
     const churnMonth = `${todayYM}-01`;
-    const months = monthsBetween(entryMonth, churnMonth);
 
-    const { error: chErr } = await supabase.from("squad_churn").insert({
-      squad_id: squadId,
+    setPendingClientDelete(c.id);
+    setEditingChurn({
       client_name: c.name,
       entry_month: entryMonth,
       churn_month: churnMonth,
-      reason: null,
-      months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
-      observations: null,
+      reason: "",
+      observations: "",
     });
-    if (chErr) return toast.error(`Falha ao criar churn: ${chErr.message}`);
-
-    const { error: delErr } = await supabase.from("squad_clients").delete().eq("id", c.id);
-    if (delErr) return toast.error(`Churn criado, mas falhou ao remover cliente: ${delErr.message}`);
-
-    toast.success("Cliente movido para Churn — edite o motivo na aba Churn");
-    void loadAll(squadId);
+    setOpenChurn(true);
   }
 
   // ---------- METRICS ----------
