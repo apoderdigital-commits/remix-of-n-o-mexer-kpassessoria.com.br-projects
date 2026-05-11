@@ -276,6 +276,7 @@ export default function Squad() {
       churn_month: churnMonth,
       reason: "",
       observations: "",
+      contract_value: c.contract_value ?? null,
     });
     setOpenChurn(true);
   }
