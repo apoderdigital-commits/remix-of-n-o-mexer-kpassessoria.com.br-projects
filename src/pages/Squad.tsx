@@ -2271,25 +2271,33 @@ function ChurnPanel({
                     <TableHead>Cliente</TableHead>
                     <TableHead>Mês entrada</TableHead>
                     <TableHead>Meses vigentes</TableHead>
+                    <TableHead>Contrato</TableHead>
+                    <TableHead>LTV</TableHead>
                     <TableHead>Motivo</TableHead>
                     <TableHead>Observações</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((c) => (
-                    <TableRow key={c.id} className="border-border/20">
-                      <TableCell className="font-semibold">{c.client_name}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
-                      <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
-                      <TableCell className="text-xs">{c.reason || "-"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {items.map((c) => {
+                    const m = monthsBetween(c.entry_month, c.churn_month);
+                    const ltv = c.contract_value != null && m != null && m >= 0 ? c.contract_value * m : null;
+                    return (
+                      <TableRow key={c.id} className="border-border/20">
+                        <TableCell className="font-semibold">{c.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
+                        <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
+                        <TableCell className="text-xs">{c.contract_value != null ? formatBRL(c.contract_value) : "-"}</TableCell>
+                        <TableCell className="text-xs font-semibold text-emerald-300">{ltv != null ? formatBRL(ltv) : "-"}</TableCell>
+                        <TableCell className="text-xs">{c.reason || "-"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
