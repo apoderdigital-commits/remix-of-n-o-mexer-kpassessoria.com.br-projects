@@ -1272,6 +1272,10 @@ export default function Squad() {
                     value={editing.invested_tp ?? ""}
                     onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })}
                   />
+                </div>
+                {parseMoney(editing.invested_tp) != null && (
+                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
+                )}
               </div>
               <div>
                 <Label>Valor do contrato (mensal)</Label>
