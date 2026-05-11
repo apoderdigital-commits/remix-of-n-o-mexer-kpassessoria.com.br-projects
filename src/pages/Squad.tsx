@@ -2185,7 +2185,7 @@ function ChurnPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
@@ -2212,6 +2212,17 @@ function ChurnPanel({
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
               Média de meses ativos dos {lifetimes.length} {lifetimes.length === 1 ? "churn" : "churns"} com datas
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">LTV total</p>
+            <p className="text-2xl font-bold text-emerald-300 mt-1">
+              {validLtvs.length > 0 ? formatBRL(totalLtv) : "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Média {avgLtv != null ? formatBRL(avgLtv) : "—"} · {validLtvs.length} {validLtvs.length === 1 ? "cliente" : "clientes"}
             </p>
           </CardContent>
         </Card>
