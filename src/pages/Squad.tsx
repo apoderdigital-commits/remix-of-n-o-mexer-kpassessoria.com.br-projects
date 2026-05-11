@@ -2173,6 +2173,16 @@ function ChurnPanel({
     ? lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length
     : null;
 
+  // LTV per churn = contract_value * months_active
+  const ltvList = churns.map((c) => {
+    const m = monthsBetween(c.entry_month, c.churn_month);
+    if (c.contract_value == null || m == null || m < 0) return null;
+    return c.contract_value * m;
+  });
+  const validLtvs = ltvList.filter((n): n is number => n != null);
+  const totalLtv = validLtvs.reduce((a, b) => a + b, 0);
+  const avgLtv = validLtvs.length > 0 ? totalLtv / validLtvs.length : null;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
