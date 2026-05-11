@@ -576,6 +576,27 @@ export default function Clients() {
               <Input value={form.name} onChange={set("name")} placeholder="Ex: Moto Honda Recife" />
             </div>
             <div className="space-y-2">
+              <Label>Squad</Label>
+              <Select
+                value={form.squadId || "__none__"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, squadId: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um squad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sem squad —</SelectItem>
+                  {squads?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Meta Account ID</Label>
               <Input value={form.metaAccountId} onChange={set("metaAccountId")} placeholder="Ex: 123456789" />
             </div>
