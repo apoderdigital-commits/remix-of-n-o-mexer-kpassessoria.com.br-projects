@@ -1034,6 +1034,7 @@ export type Database = {
           meta_account_id: string
           name: string
           phone: string
+          squad_id: string
           ticket_medio: number
         }[]
       }
