@@ -435,6 +435,7 @@ export type Database = {
         Row: {
           churn_month: string | null
           client_name: string
+          contract_value: number | null
           created_at: string
           entry_month: string | null
           id: string
@@ -447,6 +448,7 @@ export type Database = {
         Insert: {
           churn_month?: string | null
           client_name: string
+          contract_value?: number | null
           created_at?: string
           entry_month?: string | null
           id?: string
@@ -459,6 +461,7 @@ export type Database = {
         Update: {
           churn_month?: string | null
           client_name?: string
+          contract_value?: number | null
           created_at?: string
           entry_month?: string | null
           id?: string
@@ -473,6 +476,7 @@ export type Database = {
       squad_clients: {
         Row: {
           bm_verified: boolean | null
+          contract_value: number | null
           created_at: string
           curve_abc: string | null
           due_date: string | null
@@ -492,6 +496,7 @@ export type Database = {
         }
         Insert: {
           bm_verified?: boolean | null
+          contract_value?: number | null
           created_at?: string
           curve_abc?: string | null
           due_date?: string | null
@@ -511,6 +516,7 @@ export type Database = {
         }
         Update: {
           bm_verified?: boolean | null
+          contract_value?: number | null
           created_at?: string
           curve_abc?: string | null
           due_date?: string | null
