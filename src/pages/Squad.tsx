@@ -327,6 +327,7 @@ export default function Squad() {
       reason: editingChurn.reason || null,
       months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
       observations: editingChurn.observations || null,
+      contract_value: editingChurn.contract_value ?? null,
     };
     const res = editingChurn.id
       ? await supabase.from("squad_churn").update(payload).eq("id", editingChurn.id)
