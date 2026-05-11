@@ -53,7 +53,7 @@ type SquadClient = {
   priority_score: number;
   bm_verified: boolean | null;
   invested_tp: string | null;
-  contract_value: string | null;
+  contract_value: number | null;
   observations: string | null;
 };
 type Metric = {
