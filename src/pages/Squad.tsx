@@ -67,6 +67,7 @@ type Churn = {
   id: string; squad_id: string; client_name: string;
   entry_month: string | null; churn_month: string | null;
   reason: string | null; months_active: string | null; observations: string | null;
+  contract_value: number | null;
 };
 type Nps = {
   id: string; squad_id: string; period: string;
