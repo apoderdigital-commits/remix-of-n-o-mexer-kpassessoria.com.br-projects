@@ -1385,6 +1385,27 @@ export default function Squad() {
                   </div>
                 </div>
                 <div className="col-span-2">
+                  <Label>Valor do contrato (mensal)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="100"
+                      className="pl-9"
+                      placeholder="0"
+                      value={editingChurn.contract_value ?? ""}
+                      onChange={(e) => setEditingChurn({ ...editingChurn, contract_value: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </div>
+                  {editingChurn.contract_value != null && months != null && months > 0 && (
+                    <p className="text-[11px] text-emerald-300 mt-1 font-semibold">
+                      LTV: {formatBRL(editingChurn.contract_value * months)} ({months} {months === 1 ? "mês" : "meses"} × {formatBRL(editingChurn.contract_value)})
+                    </p>
+                  )}
+                </div>
+                <div className="col-span-2">
                   <Label>Motivo</Label>
                   <Input value={editingChurn.reason || ""} onChange={(e) => setEditingChurn({ ...editingChurn, reason: e.target.value })} />
                 </div>
