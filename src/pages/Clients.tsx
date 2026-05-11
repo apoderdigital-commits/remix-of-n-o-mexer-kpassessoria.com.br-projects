@@ -49,6 +49,7 @@ interface ClientForm {
   ghlApiKey: string;
   ghlLocationId: string;
   stageMapping: StageMapping;
+  squadId: string;
 }
 
 const emptyForm: ClientForm = {
@@ -60,6 +61,7 @@ const emptyForm: ClientForm = {
   ghlApiKey: "",
   ghlLocationId: "",
   stageMapping: EMPTY_MAPPING,
+  squadId: "",
 };
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
@@ -104,6 +106,18 @@ export default function Clients() {
         .order("name");
       if (error) throw error;
       return (data || []) as MetaToken[];
+    },
+  });
+
+  const { data: squads } = useQuery({
+    queryKey: ["squads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("squads")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
     },
   });
 
@@ -226,6 +240,7 @@ export default function Clients() {
       ghlApiKey: c.ghl_api_key || "",
       ghlLocationId: c.ghl_location_id || "",
       stageMapping: { ...EMPTY_MAPPING, ...(c.ghl_stage_mapping || {}) },
+      squadId: c.squad_id || "",
     });
     setOpen(true);
   };
@@ -248,6 +263,7 @@ export default function Clients() {
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
       ghl_stage_mapping: form.stageMapping,
+      squad_id: form.squadId || null,
     };
 
     setOpen(false);
@@ -558,6 +574,27 @@ export default function Clients() {
             <div className="space-y-2">
               <Label>Nome do Cliente</Label>
               <Input value={form.name} onChange={set("name")} placeholder="Ex: Moto Honda Recife" />
+            </div>
+            <div className="space-y-2">
+              <Label>Squad</Label>
+              <Select
+                value={form.squadId || "__none__"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, squadId: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um squad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sem squad —</SelectItem>
+                  {squads?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Meta Account ID</Label>

@@ -29,6 +29,7 @@ export type Database = {
           name: string
           phone: string | null
           share_token: string | null
+          squad_id: string | null
           ticket_medio: number | null
           updated_at: string
           user_id: string | null
@@ -47,6 +48,7 @@ export type Database = {
           name: string
           phone?: string | null
           share_token?: string | null
+          squad_id?: string | null
           ticket_medio?: number | null
           updated_at?: string
           user_id?: string | null
@@ -65,6 +67,7 @@ export type Database = {
           name?: string
           phone?: string | null
           share_token?: string | null
+          squad_id?: string | null
           ticket_medio?: number | null
           updated_at?: string
           user_id?: string | null
@@ -75,6 +78,13 @@ export type Database = {
             columns: ["meta_token_id"]
             isOneToOne: false
             referencedRelation: "meta_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
             referencedColumns: ["id"]
           },
         ]
@@ -1024,6 +1034,7 @@ export type Database = {
           meta_account_id: string
           name: string
           phone: string
+          squad_id: string
           ticket_medio: number
         }[]
       }

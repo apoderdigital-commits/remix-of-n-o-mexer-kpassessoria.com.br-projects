@@ -13,6 +13,7 @@ export interface AccessibleClient {
   has_google_sheet?: boolean;
   has_ghl_credentials?: boolean;
   has_ticket_medio?: boolean;
+  squad_id?: string | null;
 }
 
 export function useClients() {
@@ -21,7 +22,7 @@ export function useClients() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, meta_account_id, meta_access_token, meta_token_id, google_sheet_id, ticket_medio, user_id, created_at, ghl_api_key, ghl_location_id, ghl_stage_mapping, phone")
+        .select("id, name, meta_account_id, meta_access_token, meta_token_id, google_sheet_id, ticket_medio, user_id, created_at, ghl_api_key, ghl_location_id, ghl_stage_mapping, phone, squad_id")
         .order("name");
       if (error) throw error;
       return data;

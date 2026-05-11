@@ -1,7 +1,9 @@
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Command,
   CommandEmpty,
@@ -9,6 +11,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -31,6 +34,7 @@ interface Client {
   ticket_medio?: number | null;
   ghl_api_key?: string | null;
   ghl_location_id?: string | null;
+  squad_id?: string | null;
 }
 
 interface ClientSelectorProps {
@@ -55,6 +59,31 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
   const selected = clients.find((c) => c.id === selectedId);
   const selectedName = selected?.name;
 
+  const { data: squads } = useQuery({
+    queryKey: ["squads_for_selector"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("squads").select("id, name").order("name");
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const grouped = React.useMemo(() => {
+    const squadMap = new Map<string, { id: string; name: string; items: Client[] }>();
+    (squads || []).forEach((s) => squadMap.set(s.id, { id: s.id, name: s.name, items: [] }));
+    const noSquad: Client[] = [];
+    clients.forEach((c) => {
+      if (c.squad_id && squadMap.has(c.squad_id)) {
+        squadMap.get(c.squad_id)!.items.push(c);
+      } else {
+        noSquad.push(c);
+      }
+    });
+    const groups = Array.from(squadMap.values()).filter((g) => g.items.length > 0);
+    return { groups, noSquad };
+  }, [clients, squads]);
+
   const checks = selected
     ? [
         { label: "Meta ID", ok: !!selected.meta_account_id },
@@ -67,6 +96,25 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
     : [];
   const okCount = checks.filter((c) => c.ok).length;
   const allOk = selected && okCount === checks.length;
+
+  const renderItem = (c: Client) => (
+    <CommandItem
+      key={c.id}
+      value={c.name}
+      onSelect={() => {
+        onSelect(c.id);
+        setOpen(false);
+      }}
+    >
+      <Check
+        className={cn(
+          "mr-2 h-4 w-4",
+          selectedId === c.id ? "opacity-100" : "opacity-0"
+        )}
+      />
+      {c.name}
+    </CommandItem>
+  );
 
   const trigger = (
     <Popover open={open} onOpenChange={setOpen}>
@@ -93,26 +141,22 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
           <CommandInput placeholder="Buscar cliente..." />
           <CommandList>
             <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-            <CommandGroup>
-              {clients.map((c) => (
-                <CommandItem
-                  key={c.id}
-                  value={c.name}
-                  onSelect={() => {
-                    onSelect(c.id);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedId === c.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {c.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {grouped.groups.map((g, idx) => (
+              <React.Fragment key={g.id}>
+                {idx > 0 && <CommandSeparator />}
+                <CommandGroup heading={g.name}>
+                  {g.items.map(renderItem)}
+                </CommandGroup>
+              </React.Fragment>
+            ))}
+            {grouped.noSquad.length > 0 && (
+              <>
+                {grouped.groups.length > 0 && <CommandSeparator />}
+                <CommandGroup heading={grouped.groups.length > 0 ? "Sem squad" : undefined}>
+                  {grouped.noSquad.map(renderItem)}
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
