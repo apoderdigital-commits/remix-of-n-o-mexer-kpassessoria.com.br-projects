@@ -109,6 +109,18 @@ export default function Clients() {
     },
   });
 
+  const { data: squads } = useQuery({
+    queryKey: ["squads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("squads")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+  });
+
   // Token add/edit dialog
   const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
