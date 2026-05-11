@@ -1272,7 +1272,26 @@ export default function Squad() {
                     value={editing.invested_tp ?? ""}
                     onChange={(e) => setEditing({ ...editing, invested_tp: e.target.value })}
                   />
+              </div>
+              <div>
+                <Label>Valor do contrato (mensal)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.contract_value ?? ""}
+                    onChange={(e) => setEditing({ ...editing, contract_value: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
                 </div>
+                {editing.contract_value != null && (
+                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
+                )}
+              </div>
                 {parseMoney(editing.invested_tp) != null && (
                   <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
                 )}
