@@ -241,6 +241,7 @@ export default function Squad() {
       sprint: editing.sprint?.toUpperCase() || null,
       bm_verified: !!editing.bm_verified,
       invested_tp: editing.invested_tp || null,
+      contract_value: editing.contract_value ?? null,
       observations: editing.observations || null,
     };
     const res = editing.id
