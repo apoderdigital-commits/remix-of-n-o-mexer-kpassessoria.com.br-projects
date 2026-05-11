@@ -228,6 +228,7 @@ export default function Clients() {
       ghlApiKey: c.ghl_api_key || "",
       ghlLocationId: c.ghl_location_id || "",
       stageMapping: { ...EMPTY_MAPPING, ...(c.ghl_stage_mapping || {}) },
+      squadId: c.squad_id || "",
     });
     setOpen(true);
   };
