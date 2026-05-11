@@ -1292,10 +1292,6 @@ export default function Squad() {
                   <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
                 )}
               </div>
-                {parseMoney(editing.invested_tp) != null && (
-                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
-                )}
-              </div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
                 <Label htmlFor="bm">BM Verificada</Label>
