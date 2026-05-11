@@ -251,6 +251,7 @@ export default function Clients() {
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
       ghl_stage_mapping: form.stageMapping,
+      squad_id: form.squadId || null,
     };
 
     setOpen(false);
