@@ -90,7 +90,7 @@ type Agenda = {
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
-  invested_tp: "", observations: "", renewal_60d: false, bm_verified: false,
+  invested_tp: "", contract_value: null, observations: "", renewal_60d: false, bm_verified: false,
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
