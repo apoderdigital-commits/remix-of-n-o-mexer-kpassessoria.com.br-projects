@@ -53,6 +53,7 @@ type SquadClient = {
   priority_score: number;
   bm_verified: boolean | null;
   invested_tp: string | null;
+  contract_value: number | null;
   observations: string | null;
 };
 type Metric = {
@@ -66,6 +67,7 @@ type Churn = {
   id: string; squad_id: string; client_name: string;
   entry_month: string | null; churn_month: string | null;
   reason: string | null; months_active: string | null; observations: string | null;
+  contract_value: number | null;
 };
 type Nps = {
   id: string; squad_id: string; period: string;
@@ -88,7 +90,7 @@ type Agenda = {
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
-  invested_tp: "", observations: "", renewal_60d: false, bm_verified: false,
+  invested_tp: "", contract_value: null, observations: "", renewal_60d: false, bm_verified: false,
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -239,6 +241,7 @@ export default function Squad() {
       sprint: editing.sprint?.toUpperCase() || null,
       bm_verified: !!editing.bm_verified,
       invested_tp: editing.invested_tp || null,
+      contract_value: editing.contract_value ?? null,
       observations: editing.observations || null,
     };
     const res = editing.id
@@ -273,6 +276,7 @@ export default function Squad() {
       churn_month: churnMonth,
       reason: "",
       observations: "",
+      contract_value: c.contract_value ?? null,
     });
     setOpenChurn(true);
   }
@@ -323,6 +327,7 @@ export default function Squad() {
       reason: editingChurn.reason || null,
       months_active: months != null ? `${months} ${months === 1 ? "MÊS" : "MESES"}` : null,
       observations: editingChurn.observations || null,
+      contract_value: editingChurn.contract_value ?? null,
     };
     const res = editingChurn.id
       ? await supabase.from("squad_churn").update(payload).eq("id", editingChurn.id)
@@ -1272,6 +1277,25 @@ export default function Squad() {
                   <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
                 )}
               </div>
+              <div>
+                <Label>Valor do contrato (mensal)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.contract_value ?? ""}
+                    onChange={(e) => setEditing({ ...editing, contract_value: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                {editing.contract_value != null && (
+                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
                 <Label htmlFor="bm">BM Verificada</Label>
@@ -1359,6 +1383,27 @@ export default function Squad() {
                   <div className="h-9 px-3 py-2 rounded-md border border-border/40 bg-muted/30 text-sm flex items-center">
                     {months != null ? `${months} ${months === 1 ? "mês" : "meses"}` : "—"}
                   </div>
+                </div>
+                <div className="col-span-2">
+                  <Label>Valor do contrato (mensal)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="100"
+                      className="pl-9"
+                      placeholder="0"
+                      value={editingChurn.contract_value ?? ""}
+                      onChange={(e) => setEditingChurn({ ...editingChurn, contract_value: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </div>
+                  {editingChurn.contract_value != null && months != null && months > 0 && (
+                    <p className="text-[11px] text-emerald-300 mt-1 font-semibold">
+                      LTV: {formatBRL(editingChurn.contract_value * months)} ({months} {months === 1 ? "mês" : "meses"} × {formatBRL(editingChurn.contract_value)})
+                    </p>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <Label>Motivo</Label>
@@ -2128,9 +2173,19 @@ function ChurnPanel({
     ? lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length
     : null;
 
+  // LTV per churn = contract_value * months_active
+  const ltvList = churns.map((c) => {
+    const m = monthsBetween(c.entry_month, c.churn_month);
+    if (c.contract_value == null || m == null || m < 0) return null;
+    return c.contract_value * m;
+  });
+  const validLtvs = ltvList.filter((n): n is number => n != null);
+  const totalLtv = validLtvs.reduce((a, b) => a + b, 0);
+  const avgLtv = validLtvs.length > 0 ? totalLtv / validLtvs.length : null;
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
@@ -2157,6 +2212,17 @@ function ChurnPanel({
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
               Média de meses ativos dos {lifetimes.length} {lifetimes.length === 1 ? "churn" : "churns"} com datas
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">LTV total</p>
+            <p className="text-2xl font-bold text-emerald-300 mt-1">
+              {validLtvs.length > 0 ? formatBRL(totalLtv) : "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Média {avgLtv != null ? formatBRL(avgLtv) : "—"} · {validLtvs.length} {validLtvs.length === 1 ? "cliente" : "clientes"}
             </p>
           </CardContent>
         </Card>
@@ -2205,25 +2271,33 @@ function ChurnPanel({
                     <TableHead>Cliente</TableHead>
                     <TableHead>Mês entrada</TableHead>
                     <TableHead>Meses vigentes</TableHead>
+                    <TableHead>Contrato</TableHead>
+                    <TableHead>LTV</TableHead>
                     <TableHead>Motivo</TableHead>
                     <TableHead>Observações</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((c) => (
-                    <TableRow key={c.id} className="border-border/20">
-                      <TableCell className="font-semibold">{c.client_name}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
-                      <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
-                      <TableCell className="text-xs">{c.reason || "-"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {items.map((c) => {
+                    const m = monthsBetween(c.entry_month, c.churn_month);
+                    const ltv = c.contract_value != null && m != null && m >= 0 ? c.contract_value * m : null;
+                    return (
+                      <TableRow key={c.id} className="border-border/20">
+                        <TableCell className="font-semibold">{c.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
+                        <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
+                        <TableCell className="text-xs">{c.contract_value != null ? formatBRL(c.contract_value) : "-"}</TableCell>
+                        <TableCell className="text-xs font-semibold text-emerald-300">{ltv != null ? formatBRL(ltv) : "-"}</TableCell>
+                        <TableCell className="text-xs">{c.reason || "-"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="icon" variant="ghost" onClick={() => onEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => onRemove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
