@@ -49,6 +49,7 @@ interface ClientForm {
   ghlApiKey: string;
   ghlLocationId: string;
   stageMapping: StageMapping;
+  squadId: string;
 }
 
 const emptyForm: ClientForm = {
@@ -60,6 +61,7 @@ const emptyForm: ClientForm = {
   ghlApiKey: "",
   ghlLocationId: "",
   stageMapping: EMPTY_MAPPING,
+  squadId: "",
 };
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
