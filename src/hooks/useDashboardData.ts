@@ -13,6 +13,7 @@ export interface AccessibleClient {
   has_google_sheet?: boolean;
   has_ghl_credentials?: boolean;
   has_ticket_medio?: boolean;
+  squad_id?: string | null;
 }
 
 export function useClients() {
