@@ -755,7 +755,7 @@ export default function Clients() {
                 {filteredClients.map((c: any) => {
                   const checks = [
                     { label: "Meta ID", ok: !!c.meta_account_id },
-                    { label: "Token Meta", ok: !!c.meta_access_token },
+                    { label: "Token Meta", ok: !!c.meta_access_token || !!c.meta_token_id },
                     { label: "Sheet", ok: !!c.google_sheet_id },
                     { label: "Ticket", ok: !!c.ticket_medio },
                     { label: "CRM Key", ok: !!c.ghl_api_key },
