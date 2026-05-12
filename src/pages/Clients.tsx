@@ -270,10 +270,9 @@ export default function Clients() {
     if (editingId) {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
       setVerifyAction({
-        action: tokenChanged ? "update_client_meta_token" : "update_client",
-        // For token changes, we use update_client so the full edit (including new token) is persisted.
-        // The "update_client_meta_token" action exists for the dedicated "swap token only" flow,
-        // but here in the edit form we always send the full payload.
+        // Always use update_client so the FULL payload (squad_id, mappings, token, etc.) is persisted.
+        // update_client_meta_token only swaps the token fields and would discard other edits.
+        action: "update_client",
         payload: { client_id: editingId, client: clientPayload },
         targetLabel: tokenChanged
           ? `Atualizar cliente ${form.name} (inclui troca de token Meta)`
