@@ -72,8 +72,20 @@ async function execCreateClient(admin: SupabaseClient, payload: any) {
 async function execUpdateClient(admin: SupabaseClient, payload: any) {
   const { client_id, client } = payload;
   if (!client_id) throw new Error("client_id obrigatório");
-  const { error } = await admin.from("clients").update(client).eq("id", client_id);
+  console.log("[confirm-action-code] update_client payload", {
+    client_id,
+    squad_id: client?.squad_id ?? null,
+    meta_token_id: client?.meta_token_id ?? null,
+    has_meta_access_token: !!client?.meta_access_token,
+  });
+  const { data, error } = await admin
+    .from("clients")
+    .update(client)
+    .eq("id", client_id)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("Cliente não encontrado para atualização");
   return { client_id };
 }
 

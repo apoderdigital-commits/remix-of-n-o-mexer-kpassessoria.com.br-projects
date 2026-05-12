@@ -88,6 +88,8 @@ export default function Clients() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingOriginalTokenId, setEditingOriginalTokenId] = useState<string>("");
+  const [editingOriginalMetaAccessToken, setEditingOriginalMetaAccessToken] = useState<string>("");
+  const [tokenSelectionTouched, setTokenSelectionTouched] = useState(false);
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
@@ -164,6 +166,7 @@ export default function Clients() {
     payload: Record<string, any>;
     targetLabel: string;
     successMessage: string;
+    reopenEditorOnCancel?: boolean;
     onSuccess?: () => void;
   } | null>(null);
 
@@ -224,17 +227,25 @@ export default function Clients() {
   const openCreate = () => {
     setEditingId(null);
     setEditingOriginalTokenId("");
+    setEditingOriginalMetaAccessToken("");
+    setTokenSelectionTouched(false);
     setForm({ ...emptyForm });
     setOpen(true);
   };
 
   const openEdit = (c: any) => {
+    const resolvedTokenId = c.meta_token_id
+      || metaTokens?.find((t) => t.token === c.meta_access_token)?.id
+      || "";
+
     setEditingId(c.id);
-    setEditingOriginalTokenId(c.meta_token_id || "");
+    setEditingOriginalTokenId(resolvedTokenId);
+    setEditingOriginalMetaAccessToken(c.meta_access_token || "");
+    setTokenSelectionTouched(false);
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
-      metaTokenId: c.meta_token_id || "",
+      metaTokenId: resolvedTokenId,
       googleSheetId: c.google_sheet_id || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
@@ -252,12 +263,17 @@ export default function Clients() {
     }
 
     const selectedToken = metaTokens?.find((t) => t.id === form.metaTokenId);
+    const nextMetaAccessToken = form.metaTokenId
+      ? selectedToken?.token || null
+      : editingId && !tokenSelectionTouched
+        ? editingOriginalMetaAccessToken || null
+        : null;
 
     const clientPayload = {
       name: form.name.trim(),
       meta_account_id: form.metaAccountId.trim() || null,
       meta_token_id: form.metaTokenId || null,
-      meta_access_token: selectedToken?.token || null,
+       meta_access_token: nextMetaAccessToken,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
@@ -266,7 +282,6 @@ export default function Clients() {
       squad_id: form.squadId || null,
     };
 
-    setOpen(false);
     if (editingId) {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
       setVerifyAction({
@@ -278,14 +293,20 @@ export default function Clients() {
           ? `Atualizar cliente ${form.name} (inclui troca de token Meta)`
           : `Atualizar cliente ${form.name}`,
         successMessage: "Cliente atualizado!",
+        reopenEditorOnCancel: true,
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["clients"] });
+          queryClient.refetchQueries({ queryKey: ["clients"] });
           setForm(emptyForm);
           setEditingId(null);
           setEditingOriginalTokenId("");
+          setEditingOriginalMetaAccessToken("");
+          setTokenSelectionTouched(false);
+          setOpen(false);
         },
       });
     } else {
+      setOpen(false);
       setVerifyAction({
         action: "create_client",
         payload: { client: clientPayload },
@@ -295,6 +316,9 @@ export default function Clients() {
           queryClient.invalidateQueries({ queryKey: ["clients"] });
           setForm(emptyForm);
           setEditingId(null);
+          setEditingOriginalTokenId("");
+          setEditingOriginalMetaAccessToken("");
+          setTokenSelectionTouched(false);
         },
       });
     }
@@ -603,9 +627,10 @@ export default function Clients() {
               <Label>Token da Meta</Label>
               <Select
                 value={form.metaTokenId || "__none__"}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }))
-                }
+                onValueChange={(v) => {
+                  setTokenSelectionTouched(true);
+                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um token cadastrado" />
@@ -730,7 +755,7 @@ export default function Clients() {
                 {filteredClients.map((c: any) => {
                   const checks = [
                     { label: "Meta ID", ok: !!c.meta_account_id },
-                    { label: "Token Meta", ok: !!c.meta_access_token },
+                    { label: "Token Meta", ok: !!c.meta_access_token || !!c.meta_token_id },
                     { label: "Sheet", ok: !!c.google_sheet_id },
                     { label: "Ticket", ok: !!c.ticket_medio },
                     { label: "CRM Key", ok: !!c.ghl_api_key },
@@ -992,7 +1017,12 @@ export default function Clients() {
       {verifyAction && (
         <ActionVerificationDialog
           open={!!verifyAction}
-          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          onOpenChange={(o) => {
+            if (!o) {
+              if (verifyAction?.reopenEditorOnCancel) setOpen(true);
+              setVerifyAction(null);
+            }
+          }}
           action={verifyAction.action}
           payload={verifyAction.payload}
           targetLabel={verifyAction.targetLabel}
