@@ -164,6 +164,7 @@ export default function Clients() {
     payload: Record<string, any>;
     targetLabel: string;
     successMessage: string;
+    reopenEditorOnCancel?: boolean;
     onSuccess?: () => void;
   } | null>(null);
 
@@ -229,12 +230,16 @@ export default function Clients() {
   };
 
   const openEdit = (c: any) => {
+    const resolvedTokenId = c.meta_token_id
+      || metaTokens?.find((t) => t.token === c.meta_access_token)?.id
+      || "";
+
     setEditingId(c.id);
-    setEditingOriginalTokenId(c.meta_token_id || "");
+    setEditingOriginalTokenId(resolvedTokenId);
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
-      metaTokenId: c.meta_token_id || "",
+      metaTokenId: resolvedTokenId,
       googleSheetId: c.google_sheet_id || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
@@ -266,7 +271,6 @@ export default function Clients() {
       squad_id: form.squadId || null,
     };
 
-    setOpen(false);
     if (editingId) {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
       setVerifyAction({
@@ -278,14 +282,18 @@ export default function Clients() {
           ? `Atualizar cliente ${form.name} (inclui troca de token Meta)`
           : `Atualizar cliente ${form.name}`,
         successMessage: "Cliente atualizado!",
+        reopenEditorOnCancel: true,
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["clients"] });
+          queryClient.refetchQueries({ queryKey: ["clients"] });
           setForm(emptyForm);
           setEditingId(null);
           setEditingOriginalTokenId("");
+          setOpen(false);
         },
       });
     } else {
+      setOpen(false);
       setVerifyAction({
         action: "create_client",
         payload: { client: clientPayload },
@@ -992,7 +1000,12 @@ export default function Clients() {
       {verifyAction && (
         <ActionVerificationDialog
           open={!!verifyAction}
-          onOpenChange={(o) => { if (!o) setVerifyAction(null); }}
+          onOpenChange={(o) => {
+            if (!o) {
+              if (verifyAction?.reopenEditorOnCancel) setOpen(true);
+              setVerifyAction(null);
+            }
+          }}
           action={verifyAction.action}
           payload={verifyAction.payload}
           targetLabel={verifyAction.targetLabel}
