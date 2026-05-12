@@ -627,9 +627,10 @@ export default function Clients() {
               <Label>Token da Meta</Label>
               <Select
                 value={form.metaTokenId || "__none__"}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }))
-                }
+                onValueChange={(v) => {
+                  setTokenSelectionTouched(true);
+                  setForm((f) => ({ ...f, metaTokenId: v === "__none__" ? "" : v }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um token cadastrado" />
