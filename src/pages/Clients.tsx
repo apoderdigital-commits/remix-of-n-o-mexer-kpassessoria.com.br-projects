@@ -88,6 +88,8 @@ export default function Clients() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingOriginalTokenId, setEditingOriginalTokenId] = useState<string>("");
+  const [editingOriginalMetaAccessToken, setEditingOriginalMetaAccessToken] = useState<string>("");
+  const [tokenSelectionTouched, setTokenSelectionTouched] = useState(false);
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
@@ -225,6 +227,8 @@ export default function Clients() {
   const openCreate = () => {
     setEditingId(null);
     setEditingOriginalTokenId("");
+    setEditingOriginalMetaAccessToken("");
+    setTokenSelectionTouched(false);
     setForm({ ...emptyForm });
     setOpen(true);
   };
@@ -236,6 +240,8 @@ export default function Clients() {
 
     setEditingId(c.id);
     setEditingOriginalTokenId(resolvedTokenId);
+    setEditingOriginalMetaAccessToken(c.meta_access_token || "");
+    setTokenSelectionTouched(false);
     setForm({
       name: c.name,
       metaAccountId: c.meta_account_id || "",
@@ -257,12 +263,17 @@ export default function Clients() {
     }
 
     const selectedToken = metaTokens?.find((t) => t.id === form.metaTokenId);
+    const nextMetaAccessToken = form.metaTokenId
+      ? selectedToken?.token || null
+      : editingId && !tokenSelectionTouched
+        ? editingOriginalMetaAccessToken || null
+        : null;
 
     const clientPayload = {
       name: form.name.trim(),
       meta_account_id: form.metaAccountId.trim() || null,
       meta_token_id: form.metaTokenId || null,
-      meta_access_token: selectedToken?.token || null,
+       meta_access_token: nextMetaAccessToken,
       google_sheet_id: form.googleSheetId.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
@@ -289,6 +300,8 @@ export default function Clients() {
           setForm(emptyForm);
           setEditingId(null);
           setEditingOriginalTokenId("");
+          setEditingOriginalMetaAccessToken("");
+          setTokenSelectionTouched(false);
           setOpen(false);
         },
       });
@@ -303,6 +316,9 @@ export default function Clients() {
           queryClient.invalidateQueries({ queryKey: ["clients"] });
           setForm(emptyForm);
           setEditingId(null);
+          setEditingOriginalTokenId("");
+          setEditingOriginalMetaAccessToken("");
+          setTokenSelectionTouched(false);
         },
       });
     }
