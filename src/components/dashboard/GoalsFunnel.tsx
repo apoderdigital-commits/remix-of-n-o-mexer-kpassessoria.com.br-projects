@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Calculator, CheckCircle2, Banknote, ArrowDown, Target, AlertTriangle, CheckCheck, Eye, ArrowRight } from "lucide-react";
+import { Users, Calculator, CheckCircle2, Banknote, ArrowDown, Target, AlertTriangle, CheckCheck, Eye, ArrowRight, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -9,6 +9,8 @@ interface GoalsFunnelProps {
   ghlCpfApproved: number;
   planilhaCpfApproved: number;
   salesFinancing: number;
+  planilhaSalesFinancing?: number;
+  ghlSalesFinancing?: number;
   onScrollTo: (target: "cpf" | "financing") => void;
 }
 
