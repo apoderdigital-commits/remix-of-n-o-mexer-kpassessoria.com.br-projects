@@ -291,6 +291,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "35 85% 55%",
       sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
+      costIndicator: displayVendasFin > 0 ? { label: "CPV", value: totalSpent / displayVendasFin, target: 150, denominatorLabel: "venda" } : undefined,
       scrollTarget: "financing" as const,
       insight: ghlData && ghlAprovado > 0
         ? (() => {
