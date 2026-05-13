@@ -25,12 +25,13 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
-  Smile, CalendarDays, Star, AlertCircle, NotebookPen,
+  Smile, CalendarDays, Star, AlertCircle, NotebookPen, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
 import { SquadNotesReport } from "@/components/squad/SquadNotesReport";
+import { SquadConsolidated } from "@/components/squad/SquadConsolidated";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -178,6 +179,7 @@ export default function Squad() {
   const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [consolidatedOpen, setConsolidatedOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [notesReportOpen, setNotesReportOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
@@ -702,6 +704,14 @@ export default function Squad() {
           )}
           {squadId && clients.length > 0 && (
             <Button
+              onClick={() => setConsolidatedOpen(true)}
+              className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 shadow-lg shadow-emerald-500/30"
+            >
+              <ClipboardList className="h-4 w-4" /> Começar Consolidado
+            </Button>
+          )}
+          {squadId && clients.length > 0 && (
+            <Button
               onClick={() => setDailyOpen(true)}
               className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"
             >
@@ -709,6 +719,13 @@ export default function Squad() {
             </Button>
           )}
         </div>
+
+        <SquadConsolidated
+          open={consolidatedOpen}
+          onClose={() => setConsolidatedOpen(false)}
+          squadId={squadId}
+          clients={clients}
+        />
 
         <SquadDaily
           open={dailyOpen}

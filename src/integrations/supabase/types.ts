@@ -554,6 +554,96 @@ export type Database = {
           },
         ]
       }
+      squad_consolidated_notes: {
+        Row: {
+          action_plan: string | null
+          assignee: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          id: string
+          observations: string | null
+          problem_area: string | null
+          problem_description: string | null
+          squad_id: string
+          status: string
+          updated_at: string
+          week_start: string
+          week_summary: string
+        }
+        Insert: {
+          action_plan?: string | null
+          assignee?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          observations?: string | null
+          problem_area?: string | null
+          problem_description?: string | null
+          squad_id: string
+          status?: string
+          updated_at?: string
+          week_start?: string
+          week_summary?: string
+        }
+        Update: {
+          action_plan?: string | null
+          assignee?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          observations?: string | null
+          problem_area?: string | null
+          problem_description?: string | null
+          squad_id?: string
+          status?: string
+          updated_at?: string
+          week_start?: string
+          week_summary?: string
+        }
+        Relationships: []
+      }
+      squad_consolidated_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          ended_at: string | null
+          id: string
+          squad_id: string
+          started_at: string
+          total_seconds: number | null
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          ended_at?: string | null
+          id?: string
+          squad_id: string
+          started_at?: string
+          total_seconds?: number | null
+          week_start?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          ended_at?: string | null
+          id?: string
+          squad_id?: string
+          started_at?: string
+          total_seconds?: number | null
+          week_start?: string
+        }
+        Relationships: []
+      }
       squad_daily_notes: {
         Row: {
           client_id: string
