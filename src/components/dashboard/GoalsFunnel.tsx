@@ -147,8 +147,15 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, g
   );
 }
 
-export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, onScrollTo }: GoalsFunnelProps) {
+export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
   const [showCpfCompare, setShowCpfCompare] = useState(false);
+  const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("planilha");
+  const [showSalesCompare, setShowSalesCompare] = useState(false);
+
+  const planilhaSales = planilhaSalesFinancing ?? salesFinancing;
+  const ghlSales = ghlSalesFinancing ?? 0;
+  const displaySales = salesSource === "planilha" ? planilhaSales : ghlSales;
+  const hasBothSources = ghlSalesFinancing !== undefined;
 
   return (
     <div className="space-y-6">
