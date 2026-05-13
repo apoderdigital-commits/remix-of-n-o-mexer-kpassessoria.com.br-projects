@@ -426,6 +426,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               {card.indicator && (
                 <MetaIndicator {...card.indicator} />
               )}
+              {(card as any).costIndicator && (
+                <CostIndicator {...(card as any).costIndicator} />
+              )}
               {(card as any).insight && (
                 <p className="mt-2 text-[11px] leading-snug text-muted-foreground/75">
                   {(card as any).insight}
