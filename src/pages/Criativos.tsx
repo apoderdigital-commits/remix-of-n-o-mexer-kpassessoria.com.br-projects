@@ -570,6 +570,8 @@ export default function Index() {
             ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
             planilhaCpfApproved={planilhaCpfApproved}
             salesFinancing={salesFinancing + salesLegacy}
+            planilhaSalesFinancing={salesFinancing + salesLegacy}
+            ghlSalesFinancing={ghlData?.vendas_financiamento ?? 0}
             onScrollTo={(t) => handleScrollToRanking(t)}
           />
           </div>

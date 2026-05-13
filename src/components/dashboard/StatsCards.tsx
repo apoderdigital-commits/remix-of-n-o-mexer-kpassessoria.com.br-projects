@@ -133,6 +133,25 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
   );
 }
 
+function CostIndicator({ label, value, target, denominatorLabel }: { label: string; value: number; target: number; denominatorLabel?: string }) {
+  if (!isFinite(value) || value <= 0) return null;
+  const ok = value <= target;
+  return (
+    <div
+      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+        ok
+          ? "border-green-500/30 bg-green-500/10 text-green-300"
+          : "border-red-500/30 bg-red-500/10 text-red-300"
+      }`}
+      title={`Máx ideal: R$ ${target.toLocaleString("pt-BR")}${denominatorLabel ? ` por ${denominatorLabel}` : ""}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-green-400" : "bg-red-400"}`} />
+      {label}: R$ {value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <span className="text-muted-foreground/70 font-normal">· máx R$ {target}</span>
+    </div>
+  );
+}
+
 function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onToggle: () => void }) {
   return (
     <button
@@ -246,6 +265,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "142 65% 50%",
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
+      costIndicator: displayCpfAprovado > 0 ? { label: "CPMQL", value: totalSpent / displayCpfAprovado, target: 35, denominatorLabel: "CPF aprovado" } : undefined,
       scrollTarget: "cpf" as const,
       compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
       prev: cpfAprovSource === "ghl" ? previousPeriod?.cpfAprovado : undefined,
@@ -271,6 +291,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "35 85% 55%",
       sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
+      costIndicator: displayVendasFin > 0 ? { label: "CPV", value: totalSpent / displayVendasFin, target: 150, denominatorLabel: "venda" } : undefined,
       scrollTarget: "financing" as const,
       insight: ghlData && ghlAprovado > 0
         ? (() => {
@@ -404,6 +425,9 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               )}
               {card.indicator && (
                 <MetaIndicator {...card.indicator} />
+              )}
+              {(card as any).costIndicator && (
+                <CostIndicator {...(card as any).costIndicator} />
               )}
               {(card as any).insight && (
                 <p className="mt-2 text-[11px] leading-snug text-muted-foreground/75">

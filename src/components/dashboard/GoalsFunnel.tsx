@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Calculator, CheckCircle2, Banknote, ArrowDown, Target, AlertTriangle, CheckCheck, Eye, ArrowRight } from "lucide-react";
+import { Users, Calculator, CheckCircle2, Banknote, ArrowDown, Target, AlertTriangle, CheckCheck, Eye, ArrowRight, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -9,6 +9,8 @@ interface GoalsFunnelProps {
   ghlCpfApproved: number;
   planilhaCpfApproved: number;
   salesFinancing: number;
+  planilhaSalesFinancing?: number;
+  ghlSalesFinancing?: number;
   onScrollTo: (target: "cpf" | "financing") => void;
 }
 
@@ -145,8 +147,15 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, g
   );
 }
 
-export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, onScrollTo }: GoalsFunnelProps) {
+export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
   const [showCpfCompare, setShowCpfCompare] = useState(false);
+  const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("planilha");
+  const [showSalesCompare, setShowSalesCompare] = useState(false);
+
+  const planilhaSales = planilhaSalesFinancing ?? salesFinancing;
+  const ghlSales = ghlSalesFinancing ?? 0;
+  const displaySales = salesSource === "planilha" ? planilhaSales : ghlSales;
+  const hasBothSources = ghlSalesFinancing !== undefined;
 
   return (
     <div className="space-y-6">
@@ -206,9 +215,9 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label="Vendas Financiamento"
+          label={`Vendas Financiamento${hasBothSources ? ` (${salesSource === "ghl" ? "CRM" : "Planilha"})` : ""}`}
           icon={Banknote}
-          value={salesFinancing}
+          value={displaySales}
           baseValue={ghlCpfApproved}
           metaPct={META_VENDAS}
           metaLabel={`Mín. ${META_VENDAS}% dos CPFs aprovados precisam virar venda`}
@@ -216,12 +225,63 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           textColor="text-fuchsia-300"
           highlight
           extra={
-            <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => onScrollTo("financing")}>
-              <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de Venda Financiamento
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {hasBothSources && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 h-8"
+                    onClick={() => setSalesSource(s => s === "ghl" ? "planilha" : "ghl")}
+                  >
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                    Ver {salesSource === "ghl" ? "Planilha" : "CRM"}
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => setShowSalesCompare(true)}>
+                    <Eye className="h-3.5 w-3.5" /> CRM × Planilha
+                  </Button>
+                </>
+              )}
+              <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => onScrollTo("financing")}>
+                <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de Venda Financiamento
+              </Button>
+            </div>
           }
         />
       </div>
+
+      <Dialog open={showSalesCompare} onOpenChange={setShowSalesCompare}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vendas Financiamento | CRM × Planilha</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-emerald-400">CRM</p>
+                <p className="text-xs text-muted-foreground">Pipeline automático</p>
+              </div>
+              <p className="text-2xl font-bold text-emerald-300">{formatNumber(ghlSales)}</p>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-blue-400">Planilha</p>
+                <p className="text-xs text-muted-foreground">Registro por API</p>
+              </div>
+              <p className="text-2xl font-bold text-blue-300">{formatNumber(planilhaSales)}</p>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/30">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Diferença</p>
+                <p className="text-xs text-primary-foreground">CRM | Planilha</p>
+              </div>
+              <p className={`text-2xl font-bold ${ghlSales - planilhaSales >= 0 ? "text-foreground" : "text-amber-300"}`}>
+                {ghlSales - planilhaSales >= 0 ? "+" : ""}{formatNumber(ghlSales - planilhaSales)}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCpfCompare} onOpenChange={setShowCpfCompare}>
         <DialogContent className="max-w-md">
