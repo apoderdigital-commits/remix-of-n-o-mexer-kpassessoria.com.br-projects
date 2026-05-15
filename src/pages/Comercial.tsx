@@ -216,30 +216,48 @@ export default function Comercial() {
 
           {/* SDRs */}
           <TabsContent value="sdrs">
-            <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {fase2 && fase2.sdrs.length > 0 ? (
+            <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+              <div className="text-xs text-muted-foreground">
+                Edite as metas (mensais) por SDR — salvas localmente no seu navegador. % é o atingimento no período filtrado.
+              </div>
+              {sdrRanking.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">#</TableHead>
                       <TableHead>SDR</TableHead>
                       <TableHead className="text-right">Agendados</TableHead>
+                      <TableHead className="w-24 text-right">Meta ag.</TableHead>
                       <TableHead className="text-right">Realizados</TableHead>
+                      <TableHead className="w-24 text-right">Meta real.</TableHead>
                       <TableHead className="text-right">No-show</TableHead>
-                      <TableHead className="text-right">Cancelados</TableHead>
                       <TableHead className="text-right">Show rate</TableHead>
+                      <TableHead className="text-right">Atingimento</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fase2.sdrs.map((s) => {
-                      const sr = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
+                    {sdrRanking.map((s, idx) => {
+                      const atAg = s.goal.agendados ? (s.agendados / s.goal.agendados) * 100 : null;
+                      const atRl = s.goal.realizados ? (s.realizados / s.goal.realizados) * 100 : null;
                       return (
                         <TableRow key={s.user.id}>
+                          <TableCell className="font-bold text-muted-foreground">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{s.user.name}</TableCell>
                           <TableCell className="text-right">{s.agendados}</TableCell>
+                          <TableCell className="text-right">
+                            <Input type="number" min={0} value={s.goal.agendados || ""} onChange={(e) => updateGoal(s.user.id, "agendados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                          </TableCell>
                           <TableCell className="text-right text-emerald-400">{s.realizados}</TableCell>
+                          <TableCell className="text-right">
+                            <Input type="number" min={0} value={s.goal.realizados || ""} onChange={(e) => updateGoal(s.user.id, "realizados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                          </TableCell>
                           <TableCell className="text-right text-rose-400">{s.noshow}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{s.cancelados}</TableCell>
-                          <TableCell className="text-right">{fmtPct(sr)}</TableCell>
+                          <TableCell className="text-right">{fmtPct(s.showRate)}</TableCell>
+                          <TableCell className="text-right text-xs">
+                            {atAg != null && <div className={atAg >= 100 ? "text-emerald-400" : "text-amber-400"}>Ag: {fmtPct(atAg)}</div>}
+                            {atRl != null && <div className={atRl >= 100 ? "text-emerald-400" : "text-amber-400"}>Rl: {fmtPct(atRl)}</div>}
+                            {atAg == null && atRl == null && <span className="text-muted-foreground">—</span>}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
