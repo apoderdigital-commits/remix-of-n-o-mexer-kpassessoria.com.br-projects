@@ -123,16 +123,16 @@ export default function Comercial() {
   ];
 
   const cards = kpis ? [
-    { icon: Users, label: "Leads Totais", value: fmtNum(kpis.leadsTotais), color: "from-blue-500/20 to-blue-500/5", border: "border-blue-500/30" },
-    { icon: Target, label: "Leads MQL", value: fmtNum(kpis.mqls), color: "from-cyan-500/20 to-cyan-500/5", border: "border-cyan-500/30" },
-    { icon: Percent, label: "Taxa Ativação MQL", value: fmtPct(kpis.taxaAtivacaoMql), color: "from-teal-500/20 to-teal-500/5", border: "border-teal-500/30" },
-    { icon: ShoppingCart, label: "Vendas", value: fmtNum(kpis.vendas), color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/30" },
-    { icon: DollarSign, label: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), color: "from-amber-500/20 to-amber-500/5", border: "border-amber-500/30" },
-    { icon: Wallet, label: "Faturamento", value: fmtBRL(kpis.faturamento), color: "from-yellow-500/20 to-yellow-500/5", border: "border-yellow-500/30" },
-    { icon: TrendingUp, label: "Investimento Tráfego", value: fmtBRL(kpis.investimento), color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "border-fuchsia-500/30" },
-    { icon: Trophy, label: "CAC", value: fmtBRL(kpis.cac), color: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30" },
-    { icon: TrendingUp, label: "ROAS", value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", color: "from-purple-500/20 to-purple-500/5", border: "border-purple-500/30" },
-    { icon: Percent, label: "Win Rate", value: fmtPct(kpis.winRate), color: "from-primary/20 to-primary/5", border: "border-primary/30" },
+    { icon: Users,        label: "Leads Totais",        value: fmtNum(kpis.leadsTotais),     accent: "blue",     ring: "ring-blue-500/20",     iconBg: "bg-blue-500/15 text-blue-300",          glow: "from-blue-500/20" },
+    { icon: Target,       label: "Leads MQL",           value: fmtNum(kpis.mqls),            accent: "cyan",     ring: "ring-cyan-500/20",     iconBg: "bg-cyan-500/15 text-cyan-300",          glow: "from-cyan-500/20" },
+    { icon: Percent,      label: "Taxa Ativação MQL",   value: fmtPct(kpis.taxaAtivacaoMql), accent: "teal",     ring: "ring-teal-500/20",     iconBg: "bg-teal-500/15 text-teal-300",          glow: "from-teal-500/20" },
+    { icon: ShoppingCart, label: "Vendas",              value: fmtNum(kpis.vendas),          accent: "emerald",  ring: "ring-emerald-500/20",  iconBg: "bg-emerald-500/15 text-emerald-300",    glow: "from-emerald-500/20" },
+    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     accent: "amber",    ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
+    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     accent: "yellow",   ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
+    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    accent: "fuchsia",  ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
+    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             accent: "rose",     ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
+    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", accent: "purple", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
+    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         accent: "primary",  ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
   ] : [];
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
