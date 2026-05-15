@@ -123,16 +123,16 @@ export default function Comercial() {
   ];
 
   const cards = kpis ? [
-    { icon: Users, label: "Leads Totais", value: fmtNum(kpis.leadsTotais), color: "from-blue-500/20 to-blue-500/5", border: "border-blue-500/30" },
-    { icon: Target, label: "Leads MQL", value: fmtNum(kpis.mqls), color: "from-cyan-500/20 to-cyan-500/5", border: "border-cyan-500/30" },
-    { icon: Percent, label: "Taxa Ativação MQL", value: fmtPct(kpis.taxaAtivacaoMql), color: "from-teal-500/20 to-teal-500/5", border: "border-teal-500/30" },
-    { icon: ShoppingCart, label: "Vendas", value: fmtNum(kpis.vendas), color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/30" },
-    { icon: DollarSign, label: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), color: "from-amber-500/20 to-amber-500/5", border: "border-amber-500/30" },
-    { icon: Wallet, label: "Faturamento", value: fmtBRL(kpis.faturamento), color: "from-yellow-500/20 to-yellow-500/5", border: "border-yellow-500/30" },
-    { icon: TrendingUp, label: "Investimento Tráfego", value: fmtBRL(kpis.investimento), color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "border-fuchsia-500/30" },
-    { icon: Trophy, label: "CAC", value: fmtBRL(kpis.cac), color: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30" },
-    { icon: TrendingUp, label: "ROAS", value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", color: "from-purple-500/20 to-purple-500/5", border: "border-purple-500/30" },
-    { icon: Percent, label: "Win Rate", value: fmtPct(kpis.winRate), color: "from-primary/20 to-primary/5", border: "border-primary/30" },
+    { icon: Users,        label: "Leads Totais",        value: fmtNum(kpis.leadsTotais),     accent: "blue",     ring: "ring-blue-500/20",     iconBg: "bg-blue-500/15 text-blue-300",          glow: "from-blue-500/20" },
+    { icon: Target,       label: "Leads MQL",           value: fmtNum(kpis.mqls),            accent: "cyan",     ring: "ring-cyan-500/20",     iconBg: "bg-cyan-500/15 text-cyan-300",          glow: "from-cyan-500/20" },
+    { icon: Percent,      label: "Taxa Ativação MQL",   value: fmtPct(kpis.taxaAtivacaoMql), accent: "teal",     ring: "ring-teal-500/20",     iconBg: "bg-teal-500/15 text-teal-300",          glow: "from-teal-500/20" },
+    { icon: ShoppingCart, label: "Vendas",              value: fmtNum(kpis.vendas),          accent: "emerald",  ring: "ring-emerald-500/20",  iconBg: "bg-emerald-500/15 text-emerald-300",    glow: "from-emerald-500/20" },
+    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     accent: "amber",    ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
+    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     accent: "yellow",   ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
+    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    accent: "fuchsia",  ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
+    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             accent: "rose",     ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
+    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", accent: "purple", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
+    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         accent: "primary",  ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
   ] : [];
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
@@ -152,67 +152,98 @@ export default function Comercial() {
   const maxNoShow = Math.max(1, ...hourEntries.map(([, v]) => v));
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="h-3.5 w-3.5" /> Portal
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Painel Comercial · KP</h1>
-            <p className="text-sm text-muted-foreground mt-1">GoHighLevel + Meta Ads</p>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Decorative background */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/15 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-fuchsia-500/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[300px] w-[700px] rounded-full bg-cyan-500/5 blur-[120px]" />
+      </div>
+
+      <div className="p-4 sm:p-6 lg:p-10">
+        <div className="max-w-7xl mx-auto space-y-7">
+          {/* Hero */}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2">
+              <Link to="/" className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft className="h-3.5 w-3.5" /> Portal
+              </Link>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-br from-foreground via-foreground to-primary bg-clip-text text-transparent">
+                Painel Comercial
+              </h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                GoHighLevel · Meta Ads · tempo real
+              </p>
+            </div>
+            <Button onClick={fetchAll} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
-          <Button onClick={fetchAll} disabled={loading} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-        </div>
 
-        <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">De</Label>
-              <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px]" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Até</Label>
-              <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px]" />
-            </div>
-            <div className="flex gap-1.5">
-              {presets.map((p) => (
-                <Button key={p.label} type="button" variant="outline" size="sm" onClick={p.apply}>{p.label}</Button>
-              ))}
-            </div>
-            <Button onClick={fetchAll} disabled={loading} className="ml-auto">Aplicar</Button>
-          </div>
-        </Card>
-
-        <Tabs defaultValue="kpis" className="space-y-4">
-          <TabsList className="bg-card/40 backdrop-blur flex-wrap h-auto">
-            <TabsTrigger value="kpis">KPIs</TabsTrigger>
-            <TabsTrigger value="sdrs">Reuniões / SDRs</TabsTrigger>
-            <TabsTrigger value="mqls">MQLs</TabsTrigger>
-            <TabsTrigger value="classes">Propostas & Vendas A/B/C</TabsTrigger>
-            <TabsTrigger value="funnel">Funil por estágio</TabsTrigger>
-            <TabsTrigger value="trend">Histórico</TabsTrigger>
-            <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-            <TabsTrigger value="noshow">No-show por horário</TabsTrigger>
-          </TabsList>
-
-          {/* KPIs */}
-          <TabsContent value="kpis">
-            {kpis ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {cards.map((c) => (
-                  <Card key={c.label} className={`p-4 bg-gradient-to-br ${c.color} ${c.border} border backdrop-blur`}>
-                    <div className="flex items-start justify-between mb-2"><c.icon className="h-4 w-4 text-foreground/70" /></div>
-                    <div className="text-xs text-muted-foreground leading-tight">{c.label}</div>
-                    <div className="text-xl font-bold mt-1 tracking-tight">{c.value}</div>
-                  </Card>
+          {/* Filtros */}
+          <Card className="p-5 bg-card/30 backdrop-blur-xl border border-white/5 shadow-2xl shadow-black/20 rounded-2xl">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">De</Label>
+                <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</Label>
+                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
+              </div>
+              <div className="flex gap-1.5">
+                {presets.map((p) => (
+                  <Button key={p.label} type="button" variant="outline" size="sm" onClick={p.apply} className="bg-background/30 border-white/10 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors">
+                    {p.label}
+                  </Button>
                 ))}
               </div>
-            ) : <div className="text-center py-20 text-muted-foreground">Sem dados.</div>}
-          </TabsContent>
+              <Button onClick={fetchAll} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
+            </div>
+          </Card>
+
+          <Tabs defaultValue="kpis" className="space-y-5">
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
+                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
+                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
+                <TabsTrigger value="mqls" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">MQLs</TabsTrigger>
+                <TabsTrigger value="classes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Propostas A/B/C</TabsTrigger>
+                <TabsTrigger value="funnel" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Funil</TabsTrigger>
+                <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
+                <TabsTrigger value="followups" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Follow-ups</TabsTrigger>
+                <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* KPIs */}
+            <TabsContent value="kpis">
+              {kpis ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {cards.map((c) => (
+                    <Card
+                      key={c.label}
+                      className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
+                    >
+                      <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
+                      <div className="relative flex items-center justify-between mb-3">
+                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
+                          <c.icon className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
+                      <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">
+                  Sem dados no período.
+                </Card>
+              )}
+            </TabsContent>
 
           {/* SDRs */}
           <TabsContent value="sdrs">
@@ -573,11 +604,12 @@ export default function Comercial() {
               ));
             })()}
           </TabsContent>
-        </Tabs>
+          </Tabs>
 
-        <p className="text-xs text-muted-foreground/60 text-center pt-4">
-          Investimento via Meta Ads (act_507006368954918, Token de Will). Reuniões/MQLs/Vendas via GoHighLevel.
-        </p>
+          <p className="text-xs text-muted-foreground/60 text-center pt-4">
+            Investimento via Meta Ads (act_507006368954918, Token de Will). Reuniões/MQLs/Vendas via GoHighLevel.
+          </p>
+        </div>
       </div>
     </div>
   );
