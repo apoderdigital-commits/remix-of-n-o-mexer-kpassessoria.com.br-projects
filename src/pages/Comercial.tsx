@@ -34,6 +34,26 @@ interface Fase2 {
   mqlsList: MqlRow[];
   classes: Record<"A" | "B" | "C" | "Outro", ClassData>;
 }
+interface PipelineFunnel { id: string; name: string; stages: { id: string; name: string; count: number; value: number }[]; won: number; lost: number; openValue: number; }
+interface TrendBucket { weekStart: string; mqls: number; vendas: number; faturamento: number; investimento: number; cac: number; roas: number; }
+interface FollowUps {
+  mqlsSemAgendamento: { id: string; nome: string; email?: string; phone?: string; diasParado: number; dateAdded: string }[];
+  propostasParadas: { id: string; nome: string; pipeline: string; valor: number; diasParado: number; updatedAt: string }[];
+  opsEstagnadas: { id: string; nome: string; pipeline: string; stage: string; valor: number; diasParado: number; updatedAt: string }[];
+  thresholds: { semAgendDias: number; propostaParadaDias: number; oppEstagnadaDias: number };
+}
+interface Fase3 {
+  aggregateFunnel: { stage: string; count: number }[];
+  pipelineFunnels: PipelineFunnel[];
+  trend: TrendBucket[];
+  followUps: FollowUps;
+  metaError?: string | null;
+}
+
+type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
+const GOALS_KEY = "kp_comercial_sdr_goals_v1";
+const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
+const saveGoals = (g: SdrGoals) => localStorage.setItem(GOALS_KEY, JSON.stringify(g));
 
 export default function Comercial() {
   const { isAdmin, squadCount, loading: authLoading } = useAuth();
@@ -44,13 +64,17 @@ export default function Comercial() {
   const [loading, setLoading] = useState(false);
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [fase2, setFase2] = useState<Fase2 | null>(null);
+  const [fase3, setFase3] = useState<Fase3 | null>(null);
+  const [goals, setGoals] = useState<SdrGoals>(loadGoals);
+  const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [k, f] = await Promise.all([
+      const [k, f, f3] = await Promise.all([
         supabase.functions.invoke("kp-comercial-kpis", { body: { since, until } }),
         supabase.functions.invoke("kp-comercial-fase2", { body: { since, until } }),
+        supabase.functions.invoke("kp-comercial-fase3", { body: { since, until } }),
       ]);
       if (k.error) throw k.error;
       if ((k.data as any)?.error) throw new Error((k.data as any).error);
@@ -59,6 +83,9 @@ export default function Comercial() {
       if (f.error) throw f.error;
       if ((f.data as any)?.error) throw new Error((f.data as any).error);
       setFase2(f.data as Fase2);
+      if (f3.error) throw f3.error;
+      if ((f3.data as any)?.error) throw new Error((f3.data as any).error);
+      setFase3(f3.data as Fase3);
     } catch (e: any) {
       console.error(e);
       toast.error("Erro: " + (e.message || ""));
@@ -68,6 +95,22 @@ export default function Comercial() {
   };
 
   useEffect(() => { void fetchAll(); /* eslint-disable-next-line */ }, []);
+
+  const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
+    const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
+    setGoals(next); saveGoals(next);
+  };
+
+  const sdrRanking = useMemo(() => {
+    if (!fase2) return [];
+    return [...fase2.sdrs].map((s) => {
+      const g = goals[s.user.id] || { agendados: 0, realizados: 0, vendas: 0 };
+      const showRate = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
+      const score = (g.agendados ? (s.agendados / g.agendados) * 100 : 0)
+        + (g.realizados ? (s.realizados / g.realizados) * 100 : 0);
+      return { ...s, goal: g, showRate, score };
+    }).sort((a, b) => (b.score - a.score) || (b.realizados - a.realizados));
+  }, [fase2, goals]);
 
   const presets = [
     { label: "Hoje", apply: () => { const d = todayIso(); setSince(d); setUntil(d); } },
