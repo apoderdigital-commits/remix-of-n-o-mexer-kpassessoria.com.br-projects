@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-const INVEST_KEY = "kp_comercial_investimento_trafego";
-
 function fmtBRL(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 }
@@ -20,7 +18,6 @@ function fmtNum(v: number) {
 function fmtPct(v: number) {
   return `${(v || 0).toFixed(1)}%`;
 }
-
 function startOfMonth(d = new Date()) {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
@@ -36,6 +33,10 @@ interface Kpis {
   faturamento: number;
   ticketMedio: number;
   winRate: number;
+  investimento: number;
+  cac: number;
+  roas: number;
+  metaError?: string | null;
 }
 
 export default function Comercial() {
@@ -46,17 +47,6 @@ export default function Comercial() {
   const [until, setUntil] = useState(todayIso());
   const [loading, setLoading] = useState(false);
   const [kpis, setKpis] = useState<Kpis | null>(null);
-  const [investimento, setInvestimento] = useState<number>(() => {
-    const v = localStorage.getItem(INVEST_KEY);
-    return v ? Number(v) || 0 : 0;
-  });
-
-  useEffect(() => {
-    localStorage.setItem(INVEST_KEY, String(investimento));
-  }, [investimento]);
-
-  const cac = useMemo(() => (kpis && kpis.vendas > 0 ? investimento / kpis.vendas : 0), [investimento, kpis]);
-  const roas = useMemo(() => (investimento > 0 && kpis ? kpis.faturamento / investimento : 0), [investimento, kpis]);
 
   const fetchKpis = async () => {
     setLoading(true);
@@ -67,18 +57,16 @@ export default function Comercial() {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setKpis(data as Kpis);
+      if ((data as any)?.metaError) toast.warning("Meta Ads: " + (data as any).metaError);
     } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao buscar dados do GHL: " + (e.message || ""));
+      toast.error("Erro ao buscar dados: " + (e.message || ""));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    void fetchKpis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { void fetchKpis(); /* eslint-disable-next-line */ }, []);
 
   const presets = [
     { label: "Hoje", apply: () => { const d = todayIso(); setSince(d); setUntil(d); } },
@@ -99,9 +87,9 @@ export default function Comercial() {
     { icon: ShoppingCart, label: "Vendas", value: fmtNum(kpis.vendas), color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/30" },
     { icon: DollarSign, label: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), color: "from-amber-500/20 to-amber-500/5", border: "border-amber-500/30" },
     { icon: Wallet, label: "Faturamento", value: fmtBRL(kpis.faturamento), color: "from-yellow-500/20 to-yellow-500/5", border: "border-yellow-500/30" },
-    { icon: TrendingUp, label: "Investimento Tráfego", value: fmtBRL(investimento), color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "border-fuchsia-500/30", editable: true },
-    { icon: Trophy, label: "CAC", value: fmtBRL(cac), color: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30" },
-    { icon: TrendingUp, label: "ROAS do Funil", value: roas > 0 ? `${roas.toFixed(2)}x` : "—", color: "from-purple-500/20 to-purple-500/5", border: "border-purple-500/30" },
+    { icon: TrendingUp, label: "Investimento Tráfego", value: fmtBRL(kpis.investimento), color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "border-fuchsia-500/30" },
+    { icon: Trophy, label: "CAC", value: fmtBRL(kpis.cac), color: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30" },
+    { icon: TrendingUp, label: "ROAS do Funil", value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", color: "from-purple-500/20 to-purple-500/5", border: "border-purple-500/30" },
     { icon: Percent, label: "Win Rate", value: fmtPct(kpis.winRate), color: "from-primary/20 to-primary/5", border: "border-primary/30" },
   ] : [];
 
@@ -111,14 +99,13 @@ export default function Comercial() {
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
               <ArrowLeft className="h-3.5 w-3.5" /> Portal
             </Link>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Painel Comercial · KP</h1>
-            <p className="text-sm text-muted-foreground mt-1">Métricas comerciais da KP via GoHighLevel</p>
+            <p className="text-sm text-muted-foreground mt-1">Métricas comerciais da KP via GoHighLevel + Meta Ads</p>
           </div>
           <Button onClick={fetchKpis} disabled={loading} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -126,7 +113,6 @@ export default function Comercial() {
           </Button>
         </div>
 
-        {/* Filtros */}
         <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
@@ -142,25 +128,12 @@ export default function Comercial() {
                 <Button key={p.label} type="button" variant="outline" size="sm" onClick={p.apply}>{p.label}</Button>
               ))}
             </div>
-            <div className="space-y-1 ml-auto">
-              <Label className="text-xs">Investimento em Tráfego (R$)</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={investimento || ""}
-                onChange={(e) => setInvestimento(Number(e.target.value) || 0)}
-                className="w-[180px]"
-                placeholder="0,00"
-              />
-            </div>
-            <Button onClick={fetchKpis} disabled={loading}>Aplicar</Button>
+            <Button onClick={fetchKpis} disabled={loading} className="ml-auto">Aplicar</Button>
           </div>
         </Card>
 
-        {/* KPI Cards */}
         {loading && !kpis ? (
-          <div className="text-center py-20 text-muted-foreground">Carregando dados do GHL…</div>
+          <div className="text-center py-20 text-muted-foreground">Carregando dados…</div>
         ) : kpis ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {cards.map((c) => (
@@ -178,7 +151,7 @@ export default function Comercial() {
         )}
 
         <p className="text-xs text-muted-foreground/60 text-center pt-4">
-          Fase 1 · KPIs do topo. Próximas fases: Reuniões/SDRs, MQLs detalhado, Propostas, No-show por horário.
+          Investimento puxado da conta Meta Ads {`(act_507006368954918)`} via Token de Will.
         </p>
       </div>
     </div>
