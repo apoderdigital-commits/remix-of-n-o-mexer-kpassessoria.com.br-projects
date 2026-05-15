@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const INVEST_KEY = "kp_comercial_investimento_trafego";
@@ -38,6 +39,9 @@ interface Kpis {
 }
 
 export default function Comercial() {
+  const { isAdmin, squadCount, loading: authLoading } = useAuth();
+  const allowed = isAdmin || squadCount > 0;
+
   const [since, setSince] = useState(startOfMonth());
   const [until, setUntil] = useState(todayIso());
   const [loading, setLoading] = useState(false);
