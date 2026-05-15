@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
-import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import kpLogo from "@/assets/kp-logo.png";
@@ -45,6 +45,7 @@ export default function Portal() {
     : allProjects.filter((p) => dashboards.includes(p.key));
 
   const showSquadCard = isAdmin || squadCount > 0;
+  const showComercialCard = isAdmin || squadCount > 0;
 
   return (
     <div className="min-h-[100dvh] flex relative overflow-hidden">
@@ -149,6 +150,28 @@ export default function Portal() {
                         </div>
                         <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
                         <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-emerald-300 group-hover:gap-2.5 transition-all">
+                          Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                {showComercialCard && (
+                  <Link to="/comercial" className="group">
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-amber-500/30 hover:border-amber-500/50 bg-gradient-to-r from-amber-500/20 to-orange-500/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/10">
+                      <div className="flex items-center sm:items-start gap-3 sm:gap-4">
+                        <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+                          <Briefcase className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">Painel Comercial KP</h2>
+                            <span className="text-[10px] uppercase font-semibold text-amber-300/80 bg-amber-500/10 px-1.5 py-0.5 rounded">Interno</span>
+                          </div>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">Métricas comerciais da KP via GoHighLevel: leads, MQLs, vendas, CAC e ROAS.</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-amber-300 group-hover:gap-2.5 transition-all">
                           Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </div>
