@@ -375,6 +375,204 @@ export default function Comercial() {
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Nenhum no-show registrado no período.</div>}
             </Card>
           </TabsContent>
+
+          {/* Funil por estágio */}
+          <TabsContent value="funnel" className="space-y-4">
+            {fase3 && (
+              <>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+                  <div className="text-sm font-semibold flex items-center gap-2"><FilterIcon className="h-4 w-4" /> Funil agregado</div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const top = fase3.aggregateFunnel[0]?.count || 1;
+                      return fase3.aggregateFunnel.map((f, i) => {
+                        const prev = i > 0 ? fase3.aggregateFunnel[i - 1].count : null;
+                        const conv = prev && prev > 0 ? (f.count / prev) * 100 : null;
+                        return (
+                          <div key={f.stage} className="flex items-center gap-3">
+                            <div className="w-32 text-sm text-muted-foreground">{f.stage}</div>
+                            <div className="flex-1 h-7 bg-muted/30 rounded overflow-hidden">
+                              <div className="h-full bg-primary/60 flex items-center px-2 text-xs font-semibold text-foreground" style={{ width: `${Math.max(2, (f.count / top) * 100)}%` }}>
+                                {fmtNum(f.count)}
+                              </div>
+                            </div>
+                            <div className="w-20 text-right text-xs text-muted-foreground">
+                              {conv != null ? fmtPct(conv) : "—"}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </Card>
+
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="text-sm font-semibold">Funil por pipeline</div>
+                    <select className="bg-background border border-border/40 rounded px-2 py-1 text-xs" value={funnelPipeline} onChange={(e) => setFunnelPipeline(e.target.value)}>
+                      <option value="__all__">Todos os pipelines</option>
+                      {fase3.pipelineFunnels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-4">
+                    {fase3.pipelineFunnels
+                      .filter((p) => funnelPipeline === "__all__" || p.id === funnelPipeline)
+                      .map((p) => {
+                        const top = Math.max(1, ...p.stages.map((s) => s.count));
+                        return (
+                          <div key={p.id} className="space-y-1.5 border-t border-border/20 pt-3 first:border-0 first:pt-0">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="font-semibold">{p.name}</div>
+                              <div className="text-muted-foreground">Won: <span className="text-emerald-400">{p.won}</span> · Lost: <span className="text-rose-400">{p.lost}</span> · Aberto: {fmtBRL(p.openValue)}</div>
+                            </div>
+                            {p.stages.map((s) => (
+                              <div key={s.id} className="flex items-center gap-2">
+                                <div className="w-40 text-xs text-muted-foreground truncate" title={s.name}>{s.name}</div>
+                                <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
+                                  <div className="h-full bg-cyan-500/50" style={{ width: `${(s.count / top) * 100}%` }} />
+                                </div>
+                                <div className="w-12 text-right text-xs">{s.count}</div>
+                                <div className="w-24 text-right text-xs text-muted-foreground">{fmtBRL(s.value)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Histórico / tendência */}
+          <TabsContent value="trend" className="space-y-4">
+            {fase3 && fase3.trend.length > 0 ? (
+              <>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">MQLs e Vendas por semana</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line type="monotone" dataKey="mqls" stroke="#06b6d4" strokeWidth={2} name="MQLs" />
+                        <Line type="monotone" dataKey="vendas" stroke="#10b981" strokeWidth={2} name="Vendas" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">Faturamento × Investimento</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} formatter={(v: any) => fmtBRL(Number(v))} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line type="monotone" dataKey="faturamento" stroke="#facc15" strokeWidth={2} name="Faturamento" />
+                        <Line type="monotone" dataKey="investimento" stroke="#a855f7" strokeWidth={2} name="Investimento" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">CAC × ROAS</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis yAxisId="cac" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${v}`} />
+                        <YAxis yAxisId="roas" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}x`} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line yAxisId="cac" type="monotone" dataKey="cac" stroke="#f43f5e" strokeWidth={2} name="CAC (R$)" />
+                        <Line yAxisId="roas" type="monotone" dataKey="roas" stroke="#8b5cf6" strokeWidth={2} name="ROAS (x)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </>
+            ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem dados de tendência.</div>}
+          </TabsContent>
+
+          {/* Follow-ups */}
+          <TabsContent value="followups" className="space-y-4">
+            {fase3 && (() => {
+              const fu = fase3.followUps;
+              const sections: { title: string; icon: any; rows: any[]; cols: string[]; render: (r: any) => React.ReactNode[]; threshold: number }[] = [
+                {
+                  title: "MQLs sem agendamento",
+                  icon: AlertTriangle,
+                  rows: fu.mqlsSemAgendamento,
+                  threshold: fu.thresholds.semAgendDias,
+                  cols: ["Nome", "Contato", "Entrada", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.phone || r.email || "—"}</span>,
+                    <span className="text-xs">{new Date(r.dateAdded).toLocaleDateString("pt-BR")}</span>,
+                    <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+                {
+                  title: "Propostas paradas",
+                  icon: Clock,
+                  rows: fu.propostasParadas,
+                  threshold: fu.thresholds.propostaParadaDias,
+                  cols: ["Oportunidade", "Pipeline", "Valor", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.pipeline}</span>,
+                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
+                    <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+                {
+                  title: "Oportunidades estagnadas",
+                  icon: Clock,
+                  rows: fu.opsEstagnadas,
+                  threshold: fu.thresholds.oppEstagnadaDias,
+                  cols: ["Oportunidade", "Pipeline / Stage", "Valor", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.pipeline} · {r.stage}</span>,
+                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
+                    <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+              ];
+              return sections.map((sec) => (
+                <Card key={sec.title} className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold flex items-center gap-2">
+                      <sec.icon className="h-4 w-4" /> {sec.title}
+                      <Badge variant="outline" className="ml-1">{sec.rows.length}</Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">≥ {sec.threshold} dias parado</span>
+                  </div>
+                  {sec.rows.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground text-xs">Tudo em dia.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader><TableRow>{sec.cols.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader>
+                      <TableBody>
+                        {sec.rows.map((r) => (
+                          <TableRow key={r.id}>
+                            {sec.render(r).map((cell, i) => <TableCell key={i}>{cell}</TableCell>)}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </Card>
+              ));
+            })()}
+          </TabsContent>
         </Tabs>
 
         <p className="text-xs text-muted-foreground/60 text-center pt-4">
