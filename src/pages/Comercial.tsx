@@ -604,11 +604,12 @@ export default function Comercial() {
               ));
             })()}
           </TabsContent>
-        </Tabs>
+          </Tabs>
 
-        <p className="text-xs text-muted-foreground/60 text-center pt-4">
-          Investimento via Meta Ads (act_507006368954918, Token de Will). Reuniões/MQLs/Vendas via GoHighLevel.
-        </p>
+          <p className="text-xs text-muted-foreground/60 text-center pt-4">
+            Investimento via Meta Ads (act_507006368954918, Token de Will). Reuniões/MQLs/Vendas via GoHighLevel.
+          </p>
+        </div>
       </div>
     </div>
   );
