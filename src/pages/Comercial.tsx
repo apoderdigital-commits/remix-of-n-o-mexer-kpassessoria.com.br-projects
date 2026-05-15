@@ -105,6 +105,9 @@ export default function Comercial() {
     { icon: Percent, label: "Win Rate", value: fmtPct(kpis.winRate), color: "from-primary/20 to-primary/5", border: "border-primary/30" },
   ] : [];
 
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
+  if (!allowed) return <Navigate to="/" replace />;
+
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">

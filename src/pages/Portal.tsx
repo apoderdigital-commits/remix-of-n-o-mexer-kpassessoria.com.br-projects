@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
-import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import kpLogo from "@/assets/kp-logo.png";
@@ -45,6 +45,7 @@ export default function Portal() {
     : allProjects.filter((p) => dashboards.includes(p.key));
 
   const showSquadCard = isAdmin || squadCount > 0;
+  const showComercialCard = isAdmin || squadCount > 0;
 
   return (
     <div className="min-h-[100dvh] flex relative overflow-hidden">
