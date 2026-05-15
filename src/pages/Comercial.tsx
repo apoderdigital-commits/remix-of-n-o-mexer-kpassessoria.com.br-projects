@@ -152,67 +152,98 @@ export default function Comercial() {
   const maxNoShow = Math.max(1, ...hourEntries.map(([, v]) => v));
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="h-3.5 w-3.5" /> Portal
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Painel Comercial · KP</h1>
-            <p className="text-sm text-muted-foreground mt-1">GoHighLevel + Meta Ads</p>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Decorative background */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/15 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-fuchsia-500/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[300px] w-[700px] rounded-full bg-cyan-500/5 blur-[120px]" />
+      </div>
+
+      <div className="p-4 sm:p-6 lg:p-10">
+        <div className="max-w-7xl mx-auto space-y-7">
+          {/* Hero */}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2">
+              <Link to="/" className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft className="h-3.5 w-3.5" /> Portal
+              </Link>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-br from-foreground via-foreground to-primary bg-clip-text text-transparent">
+                Painel Comercial
+              </h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                GoHighLevel · Meta Ads · tempo real
+              </p>
+            </div>
+            <Button onClick={fetchAll} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
-          <Button onClick={fetchAll} disabled={loading} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-        </div>
 
-        <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">De</Label>
-              <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px]" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Até</Label>
-              <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px]" />
-            </div>
-            <div className="flex gap-1.5">
-              {presets.map((p) => (
-                <Button key={p.label} type="button" variant="outline" size="sm" onClick={p.apply}>{p.label}</Button>
-              ))}
-            </div>
-            <Button onClick={fetchAll} disabled={loading} className="ml-auto">Aplicar</Button>
-          </div>
-        </Card>
-
-        <Tabs defaultValue="kpis" className="space-y-4">
-          <TabsList className="bg-card/40 backdrop-blur flex-wrap h-auto">
-            <TabsTrigger value="kpis">KPIs</TabsTrigger>
-            <TabsTrigger value="sdrs">Reuniões / SDRs</TabsTrigger>
-            <TabsTrigger value="mqls">MQLs</TabsTrigger>
-            <TabsTrigger value="classes">Propostas & Vendas A/B/C</TabsTrigger>
-            <TabsTrigger value="funnel">Funil por estágio</TabsTrigger>
-            <TabsTrigger value="trend">Histórico</TabsTrigger>
-            <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-            <TabsTrigger value="noshow">No-show por horário</TabsTrigger>
-          </TabsList>
-
-          {/* KPIs */}
-          <TabsContent value="kpis">
-            {kpis ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {cards.map((c) => (
-                  <Card key={c.label} className={`p-4 bg-gradient-to-br ${c.color} ${c.border} border backdrop-blur`}>
-                    <div className="flex items-start justify-between mb-2"><c.icon className="h-4 w-4 text-foreground/70" /></div>
-                    <div className="text-xs text-muted-foreground leading-tight">{c.label}</div>
-                    <div className="text-xl font-bold mt-1 tracking-tight">{c.value}</div>
-                  </Card>
+          {/* Filtros */}
+          <Card className="p-5 bg-card/30 backdrop-blur-xl border border-white/5 shadow-2xl shadow-black/20 rounded-2xl">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">De</Label>
+                <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</Label>
+                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
+              </div>
+              <div className="flex gap-1.5">
+                {presets.map((p) => (
+                  <Button key={p.label} type="button" variant="outline" size="sm" onClick={p.apply} className="bg-background/30 border-white/10 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors">
+                    {p.label}
+                  </Button>
                 ))}
               </div>
-            ) : <div className="text-center py-20 text-muted-foreground">Sem dados.</div>}
-          </TabsContent>
+              <Button onClick={fetchAll} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
+            </div>
+          </Card>
+
+          <Tabs defaultValue="kpis" className="space-y-5">
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
+                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
+                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
+                <TabsTrigger value="mqls" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">MQLs</TabsTrigger>
+                <TabsTrigger value="classes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Propostas A/B/C</TabsTrigger>
+                <TabsTrigger value="funnel" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Funil</TabsTrigger>
+                <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
+                <TabsTrigger value="followups" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Follow-ups</TabsTrigger>
+                <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* KPIs */}
+            <TabsContent value="kpis">
+              {kpis ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {cards.map((c) => (
+                    <Card
+                      key={c.label}
+                      className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
+                    >
+                      <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
+                      <div className="relative flex items-center justify-between mb-3">
+                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
+                          <c.icon className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
+                      <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">
+                  Sem dados no período.
+                </Card>
+              )}
+            </TabsContent>
 
           {/* SDRs */}
           <TabsContent value="sdrs">
