@@ -188,11 +188,14 @@ export default function Comercial() {
         </Card>
 
         <Tabs defaultValue="kpis" className="space-y-4">
-          <TabsList className="bg-card/40 backdrop-blur">
+          <TabsList className="bg-card/40 backdrop-blur flex-wrap h-auto">
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
             <TabsTrigger value="sdrs">Reuniões / SDRs</TabsTrigger>
             <TabsTrigger value="mqls">MQLs</TabsTrigger>
             <TabsTrigger value="classes">Propostas & Vendas A/B/C</TabsTrigger>
+            <TabsTrigger value="funnel">Funil por estágio</TabsTrigger>
+            <TabsTrigger value="trend">Histórico</TabsTrigger>
+            <TabsTrigger value="followups">Follow-ups</TabsTrigger>
             <TabsTrigger value="noshow">No-show por horário</TabsTrigger>
           </TabsList>
 
