@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,26 @@ interface Fase2 {
   mqlsList: MqlRow[];
   classes: Record<"A" | "B" | "C" | "Outro", ClassData>;
 }
+interface PipelineFunnel { id: string; name: string; stages: { id: string; name: string; count: number; value: number }[]; won: number; lost: number; openValue: number; }
+interface TrendBucket { weekStart: string; mqls: number; vendas: number; faturamento: number; investimento: number; cac: number; roas: number; }
+interface FollowUps {
+  mqlsSemAgendamento: { id: string; nome: string; email?: string; phone?: string; diasParado: number; dateAdded: string }[];
+  propostasParadas: { id: string; nome: string; pipeline: string; valor: number; diasParado: number; updatedAt: string }[];
+  opsEstagnadas: { id: string; nome: string; pipeline: string; stage: string; valor: number; diasParado: number; updatedAt: string }[];
+  thresholds: { semAgendDias: number; propostaParadaDias: number; oppEstagnadaDias: number };
+}
+interface Fase3 {
+  aggregateFunnel: { stage: string; count: number }[];
+  pipelineFunnels: PipelineFunnel[];
+  trend: TrendBucket[];
+  followUps: FollowUps;
+  metaError?: string | null;
+}
+
+type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
+const GOALS_KEY = "kp_comercial_sdr_goals_v1";
+const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
+const saveGoals = (g: SdrGoals) => localStorage.setItem(GOALS_KEY, JSON.stringify(g));
 
 export default function Comercial() {
   const { isAdmin, squadCount, loading: authLoading } = useAuth();
@@ -43,13 +64,17 @@ export default function Comercial() {
   const [loading, setLoading] = useState(false);
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [fase2, setFase2] = useState<Fase2 | null>(null);
+  const [fase3, setFase3] = useState<Fase3 | null>(null);
+  const [goals, setGoals] = useState<SdrGoals>(loadGoals);
+  const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [k, f] = await Promise.all([
+      const [k, f, f3] = await Promise.all([
         supabase.functions.invoke("kp-comercial-kpis", { body: { since, until } }),
         supabase.functions.invoke("kp-comercial-fase2", { body: { since, until } }),
+        supabase.functions.invoke("kp-comercial-fase3", { body: { since, until } }),
       ]);
       if (k.error) throw k.error;
       if ((k.data as any)?.error) throw new Error((k.data as any).error);
@@ -58,6 +83,9 @@ export default function Comercial() {
       if (f.error) throw f.error;
       if ((f.data as any)?.error) throw new Error((f.data as any).error);
       setFase2(f.data as Fase2);
+      if (f3.error) throw f3.error;
+      if ((f3.data as any)?.error) throw new Error((f3.data as any).error);
+      setFase3(f3.data as Fase3);
     } catch (e: any) {
       console.error(e);
       toast.error("Erro: " + (e.message || ""));
@@ -67,6 +95,22 @@ export default function Comercial() {
   };
 
   useEffect(() => { void fetchAll(); /* eslint-disable-next-line */ }, []);
+
+  const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
+    const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
+    setGoals(next); saveGoals(next);
+  };
+
+  const sdrRanking = useMemo(() => {
+    if (!fase2) return [];
+    return [...fase2.sdrs].map((s) => {
+      const g = goals[s.user.id] || { agendados: 0, realizados: 0, vendas: 0 };
+      const showRate = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
+      const score = (g.agendados ? (s.agendados / g.agendados) * 100 : 0)
+        + (g.realizados ? (s.realizados / g.realizados) * 100 : 0);
+      return { ...s, goal: g, showRate, score };
+    }).sort((a, b) => (b.score - a.score) || (b.realizados - a.realizados));
+  }, [fase2, goals]);
 
   const presets = [
     { label: "Hoje", apply: () => { const d = todayIso(); setSince(d); setUntil(d); } },
@@ -144,11 +188,14 @@ export default function Comercial() {
         </Card>
 
         <Tabs defaultValue="kpis" className="space-y-4">
-          <TabsList className="bg-card/40 backdrop-blur">
+          <TabsList className="bg-card/40 backdrop-blur flex-wrap h-auto">
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
             <TabsTrigger value="sdrs">Reuniões / SDRs</TabsTrigger>
             <TabsTrigger value="mqls">MQLs</TabsTrigger>
             <TabsTrigger value="classes">Propostas & Vendas A/B/C</TabsTrigger>
+            <TabsTrigger value="funnel">Funil por estágio</TabsTrigger>
+            <TabsTrigger value="trend">Histórico</TabsTrigger>
+            <TabsTrigger value="followups">Follow-ups</TabsTrigger>
             <TabsTrigger value="noshow">No-show por horário</TabsTrigger>
           </TabsList>
 
@@ -169,30 +216,48 @@ export default function Comercial() {
 
           {/* SDRs */}
           <TabsContent value="sdrs">
-            <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {fase2 && fase2.sdrs.length > 0 ? (
+            <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+              <div className="text-xs text-muted-foreground">
+                Edite as metas (mensais) por SDR — salvas localmente no seu navegador. % é o atingimento no período filtrado.
+              </div>
+              {sdrRanking.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">#</TableHead>
                       <TableHead>SDR</TableHead>
                       <TableHead className="text-right">Agendados</TableHead>
+                      <TableHead className="w-24 text-right">Meta ag.</TableHead>
                       <TableHead className="text-right">Realizados</TableHead>
+                      <TableHead className="w-24 text-right">Meta real.</TableHead>
                       <TableHead className="text-right">No-show</TableHead>
-                      <TableHead className="text-right">Cancelados</TableHead>
                       <TableHead className="text-right">Show rate</TableHead>
+                      <TableHead className="text-right">Atingimento</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fase2.sdrs.map((s) => {
-                      const sr = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
+                    {sdrRanking.map((s, idx) => {
+                      const atAg = s.goal.agendados ? (s.agendados / s.goal.agendados) * 100 : null;
+                      const atRl = s.goal.realizados ? (s.realizados / s.goal.realizados) * 100 : null;
                       return (
                         <TableRow key={s.user.id}>
+                          <TableCell className="font-bold text-muted-foreground">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{s.user.name}</TableCell>
                           <TableCell className="text-right">{s.agendados}</TableCell>
+                          <TableCell className="text-right">
+                            <Input type="number" min={0} value={s.goal.agendados || ""} onChange={(e) => updateGoal(s.user.id, "agendados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                          </TableCell>
                           <TableCell className="text-right text-emerald-400">{s.realizados}</TableCell>
+                          <TableCell className="text-right">
+                            <Input type="number" min={0} value={s.goal.realizados || ""} onChange={(e) => updateGoal(s.user.id, "realizados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                          </TableCell>
                           <TableCell className="text-right text-rose-400">{s.noshow}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{s.cancelados}</TableCell>
-                          <TableCell className="text-right">{fmtPct(sr)}</TableCell>
+                          <TableCell className="text-right">{fmtPct(s.showRate)}</TableCell>
+                          <TableCell className="text-right text-xs">
+                            {atAg != null && <div className={atAg >= 100 ? "text-emerald-400" : "text-amber-400"}>Ag: {fmtPct(atAg)}</div>}
+                            {atRl != null && <div className={atRl >= 100 ? "text-emerald-400" : "text-amber-400"}>Rl: {fmtPct(atRl)}</div>}
+                            {atAg == null && atRl == null && <span className="text-muted-foreground">—</span>}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -309,6 +374,204 @@ export default function Comercial() {
                 </div>
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Nenhum no-show registrado no período.</div>}
             </Card>
+          </TabsContent>
+
+          {/* Funil por estágio */}
+          <TabsContent value="funnel" className="space-y-4">
+            {fase3 && (
+              <>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+                  <div className="text-sm font-semibold flex items-center gap-2"><FilterIcon className="h-4 w-4" /> Funil agregado</div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const top = fase3.aggregateFunnel[0]?.count || 1;
+                      return fase3.aggregateFunnel.map((f, i) => {
+                        const prev = i > 0 ? fase3.aggregateFunnel[i - 1].count : null;
+                        const conv = prev && prev > 0 ? (f.count / prev) * 100 : null;
+                        return (
+                          <div key={f.stage} className="flex items-center gap-3">
+                            <div className="w-32 text-sm text-muted-foreground">{f.stage}</div>
+                            <div className="flex-1 h-7 bg-muted/30 rounded overflow-hidden">
+                              <div className="h-full bg-primary/60 flex items-center px-2 text-xs font-semibold text-foreground" style={{ width: `${Math.max(2, (f.count / top) * 100)}%` }}>
+                                {fmtNum(f.count)}
+                              </div>
+                            </div>
+                            <div className="w-20 text-right text-xs text-muted-foreground">
+                              {conv != null ? fmtPct(conv) : "—"}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </Card>
+
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="text-sm font-semibold">Funil por pipeline</div>
+                    <select className="bg-background border border-border/40 rounded px-2 py-1 text-xs" value={funnelPipeline} onChange={(e) => setFunnelPipeline(e.target.value)}>
+                      <option value="__all__">Todos os pipelines</option>
+                      {fase3.pipelineFunnels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-4">
+                    {fase3.pipelineFunnels
+                      .filter((p) => funnelPipeline === "__all__" || p.id === funnelPipeline)
+                      .map((p) => {
+                        const top = Math.max(1, ...p.stages.map((s) => s.count));
+                        return (
+                          <div key={p.id} className="space-y-1.5 border-t border-border/20 pt-3 first:border-0 first:pt-0">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="font-semibold">{p.name}</div>
+                              <div className="text-muted-foreground">Won: <span className="text-emerald-400">{p.won}</span> · Lost: <span className="text-rose-400">{p.lost}</span> · Aberto: {fmtBRL(p.openValue)}</div>
+                            </div>
+                            {p.stages.map((s) => (
+                              <div key={s.id} className="flex items-center gap-2">
+                                <div className="w-40 text-xs text-muted-foreground truncate" title={s.name}>{s.name}</div>
+                                <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
+                                  <div className="h-full bg-cyan-500/50" style={{ width: `${(s.count / top) * 100}%` }} />
+                                </div>
+                                <div className="w-12 text-right text-xs">{s.count}</div>
+                                <div className="w-24 text-right text-xs text-muted-foreground">{fmtBRL(s.value)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Histórico / tendência */}
+          <TabsContent value="trend" className="space-y-4">
+            {fase3 && fase3.trend.length > 0 ? (
+              <>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">MQLs e Vendas por semana</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line type="monotone" dataKey="mqls" stroke="#06b6d4" strokeWidth={2} name="MQLs" />
+                        <Line type="monotone" dataKey="vendas" stroke="#10b981" strokeWidth={2} name="Vendas" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">Faturamento × Investimento</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} formatter={(v: any) => fmtBRL(Number(v))} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line type="monotone" dataKey="faturamento" stroke="#facc15" strokeWidth={2} name="Faturamento" />
+                        <Line type="monotone" dataKey="investimento" stroke="#a855f7" strokeWidth={2} name="Investimento" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="text-sm font-semibold mb-3">CAC × ROAS</div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={fase3.trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+                        <XAxis dataKey="weekStart" tick={{ fontSize: 11 }} />
+                        <YAxis yAxisId="cac" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${v}`} />
+                        <YAxis yAxisId="roas" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}x`} />
+                        <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line yAxisId="cac" type="monotone" dataKey="cac" stroke="#f43f5e" strokeWidth={2} name="CAC (R$)" />
+                        <Line yAxisId="roas" type="monotone" dataKey="roas" stroke="#8b5cf6" strokeWidth={2} name="ROAS (x)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </>
+            ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem dados de tendência.</div>}
+          </TabsContent>
+
+          {/* Follow-ups */}
+          <TabsContent value="followups" className="space-y-4">
+            {fase3 && (() => {
+              const fu = fase3.followUps;
+              const sections: { title: string; icon: any; rows: any[]; cols: string[]; render: (r: any) => React.ReactNode[]; threshold: number }[] = [
+                {
+                  title: "MQLs sem agendamento",
+                  icon: AlertTriangle,
+                  rows: fu.mqlsSemAgendamento,
+                  threshold: fu.thresholds.semAgendDias,
+                  cols: ["Nome", "Contato", "Entrada", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.phone || r.email || "—"}</span>,
+                    <span className="text-xs">{new Date(r.dateAdded).toLocaleDateString("pt-BR")}</span>,
+                    <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+                {
+                  title: "Propostas paradas",
+                  icon: Clock,
+                  rows: fu.propostasParadas,
+                  threshold: fu.thresholds.propostaParadaDias,
+                  cols: ["Oportunidade", "Pipeline", "Valor", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.pipeline}</span>,
+                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
+                    <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+                {
+                  title: "Oportunidades estagnadas",
+                  icon: Clock,
+                  rows: fu.opsEstagnadas,
+                  threshold: fu.thresholds.oppEstagnadaDias,
+                  cols: ["Oportunidade", "Pipeline / Stage", "Valor", "Dias parado"],
+                  render: (r) => [
+                    <span className="font-medium">{r.nome}</span>,
+                    <span className="text-xs text-muted-foreground">{r.pipeline} · {r.stage}</span>,
+                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
+                    <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/30">{r.diasParado}d</Badge>,
+                  ],
+                },
+              ];
+              return sections.map((sec) => (
+                <Card key={sec.title} className="p-4 bg-card/40 backdrop-blur border-border/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold flex items-center gap-2">
+                      <sec.icon className="h-4 w-4" /> {sec.title}
+                      <Badge variant="outline" className="ml-1">{sec.rows.length}</Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">≥ {sec.threshold} dias parado</span>
+                  </div>
+                  {sec.rows.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground text-xs">Tudo em dia.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader><TableRow>{sec.cols.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader>
+                      <TableBody>
+                        {sec.rows.map((r) => (
+                          <TableRow key={r.id}>
+                            {sec.render(r).map((cell, i) => <TableCell key={i}>{cell}</TableCell>)}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </Card>
+              ));
+            })()}
           </TabsContent>
         </Tabs>
 
