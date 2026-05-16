@@ -189,6 +189,39 @@ export type Database = {
           },
         ]
       }
+      kp_comercial_snapshots: {
+        Row: {
+          block: string
+          duration_ms: number | null
+          error: string | null
+          fetched_at: string
+          id: string
+          payload: Json
+          period_end: string
+          period_start: string
+        }
+        Insert: {
+          block?: string
+          duration_ms?: number | null
+          error?: string | null
+          fetched_at?: string
+          id?: string
+          payload: Json
+          period_end: string
+          period_start: string
+        }
+        Update: {
+          block?: string
+          duration_ms?: number | null
+          error?: string | null
+          fetched_at?: string
+          id?: string
+          payload?: Json
+          period_end?: string
+          period_start?: string
+        }
+        Relationships: []
+      }
       meta_campaigns: {
         Row: {
           ad_name: string

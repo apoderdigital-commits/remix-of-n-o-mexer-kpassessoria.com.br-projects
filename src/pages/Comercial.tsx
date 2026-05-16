@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon, Database, Zap } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,25 +68,40 @@ export default function Comercial() {
   const [fase3, setFase3] = useState<Fase3 | null>(null);
   const [goals, setGoals] = useState<SdrGoals>(loadGoals);
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
+  const [source, setSource] = useState<"cache" | "fresh" | null>(null);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
-  const fetchAll = async () => {
+  const applyPayload = (payload: any) => {
+    if (!payload) return;
+    if (payload.kpis) setKpis(payload.kpis);
+    setFase2({
+      sdrs: payload.sdrs || [],
+      noShowByHour: payload.noShowByHour || {},
+      mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
+      mqlsList: payload.mqlsList || [],
+      classes: payload.classes || { A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
+    });
+    setFase3({
+      aggregateFunnel: payload.aggregateFunnel || [],
+      pipelineFunnels: payload.pipelineFunnels || [],
+      trend: payload.trend || [],
+      followUps: payload.followUps || { mqlsSemAgendamento: [], propostasParadas: [], opsEstagnadas: [], thresholds: { semAgendDias: 3, propostaParadaDias: 7, oppEstagnadaDias: 14 } },
+    });
+  };
+
+  const fetchAll = async (force = false) => {
     setLoading(true);
     try {
-      const [k, f, f3] = await Promise.all([
-        supabase.functions.invoke("kp-comercial-kpis", { body: { since, until } }),
-        supabase.functions.invoke("kp-comercial-fase2", { body: { since, until } }),
-        supabase.functions.invoke("kp-comercial-fase3", { body: { since, until } }),
-      ]);
-      if (k.error) throw k.error;
-      if ((k.data as any)?.error) throw new Error((k.data as any).error);
-      setKpis(k.data as Kpis);
-      if ((k.data as any)?.metaError) toast.warning("Meta Ads: " + (k.data as any).metaError);
-      if (f.error) throw f.error;
-      if ((f.data as any)?.error) throw new Error((f.data as any).error);
-      setFase2(f.data as Fase2);
-      if (f3.error) throw f3.error;
-      if ((f3.data as any)?.error) throw new Error((f3.data as any).error);
-      setFase3(f3.data as Fase3);
+      const { data, error } = await supabase.functions.invoke("kp-comercial-snapshot", {
+        body: { mode: force ? "refresh" : "auto", since, until, maxAgeMinutes: 30 },
+      });
+      if (error) throw error;
+      const resp = data as any;
+      if (resp?.error) throw new Error(resp.error);
+      applyPayload(resp?.data);
+      setSource(resp?.source || null);
+      setFetchedAt(resp?.snapshot?.fetched_at || null);
+      if (resp?.data?.kpis?.metaError) toast.warning("Meta Ads: " + resp.data.kpis.metaError);
     } catch (e: any) {
       console.error(e);
       toast.error("Erro: " + (e.message || ""));
@@ -94,7 +110,7 @@ export default function Comercial() {
     }
   };
 
-  useEffect(() => { void fetchAll(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { void fetchAll(false); /* eslint-disable-next-line */ }, []);
 
   const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
     const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
@@ -176,10 +192,20 @@ export default function Comercial() {
                 GoHighLevel · Meta Ads · tempo real
               </p>
             </div>
-            <Button onClick={fetchAll} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-3">
+              {fetchedAt && (
+                <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground bg-card/30 backdrop-blur-xl border border-white/5 rounded-full px-3 py-1.5">
+                  {source === "cache" ? <Database className="h-3 w-3 text-cyan-300" /> : <Zap className="h-3 w-3 text-emerald-300" />}
+                  <span>
+                    {source === "cache" ? "cache" : "ao vivo"} · {new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              )}
+              <Button onClick={() => fetchAll(true)} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            </div>
           </div>
 
           {/* Filtros */}
@@ -200,7 +226,7 @@ export default function Comercial() {
                   </Button>
                 ))}
               </div>
-              <Button onClick={fetchAll} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
+              <Button onClick={() => fetchAll(false)} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
             </div>
           </Card>
 
@@ -235,6 +261,16 @@ export default function Comercial() {
                       </div>
                       <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
                       <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
+                    </Card>
+                  ))}
+                </div>
+              ) : loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                      <Skeleton className="h-9 w-9 rounded-xl mb-3" />
+                      <Skeleton className="h-3 w-24 mb-2" />
+                      <Skeleton className="h-7 w-20" />
                     </Card>
                   ))}
                 </div>
