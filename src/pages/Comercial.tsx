@@ -226,7 +226,7 @@ export default function Comercial() {
                   </Button>
                 ))}
               </div>
-              <Button onClick={fetchAll} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
+              <Button onClick={() => fetchAll(false)} disabled={loading} className="ml-auto shadow-lg shadow-primary/20">Aplicar</Button>
             </div>
           </Card>
 
