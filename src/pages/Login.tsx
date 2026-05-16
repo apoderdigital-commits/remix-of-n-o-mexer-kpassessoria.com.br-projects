@@ -307,6 +307,8 @@ export default function Login() {
                     <Input
                       ref={usernameRef}
                       type="text"
+                      name="username"
+                      autoComplete="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="seu.usuario"
@@ -323,11 +325,22 @@ export default function Login() {
 
               {step === "password" && (
                 <form onSubmit={handleLogin} className="space-y-5">
+                  {/* Hidden username for password managers */}
+                  <input
+                    type="text"
+                    name="username"
+                    autoComplete="username"
+                    value={username}
+                    readOnly
+                    hidden
+                  />
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       ref={passwordRef}
                       type="password"
+                      name="password"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
