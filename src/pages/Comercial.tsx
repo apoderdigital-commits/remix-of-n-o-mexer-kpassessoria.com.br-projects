@@ -192,10 +192,20 @@ export default function Comercial() {
                 GoHighLevel · Meta Ads · tempo real
               </p>
             </div>
-            <Button onClick={fetchAll} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-3">
+              {fetchedAt && (
+                <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground bg-card/30 backdrop-blur-xl border border-white/5 rounded-full px-3 py-1.5">
+                  {source === "cache" ? <Database className="h-3 w-3 text-cyan-300" /> : <Zap className="h-3 w-3 text-emerald-300" />}
+                  <span>
+                    {source === "cache" ? "cache" : "ao vivo"} · {new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              )}
+              <Button onClick={() => fetchAll(true)} disabled={loading} className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            </div>
           </div>
 
           {/* Filtros */}
