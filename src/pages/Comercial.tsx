@@ -264,6 +264,16 @@ export default function Comercial() {
                     </Card>
                   ))}
                 </div>
+              ) : loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                      <Skeleton className="h-9 w-9 rounded-xl mb-3" />
+                      <Skeleton className="h-3 w-24 mb-2" />
+                      <Skeleton className="h-7 w-20" />
+                    </Card>
+                  ))}
+                </div>
               ) : (
                 <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">
                   Sem dados no período.
