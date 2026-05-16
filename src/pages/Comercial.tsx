@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon, Database, Zap } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
