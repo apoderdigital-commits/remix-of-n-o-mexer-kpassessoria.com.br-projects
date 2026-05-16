@@ -307,6 +307,8 @@ export default function Login() {
                     <Input
                       ref={usernameRef}
                       type="text"
+                      name="username"
+                      autoComplete="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="seu.usuario"
