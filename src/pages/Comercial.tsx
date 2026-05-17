@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon, Database, Zap } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp, Users, Target, ShoppingCart, DollarSign, Wallet, Percent, Trophy, Phone, CalendarClock, AlertTriangle, Clock, Filter as FilterIcon, Database, Zap, Settings, UserCog, CalendarCheck2, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,9 @@ interface Fase3 {
   metaError?: string | null;
 }
 
+interface GhlUser { id: string; name: string; email?: string }
+interface UserRoleRow { ghl_user_id: string; name: string | null; email: string | null; role: "sdr" | "closer" | "both" | "none"; active: boolean }
+
 type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
 const GOALS_KEY = "kp_comercial_sdr_goals_v1";
 const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
@@ -70,10 +73,13 @@ export default function Comercial() {
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
   const [source, setSource] = useState<"cache" | "fresh" | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
     if (payload.kpis) setKpis(payload.kpis);
+    if (payload.users) setGhlUsers(payload.users);
     setFase2({
       sdrs: payload.sdrs || [],
       noShowByHour: payload.noShowByHour || {},
@@ -110,7 +116,23 @@ export default function Comercial() {
     }
   };
 
-  useEffect(() => { void fetchAll(false); /* eslint-disable-next-line */ }, []);
+  const fetchRoles = async () => {
+    const { data, error } = await supabase.from("kp_comercial_user_roles").select("*");
+    if (error) { console.error(error); return; }
+    const map: Record<string, UserRoleRow> = {};
+    for (const r of (data || []) as any[]) map[r.ghl_user_id] = r;
+    setUserRoles(map);
+  };
+
+  const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
+    const payload = { ghl_user_id: u.id, name: u.name, email: u.email || null, role, active: true };
+    const { error } = await supabase.from("kp_comercial_user_roles").upsert(payload, { onConflict: "ghl_user_id" });
+    if (error) { toast.error("Erro ao salvar: " + error.message); return; }
+    setUserRoles((p) => ({ ...p, [u.id]: { ...payload, name: u.name, email: u.email || null } as UserRoleRow }));
+    toast.success(`${u.name}: ${role.toUpperCase()}`);
+  };
+
+  useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
 
   const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
     const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
@@ -138,17 +160,31 @@ export default function Comercial() {
     { label: "Este mês", apply: () => { setSince(startOfMonth()); setUntil(todayIso()); } },
   ];
 
+  // Funil principal: Leads → MQLs → Reuniões → Comparecidas → Vendas (taxa ativação = MQLs/Leads exibida no estágio MQL)
+  const funnelStages = kpis && fase2 ? (() => {
+    const leads = kpis.leadsTotais;
+    const mqls = kpis.mqls;
+    const marc = fase2.mqlSummary.agendados;
+    const comp = fase2.mqlSummary.realizados;
+    const vend = kpis.vendas;
+    const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
+    return [
+      { icon: Users,          label: "Leads Totais",       count: leads, pctTotal: 100,                    pctPrev: null,                       grad: "from-blue-500/80 to-blue-600/40",     iconBg: "bg-blue-500/20 text-blue-200" },
+      { icon: Target,         label: "MQLs",               count: mqls,  pctTotal: pct(mqls, leads),       pctPrev: pct(mqls, leads),           grad: "from-cyan-500/80 to-cyan-600/40",     iconBg: "bg-cyan-500/20 text-cyan-200" },
+      { icon: Percent,        label: "Taxa Ativação MQL",  count: null,  pctTotal: kpis.taxaAtivacaoMql,   pctPrev: null, isRate: true,         grad: "from-teal-500/80 to-teal-600/40",     iconBg: "bg-teal-500/20 text-teal-200" },
+      { icon: CalendarClock,  label: "Reuniões Marcadas",  count: marc,  pctTotal: pct(marc, leads),       pctPrev: pct(marc, mqls),            grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
+      { icon: CalendarCheck2, label: "Comparecidas",       count: comp,  pctTotal: pct(comp, leads),       pctPrev: pct(comp, marc),            grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
+      { icon: CheckCircle2,   label: "Vendas",             count: vend,  pctTotal: pct(vend, leads),       pctPrev: pct(vend, comp),            grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
+    ];
+  })() : [];
+
   const cards = kpis ? [
-    { icon: Users,        label: "Leads Totais",        value: fmtNum(kpis.leadsTotais),     accent: "blue",     ring: "ring-blue-500/20",     iconBg: "bg-blue-500/15 text-blue-300",          glow: "from-blue-500/20" },
-    { icon: Target,       label: "Leads MQL",           value: fmtNum(kpis.mqls),            accent: "cyan",     ring: "ring-cyan-500/20",     iconBg: "bg-cyan-500/15 text-cyan-300",          glow: "from-cyan-500/20" },
-    { icon: Percent,      label: "Taxa Ativação MQL",   value: fmtPct(kpis.taxaAtivacaoMql), accent: "teal",     ring: "ring-teal-500/20",     iconBg: "bg-teal-500/15 text-teal-300",          glow: "from-teal-500/20" },
-    { icon: ShoppingCart, label: "Vendas",              value: fmtNum(kpis.vendas),          accent: "emerald",  ring: "ring-emerald-500/20",  iconBg: "bg-emerald-500/15 text-emerald-300",    glow: "from-emerald-500/20" },
-    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     accent: "amber",    ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
-    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     accent: "yellow",   ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
-    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    accent: "fuchsia",  ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
-    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             accent: "rose",     ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
-    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", accent: "purple", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
-    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         accent: "primary",  ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
+    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
+    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
+    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
+    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
+    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
+    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
   ] : [];
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
@@ -241,38 +277,98 @@ export default function Comercial() {
                 <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
                 <TabsTrigger value="followups" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Follow-ups</TabsTrigger>
                 <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="config" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all gap-1.5">
+                    <Settings className="h-3.5 w-3.5" /> Config
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
             {/* KPIs */}
-            <TabsContent value="kpis">
-              {kpis ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {cards.map((c) => (
-                    <Card
-                      key={c.label}
-                      className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
-                    >
-                      <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
-                      <div className="relative flex items-center justify-between mb-3">
-                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
-                          <c.icon className="h-4 w-4" />
-                        </div>
+            <TabsContent value="kpis" className="space-y-5">
+              {kpis && fase2 ? (
+                <>
+                  {/* Funil principal */}
+                  <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
+                    <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+                    <div className="relative flex items-center justify-between mb-5">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
+                        <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
                       </div>
-                      <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
-                      <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
-                    </Card>
-                  ))}
-                </div>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
+                    </div>
+                    <div className="relative space-y-2.5">
+                      {funnelStages.map((s, i) => {
+                        const width = Math.max(28, 100 - i * 11);
+                        return (
+                          <div key={s.label} className="flex items-center gap-3">
+                            <div className="w-44 shrink-0 flex items-center gap-2.5">
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.iconBg}`}>
+                                <s.icon className="h-4 w-4" />
+                              </div>
+                              <div className="text-xs font-medium text-foreground/90 leading-tight">{s.label}</div>
+                            </div>
+                            <div className="flex-1">
+                              <div
+                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-4 transition-all duration-700 ease-out`}
+                                style={{ width: `${width}%` }}
+                              >
+                                <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
+                                  {s.isRate ? fmtPct(s.pctTotal) : fmtNum(s.count || 0)}
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-white/95">
+                                  {!s.isRate && (
+                                    <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                      {fmtPct(s.pctTotal)} do topo
+                                    </span>
+                                  )}
+                                  {s.pctPrev != null && !s.isRate && i > 0 && (
+                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                      ↓ {fmtPct(s.pctPrev)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  {/* Indicadores financeiros (quadrados) */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {cards.map((c) => (
+                      <Card
+                        key={c.label}
+                        className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
+                      >
+                        <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
+                        <div className="relative flex items-center justify-between mb-3">
+                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
+                            <c.icon className="h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
+                        <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
+                      </Card>
+                    ))}
+                  </div>
+                </>
               ) : loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
-                      <Skeleton className="h-9 w-9 rounded-xl mb-3" />
-                      <Skeleton className="h-3 w-24 mb-2" />
-                      <Skeleton className="h-7 w-20" />
-                    </Card>
-                  ))}
+                <div className="space-y-5">
+                  <Skeleton className="h-96 w-full rounded-2xl" />
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                        <Skeleton className="h-9 w-9 rounded-xl mb-3" />
+                        <Skeleton className="h-3 w-24 mb-2" />
+                        <Skeleton className="h-7 w-20" />
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">
@@ -640,6 +736,71 @@ export default function Comercial() {
               ));
             })()}
           </TabsContent>
+          {/* Configurações de SDRs / Closers */}
+          {isAdmin && (
+            <TabsContent value="config" className="space-y-4">
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <UserCog className="h-4 w-4 text-primary" />
+                  <div className="text-sm font-semibold">Funções da equipe comercial</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Defina quem é <span className="text-cyan-300">SDR</span> (pré-vendas / agendamento) e quem é <span className="text-emerald-300">Closer</span> (fecha venda). Usuários sem função não entram nos rankings.
+                </p>
+                {ghlUsers.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-muted-foreground">
+                    Nenhum usuário sincronizado ainda. Clique em <span className="text-foreground font-medium">Atualizar</span> para buscar do GoHighLevel.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead className="text-center w-[360px]">Função</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ghlUsers.map((u) => {
+                        const current = userRoles[u.id]?.role || "none";
+                        const opts: { v: UserRoleRow["role"]; l: string; cls: string }[] = [
+                          { v: "none",   l: "—",      cls: "bg-muted/30 text-muted-foreground hover:bg-muted/50" },
+                          { v: "sdr",    l: "SDR",    cls: "bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 border-cyan-500/40" },
+                          { v: "closer", l: "Closer", cls: "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border-emerald-500/40" },
+                          { v: "both",   l: "Ambos",  cls: "bg-violet-500/20 text-violet-200 hover:bg-violet-500/30 border-violet-500/40" },
+                        ];
+                        return (
+                          <TableRow key={u.id}>
+                            <TableCell className="font-medium">{u.name}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{u.email || "—"}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1.5 justify-center flex-wrap">
+                                {opts.map((o) => (
+                                  <Button
+                                    key={o.v}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setUserRole(u, o.v)}
+                                    className={`h-7 px-3 text-[11px] border transition-all ${current === o.v ? o.cls + " ring-2 ring-offset-1 ring-offset-background ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground hover:bg-white/5"}`}
+                                  >
+                                    {o.l}
+                                  </Button>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </Card>
+              <div className="text-[11px] text-muted-foreground/70 px-1">
+                Resumo: <span className="text-cyan-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "sdr" || r.role === "both").length}</span> SDRs ·{" "}
+                <span className="text-emerald-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "closer" || r.role === "both").length}</span> Closers
+              </div>
+            </TabsContent>
+          )}
           </Tabs>
 
           <p className="text-xs text-muted-foreground/60 text-center pt-4">

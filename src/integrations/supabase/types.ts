@@ -222,6 +222,39 @@ export type Database = {
         }
         Relationships: []
       }
+      kp_comercial_user_roles: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string | null
+          ghl_user_id: string
+          id: string
+          name: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          ghl_user_id: string
+          id?: string
+          name?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          ghl_user_id?: string
+          id?: string
+          name?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meta_campaigns: {
         Row: {
           ad_name: string
