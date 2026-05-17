@@ -325,7 +325,7 @@ export default function Comercial() {
               <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
                 <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
                 <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
-                <TabsTrigger value="mqls" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">MQLs</TabsTrigger>
+                
                 <TabsTrigger value="classes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Propostas A/B/C</TabsTrigger>
                 <TabsTrigger value="funnel" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Funil</TabsTrigger>
                 <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
