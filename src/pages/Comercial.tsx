@@ -438,7 +438,42 @@ export default function Comercial() {
             </TabsContent>
 
           {/* SDRs */}
-          <TabsContent value="sdrs">
+          <TabsContent value="sdrs" className="space-y-4">
+            {/* Resumo MQL + botões de lista (migrados da aba MQLs) */}
+            {fase2 && (
+              <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-cyan-300" /> Visão geral de leads no período
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-cyan-500/10 border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20"
+                      onClick={() => setMqlListOpen("mql")}>
+                      Ver lista de MQLs ({fmtNum(fase2.mqlSummary.total)})
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-muted/20 border-white/10 text-muted-foreground hover:bg-white/5"
+                      onClick={() => setMqlListOpen("nonmql")}>
+                      Ver lista de não-MQLs ({fmtNum(fase2.nonMqlsList.length)})
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {[
+                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200" },
+                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200" },
+                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground" },
+                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200" },
+                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200" },
+                  ].map((c) => (
+                    <div key={c.l} className="rounded-xl bg-background/40 border border-white/5 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.l}</div>
+                      <div className={`text-xl font-bold mt-0.5 ${c.c}`}>{fmtNum(c.v)}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
               <div className="text-xs text-muted-foreground">
                 Edite as metas (mensais) por SDR — salvas no banco. % é o atingimento no período filtrado. Clique nos números para ver os leads.
@@ -512,63 +547,66 @@ export default function Comercial() {
                 </Table>
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>}
             </Card>
+
+            {/* Breakdown por classe (A / B / C) */}
+            {fase2 && (() => {
+              const sum = (cat: "MQL"|"A"|"B"|"C"|"Outro", bucket: "agendado"|"realizado") =>
+                fase2.sdrs.reduce((acc, s) =>
+                  acc + (s.lists?.[bucket]?.filter(x => x.category === cat).length || 0), 0);
+              const classRows = (["A", "B", "C"] as const).map((k) => ({
+                k,
+                agendados: sum(k, "agendado"),
+                realizados: sum(k, "realizado"),
+                vendas: fase2.classes[k].vendas,
+              }));
+              const colorMap: Record<string, { bar: string; chip: string; text: string }> = {
+                A: { bar: "from-emerald-500/30 to-emerald-500/5", chip: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40", text: "text-emerald-200" },
+                B: { bar: "from-amber-500/30 to-amber-500/5",   chip: "bg-amber-500/20 text-amber-200 border-amber-500/40",     text: "text-amber-200" },
+                C: { bar: "from-blue-500/30 to-blue-500/5",     chip: "bg-blue-500/20 text-blue-200 border-blue-500/40",        text: "text-blue-200" },
+              };
+              return (
+                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead (período)
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {classRows.map((r) => {
+                      const c = colorMap[r.k];
+                      const taxa = r.agendados > 0 ? (r.realizados / r.agendados) * 100 : 0;
+                      const conv = r.realizados > 0 ? (r.vendas / r.realizados) * 100 : 0;
+                      return (
+                        <div key={r.k} className={`rounded-xl bg-gradient-to-br ${c.bar} border border-white/5 p-4 space-y-3`}>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className={c.chip}>Classe {r.k}</Badge>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Funil</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.agendados)}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Comparecidos</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.realizados)}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Vendidos</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.vendas)}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-white/5 pt-2">
+                            <span>Show rate: <span className="text-foreground font-semibold">{fmtPct(taxa)}</span></span>
+                            <span>Conv. venda: <span className="text-foreground font-semibold">{fmtPct(conv)}</span></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              );
+            })()}
           </TabsContent>
 
-          {/* MQLs */}
-          <TabsContent value="mqls" className="space-y-3">
-            {fase2 && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                  { l: "Total MQLs", v: fase2.mqlSummary.total },
-                  { l: "Agendados", v: fase2.mqlSummary.agendados },
-                  { l: "Não agendados", v: fase2.mqlSummary.naoAgendados },
-                  { l: "Realizados", v: fase2.mqlSummary.realizados },
-                  { l: "No-show", v: fase2.mqlSummary.noshow },
-                ].map((c) => (
-                  <Card key={c.l} className="p-3 bg-card/40 backdrop-blur border-border/30">
-                    <div className="text-xs text-muted-foreground">{c.l}</div>
-                    <div className="text-2xl font-bold mt-1">{fmtNum(c.v)}</div>
-                  </Card>
-                ))}
-              </div>
-            )}
-            <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {fase2 && fase2.mqlsList.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Entrada</TableHead>
-                      <TableHead>Reunião</TableHead>
-                      <TableHead>Situação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fase2.mqlsList.slice(0, 200).map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.nome}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
-                          {m.email && <div>{m.email}</div>}
-                        </TableCell>
-                        <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
-                        <TableCell className="text-xs">
-                          {m.horario ? (
-                            <div className="flex items-center gap-1"><CalendarClock className="h-3 w-3" />{new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>{situacaoBadge(m.situacao)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem MQLs no período.</div>}
-              {fase2 && fase2.mqlsList.length > 200 && (
-                <p className="text-xs text-muted-foreground text-center mt-3">Mostrando 200 de {fase2.mqlsList.length}.</p>
-              )}
-            </Card>
-          </TabsContent>
 
           {/* Classes A/B/C */}
           <TabsContent value="classes">
