@@ -31,7 +31,7 @@ const startOfWeek = (d: Date) => {
   x.setHours(0, 0, 0, 0);
   return x;
 };
-const classifyPipeline = (name: string): "A" | "B" | "C" | "Outro" => {
+const classifyPipelineByName = (name: string): "A" | "B" | "C" | "Outro" => {
   const n = (name || "").toLowerCase();
   if (/\b(a|cliente.?a|classe.?a|premium)\b/.test(n)) return "A";
   if (/\b(b|cliente.?b|classe.?b)\b/.test(n)) return "B";
