@@ -103,6 +103,7 @@ export default function Comercial() {
     if (payload.pipelines) setPipelinesList(payload.pipelines);
     setFase2({
       sdrs: payload.sdrs || [],
+      closers: payload.closers || [],
       noShowByHour: payload.noShowByHour || {},
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
