@@ -858,6 +858,72 @@ export default function Comercial() {
           </p>
         </div>
       </div>
+
+      {/* Drill-down: leads do SDR por categoria */}
+      <Dialog open={!!drillDown} onOpenChange={(o) => !o && setDrillDown(null)}>
+        <DialogContent className="max-w-3xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="capitalize">{drillDown?.tipo === "noshow" ? "No-show" : drillDown?.tipo + "s"}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-primary">{drillDown?.sdrName}</span>
+              <Badge variant="outline" className="ml-2">{drillDown?.items.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {drillDown && (() => {
+            const groups: { key: ApptCategory; label: string; cls: string }[] = [
+              { key: "MQL",   label: "MQLs",     cls: "border-cyan-500/40 text-cyan-200 bg-cyan-500/10" },
+              { key: "A",     label: "Lead A",   cls: "border-emerald-500/40 text-emerald-200 bg-emerald-500/10" },
+              { key: "B",     label: "Lead B",   cls: "border-amber-500/40 text-amber-200 bg-amber-500/10" },
+              { key: "C",     label: "Lead C",   cls: "border-blue-500/40 text-blue-200 bg-blue-500/10" },
+              { key: "Outro", label: "Outros",   cls: "border-muted text-muted-foreground bg-muted/20" },
+            ];
+            const grouped: Record<ApptCategory, ApptEntry[]> = { MQL: [], A: [], B: [], C: [], Outro: [] };
+            for (const it of drillDown.items) grouped[it.category].push(it);
+            const visible = groups.filter(g => grouped[g.key].length > 0);
+            if (visible.length === 0) return <div className="text-center text-sm text-muted-foreground py-8">Sem registros.</div>;
+            return (
+              <Tabs defaultValue={visible[0].key} className="mt-2">
+                <TabsList className="bg-background/40 border border-white/5 inline-flex gap-1 h-auto p-1 flex-wrap">
+                  {visible.map((g) => (
+                    <TabsTrigger key={g.key} value={g.key} className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      {g.label} <Badge variant="outline" className={`text-[10px] h-4 px-1.5 ${g.cls}`}>{grouped[g.key].length}</Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {visible.map((g) => (
+                  <TabsContent key={g.key} value={g.key} className="mt-3 max-h-[55vh] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Contato</TableHead>
+                          <TableHead>Horário</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {grouped[g.key].map((it, i) => (
+                          <TableRow key={(it.contactId || "") + i}>
+                            <TableCell className="font-medium">{it.nome}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {it.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{it.phone}</div>}
+                              {it.email && <div>{it.email}</div>}
+                              {!it.phone && !it.email && "—"}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {it.startTime ? new Date(it.startTime).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
