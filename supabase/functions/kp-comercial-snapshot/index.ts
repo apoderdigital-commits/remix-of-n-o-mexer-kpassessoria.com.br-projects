@@ -336,6 +336,27 @@ async function buildSnapshot(since: Date, until: Date) {
     noshow: mqlsList.filter((m) => m.situacao === "noshow").length,
   };
 
+  // ---------- NÃO-MQLs LIST ----------
+  const nonMqlsList = allContacts
+    .filter((c) => inRange(c.dateAdded) && !(c.tags || []).some((t: string) => String(t).toLowerCase().includes("mql")))
+    .map((c) => {
+      const appt = apptByContact.get(c.id);
+      const apptStatus = (appt?.appointmentStatus || appt?.status || "").toLowerCase();
+      let situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento" = "sem_agendamento";
+      if (appt) {
+        if (apptStatus.includes("noshow")) situacao = "noshow";
+        else if (apptStatus.includes("show")) situacao = "realizado";
+        else situacao = "agendado";
+      }
+      return {
+        id: c.id,
+        nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.contactName || "—",
+        email: c.email, phone: c.phone,
+        dateAdded: c.dateAdded, situacao, horario: appt?.startTime,
+      };
+    })
+    .sort((a, b) => (b.dateAdded || "").localeCompare(a.dateAdded || ""));
+
   // ---------- CLASSES A/B/C ----------
   const classes: Record<string, any> = {
     A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
