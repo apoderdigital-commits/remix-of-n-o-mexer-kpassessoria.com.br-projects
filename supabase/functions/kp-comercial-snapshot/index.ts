@@ -309,6 +309,66 @@ async function buildSnapshot(since: Date, until: Date) {
   }
   const sdrs = Array.from(sdrMap.values()).sort((a, b) => b.agendados - a.agendados);
 
+  // ---------- CLOSERS BREAKDOWN ----------
+  const closerMap = new Map<string, any>();
+  const emptyClassLists = () => ({ A: [] as any[], B: [] as any[], C: [] as any[], Outro: [] as any[] });
+  const initCloser = (uid: string) => {
+    if (!closerMap.has(uid)) {
+      const u = users.find((x: any) => x.id === uid) || { id: uid, name: "Desconhecido" };
+      closerMap.set(uid, {
+        user: u,
+        lists: {
+          realizados: emptyClassLists(),
+          vendas: emptyClassLists(),
+          propostasAbertas: emptyClassLists(),
+          propostasPerdidas: emptyClassLists(),
+        },
+      });
+    }
+    return closerMap.get(uid)!;
+  };
+  // Reuniões realizadas atribuídas (atende ao closer responsável pela reunião)
+  for (const a of allAppts) {
+    const st = (a.appointmentStatus || a.status || "").toLowerCase();
+    if (!(st.includes("show") && !st.includes("no"))) continue;
+    const uid = a.assignedUserId || a.userId;
+    if (!uid) continue;
+    const c = initCloser(uid);
+    const contact = a.contactId ? contactById.get(a.contactId) : null;
+    const catRaw = a.contactId ? classifyContact(a.contactId) : "Outro";
+    const cls: "A"|"B"|"C"|"Outro" = (catRaw === "A" || catRaw === "B" || catRaw === "C") ? catRaw : "Outro";
+    c.lists.realizados[cls].push({
+      contactId: a.contactId || null,
+      nome: contact ? (`${contact.firstName||""} ${contact.lastName||""}`.trim() || contact.contactName || contact.email || "—") : (a.title || "—"),
+      email: contact?.email, phone: contact?.phone,
+      startTime: a.startTime, valor: 0, pipeline: null,
+    });
+  }
+  // Vendas / propostas abertas / propostas perdidas (atribuídas via opp.assignedTo)
+  for (const o of allOpps) {
+    const uid = o.assignedTo;
+    if (!uid) continue;
+    const c = initCloser(uid);
+    const clsRaw = (pipelineClasseById.get(o._pipelineId) || "Outro");
+    const cls: "A"|"B"|"C"|"Outro" = (clsRaw === "A" || clsRaw === "B" || clsRaw === "C") ? clsRaw as any : "Outro";
+    const status = (o.status || "").toLowerCase();
+    const contact = o.contactId ? contactById.get(o.contactId) : null;
+    const entry = {
+      contactId: o.contactId || null,
+      oppId: o.id,
+      nome: o.name || (contact ? `${contact.firstName||""} ${contact.lastName||""}`.trim() : "") || o.contactName || "—",
+      email: contact?.email, phone: contact?.phone,
+      valor: Number(o.monetaryValue || 0),
+      pipeline: o._pipelineName,
+    };
+    if (status === "won") c.lists.vendas[cls].push(entry);
+    if (proposalStageIdsAll.has(o.pipelineStageId)) {
+      if (status === "lost") c.lists.propostasPerdidas[cls].push(entry);
+      else if (status !== "won") c.lists.propostasAbertas[cls].push(entry);
+    }
+  }
+  const closers = Array.from(closerMap.values());
+
   // ---------- MQLs LIST ----------
   const mqlsList = mqlContacts.map((c) => {
     const appt = apptByContact.get(c.id);
@@ -466,6 +526,7 @@ async function buildSnapshot(since: Date, until: Date) {
     kpis,
     users,
     sdrs,
+    closers,
     noShowByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
