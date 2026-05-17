@@ -736,6 +736,71 @@ export default function Comercial() {
               ));
             })()}
           </TabsContent>
+          {/* Configurações de SDRs / Closers */}
+          {isAdmin && (
+            <TabsContent value="config" className="space-y-4">
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <UserCog className="h-4 w-4 text-primary" />
+                  <div className="text-sm font-semibold">Funções da equipe comercial</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Defina quem é <span className="text-cyan-300">SDR</span> (pré-vendas / agendamento) e quem é <span className="text-emerald-300">Closer</span> (fecha venda). Usuários sem função não entram nos rankings.
+                </p>
+                {ghlUsers.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-muted-foreground">
+                    Nenhum usuário sincronizado ainda. Clique em <span className="text-foreground font-medium">Atualizar</span> para buscar do GoHighLevel.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead className="text-center w-[360px]">Função</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ghlUsers.map((u) => {
+                        const current = userRoles[u.id]?.role || "none";
+                        const opts: { v: UserRoleRow["role"]; l: string; cls: string }[] = [
+                          { v: "none",   l: "—",      cls: "bg-muted/30 text-muted-foreground hover:bg-muted/50" },
+                          { v: "sdr",    l: "SDR",    cls: "bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 border-cyan-500/40" },
+                          { v: "closer", l: "Closer", cls: "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border-emerald-500/40" },
+                          { v: "both",   l: "Ambos",  cls: "bg-violet-500/20 text-violet-200 hover:bg-violet-500/30 border-violet-500/40" },
+                        ];
+                        return (
+                          <TableRow key={u.id}>
+                            <TableCell className="font-medium">{u.name}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{u.email || "—"}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1.5 justify-center flex-wrap">
+                                {opts.map((o) => (
+                                  <Button
+                                    key={o.v}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setUserRole(u, o.v)}
+                                    className={`h-7 px-3 text-[11px] border transition-all ${current === o.v ? o.cls + " ring-2 ring-offset-1 ring-offset-background ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground hover:bg-white/5"}`}
+                                  >
+                                    {o.l}
+                                  </Button>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </Card>
+              <div className="text-[11px] text-muted-foreground/70 px-1">
+                Resumo: <span className="text-cyan-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "sdr" || r.role === "both").length}</span> SDRs ·{" "}
+                <span className="text-emerald-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "closer" || r.role === "both").length}</span> Closers
+              </div>
+            </TabsContent>
+          )}
           </Tabs>
 
           <p className="text-xs text-muted-foreground/60 text-center pt-4">
