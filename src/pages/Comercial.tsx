@@ -1107,6 +1107,108 @@ export default function Comercial() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Drill-down: closer */}
+      <Dialog open={!!closerDrill} onOpenChange={(o) => !o && setCloserDrill(null)}>
+        <DialogContent className="max-w-3xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <span className="text-primary">{closerDrill?.closerName}</span>
+              <span className="text-muted-foreground">·</span>
+              <span>
+                {closerDrill?.bucket === "realizados" && "Reuniões realizadas"}
+                {closerDrill?.bucket === "vendas" && "Vendas"}
+                {closerDrill?.bucket === "propostasAbertas" && "Propostas em aberto"}
+                {closerDrill?.bucket === "propostasPerdidas" && "Propostas perdidas"}
+              </span>
+              {closerDrill?.classe !== "Total" && (
+                <Badge variant="outline" className="ml-1">Lead {closerDrill?.classe}</Badge>
+              )}
+              <Badge variant="outline" className="ml-1">{closerDrill?.items.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {closerDrill && closerDrill.items.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    {(closerDrill.bucket === "vendas" || closerDrill.bucket.includes("propostas")) && <TableHead className="text-right">Valor</TableHead>}
+                    {closerDrill.bucket === "realizados" && <TableHead>Horário</TableHead>}
+                    {closerDrill.bucket.includes("propostas") && <TableHead>Pipeline</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {closerDrill.items.map((it, i) => (
+                    <TableRow key={(it.contactId || it.oppId || "") + i}>
+                      <TableCell className="font-medium">{it.nome}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {it.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{it.phone}</div>}
+                        {it.email && <div>{it.email}</div>}
+                        {!it.phone && !it.email && "—"}
+                      </TableCell>
+                      {(closerDrill.bucket === "vendas" || closerDrill.bucket.includes("propostas")) && (
+                        <TableCell className="text-right text-xs">{fmtBRL(it.valor || 0)}</TableCell>
+                      )}
+                      {closerDrill.bucket === "realizados" && (
+                        <TableCell className="text-xs">
+                          {it.startTime ? new Date(it.startTime).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                        </TableCell>
+                      )}
+                      {closerDrill.bucket.includes("propostas") && (
+                        <TableCell className="text-xs text-muted-foreground">{it.pipeline || "—"}</TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">Sem registros.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MQLs sem agendamento */}
+      <Dialog open={semAgendOpen} onOpenChange={setSemAgendOpen}>
+        <DialogContent className="max-w-3xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-400" /> MQLs sem agendamento
+              <Badge variant="outline" className="ml-2">{fase3?.followUps.mqlsSemAgendamento.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {fase3 && fase3.followUps.mqlsSemAgendamento.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Entrada</TableHead>
+                    <TableHead className="text-right">Dias parado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fase3.followUps.mqlsSemAgendamento.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.nome}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{r.phone || r.email || "—"}</TableCell>
+                      <TableCell className="text-xs">{new Date(r.dateAdded).toLocaleDateString("pt-BR")}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/30">{r.diasParado}d</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">Tudo em dia.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
