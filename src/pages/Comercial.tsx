@@ -116,7 +116,23 @@ export default function Comercial() {
     }
   };
 
-  useEffect(() => { void fetchAll(false); /* eslint-disable-next-line */ }, []);
+  const fetchRoles = async () => {
+    const { data, error } = await supabase.from("kp_comercial_user_roles").select("*");
+    if (error) { console.error(error); return; }
+    const map: Record<string, UserRoleRow> = {};
+    for (const r of (data || []) as any[]) map[r.ghl_user_id] = r;
+    setUserRoles(map);
+  };
+
+  const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
+    const payload = { ghl_user_id: u.id, name: u.name, email: u.email || null, role, active: true };
+    const { error } = await supabase.from("kp_comercial_user_roles").upsert(payload, { onConflict: "ghl_user_id" });
+    if (error) { toast.error("Erro ao salvar: " + error.message); return; }
+    setUserRoles((p) => ({ ...p, [u.id]: { ...payload, name: u.name, email: u.email || null } as UserRoleRow }));
+    toast.success(`${u.name}: ${role.toUpperCase()}`);
+  };
+
+  useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
 
   const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
     const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
