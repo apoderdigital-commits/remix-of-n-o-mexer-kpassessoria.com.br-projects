@@ -105,8 +105,23 @@ async function buildSnapshot(since: Date, until: Date) {
   const pipRes = await fetch(`${GHL_BASE}/opportunities/pipelines?locationId=${locationId}`, { headers });
   const pipelines = ((pipRes.ok ? (await pipRes.json()).pipelines : []) || []);
 
+  // Overrides de classificação (A/B/C) e tipo (sdr/closer) por pipeline
+  const supabaseAdmin = sb();
+  const { data: pipeCfgRows } = await supabaseAdmin
+    .from("kp_comercial_pipeline_config").select("*");
+  const pipeCfg = new Map<string, { classe?: string; kind?: string }>();
+  for (const r of (pipeCfgRows || []) as any[]) {
+    pipeCfg.set(r.pipeline_id, { classe: r.classe || undefined, kind: r.kind || undefined });
+  }
+  const classifyPipeline = (id: string, name: string): "A" | "B" | "C" | "Outro" => {
+    const ov = pipeCfg.get(id)?.classe;
+    if (ov === "A" || ov === "B" || ov === "C" || ov === "Outro") return ov;
+    return classifyPipelineByName(name);
+  };
+
   interface PipelineFunnel {
     id: string; name: string; classe: string;
+
     stages: { id: string; name: string; count: number; value: number }[];
     won: number; lost: number; openValue: number;
   }
