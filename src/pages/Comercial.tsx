@@ -609,7 +609,7 @@ export default function Comercial() {
 
 
           {/* Classes A/B/C */}
-          <TabsContent value="classes">
+          <TabsContent value="classes" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {fase2 && (["A", "B", "C", "Outro"] as const).map((k) => {
                 const c = fase2.classes[k];
@@ -637,8 +637,55 @@ export default function Comercial() {
                 );
               })}
             </div>
+
+            {/* Configuração de pipelines → classe (somente admin) */}
+            {isAdmin && (
+              <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Settings className="h-4 w-4 text-primary" />
+                  <div className="text-sm font-semibold">Configurar pipelines por classe</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Escolha de quais pipelines do GHL extrair as propostas/vendas de cada classe. A mudança é aplicada na próxima atualização.
+                </p>
+                {pipelinesList.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">Atualize para carregar pipelines.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {pipelinesList.map((p) => {
+                      const cur = pipelineCfg[p.id]?.classe || "";
+                      const opts: { v: string | null; l: string; cls: string }[] = [
+                        { v: null,    l: "Auto",  cls: "bg-muted/30 text-muted-foreground hover:bg-muted/50" },
+                        { v: "A",     l: "A",     cls: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40" },
+                        { v: "B",     l: "B",     cls: "bg-amber-500/20 text-amber-200 border-amber-500/40" },
+                        { v: "C",     l: "C",     cls: "bg-blue-500/20 text-blue-200 border-blue-500/40" },
+                        { v: "Outro", l: "Outro", cls: "bg-muted/40 text-muted-foreground" },
+                      ];
+                      return (
+                        <div key={p.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-white/5 last:border-0">
+                          <div className="text-xs font-medium truncate flex-1">{p.name}</div>
+                          <div className="flex gap-1">
+                            {opts.map((o) => (
+                              <Button
+                                key={o.l}
+                                variant="outline" size="sm"
+                                onClick={() => setPipelineClasse(p, o.v)}
+                                className={`h-6 px-2 text-[10px] border ${(cur || null) === o.v ? o.cls + " font-semibold ring-1 ring-primary/40" : "bg-background/30 border-white/10 text-muted-foreground hover:bg-white/5"}`}
+                              >
+                                {o.l}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
+
             <p className="text-xs text-muted-foreground/70 mt-3">
-              Classificação inferida pelo nome do pipeline (procuro "A", "B", "C"). Renomeie pipelines no GHL para algo como "Cliente A · Vendas" se quiser ajustar.
+              Se não configurar manualmente, classifico pelo nome do pipeline (procuro "A", "B", "C").
             </p>
           </TabsContent>
 
