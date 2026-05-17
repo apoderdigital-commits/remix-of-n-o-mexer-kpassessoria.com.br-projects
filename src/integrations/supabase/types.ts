@@ -189,6 +189,33 @@ export type Database = {
           },
         ]
       }
+      kp_comercial_sdr_goals: {
+        Row: {
+          agendados: number
+          ghl_user_id: string
+          realizados: number
+          updated_at: string
+          updated_by: string | null
+          vendas: number
+        }
+        Insert: {
+          agendados?: number
+          ghl_user_id: string
+          realizados?: number
+          updated_at?: string
+          updated_by?: string | null
+          vendas?: number
+        }
+        Update: {
+          agendados?: number
+          ghl_user_id?: string
+          realizados?: number
+          updated_at?: string
+          updated_by?: string | null
+          vendas?: number
+        }
+        Relationships: []
+      }
       kp_comercial_snapshots: {
         Row: {
           block: string

@@ -220,12 +220,44 @@ async function buildSnapshot(since: Date, until: Date) {
     investimento, cac, roas, metaError,
   };
 
-  // ---------- SDR BREAKDOWN ----------
+  // ---------- CLASSIFICAÇÃO DE CONTATOS (MQL / A / B / C / Outro) ----------
+  const contactById = new Map<string, any>();
+  for (const c of allContacts) contactById.set(c.id, c);
+  const pipelineClasseById = new Map<string, string>();
+  for (const pf of pipelineFunnels) pipelineClasseById.set(pf.id, pf.classe);
+  const contactClasses = new Map<string, Set<string>>();
+  for (const o of allOpps) {
+    if (!o.contactId) continue;
+    const cls = pipelineClasseById.get(o._pipelineId) || "Outro";
+    if (!contactClasses.has(o.contactId)) contactClasses.set(o.contactId, new Set());
+    contactClasses.get(o.contactId)!.add(cls);
+  }
+  const isMql = (c: any) => !!(c?.tags || []).some((t: string) => String(t).toLowerCase().includes("mql"));
+  const classifyContact = (contactId: string): "MQL" | "A" | "B" | "C" | "Outro" => {
+    const c = contactById.get(contactId);
+    if (c && isMql(c)) return "MQL";
+    const classes = contactClasses.get(contactId);
+    if (classes?.has("A")) return "A";
+    if (classes?.has("B")) return "B";
+    if (classes?.has("C")) return "C";
+    return "Outro";
+  };
+
+  // ---------- SDR BREAKDOWN + APPOINTMENT LISTS ----------
   const sdrMap = new Map<string, any>();
   const initSdr = (uid: string) => {
     if (!sdrMap.has(uid)) {
       const u = users.find((x: any) => x.id === uid) || { id: uid, name: "Desconhecido" };
-      sdrMap.set(uid, { user: u, agendados: 0, realizados: 0, noshow: 0, cancelados: 0 });
+      sdrMap.set(uid, {
+        user: u,
+        agendados: 0, realizados: 0, noshow: 0, cancelados: 0,
+        lists: {
+          agendado: [] as any[],
+          realizado: [] as any[],
+          noshow: [] as any[],
+          cancelado: [] as any[],
+        },
+      });
     }
     return sdrMap.get(uid)!;
   };
@@ -236,15 +268,29 @@ async function buildSnapshot(since: Date, until: Date) {
     const s = initSdr(uid);
     s.agendados++;
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
-    if (st.includes("show") && !st.includes("no")) s.realizados++;
+    const contact = a.contactId ? contactById.get(a.contactId) : null;
+    const category = a.contactId ? classifyContact(a.contactId) : "Outro";
+    const entry = {
+      contactId: a.contactId || null,
+      nome: contact
+        ? (`${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.contactName || contact.email || "—")
+        : (a.title || "Sem contato"),
+      email: contact?.email,
+      phone: contact?.phone,
+      startTime: a.startTime,
+      category,
+    };
+    let bucket: "agendado" | "realizado" | "noshow" | "cancelado" = "agendado";
+    if (st.includes("show") && !st.includes("no")) { s.realizados++; bucket = "realizado"; }
     else if (st.includes("noshow") || st === "no-show" || st === "no_show") {
-      s.noshow++;
+      s.noshow++; bucket = "noshow";
       if (a.startTime) {
         const h = new Date(a.startTime).getHours();
         const key = `${String(h).padStart(2, "0")}:00`;
         noShowByHour[key] = (noShowByHour[key] || 0) + 1;
       }
-    } else if (st.includes("cancel")) s.cancelados++;
+    } else if (st.includes("cancel")) { s.cancelados++; bucket = "cancelado"; }
+    s.lists[bucket].push(entry);
   }
   const sdrs = Array.from(sdrMap.values()).sort((a, b) => b.agendados - a.agendados);
 

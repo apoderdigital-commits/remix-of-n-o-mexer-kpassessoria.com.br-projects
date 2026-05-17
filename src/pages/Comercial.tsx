@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -25,7 +26,13 @@ interface Kpis {
   faturamento: number; ticketMedio: number; winRate: number;
   investimento: number; cac: number; roas: number; metaError?: string | null;
 }
-interface Sdr { user: { id: string; name: string; email?: string }; agendados: number; realizados: number; noshow: number; cancelados: number; }
+type ApptCategory = "MQL" | "A" | "B" | "C" | "Outro";
+interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory }
+interface Sdr {
+  user: { id: string; name: string; email?: string };
+  agendados: number; realizados: number; noshow: number; cancelados: number;
+  lists?: { agendado: ApptEntry[]; realizado: ApptEntry[]; noshow: ApptEntry[]; cancelado: ApptEntry[] };
+}
 interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; }
 interface ClassData { propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
 interface Fase2 {
@@ -54,10 +61,8 @@ interface Fase3 {
 interface GhlUser { id: string; name: string; email?: string }
 interface UserRoleRow { ghl_user_id: string; name: string | null; email: string | null; role: "sdr" | "closer" | "both" | "none"; active: boolean }
 
-type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
-const GOALS_KEY = "kp_comercial_sdr_goals_v1";
-const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
-const saveGoals = (g: SdrGoals) => localStorage.setItem(GOALS_KEY, JSON.stringify(g));
+interface SdrGoal { agendados: number; realizados: number; vendas: number }
+type SdrGoals = Record<string, SdrGoal>;
 
 export default function Comercial() {
   const { isAdmin, squadCount, loading: authLoading } = useAuth();
@@ -69,7 +74,8 @@ export default function Comercial() {
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [fase2, setFase2] = useState<Fase2 | null>(null);
   const [fase3, setFase3] = useState<Fase3 | null>(null);
-  const [goals, setGoals] = useState<SdrGoals>(loadGoals);
+  const [goals, setGoals] = useState<SdrGoals>({});
+  const [drillDown, setDrillDown] = useState<{ sdrName: string; tipo: "agendado" | "realizado" | "noshow"; items: ApptEntry[] } | null>(null);
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
   const [source, setSource] = useState<"cache" | "fresh" | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
@@ -117,11 +123,22 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const { data, error } = await supabase.from("kp_comercial_user_roles").select("*");
-    if (error) { console.error(error); return; }
-    const map: Record<string, UserRoleRow> = {};
-    for (const r of (data || []) as any[]) map[r.ghl_user_id] = r;
-    setUserRoles(map);
+    const [rolesRes, goalsRes] = await Promise.all([
+      supabase.from("kp_comercial_user_roles").select("*"),
+      supabase.from("kp_comercial_sdr_goals").select("*"),
+    ]);
+    if (rolesRes.data) {
+      const map: Record<string, UserRoleRow> = {};
+      for (const r of rolesRes.data as any[]) map[r.ghl_user_id] = r;
+      setUserRoles(map);
+    }
+    if (goalsRes.data) {
+      const map: SdrGoals = {};
+      for (const g of goalsRes.data as any[]) {
+        map[g.ghl_user_id] = { agendados: g.agendados || 0, realizados: g.realizados || 0, vendas: g.vendas || 0 };
+      }
+      setGoals(map);
+    }
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -134,9 +151,18 @@ export default function Comercial() {
 
   useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
 
-  const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
-    const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
-    setGoals(next); saveGoals(next);
+  const updateGoalLocal = (sdrId: string, key: keyof SdrGoal, val: number) => {
+    setGoals((g) => ({ ...g, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...g[sdrId], [key]: val } }));
+  };
+
+  const persistGoal = async (sdrId: string) => {
+    const g = goals[sdrId] || { agendados: 0, realizados: 0, vendas: 0 };
+    const { error } = await supabase.from("kp_comercial_sdr_goals").upsert(
+      { ghl_user_id: sdrId, agendados: g.agendados || 0, realizados: g.realizados || 0, vendas: g.vendas || 0 },
+      { onConflict: "ghl_user_id" }
+    );
+    if (error) toast.error("Erro ao salvar meta: " + error.message);
+    else toast.success("Meta salva");
   };
 
   const sdrRanking = useMemo(() => {
@@ -381,7 +407,7 @@ export default function Comercial() {
           <TabsContent value="sdrs">
             <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
               <div className="text-xs text-muted-foreground">
-                Edite as metas (mensais) por SDR — salvas localmente no seu navegador. % é o atingimento no período filtrado.
+                Edite as metas (mensais) por SDR — salvas no banco. % é o atingimento no período filtrado. Clique nos números para ver os leads.
               </div>
               {sdrRanking.length > 0 ? (
                 <Table>
@@ -390,9 +416,9 @@ export default function Comercial() {
                       <TableHead className="w-10">#</TableHead>
                       <TableHead>SDR</TableHead>
                       <TableHead className="text-right">Agendados</TableHead>
-                      <TableHead className="w-24 text-right">Meta ag.</TableHead>
+                      <TableHead className="w-28 text-right">Meta ag.</TableHead>
                       <TableHead className="text-right">Realizados</TableHead>
-                      <TableHead className="w-24 text-right">Meta real.</TableHead>
+                      <TableHead className="w-28 text-right">Meta real.</TableHead>
                       <TableHead className="text-right">No-show</TableHead>
                       <TableHead className="text-right">Show rate</TableHead>
                       <TableHead className="text-right">Atingimento</TableHead>
@@ -402,19 +428,43 @@ export default function Comercial() {
                     {sdrRanking.map((s, idx) => {
                       const atAg = s.goal.agendados ? (s.agendados / s.goal.agendados) * 100 : null;
                       const atRl = s.goal.realizados ? (s.realizados / s.goal.realizados) * 100 : null;
+                      const openDrill = (tipo: "agendado" | "realizado" | "noshow") => {
+                        const items = s.lists?.[tipo] || [];
+                        if (!items.length) { toast.info("Sem registros"); return; }
+                        setDrillDown({ sdrName: s.user.name, tipo, items });
+                      };
+                      const cellBtn = "underline-offset-2 hover:underline cursor-pointer";
                       return (
                         <TableRow key={s.user.id}>
                           <TableCell className="font-bold text-muted-foreground">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{s.user.name}</TableCell>
-                          <TableCell className="text-right">{s.agendados}</TableCell>
                           <TableCell className="text-right">
-                            <Input type="number" min={0} value={s.goal.agendados || ""} onChange={(e) => updateGoal(s.user.id, "agendados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                            <button type="button" className={cellBtn} onClick={() => openDrill("agendado")}>{s.agendados}</button>
                           </TableCell>
-                          <TableCell className="text-right text-emerald-400">{s.realizados}</TableCell>
                           <TableCell className="text-right">
-                            <Input type="number" min={0} value={s.goal.realizados || ""} onChange={(e) => updateGoal(s.user.id, "realizados", Number(e.target.value) || 0)} className="h-7 w-20 text-right text-xs" />
+                            <Input
+                              type="number" min={0}
+                              value={s.goal.agendados || ""}
+                              onChange={(e) => updateGoalLocal(s.user.id, "agendados", Number(e.target.value) || 0)}
+                              onBlur={() => persistGoal(s.user.id)}
+                              className="h-7 w-20 text-right text-xs"
+                            />
                           </TableCell>
-                          <TableCell className="text-right text-rose-400">{s.noshow}</TableCell>
+                          <TableCell className="text-right text-emerald-400">
+                            <button type="button" className={cellBtn} onClick={() => openDrill("realizado")}>{s.realizados}</button>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number" min={0}
+                              value={s.goal.realizados || ""}
+                              onChange={(e) => updateGoalLocal(s.user.id, "realizados", Number(e.target.value) || 0)}
+                              onBlur={() => persistGoal(s.user.id)}
+                              className="h-7 w-20 text-right text-xs"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right text-rose-400">
+                            <button type="button" className={cellBtn} onClick={() => openDrill("noshow")}>{s.noshow}</button>
+                          </TableCell>
                           <TableCell className="text-right">{fmtPct(s.showRate)}</TableCell>
                           <TableCell className="text-right text-xs">
                             {atAg != null && <div className={atAg >= 100 ? "text-emerald-400" : "text-amber-400"}>Ag: {fmtPct(atAg)}</div>}
@@ -808,6 +858,72 @@ export default function Comercial() {
           </p>
         </div>
       </div>
+
+      {/* Drill-down: leads do SDR por categoria */}
+      <Dialog open={!!drillDown} onOpenChange={(o) => !o && setDrillDown(null)}>
+        <DialogContent className="max-w-3xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="capitalize">{drillDown?.tipo === "noshow" ? "No-show" : drillDown?.tipo + "s"}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-primary">{drillDown?.sdrName}</span>
+              <Badge variant="outline" className="ml-2">{drillDown?.items.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {drillDown && (() => {
+            const groups: { key: ApptCategory; label: string; cls: string }[] = [
+              { key: "MQL",   label: "MQLs",     cls: "border-cyan-500/40 text-cyan-200 bg-cyan-500/10" },
+              { key: "A",     label: "Lead A",   cls: "border-emerald-500/40 text-emerald-200 bg-emerald-500/10" },
+              { key: "B",     label: "Lead B",   cls: "border-amber-500/40 text-amber-200 bg-amber-500/10" },
+              { key: "C",     label: "Lead C",   cls: "border-blue-500/40 text-blue-200 bg-blue-500/10" },
+              { key: "Outro", label: "Outros",   cls: "border-muted text-muted-foreground bg-muted/20" },
+            ];
+            const grouped: Record<ApptCategory, ApptEntry[]> = { MQL: [], A: [], B: [], C: [], Outro: [] };
+            for (const it of drillDown.items) grouped[it.category].push(it);
+            const visible = groups.filter(g => grouped[g.key].length > 0);
+            if (visible.length === 0) return <div className="text-center text-sm text-muted-foreground py-8">Sem registros.</div>;
+            return (
+              <Tabs defaultValue={visible[0].key} className="mt-2">
+                <TabsList className="bg-background/40 border border-white/5 inline-flex gap-1 h-auto p-1 flex-wrap">
+                  {visible.map((g) => (
+                    <TabsTrigger key={g.key} value={g.key} className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      {g.label} <Badge variant="outline" className={`text-[10px] h-4 px-1.5 ${g.cls}`}>{grouped[g.key].length}</Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {visible.map((g) => (
+                  <TabsContent key={g.key} value={g.key} className="mt-3 max-h-[55vh] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Contato</TableHead>
+                          <TableHead>Horário</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {grouped[g.key].map((it, i) => (
+                          <TableRow key={(it.contactId || "") + i}>
+                            <TableCell className="font-medium">{it.nome}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {it.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{it.phone}</div>}
+                              {it.email && <div>{it.email}</div>}
+                              {!it.phone && !it.email && "—"}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {it.startTime ? new Date(it.startTime).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
