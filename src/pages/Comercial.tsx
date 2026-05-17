@@ -465,7 +465,7 @@ export default function Comercial() {
                       const openDrill = (tipo: "agendado" | "realizado" | "noshow") => {
                         const items = s.lists?.[tipo] || [];
                         if (!items.length) { toast.info("Sem registros"); return; }
-                        setDrillDown({ sdrName: s.user.name, tipo, items });
+                        setDrillDown({ sdrName: s.user.name, tipo, items, agendados: s.agendados, realizados: s.realizados, noshow: s.noshow });
                       };
                       const cellBtn = "underline-offset-2 hover:underline cursor-pointer";
                       return (
