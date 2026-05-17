@@ -61,10 +61,8 @@ interface Fase3 {
 interface GhlUser { id: string; name: string; email?: string }
 interface UserRoleRow { ghl_user_id: string; name: string | null; email: string | null; role: "sdr" | "closer" | "both" | "none"; active: boolean }
 
-type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
-const GOALS_KEY = "kp_comercial_sdr_goals_v1";
-const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
-const saveGoals = (g: SdrGoals) => localStorage.setItem(GOALS_KEY, JSON.stringify(g));
+interface SdrGoal { agendados: number; realizados: number; vendas: number }
+type SdrGoals = Record<string, SdrGoal>;
 
 export default function Comercial() {
   const { isAdmin, squadCount, loading: authLoading } = useAuth();
