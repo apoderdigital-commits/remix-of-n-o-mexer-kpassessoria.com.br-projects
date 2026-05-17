@@ -526,6 +526,7 @@ async function buildSnapshot(since: Date, until: Date) {
     kpis,
     users,
     sdrs,
+    closers,
     noShowByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
