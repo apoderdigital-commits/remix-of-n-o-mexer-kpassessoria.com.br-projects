@@ -26,7 +26,13 @@ interface Kpis {
   faturamento: number; ticketMedio: number; winRate: number;
   investimento: number; cac: number; roas: number; metaError?: string | null;
 }
-interface Sdr { user: { id: string; name: string; email?: string }; agendados: number; realizados: number; noshow: number; cancelados: number; }
+type ApptCategory = "MQL" | "A" | "B" | "C" | "Outro";
+interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory }
+interface Sdr {
+  user: { id: string; name: string; email?: string };
+  agendados: number; realizados: number; noshow: number; cancelados: number;
+  lists?: { agendado: ApptEntry[]; realizado: ApptEntry[]; noshow: ApptEntry[]; cancelado: ApptEntry[] };
+}
 interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; }
 interface ClassData { propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
 interface Fase2 {
