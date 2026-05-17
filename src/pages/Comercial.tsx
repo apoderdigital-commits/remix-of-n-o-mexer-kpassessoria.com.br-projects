@@ -1063,6 +1063,55 @@ export default function Comercial() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Lista de MQLs / não-MQLs */}
+      <Dialog open={!!mqlListOpen} onOpenChange={(o) => !o && setMqlListOpen(null)}>
+        <DialogContent className="max-w-4xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {mqlListOpen === "mql" ? "Lista de MQLs" : "Leads (não-MQL)"}
+              <Badge variant="outline" className="ml-2">
+                {fase2 ? (mqlListOpen === "mql" ? fase2.mqlsList.length : fase2.nonMqlsList.length) : 0}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {fase2 && (() => {
+            const rows = (mqlListOpen === "mql" ? fase2.mqlsList : fase2.nonMqlsList).slice(0, 300);
+            if (rows.length === 0) return <div className="text-center py-8 text-sm text-muted-foreground">Nenhum lead no período.</div>;
+            return (
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Entrada</TableHead>
+                      <TableHead>Reunião</TableHead>
+                      <TableHead>Situação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">{m.nome}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
+                          {m.email && <div>{m.email}</div>}
+                        </TableCell>
+                        <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                        <TableCell className="text-xs">
+                          {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                        </TableCell>
+                        <TableCell>{situacaoBadge(m.situacao)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
