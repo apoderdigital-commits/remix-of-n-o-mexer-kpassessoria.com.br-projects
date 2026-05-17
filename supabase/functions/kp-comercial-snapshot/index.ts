@@ -158,7 +158,7 @@ async function buildSnapshot(since: Date, until: Date) {
       oppPage++;
     }
     pipelineFunnels.push({
-      id: p.id, name: p.name, classe: classifyPipeline(p.name),
+      id: p.id, name: p.name, classe: classifyPipeline(p.id, p.name), kind: pipeCfg.get(p.id)?.kind || null,
       stages, won, lost, openValue,
     });
   }
