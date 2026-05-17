@@ -51,6 +51,9 @@ interface Fase3 {
   metaError?: string | null;
 }
 
+interface GhlUser { id: string; name: string; email?: string }
+interface UserRoleRow { ghl_user_id: string; name: string | null; email: string | null; role: "sdr" | "closer" | "both" | "none"; active: boolean }
+
 type SdrGoals = Record<string, { agendados: number; realizados: number; vendas: number }>;
 const GOALS_KEY = "kp_comercial_sdr_goals_v1";
 const loadGoals = (): SdrGoals => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || "{}"); } catch { return {}; } };
