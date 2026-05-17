@@ -74,7 +74,8 @@ export default function Comercial() {
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [fase2, setFase2] = useState<Fase2 | null>(null);
   const [fase3, setFase3] = useState<Fase3 | null>(null);
-  const [goals, setGoals] = useState<SdrGoals>(loadGoals);
+  const [goals, setGoals] = useState<SdrGoals>({});
+  const [drillDown, setDrillDown] = useState<{ sdrName: string; tipo: "agendado" | "realizado" | "noshow"; items: ApptEntry[] } | null>(null);
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
   const [source, setSource] = useState<"cache" | "fresh" | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
