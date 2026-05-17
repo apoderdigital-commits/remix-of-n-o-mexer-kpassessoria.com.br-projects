@@ -82,16 +82,21 @@ export default function Comercial() {
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
+  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([]);
+  const [pipelineCfg, setPipelineCfg] = useState<Record<string, { classe?: string | null; kind?: string | null }>>({});
+  const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
     if (payload.kpis) setKpis(payload.kpis);
     if (payload.users) setGhlUsers(payload.users);
+    if (payload.pipelines) setPipelinesList(payload.pipelines);
     setFase2({
       sdrs: payload.sdrs || [],
       noShowByHour: payload.noShowByHour || {},
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
+      nonMqlsList: payload.nonMqlsList || [],
       classes: payload.classes || { A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
     });
     setFase3({
