@@ -73,10 +73,13 @@ export default function Comercial() {
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
   const [source, setSource] = useState<"cache" | "fresh" | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
     if (payload.kpis) setKpis(payload.kpis);
+    if (payload.users) setGhlUsers(payload.users);
     setFase2({
       sdrs: payload.sdrs || [],
       noShowByHour: payload.noShowByHour || {},
