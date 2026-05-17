@@ -325,35 +325,41 @@ export default function Comercial() {
                       </div>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
                     </div>
-                    <div className="relative space-y-2.5">
+                    <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
-                        const width = Math.max(28, 100 - i * 11);
+                        const width = Math.max(34, 100 - i * 13);
                         return (
-                          <div key={s.label} className="flex items-center gap-3">
+                          <div key={s.label} className="flex items-center gap-3 w-full">
                             <div className="w-44 shrink-0 flex items-center gap-2.5">
                               <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.iconBg}`}>
                                 <s.icon className="h-4 w-4" />
                               </div>
                               <div className="text-xs font-medium text-foreground/90 leading-tight">{s.label}</div>
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 flex justify-center">
                               <div
-                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-4 transition-all duration-700 ease-out`}
+                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out`}
                                 style={{ width: `${width}%` }}
                               >
                                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
-                                  {s.isRate ? fmtPct(s.pctTotal) : fmtNum(s.count || 0)}
+                                  {s.isRate ? "—" : fmtNum(s.count || 0)}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-white/95">
-                                  {!s.isRate && (
-                                    <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
-                                      {fmtPct(s.pctTotal)} do topo
+                                  {s.isRate ? (
+                                    <span className="bg-black/25 rounded-full px-2.5 py-0.5 backdrop-blur-sm font-bold text-sm">
+                                      {fmtPct(s.pctTotal)}
                                     </span>
-                                  )}
-                                  {s.pctPrev != null && !s.isRate && i > 0 && (
-                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
-                                      ↓ {fmtPct(s.pctPrev)}
-                                    </span>
+                                  ) : (
+                                    <>
+                                      <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                        {fmtPct(s.pctTotal)} do topo
+                                      </span>
+                                      {s.pctPrev != null && i > 0 && (
+                                        <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                          ↓ {fmtPct(s.pctPrev)}
+                                        </span>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>
