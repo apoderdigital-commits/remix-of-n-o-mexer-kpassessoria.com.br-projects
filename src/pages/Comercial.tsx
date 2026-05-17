@@ -848,19 +848,6 @@ export default function Comercial() {
               const fu = fase3.followUps;
               const sections: { title: string; icon: any; rows: any[]; cols: string[]; render: (r: any) => React.ReactNode[]; threshold: number }[] = [
                 {
-                  title: "MQLs sem agendamento",
-                  icon: AlertTriangle,
-                  rows: fu.mqlsSemAgendamento,
-                  threshold: fu.thresholds.semAgendDias,
-                  cols: ["Nome", "Contato", "Entrada", "Dias parado"],
-                  render: (r) => [
-                    <span className="font-medium">{r.nome}</span>,
-                    <span className="text-xs text-muted-foreground">{r.phone || r.email || "—"}</span>,
-                    <span className="text-xs">{new Date(r.dateAdded).toLocaleDateString("pt-BR")}</span>,
-                    <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/30">{r.diasParado}d</Badge>,
-                  ],
-                },
-                {
                   title: "Propostas paradas",
                   icon: Clock,
                   rows: fu.propostasParadas,
