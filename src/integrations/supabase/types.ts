@@ -189,6 +189,30 @@ export type Database = {
           },
         ]
       }
+      kp_comercial_pipeline_config: {
+        Row: {
+          classe: string | null
+          kind: string | null
+          pipeline_id: string
+          pipeline_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          classe?: string | null
+          kind?: string | null
+          pipeline_id: string
+          pipeline_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          classe?: string | null
+          kind?: string | null
+          pipeline_id?: string
+          pipeline_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kp_comercial_sdr_goals: {
         Row: {
           agendados: number

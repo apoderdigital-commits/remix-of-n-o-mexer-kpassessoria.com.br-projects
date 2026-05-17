@@ -31,7 +31,7 @@ const startOfWeek = (d: Date) => {
   x.setHours(0, 0, 0, 0);
   return x;
 };
-const classifyPipeline = (name: string): "A" | "B" | "C" | "Outro" => {
+const classifyPipelineByName = (name: string): "A" | "B" | "C" | "Outro" => {
   const n = (name || "").toLowerCase();
   if (/\b(a|cliente.?a|classe.?a|premium)\b/.test(n)) return "A";
   if (/\b(b|cliente.?b|classe.?b)\b/.test(n)) return "B";
@@ -105,8 +105,23 @@ async function buildSnapshot(since: Date, until: Date) {
   const pipRes = await fetch(`${GHL_BASE}/opportunities/pipelines?locationId=${locationId}`, { headers });
   const pipelines = ((pipRes.ok ? (await pipRes.json()).pipelines : []) || []);
 
+  // Overrides de classificação (A/B/C) e tipo (sdr/closer) por pipeline
+  const supabaseAdmin = sb();
+  const { data: pipeCfgRows } = await supabaseAdmin
+    .from("kp_comercial_pipeline_config").select("*");
+  const pipeCfg = new Map<string, { classe?: string; kind?: string }>();
+  for (const r of (pipeCfgRows || []) as any[]) {
+    pipeCfg.set(r.pipeline_id, { classe: r.classe || undefined, kind: r.kind || undefined });
+  }
+  const classifyPipeline = (id: string, name: string): "A" | "B" | "C" | "Outro" => {
+    const ov = pipeCfg.get(id)?.classe;
+    if (ov === "A" || ov === "B" || ov === "C" || ov === "Outro") return ov;
+    return classifyPipelineByName(name);
+  };
+
   interface PipelineFunnel {
     id: string; name: string; classe: string;
+
     stages: { id: string; name: string; count: number; value: number }[];
     won: number; lost: number; openValue: number;
   }
@@ -143,7 +158,7 @@ async function buildSnapshot(since: Date, until: Date) {
       oppPage++;
     }
     pipelineFunnels.push({
-      id: p.id, name: p.name, classe: classifyPipeline(p.name),
+      id: p.id, name: p.name, classe: classifyPipeline(p.id, p.name), kind: pipeCfg.get(p.id)?.kind || null,
       stages, won, lost, openValue,
     });
   }
@@ -321,6 +336,27 @@ async function buildSnapshot(since: Date, until: Date) {
     noshow: mqlsList.filter((m) => m.situacao === "noshow").length,
   };
 
+  // ---------- NÃO-MQLs LIST ----------
+  const nonMqlsList = allContacts
+    .filter((c) => inRange(c.dateAdded) && !(c.tags || []).some((t: string) => String(t).toLowerCase().includes("mql")))
+    .map((c) => {
+      const appt = apptByContact.get(c.id);
+      const apptStatus = (appt?.appointmentStatus || appt?.status || "").toLowerCase();
+      let situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento" = "sem_agendamento";
+      if (appt) {
+        if (apptStatus.includes("noshow")) situacao = "noshow";
+        else if (apptStatus.includes("show")) situacao = "realizado";
+        else situacao = "agendado";
+      }
+      return {
+        id: c.id,
+        nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.contactName || "—",
+        email: c.email, phone: c.phone,
+        dateAdded: c.dateAdded, situacao, horario: appt?.startTime,
+      };
+    })
+    .sort((a, b) => (b.dateAdded || "").localeCompare(a.dateAdded || ""));
+
   // ---------- CLASSES A/B/C ----------
   const classes: Record<string, any> = {
     A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
@@ -433,6 +469,8 @@ async function buildSnapshot(since: Date, until: Date) {
     noShowByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
+    nonMqlsList: nonMqlsList.slice(0, 500),
+    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name })),
     classes,
     aggregateFunnel,
     pipelineFunnels,

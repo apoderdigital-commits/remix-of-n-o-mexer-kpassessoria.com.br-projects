@@ -40,6 +40,7 @@ interface Fase2 {
   noShowByHour: Record<string, number>;
   mqlSummary: { total: number; agendados: number; naoAgendados: number; realizados: number; noshow: number };
   mqlsList: MqlRow[];
+  nonMqlsList: MqlRow[];
   classes: Record<"A" | "B" | "C" | "Outro", ClassData>;
 }
 interface PipelineFunnel { id: string; name: string; stages: { id: string; name: string; count: number; value: number }[]; won: number; lost: number; openValue: number; }
@@ -75,22 +76,27 @@ export default function Comercial() {
   const [fase2, setFase2] = useState<Fase2 | null>(null);
   const [fase3, setFase3] = useState<Fase3 | null>(null);
   const [goals, setGoals] = useState<SdrGoals>({});
-  const [drillDown, setDrillDown] = useState<{ sdrName: string; tipo: "agendado" | "realizado" | "noshow"; items: ApptEntry[] } | null>(null);
+  const [drillDown, setDrillDown] = useState<{ sdrName: string; tipo: "agendado" | "realizado" | "noshow"; items: ApptEntry[]; agendados: number; realizados: number; noshow: number } | null>(null);
   const [funnelPipeline, setFunnelPipeline] = useState<string>("__all__");
   const [source, setSource] = useState<"cache" | "fresh" | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
+  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([]);
+  const [pipelineCfg, setPipelineCfg] = useState<Record<string, { classe?: string | null; kind?: string | null }>>({});
+  const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
     if (payload.kpis) setKpis(payload.kpis);
     if (payload.users) setGhlUsers(payload.users);
+    if (payload.pipelines) setPipelinesList(payload.pipelines);
     setFase2({
       sdrs: payload.sdrs || [],
       noShowByHour: payload.noShowByHour || {},
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
+      nonMqlsList: payload.nonMqlsList || [],
       classes: payload.classes || { A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
     });
     setFase3({
@@ -123,9 +129,10 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
+      supabase.from("kp_comercial_pipeline_config").select("*"),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -139,6 +146,11 @@ export default function Comercial() {
       }
       setGoals(map);
     }
+    if (pipeRes.data) {
+      const map: Record<string, { classe?: string | null; kind?: string | null }> = {};
+      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = { classe: r.classe, kind: r.kind };
+      setPipelineCfg(map);
+    }
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -147,6 +159,22 @@ export default function Comercial() {
     if (error) { toast.error("Erro ao salvar: " + error.message); return; }
     setUserRoles((p) => ({ ...p, [u.id]: { ...payload, name: u.name, email: u.email || null } as UserRoleRow }));
     toast.success(`${u.name}: ${role.toUpperCase()}`);
+  };
+
+  const setPipelineClasse = async (pipeline: { id: string; name: string }, classe: string | null) => {
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, classe };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], classe } }));
+    toast.success(`${pipeline.name}: ${classe || "—"}`);
+  };
+
+  const setPipelineKind = async (pipeline: { id: string; name: string }, kind: string | null) => {
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, kind };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], kind } }));
+    toast.success(`${pipeline.name}: ${kind || "—"}`);
   };
 
   useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
@@ -297,7 +325,7 @@ export default function Comercial() {
               <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
                 <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
                 <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
-                <TabsTrigger value="mqls" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">MQLs</TabsTrigger>
+                
                 <TabsTrigger value="classes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Propostas A/B/C</TabsTrigger>
                 <TabsTrigger value="funnel" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Funil</TabsTrigger>
                 <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
@@ -325,35 +353,41 @@ export default function Comercial() {
                       </div>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
                     </div>
-                    <div className="relative space-y-2.5">
+                    <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
-                        const width = Math.max(28, 100 - i * 11);
+                        const width = Math.max(34, 100 - i * 13);
                         return (
-                          <div key={s.label} className="flex items-center gap-3">
+                          <div key={s.label} className="flex items-center gap-3 w-full">
                             <div className="w-44 shrink-0 flex items-center gap-2.5">
                               <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.iconBg}`}>
                                 <s.icon className="h-4 w-4" />
                               </div>
                               <div className="text-xs font-medium text-foreground/90 leading-tight">{s.label}</div>
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 flex justify-center">
                               <div
-                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-4 transition-all duration-700 ease-out`}
+                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out`}
                                 style={{ width: `${width}%` }}
                               >
                                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
-                                  {s.isRate ? fmtPct(s.pctTotal) : fmtNum(s.count || 0)}
+                                  {s.isRate ? "—" : fmtNum(s.count || 0)}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-white/95">
-                                  {!s.isRate && (
-                                    <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
-                                      {fmtPct(s.pctTotal)} do topo
+                                  {s.isRate ? (
+                                    <span className="bg-black/25 rounded-full px-2.5 py-0.5 backdrop-blur-sm font-bold text-sm">
+                                      {fmtPct(s.pctTotal)}
                                     </span>
-                                  )}
-                                  {s.pctPrev != null && !s.isRate && i > 0 && (
-                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
-                                      ↓ {fmtPct(s.pctPrev)}
-                                    </span>
+                                  ) : (
+                                    <>
+                                      <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                        {fmtPct(s.pctTotal)} do topo
+                                      </span>
+                                      {s.pctPrev != null && i > 0 && (
+                                        <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                          ↓ {fmtPct(s.pctPrev)}
+                                        </span>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -404,7 +438,42 @@ export default function Comercial() {
             </TabsContent>
 
           {/* SDRs */}
-          <TabsContent value="sdrs">
+          <TabsContent value="sdrs" className="space-y-4">
+            {/* Resumo MQL + botões de lista (migrados da aba MQLs) */}
+            {fase2 && (
+              <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-cyan-300" /> Visão geral de leads no período
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-cyan-500/10 border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20"
+                      onClick={() => setMqlListOpen("mql")}>
+                      Ver lista de MQLs ({fmtNum(fase2.mqlSummary.total)})
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-muted/20 border-white/10 text-muted-foreground hover:bg-white/5"
+                      onClick={() => setMqlListOpen("nonmql")}>
+                      Ver lista de não-MQLs ({fmtNum(fase2.nonMqlsList.length)})
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {[
+                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200" },
+                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200" },
+                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground" },
+                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200" },
+                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200" },
+                  ].map((c) => (
+                    <div key={c.l} className="rounded-xl bg-background/40 border border-white/5 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.l}</div>
+                      <div className={`text-xl font-bold mt-0.5 ${c.c}`}>{fmtNum(c.v)}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             <Card className="p-4 bg-card/40 backdrop-blur border-border/30 space-y-3">
               <div className="text-xs text-muted-foreground">
                 Edite as metas (mensais) por SDR — salvas no banco. % é o atingimento no período filtrado. Clique nos números para ver os leads.
@@ -431,7 +500,7 @@ export default function Comercial() {
                       const openDrill = (tipo: "agendado" | "realizado" | "noshow") => {
                         const items = s.lists?.[tipo] || [];
                         if (!items.length) { toast.info("Sem registros"); return; }
-                        setDrillDown({ sdrName: s.user.name, tipo, items });
+                        setDrillDown({ sdrName: s.user.name, tipo, items, agendados: s.agendados, realizados: s.realizados, noshow: s.noshow });
                       };
                       const cellBtn = "underline-offset-2 hover:underline cursor-pointer";
                       return (
@@ -478,66 +547,69 @@ export default function Comercial() {
                 </Table>
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>}
             </Card>
+
+            {/* Breakdown por classe (A / B / C) */}
+            {fase2 && (() => {
+              const sum = (cat: "MQL"|"A"|"B"|"C"|"Outro", bucket: "agendado"|"realizado") =>
+                fase2.sdrs.reduce((acc, s) =>
+                  acc + (s.lists?.[bucket]?.filter(x => x.category === cat).length || 0), 0);
+              const classRows = (["A", "B", "C"] as const).map((k) => ({
+                k,
+                agendados: sum(k, "agendado"),
+                realizados: sum(k, "realizado"),
+                vendas: fase2.classes[k].vendas,
+              }));
+              const colorMap: Record<string, { bar: string; chip: string; text: string }> = {
+                A: { bar: "from-emerald-500/30 to-emerald-500/5", chip: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40", text: "text-emerald-200" },
+                B: { bar: "from-amber-500/30 to-amber-500/5",   chip: "bg-amber-500/20 text-amber-200 border-amber-500/40",     text: "text-amber-200" },
+                C: { bar: "from-blue-500/30 to-blue-500/5",     chip: "bg-blue-500/20 text-blue-200 border-blue-500/40",        text: "text-blue-200" },
+              };
+              return (
+                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead (período)
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {classRows.map((r) => {
+                      const c = colorMap[r.k];
+                      const taxa = r.agendados > 0 ? (r.realizados / r.agendados) * 100 : 0;
+                      const conv = r.realizados > 0 ? (r.vendas / r.realizados) * 100 : 0;
+                      return (
+                        <div key={r.k} className={`rounded-xl bg-gradient-to-br ${c.bar} border border-white/5 p-4 space-y-3`}>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className={c.chip}>Classe {r.k}</Badge>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Funil</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.agendados)}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Comparecidos</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.realizados)}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-muted-foreground">Vendidos</div>
+                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.vendas)}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-white/5 pt-2">
+                            <span>Show rate: <span className="text-foreground font-semibold">{fmtPct(taxa)}</span></span>
+                            <span>Conv. venda: <span className="text-foreground font-semibold">{fmtPct(conv)}</span></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              );
+            })()}
           </TabsContent>
 
-          {/* MQLs */}
-          <TabsContent value="mqls" className="space-y-3">
-            {fase2 && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                  { l: "Total MQLs", v: fase2.mqlSummary.total },
-                  { l: "Agendados", v: fase2.mqlSummary.agendados },
-                  { l: "Não agendados", v: fase2.mqlSummary.naoAgendados },
-                  { l: "Realizados", v: fase2.mqlSummary.realizados },
-                  { l: "No-show", v: fase2.mqlSummary.noshow },
-                ].map((c) => (
-                  <Card key={c.l} className="p-3 bg-card/40 backdrop-blur border-border/30">
-                    <div className="text-xs text-muted-foreground">{c.l}</div>
-                    <div className="text-2xl font-bold mt-1">{fmtNum(c.v)}</div>
-                  </Card>
-                ))}
-              </div>
-            )}
-            <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {fase2 && fase2.mqlsList.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Entrada</TableHead>
-                      <TableHead>Reunião</TableHead>
-                      <TableHead>Situação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fase2.mqlsList.slice(0, 200).map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.nome}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
-                          {m.email && <div>{m.email}</div>}
-                        </TableCell>
-                        <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
-                        <TableCell className="text-xs">
-                          {m.horario ? (
-                            <div className="flex items-center gap-1"><CalendarClock className="h-3 w-3" />{new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>{situacaoBadge(m.situacao)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem MQLs no período.</div>}
-              {fase2 && fase2.mqlsList.length > 200 && (
-                <p className="text-xs text-muted-foreground text-center mt-3">Mostrando 200 de {fase2.mqlsList.length}.</p>
-              )}
-            </Card>
-          </TabsContent>
 
           {/* Classes A/B/C */}
-          <TabsContent value="classes">
+          <TabsContent value="classes" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {fase2 && (["A", "B", "C", "Outro"] as const).map((k) => {
                 const c = fase2.classes[k];
@@ -565,8 +637,55 @@ export default function Comercial() {
                 );
               })}
             </div>
+
+            {/* Configuração de pipelines → classe (somente admin) */}
+            {isAdmin && (
+              <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Settings className="h-4 w-4 text-primary" />
+                  <div className="text-sm font-semibold">Configurar pipelines por classe</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Escolha de quais pipelines do GHL extrair as propostas/vendas de cada classe. A mudança é aplicada na próxima atualização.
+                </p>
+                {pipelinesList.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">Atualize para carregar pipelines.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {pipelinesList.map((p) => {
+                      const cur = pipelineCfg[p.id]?.classe || "";
+                      const opts: { v: string | null; l: string; cls: string }[] = [
+                        { v: null,    l: "Auto",  cls: "bg-muted/30 text-muted-foreground hover:bg-muted/50" },
+                        { v: "A",     l: "A",     cls: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40" },
+                        { v: "B",     l: "B",     cls: "bg-amber-500/20 text-amber-200 border-amber-500/40" },
+                        { v: "C",     l: "C",     cls: "bg-blue-500/20 text-blue-200 border-blue-500/40" },
+                        { v: "Outro", l: "Outro", cls: "bg-muted/40 text-muted-foreground" },
+                      ];
+                      return (
+                        <div key={p.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-white/5 last:border-0">
+                          <div className="text-xs font-medium truncate flex-1">{p.name}</div>
+                          <div className="flex gap-1">
+                            {opts.map((o) => (
+                              <Button
+                                key={o.l}
+                                variant="outline" size="sm"
+                                onClick={() => setPipelineClasse(p, o.v)}
+                                className={`h-6 px-2 text-[10px] border ${(cur || null) === o.v ? o.cls + " font-semibold ring-1 ring-primary/40" : "bg-background/30 border-white/10 text-muted-foreground hover:bg-white/5"}`}
+                              >
+                                {o.l}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
+
             <p className="text-xs text-muted-foreground/70 mt-3">
-              Classificação inferida pelo nome do pipeline (procuro "A", "B", "C"). Renomeie pipelines no GHL para algo como "Cliente A · Vendas" se quiser ajustar.
+              Se não configurar manualmente, classifico pelo nome do pipeline (procuro "A", "B", "C").
             </p>
           </TabsContent>
 
@@ -870,6 +989,26 @@ export default function Comercial() {
               <Badge variant="outline" className="ml-2">{drillDown?.items.length || 0}</Badge>
             </DialogTitle>
           </DialogHeader>
+          {drillDown && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 -mt-1">
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-blue-300/80">Agendados</div>
+                <div className="text-base font-bold text-blue-200">{fmtNum(drillDown.agendados)}</div>
+              </div>
+              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">Realizados</div>
+                <div className="text-base font-bold text-emerald-200">{fmtNum(drillDown.realizados)}</div>
+              </div>
+              <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-rose-300/80">No-show</div>
+                <div className="text-base font-bold text-rose-200">{fmtNum(drillDown.noshow)}</div>
+              </div>
+              <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-primary/80">Taxa ativação</div>
+                <div className="text-base font-bold text-primary">{drillDown.agendados > 0 ? fmtPct((drillDown.realizados / drillDown.agendados) * 100) : "—"}</div>
+              </div>
+            </div>
+          )}
           {drillDown && (() => {
             const groups: { key: ApptCategory; label: string; cls: string }[] = [
               { key: "MQL",   label: "MQLs",     cls: "border-cyan-500/40 text-cyan-200 bg-cyan-500/10" },
@@ -920,6 +1059,55 @@ export default function Comercial() {
                   </TabsContent>
                 ))}
               </Tabs>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lista de MQLs / não-MQLs */}
+      <Dialog open={!!mqlListOpen} onOpenChange={(o) => !o && setMqlListOpen(null)}>
+        <DialogContent className="max-w-4xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {mqlListOpen === "mql" ? "Lista de MQLs" : "Leads (não-MQL)"}
+              <Badge variant="outline" className="ml-2">
+                {fase2 ? (mqlListOpen === "mql" ? fase2.mqlsList.length : fase2.nonMqlsList.length) : 0}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {fase2 && (() => {
+            const rows = (mqlListOpen === "mql" ? fase2.mqlsList : fase2.nonMqlsList).slice(0, 300);
+            if (rows.length === 0) return <div className="text-center py-8 text-sm text-muted-foreground">Nenhum lead no período.</div>;
+            return (
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Entrada</TableHead>
+                      <TableHead>Reunião</TableHead>
+                      <TableHead>Situação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">{m.nome}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
+                          {m.email && <div>{m.email}</div>}
+                        </TableCell>
+                        <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                        <TableCell className="text-xs">
+                          {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                        </TableCell>
+                        <TableCell>{situacaoBadge(m.situacao)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             );
           })()}
         </DialogContent>
