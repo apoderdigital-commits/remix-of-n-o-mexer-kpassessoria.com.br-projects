@@ -620,44 +620,164 @@ export default function Comercial() {
 
 
           {/* Classes A/B/C */}
-          <TabsContent value="classes" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {fase2 && (["A", "B", "C", "Outro"] as const).map((k) => {
-                const c = fase2.classes[k];
-                const colorMap: Record<string, string> = {
-                  A: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30",
-                  B: "from-amber-500/20 to-amber-500/5 border-amber-500/30",
-                  C: "from-blue-500/20 to-blue-500/5 border-blue-500/30",
-                  Outro: "from-muted/40 to-muted/10 border-border",
-                };
+          <TabsContent value="closers" className="space-y-4">
+            {fase2 && (() => {
+              const allowedRoles = new Set(["closer", "both"]);
+              const closerList = fase2.closers.filter((c) => {
+                const r = userRoles[c.user.id]?.role;
+                return !r || allowedRoles.has(r); // sem config aparecem todos
+              });
+              const onlyClosers = fase2.closers.filter((c) => allowedRoles.has(userRoles[c.user.id]?.role || ""));
+              const list = onlyClosers.length > 0 ? onlyClosers : closerList;
+
+              if (list.length === 0) {
                 return (
-                  <Card key={k} className={`p-4 bg-gradient-to-br ${colorMap[k]} border backdrop-blur space-y-3`}>
-                    <div className="flex items-center justify-between">
-                      <div className="text-lg font-bold">Classe {k}</div>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Propostas</span><span className="font-semibold">{fmtNum(c.propostas)}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Vendas</span><span className="font-semibold">{fmtNum(c.vendas)}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Faturamento</span><span className="font-semibold">{fmtBRL(c.faturamento)}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Conversão</span><span className="font-semibold">{c.propostas > 0 ? fmtPct((c.vendas / c.propostas) * 100) : "—"}</span></div>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-2">
-                      {c.pipelines.length > 0 ? c.pipelines.join(" · ") : "Sem pipelines mapeados"}
-                    </div>
+                  <Card className="p-10 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-sm text-muted-foreground">
+                    Nenhum closer com reuniões/vendas no período. {isAdmin && "Configure os closers na aba Config."}
                   </Card>
                 );
-              })}
-            </div>
+              }
 
-            {/* Configuração de pipelines → classe (somente admin) */}
+              const classKeys = ["A", "B", "C"] as const;
+              const openDrill = (closerName: string, bucket: CloserBucket, classe: "A"|"B"|"C"|"Outro"|"Total", items: CloserEntry[]) => {
+                if (!items.length) { toast.info("Sem registros"); return; }
+                setCloserDrill({ closerName, bucket, classe, items });
+              };
+              const sumLists = (lists: CloserEntry[][]) => lists.reduce((a, b) => a.concat(b), []);
+
+              return list.map((c) => {
+                const L = c.lists;
+                const totals = {
+                  realizados: sumLists([L.realizados.A, L.realizados.B, L.realizados.C, L.realizados.Outro]),
+                  vendas: sumLists([L.vendas.A, L.vendas.B, L.vendas.C, L.vendas.Outro]),
+                  propostasAbertas: sumLists([L.propostasAbertas.A, L.propostasAbertas.B, L.propostasAbertas.C, L.propostasAbertas.Outro]),
+                  propostasPerdidas: sumLists([L.propostasPerdidas.A, L.propostasPerdidas.B, L.propostasPerdidas.C, L.propostasPerdidas.Outro]),
+                };
+                const fat = (items: CloserEntry[]) => items.reduce((s, x) => s + (x.valor || 0), 0);
+                const cellNum = "text-right text-xs font-semibold cursor-pointer hover:underline";
+                const colorMap: Record<string, string> = {
+                  A: "text-emerald-300", B: "text-amber-300", C: "text-blue-300", Total: "text-foreground",
+                };
+
+                const rows = [
+                  {
+                    label: "Reuniões realizadas",
+                    bucket: "realizados" as CloserBucket,
+                    fmt: (i: CloserEntry[]) => fmtNum(i.length),
+                    cellClass: cellNum,
+                  },
+                  {
+                    label: "Vendas",
+                    bucket: "vendas" as CloserBucket,
+                    fmt: (i: CloserEntry[]) => fmtNum(i.length),
+                    cellClass: cellNum,
+                  },
+                  {
+                    label: "Faturamento",
+                    bucket: "vendas" as CloserBucket,
+                    fmt: (i: CloserEntry[]) => fmtBRL(fat(i)),
+                    cellClass: "text-right text-xs font-semibold",
+                  },
+                  {
+                    label: "Ticket médio",
+                    bucket: "vendas" as CloserBucket,
+                    fmt: (i: CloserEntry[]) => i.length > 0 ? fmtBRL(fat(i) / i.length) : "—",
+                    cellClass: "text-right text-xs",
+                  },
+                  {
+                    label: "Taxa de conversão",
+                    bucket: "vendas" as CloserBucket,
+                    fmt: (vendas: CloserEntry[], realiz?: CloserEntry[]) => realiz && realiz.length > 0 ? fmtPct((vendas.length / realiz.length) * 100) : "—",
+                    cellClass: "text-right text-xs",
+                    needsRealiz: true as const,
+                  },
+                ];
+
+                return (
+                  <Card key={c.user.id} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-xl shadow-black/20">
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/15 text-emerald-300">
+                          <Trophy className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="text-base font-semibold">{c.user.name}</div>
+                          <div className="text-[11px] text-muted-foreground">Closer</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          type="button" variant="outline" size="sm"
+                          className="h-8 text-xs gap-1.5 bg-amber-500/10 border-amber-500/30 text-amber-200 hover:bg-amber-500/20"
+                          onClick={() => openDrill(c.user.name, "propostasAbertas", "Total", totals.propostasAbertas)}
+                        >
+                          Propostas em aberto <Badge variant="outline" className="bg-amber-500/20 text-amber-200 border-amber-500/40 ml-1">{totals.propostasAbertas.length}</Badge>
+                        </Button>
+                        <Button
+                          type="button" variant="outline" size="sm"
+                          className="h-8 text-xs gap-1.5 bg-rose-500/10 border-rose-500/30 text-rose-200 hover:bg-rose-500/20"
+                          onClick={() => openDrill(c.user.name, "propostasPerdidas", "Total", totals.propostasPerdidas)}
+                        >
+                          Propostas perdidas <Badge variant="outline" className="bg-rose-500/20 text-rose-200 border-rose-500/40 ml-1">{totals.propostasPerdidas.length}</Badge>
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-48">Métrica</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-right text-emerald-300">Lead A</TableHead>
+                          <TableHead className="text-right text-amber-300">Lead B</TableHead>
+                          <TableHead className="text-right text-blue-300">Lead C</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rows.map((row) => {
+                          const totalItems = totals[row.bucket];
+                          const realizTotal = totals.realizados;
+                          return (
+                            <TableRow key={row.label}>
+                              <TableCell className="text-xs text-muted-foreground">{row.label}</TableCell>
+                              <TableCell
+                                className={`${row.cellClass} ${colorMap.Total}`}
+                                onClick={() => row.cellClass.includes("cursor-pointer") && openDrill(c.user.name, row.bucket, "Total", totalItems)}
+                              >
+                                {row.needsRealiz ? row.fmt(totalItems, realizTotal) : row.fmt(totalItems)}
+                              </TableCell>
+                              {classKeys.map((k) => {
+                                const items = L[row.bucket][k];
+                                const realizK = L.realizados[k];
+                                return (
+                                  <TableCell
+                                    key={k}
+                                    className={`${row.cellClass} ${colorMap[k]}`}
+                                    onClick={() => row.cellClass.includes("cursor-pointer") && openDrill(c.user.name, row.bucket, k, items)}
+                                  >
+                                    {row.needsRealiz ? row.fmt(items, realizK) : row.fmt(items)}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </Card>
+                );
+              });
+            })()}
+
+            {/* Configuração de pipelines → classe (admin) */}
             {isAdmin && (
               <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
                 <div className="flex items-center gap-2 mb-1">
                   <Settings className="h-4 w-4 text-primary" />
-                  <div className="text-sm font-semibold">Configurar pipelines por classe</div>
+                  <div className="text-sm font-semibold">Configurar pipelines por classe (A/B/C)</div>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Escolha de quais pipelines do GHL extrair as propostas/vendas de cada classe. A mudança é aplicada na próxima atualização.
+                  Defina a classe de cada pipeline do GHL. Usada para segmentar as métricas dos closers.
                 </p>
                 {pipelinesList.length === 0 ? (
                   <div className="text-center py-6 text-xs text-muted-foreground">Atualize para carregar pipelines.</div>
@@ -694,10 +814,6 @@ export default function Comercial() {
                 )}
               </Card>
             )}
-
-            <p className="text-xs text-muted-foreground/70 mt-3">
-              Se não configurar manualmente, classifico pelo nome do pipeline (procuro "A", "B", "C").
-            </p>
           </TabsContent>
 
           {/* No-show por horário */}
