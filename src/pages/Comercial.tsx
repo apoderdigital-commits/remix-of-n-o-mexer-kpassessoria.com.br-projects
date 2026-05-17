@@ -35,8 +35,18 @@ interface Sdr {
 }
 interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; }
 interface ClassData { propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
+interface CloserEntry {
+  contactId?: string | null; oppId?: string; nome: string; email?: string; phone?: string;
+  startTime?: string; valor?: number; pipeline?: string | null;
+}
+type CloserBucket = "realizados" | "vendas" | "propostasAbertas" | "propostasPerdidas";
+interface Closer {
+  user: { id: string; name: string; email?: string };
+  lists: Record<CloserBucket, Record<"A"|"B"|"C"|"Outro", CloserEntry[]>>;
+}
 interface Fase2 {
   sdrs: Sdr[];
+  closers: Closer[];
   noShowByHour: Record<string, number>;
   mqlSummary: { total: number; agendados: number; naoAgendados: number; realizados: number; noshow: number };
   mqlsList: MqlRow[];
