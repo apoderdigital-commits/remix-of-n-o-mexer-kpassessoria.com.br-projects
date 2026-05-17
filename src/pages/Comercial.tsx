@@ -904,6 +904,26 @@ export default function Comercial() {
               <Badge variant="outline" className="ml-2">{drillDown?.items.length || 0}</Badge>
             </DialogTitle>
           </DialogHeader>
+          {drillDown && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 -mt-1">
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-blue-300/80">Agendados</div>
+                <div className="text-base font-bold text-blue-200">{fmtNum(drillDown.agendados)}</div>
+              </div>
+              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">Realizados</div>
+                <div className="text-base font-bold text-emerald-200">{fmtNum(drillDown.realizados)}</div>
+              </div>
+              <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-rose-300/80">No-show</div>
+                <div className="text-base font-bold text-rose-200">{fmtNum(drillDown.noshow)}</div>
+              </div>
+              <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-primary/80">Taxa ativação</div>
+                <div className="text-base font-bold text-primary">{drillDown.agendados > 0 ? fmtPct((drillDown.realizados / drillDown.agendados) * 100) : "—"}</div>
+              </div>
+            </div>
+          )}
           {drillDown && (() => {
             const groups: { key: ApptCategory; label: string; cls: string }[] = [
               { key: "MQL",   label: "MQLs",     cls: "border-cyan-500/40 text-cyan-200 bg-cyan-500/10" },
