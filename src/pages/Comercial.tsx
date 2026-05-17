@@ -277,38 +277,98 @@ export default function Comercial() {
                 <TabsTrigger value="trend" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Histórico</TabsTrigger>
                 <TabsTrigger value="followups" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Follow-ups</TabsTrigger>
                 <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="config" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all gap-1.5">
+                    <Settings className="h-3.5 w-3.5" /> Config
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
             {/* KPIs */}
-            <TabsContent value="kpis">
-              {kpis ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {cards.map((c) => (
-                    <Card
-                      key={c.label}
-                      className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
-                    >
-                      <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
-                      <div className="relative flex items-center justify-between mb-3">
-                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
-                          <c.icon className="h-4 w-4" />
-                        </div>
+            <TabsContent value="kpis" className="space-y-5">
+              {kpis && fase2 ? (
+                <>
+                  {/* Funil principal */}
+                  <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
+                    <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+                    <div className="relative flex items-center justify-between mb-5">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
+                        <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
                       </div>
-                      <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
-                      <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
-                    </Card>
-                  ))}
-                </div>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
+                    </div>
+                    <div className="relative space-y-2.5">
+                      {funnelStages.map((s, i) => {
+                        const width = Math.max(28, 100 - i * 11);
+                        return (
+                          <div key={s.label} className="flex items-center gap-3">
+                            <div className="w-44 shrink-0 flex items-center gap-2.5">
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.iconBg}`}>
+                                <s.icon className="h-4 w-4" />
+                              </div>
+                              <div className="text-xs font-medium text-foreground/90 leading-tight">{s.label}</div>
+                            </div>
+                            <div className="flex-1">
+                              <div
+                                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-4 transition-all duration-700 ease-out`}
+                                style={{ width: `${width}%` }}
+                              >
+                                <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
+                                  {s.isRate ? fmtPct(s.pctTotal) : fmtNum(s.count || 0)}
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-white/95">
+                                  {!s.isRate && (
+                                    <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                      {fmtPct(s.pctTotal)} do topo
+                                    </span>
+                                  )}
+                                  {s.pctPrev != null && !s.isRate && i > 0 && (
+                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                      ↓ {fmtPct(s.pctPrev)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  {/* Indicadores financeiros (quadrados) */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {cards.map((c) => (
+                      <Card
+                        key={c.label}
+                        className={`group relative overflow-hidden p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ${c.ring}`}
+                      >
+                        <div className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${c.glow} to-transparent blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
+                        <div className="relative flex items-center justify-between mb-3">
+                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${c.iconBg}`}>
+                            <c.icon className="h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="relative text-[11px] uppercase tracking-wider text-muted-foreground leading-tight">{c.label}</div>
+                        <div className="relative text-2xl font-bold mt-1.5 tracking-tight">{c.value}</div>
+                      </Card>
+                    ))}
+                  </div>
+                </>
               ) : loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
-                      <Skeleton className="h-9 w-9 rounded-xl mb-3" />
-                      <Skeleton className="h-3 w-24 mb-2" />
-                      <Skeleton className="h-7 w-20" />
-                    </Card>
-                  ))}
+                <div className="space-y-5">
+                  <Skeleton className="h-96 w-full rounded-2xl" />
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Card key={i} className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                        <Skeleton className="h-9 w-9 rounded-xl mb-3" />
+                        <Skeleton className="h-3 w-24 mb-2" />
+                        <Skeleton className="h-7 w-20" />
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">
