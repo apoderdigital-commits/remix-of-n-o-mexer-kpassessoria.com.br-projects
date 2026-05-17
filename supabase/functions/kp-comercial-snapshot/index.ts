@@ -469,6 +469,8 @@ async function buildSnapshot(since: Date, until: Date) {
     noShowByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
+    nonMqlsList: nonMqlsList.slice(0, 500),
+    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name })),
     classes,
     aggregateFunnel,
     pipelineFunnels,
