@@ -40,6 +40,7 @@ interface Fase2 {
   noShowByHour: Record<string, number>;
   mqlSummary: { total: number; agendados: number; naoAgendados: number; realizados: number; noshow: number };
   mqlsList: MqlRow[];
+  nonMqlsList: MqlRow[];
   classes: Record<"A" | "B" | "C" | "Outro", ClassData>;
 }
 interface PipelineFunnel { id: string; name: string; stages: { id: string; name: string; count: number; value: number }[]; won: number; lost: number; openValue: number; }
