@@ -457,7 +457,7 @@ export default function Comercial() {
                   <div className="text-sm font-semibold flex items-center gap-2">
                     <Target className="h-4 w-4 text-cyan-300" /> Visão geral de leads no período
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-cyan-500/10 border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20"
                       onClick={() => setMqlListOpen("mql")}>
                       Ver lista de MQLs ({fmtNum(fase2.mqlSummary.total)})
@@ -466,6 +466,12 @@ export default function Comercial() {
                       onClick={() => setMqlListOpen("nonmql")}>
                       Ver lista de não-MQLs ({fmtNum(fase2.nonMqlsList.length)})
                     </Button>
+                    {fase3 && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-rose-500/10 border-rose-500/30 text-rose-200 hover:bg-rose-500/20"
+                        onClick={() => setSemAgendOpen(true)}>
+                        <AlertTriangle className="h-3 w-3" /> MQLs sem agendamento ({fmtNum(fase3.followUps.mqlsSemAgendamento.length)})
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
