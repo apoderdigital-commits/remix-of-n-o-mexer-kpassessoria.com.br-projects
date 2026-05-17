@@ -95,6 +95,8 @@ export default function Comercial() {
   const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([]);
   const [pipelineCfg, setPipelineCfg] = useState<Record<string, { classe?: string | null; kind?: string | null }>>({});
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
+  const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
+  const [semAgendOpen, setSemAgendOpen] = useState(false);
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
