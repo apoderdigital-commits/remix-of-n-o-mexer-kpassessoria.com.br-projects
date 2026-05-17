@@ -123,11 +123,22 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const { data, error } = await supabase.from("kp_comercial_user_roles").select("*");
-    if (error) { console.error(error); return; }
-    const map: Record<string, UserRoleRow> = {};
-    for (const r of (data || []) as any[]) map[r.ghl_user_id] = r;
-    setUserRoles(map);
+    const [rolesRes, goalsRes] = await Promise.all([
+      supabase.from("kp_comercial_user_roles").select("*"),
+      supabase.from("kp_comercial_sdr_goals").select("*"),
+    ]);
+    if (rolesRes.data) {
+      const map: Record<string, UserRoleRow> = {};
+      for (const r of rolesRes.data as any[]) map[r.ghl_user_id] = r;
+      setUserRoles(map);
+    }
+    if (goalsRes.data) {
+      const map: SdrGoals = {};
+      for (const g of goalsRes.data as any[]) {
+        map[g.ghl_user_id] = { agendados: g.agendados || 0, realizados: g.realizados || 0, vendas: g.vendas || 0 };
+      }
+      setGoals(map);
+    }
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -140,9 +151,18 @@ export default function Comercial() {
 
   useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
 
-  const updateGoal = (sdrId: string, key: "agendados" | "realizados" | "vendas", val: number) => {
-    const next = { ...goals, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...goals[sdrId], [key]: val } };
-    setGoals(next); saveGoals(next);
+  const updateGoalLocal = (sdrId: string, key: keyof SdrGoal, val: number) => {
+    setGoals((g) => ({ ...g, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...g[sdrId], [key]: val } }));
+  };
+
+  const persistGoal = async (sdrId: string) => {
+    const g = goals[sdrId] || { agendados: 0, realizados: 0, vendas: 0 };
+    const { error } = await supabase.from("kp_comercial_sdr_goals").upsert(
+      { ghl_user_id: sdrId, agendados: g.agendados || 0, realizados: g.realizados || 0, vendas: g.vendas || 0 },
+      { onConflict: "ghl_user_id" }
+    );
+    if (error) toast.error("Erro ao salvar meta: " + error.message);
+    else toast.success("Meta salva");
   };
 
   const sdrRanking = useMemo(() => {
