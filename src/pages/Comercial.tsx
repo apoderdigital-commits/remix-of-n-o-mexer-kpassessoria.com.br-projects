@@ -160,17 +160,31 @@ export default function Comercial() {
     { label: "Este mês", apply: () => { setSince(startOfMonth()); setUntil(todayIso()); } },
   ];
 
+  // Funil principal: Leads → MQLs → Reuniões → Comparecidas → Vendas (taxa ativação = MQLs/Leads exibida no estágio MQL)
+  const funnelStages = kpis && fase2 ? (() => {
+    const leads = kpis.leadsTotais;
+    const mqls = kpis.mqls;
+    const marc = fase2.mqlSummary.agendados;
+    const comp = fase2.mqlSummary.realizados;
+    const vend = kpis.vendas;
+    const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
+    return [
+      { icon: Users,          label: "Leads Totais",       count: leads, pctTotal: 100,                    pctPrev: null,                       grad: "from-blue-500/80 to-blue-600/40",     iconBg: "bg-blue-500/20 text-blue-200" },
+      { icon: Target,         label: "MQLs",               count: mqls,  pctTotal: pct(mqls, leads),       pctPrev: pct(mqls, leads),           grad: "from-cyan-500/80 to-cyan-600/40",     iconBg: "bg-cyan-500/20 text-cyan-200" },
+      { icon: Percent,        label: "Taxa Ativação MQL",  count: null,  pctTotal: kpis.taxaAtivacaoMql,   pctPrev: null, isRate: true,         grad: "from-teal-500/80 to-teal-600/40",     iconBg: "bg-teal-500/20 text-teal-200" },
+      { icon: CalendarClock,  label: "Reuniões Marcadas",  count: marc,  pctTotal: pct(marc, leads),       pctPrev: pct(marc, mqls),            grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
+      { icon: CalendarCheck2, label: "Comparecidas",       count: comp,  pctTotal: pct(comp, leads),       pctPrev: pct(comp, marc),            grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
+      { icon: CheckCircle2,   label: "Vendas",             count: vend,  pctTotal: pct(vend, leads),       pctPrev: pct(vend, comp),            grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
+    ];
+  })() : [];
+
   const cards = kpis ? [
-    { icon: Users,        label: "Leads Totais",        value: fmtNum(kpis.leadsTotais),     accent: "blue",     ring: "ring-blue-500/20",     iconBg: "bg-blue-500/15 text-blue-300",          glow: "from-blue-500/20" },
-    { icon: Target,       label: "Leads MQL",           value: fmtNum(kpis.mqls),            accent: "cyan",     ring: "ring-cyan-500/20",     iconBg: "bg-cyan-500/15 text-cyan-300",          glow: "from-cyan-500/20" },
-    { icon: Percent,      label: "Taxa Ativação MQL",   value: fmtPct(kpis.taxaAtivacaoMql), accent: "teal",     ring: "ring-teal-500/20",     iconBg: "bg-teal-500/15 text-teal-300",          glow: "from-teal-500/20" },
-    { icon: ShoppingCart, label: "Vendas",              value: fmtNum(kpis.vendas),          accent: "emerald",  ring: "ring-emerald-500/20",  iconBg: "bg-emerald-500/15 text-emerald-300",    glow: "from-emerald-500/20" },
-    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     accent: "amber",    ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
-    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     accent: "yellow",   ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
-    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    accent: "fuchsia",  ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
-    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             accent: "rose",     ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
-    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", accent: "purple", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
-    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         accent: "primary",  ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
+    { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
+    { icon: Wallet,       label: "Faturamento",         value: fmtBRL(kpis.faturamento),     ring: "ring-yellow-500/20",   iconBg: "bg-yellow-500/15 text-yellow-300",      glow: "from-yellow-500/20" },
+    { icon: TrendingUp,   label: "Investimento Tráfego",value: fmtBRL(kpis.investimento),    ring: "ring-fuchsia-500/20",  iconBg: "bg-fuchsia-500/15 text-fuchsia-300",    glow: "from-fuchsia-500/20" },
+    { icon: Trophy,       label: "CAC",                 value: fmtBRL(kpis.cac),             ring: "ring-rose-500/20",     iconBg: "bg-rose-500/15 text-rose-300",          glow: "from-rose-500/20" },
+    { icon: TrendingUp,   label: "ROAS",                value: kpis.roas > 0 ? `${kpis.roas.toFixed(2)}x` : "—", ring: "ring-purple-500/20", iconBg: "bg-purple-500/15 text-purple-300", glow: "from-purple-500/20" },
+    { icon: Percent,      label: "Win Rate",            value: fmtPct(kpis.winRate),         ring: "ring-primary/20",      iconBg: "bg-primary/15 text-primary",            glow: "from-primary/20" },
   ] : [];
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
