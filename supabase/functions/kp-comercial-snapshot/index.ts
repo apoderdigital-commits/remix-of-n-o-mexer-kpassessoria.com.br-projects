@@ -382,6 +382,7 @@ async function buildSnapshot(since: Date, until: Date) {
   return {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
+    users,
     sdrs,
     noShowByHour,
     mqlSummary,
