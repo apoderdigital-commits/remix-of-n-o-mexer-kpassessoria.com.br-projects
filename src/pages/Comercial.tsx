@@ -129,9 +129,10 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
+      supabase.from("kp_comercial_pipeline_config").select("*"),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -145,6 +146,11 @@ export default function Comercial() {
       }
       setGoals(map);
     }
+    if (pipeRes.data) {
+      const map: Record<string, { classe?: string | null; kind?: string | null }> = {};
+      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = { classe: r.classe, kind: r.kind };
+      setPipelineCfg(map);
+    }
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -153,6 +159,22 @@ export default function Comercial() {
     if (error) { toast.error("Erro ao salvar: " + error.message); return; }
     setUserRoles((p) => ({ ...p, [u.id]: { ...payload, name: u.name, email: u.email || null } as UserRoleRow }));
     toast.success(`${u.name}: ${role.toUpperCase()}`);
+  };
+
+  const setPipelineClasse = async (pipeline: { id: string; name: string }, classe: string | null) => {
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, classe };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], classe } }));
+    toast.success(`${pipeline.name}: ${classe || "—"}`);
+  };
+
+  const setPipelineKind = async (pipeline: { id: string; name: string }, kind: string | null) => {
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, kind };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], kind } }));
+    toast.success(`${pipeline.name}: ${kind || "—"}`);
   };
 
   useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
