@@ -97,6 +97,7 @@ export default function UsersPage() {
     password: "",
     fullName: "",
     role: "manager" as string,
+    squadFunction: "" as string,
     dashboards: [] as string[],
     clientIds: [] as string[],
     phone: "",
