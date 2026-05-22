@@ -135,6 +135,28 @@ export default function Portal() {
 
               <div className="grid gap-3">
                 {showSquadCard && (
+                  <Link to="/tarefas" className="group">
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-violet-500/30 hover:border-violet-500/50 bg-gradient-to-r from-violet-500/20 to-violet-500/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/10">
+                      <div className="flex items-center sm:items-start gap-3 sm:gap-4">
+                        <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+                          <ListChecks className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">Plataforma de Tarefas</h2>
+                            <span className="text-[10px] uppercase font-semibold text-violet-300/80 bg-violet-500/10 px-1.5 py-0.5 rounded">Interno</span>
+                          </div>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">Gestão de tarefas por cliente, função e cadência — estilo ClickUp.</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-violet-300 group-hover:gap-2.5 transition-all">
+                          Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                {showSquadCard && (
                   <Link to="/squad" className="group">
                     <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-emerald-500/30 hover:border-emerald-500/50 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/10">
                       <div className="flex items-center sm:items-start gap-3 sm:gap-4">
