@@ -21,6 +21,12 @@ const DASHBOARDS = [
   { key: "projecao", label: "Funil de Projeção de Vendas" },
 ];
 
+const SQUAD_FUNCTIONS = [
+  { key: "gestor_trafego", label: "Gestor de Tráfego" },
+  { key: "head", label: "Head" },
+  { key: "especialista_projetos", label: "Especialista de Projetos" },
+];
+
 const EMAIL_DOMAIN = "@kp.local";
 
 interface UserRow {
@@ -29,6 +35,7 @@ interface UserRow {
   full_name: string | null;
   phone: string | null;
   role: string;
+  squad_function: string | null;
   dashboards: string[];
   clients: { id: string; name: string }[];
   deleted_at?: string | null;
