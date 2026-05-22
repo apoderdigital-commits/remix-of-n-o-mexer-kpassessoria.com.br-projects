@@ -71,6 +71,7 @@ export default function UsersPage() {
         full_name: p.full_name,
         phone: p.phone || null,
         role,
+        squad_function: (p as any).squad_function || null,
         dashboards: userDash,
         clients: userClients,
         deleted_at: p.deleted_at || null,
