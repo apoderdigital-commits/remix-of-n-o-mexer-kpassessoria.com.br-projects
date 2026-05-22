@@ -1,99 +1,107 @@
-# Portal Squad CS — Dashboard interna dos colaboradores
 
-Migrar a planilha "Dashboard CS KP Agency" para dentro do Lovable, com isolamento por **squad**: cada colaborador só enxerga os clientes do(s) squad(s) ao qual o admin o associou. Vamos por fases para não quebrar nada.
+# Plataforma de Tarefas (estilo ClickUp)
 
----
+Nova página `/tarefas` para gestão de tarefas dos squads, organizada por cliente → lista → tarefa, com responsáveis vinculados às funções dos usuários.
 
-## Modelo de acesso
-
-- Nova role: **`collaborator`** (admin/manager seguem como hoje).
-- Novas tabelas:
-  - `squads` — cada planilha vira 1 squad (nome, cor, descrição).
-  - `squad_members` — relação `user_id ↔ squad_id` (admin define).
-  - Cada cliente/registro do squad pertence a 1 squad → RLS filtra por squad do usuário.
-- Admin: vê tudo e gerencia squads e membros.
-- Colaborador: vê só os squads em que foi adicionado.
-- **Não mistura** com a base de "Clientes" da dash de Criativos — é um banco separado (tabelas `squad_*`).
-
-## Onde aparece
-
-- Novo card **"Dash do Squad"** na home (`/`), posicionado **acima** do "Dashboard de Criativos".
-- Visível só para `admin`, `manager` e `collaborator`. Cliente final nunca vê.
-- Rota: `/squad`.
-
----
-
-## Fase 1 — Fundação + Dados Clientes (começar por aqui)
-
-**Backend**
-- Adicionar role `collaborator` ao enum.
-- Tabelas: `squads`, `squad_members`, `squad_clients`.
-- `squad_clients` (campos da aba "Dados Clientes"): cliente, nicho, serviços (CRM/TP/COM), data entrada, data vencimento, dias para vencer (calculado), renovação 60d, curva ABC, sprint, priorização, BM verificada, valor investido TP, observações.
-- RLS:
-  - Admin: tudo.
-  - Colaborador/manager: só linhas cujo `squad_id` está em `squad_members` do usuário.
-- Função `user_squads()` (security definer) para evitar recursão.
-
-**Frontend**
-- Card novo na home (acima do card de Criativos), só para equipe interna.
-- Página `/squad`: seletor de squad → tabela de clientes editável (CRUD).
-- Página admin `/squad/admin`: criar squads, adicionar/remover membros.
-
-**Importação**
-- Importo a aba "Dados Clientes" da planilha como squad inicial **"Squad CS KP"**. ~200 clientes preenchidos.
-
-## Fase 2 — Métricas CS mensais + Motivo de Churn
-- Tabela `squad_monthly_metrics` (mês, ativos, fora da meta, churn, entradas, renovação, motivo, qtde mensais, % calls, upsell, LT).
-- Tabela `squad_churn` (cliente, mês entrada, mês churn, motivo, meses vigentes).
-- Telas de visualização + edição mensal.
-- Importo histórico existente.
-
-## Fase 3 — NPS + Engajamento mensal
-- Tabela `squad_nps` (período, clientes, respostas, detratores/neutros/promotores, NPS, engajamento médio).
-- Tabela `squad_engagement` (mês, cliente, ponto de contato, curva, sprint, nota engajamento 1-5, NPS, observação).
-- Importo as 4 abas mensais existentes (JAN/FEV/MAR/ABRIL 2026).
-
-## Fase 4 — Agenda mensal de consultoria
-- Tabela `squad_agenda` (mês, categoria, cliente, responsável, data reunião, horário, realizada).
-- Tela de calendário/lista por mês.
-- Importo as 4 agendas mensais existentes.
-
----
-
-## Detalhes técnicos (resumo)
+## Estrutura conceitual
 
 ```
-squads (id, name, color, description, created_at)
-squad_members (id, squad_id, user_id, added_by, created_at)  UNIQUE(squad_id,user_id)
-squad_clients (id, squad_id, name, niche, services, entry_date, due_date,
-               renewal_60d, curve_abc, sprint, prioritization, bm_verified,
-               invested_tp, observations, created_at, updated_at)
-squad_monthly_metrics (id, squad_id, month, ...)
-squad_churn (id, squad_id, client_name, entry_month, churn_month, reason, ...)
-squad_nps (id, squad_id, period, ...)
-squad_engagement (id, squad_id, month, client_name, contact, ...)
-squad_agenda (id, squad_id, month, category, client_name, responsible, meeting_date, time, done)
+Cliente (pasta — vem de squad_clients)
+ └─ Lista (8 fixas)
+     ├─ Jornada Inicial          (única)
+     ├─ Gestor de Tráfego Sem.   (semanal)
+     ├─ Gestor de Tráfego Mensal (mensal)
+     ├─ Head Semanal             (semanal)
+     ├─ Head Mensal              (mensal)
+     ├─ Ex. de Projetos Sem.     (semanal)
+     ├─ Ex. de Projetos Mensal   (mensal)
+     └─ Melhoria Contínua        (avulso)
+        └─ Tarefa (título, responsável, prioridade, vencimento, status)
 ```
 
-Helper SQL:
+As 8 listas são **fixas no código** (não viram tabela) — cada tarefa apenas guarda a chave da lista. Isso garante padronização entre clientes.
+
+## Fase 1 — escopo entregue agora
+
+1. **Cadastro de função do usuário** (tela Usuários)
+   - Novo campo "Função no squad": `gestor_trafego` | `head` | `especialista_projetos` | `sem_funcao`.
+   - Mudou ali → reflete como responsável-padrão em todos os clientes.
+2. **Override por cliente** (tela do cliente, área admin)
+   - Admin pode trocar quem é o Gestor/Head/Especialista naquele cliente específico, sem mexer no global.
+3. **Página `/tarefas`**
+   - Sidebar esquerda: lista de clientes do squad (busca + contador de tarefas abertas).
+   - Conteúdo: 8 listas em accordion/colunas, cada uma com contador (abertas/total) e botão "+ Nova tarefa".
+   - Linha de tarefa: checkbox status, título editável, badge de prioridade, data de vencimento, avatar do responsável.
+   - Filtros no topo: minhas tarefas / todas, status, prioridade.
+4. **CRUD de tarefa** via dialog: título, descrição, lista, responsável (default = quem tem a função daquela lista no cliente), prioridade, vencimento, status.
+5. **Acesso**
+   - Admin: vê e edita tudo.
+   - Colaborador: vê todos os clientes do(s) seu(s) squad(s), mas só edita/conclui tarefas **atribuídas a ele**. Pode criar tarefas em "Melhoria Contínua".
+
+**Fora da Fase 1** (fica para depois, conforme você validou):
+- Templates por função/cadência + recorrência automática.
+- Visões "Minhas tarefas" e "Por cadência" como páginas próprias (na Fase 1 só o filtro "minhas" dentro do cliente).
+- Comentários, anexos, subtarefas.
+
+## Detalhes técnicos
+
+### Banco (migration)
+
 ```sql
-create function user_in_squad(_sid uuid) returns boolean
-language sql stable security definer set search_path=public as $$
-  select has_role(auth.uid(),'admin')
-      or exists(select 1 from squad_members where squad_id=_sid and user_id=auth.uid())
-$$;
+-- Função do colaborador no squad (1 por usuário)
+alter table profiles add column squad_function text;
+  -- valores: 'gestor_trafego' | 'head' | 'especialista_projetos' | null
+
+-- Override por cliente (opcional)
+create table squad_client_assignments (
+  id uuid pk,
+  squad_client_id uuid not null,   -- FK squad_clients.id
+  function text not null,          -- gestor_trafego | head | especialista_projetos
+  user_id uuid not null,           -- auth.users.id
+  unique(squad_client_id, function)
+);
+
+-- Tarefas
+create table squad_tasks (
+  id uuid pk,
+  squad_client_id uuid not null,   -- FK squad_clients.id
+  list_key text not null,          -- 'jornada_inicial' | 'gt_semanal' | 'gt_mensal'
+                                   --  'head_semanal' | 'head_mensal'
+                                   --  'ep_semanal' | 'ep_mensal' | 'melhoria_continua'
+  title text not null,
+  description text,
+  assignee_id uuid,                -- auth.users.id (resolvido na criação)
+  priority text default 'normal',  -- urgent | high | normal | low
+  status text default 'todo',      -- todo | doing | done
+  due_date date,
+  created_by uuid,
+  created_at, updated_at, completed_at
+);
+create index on squad_tasks(squad_client_id, list_key, status);
 ```
 
-RLS padrão em todas as tabelas `squad_*`: `USING (user_in_squad(squad_id))`. Admin tem policy ALL separada.
+RLS:
+- `squad_tasks` SELECT: admin OR `user_in_squad(squad_client → squad_id)`.
+- UPDATE/DELETE: admin OR `assignee_id = auth.uid()` OR criador.
+- INSERT: admin OR membro do squad (sempre setando `created_by = auth.uid()`).
+- `squad_client_assignments`: admin gerencia; membros do squad leem.
+- `profiles.squad_function`: admin atualiza qualquer; usuário lê o próprio (já coberto).
 
----
+### Frontend
 
-## O que vou entregar no próximo passo (Fase 1)
+- Rota nova `/tarefas` em `src/App.tsx` (ProtectedRoute, sem `adminOnly` — qualquer usuário logado entra; quem não tem squad vê estado vazio).
+- Card novo no Portal "Tarefas do Squad" acima do "Painel Comercial KP".
+- Páginas/arquivos:
+  - `src/pages/Tarefas.tsx` — layout sidebar de clientes + listas.
+  - `src/components/tarefas/ClientSidebar.tsx`
+  - `src/components/tarefas/TaskList.tsx` (uma das 8 listas)
+  - `src/components/tarefas/TaskRow.tsx`
+  - `src/components/tarefas/TaskDialog.tsx` (criar/editar)
+  - `src/components/tarefas/ClientAssignmentsCard.tsx` (admin, override por cliente)
+- Em `src/pages/UsersPage.tsx`: adicionar seletor de "Função no squad" por usuário.
+- Resolver responsável padrão: `assignment override` do cliente, senão primeiro `profiles.squad_function = X` do squad daquele cliente.
+- Mantém tema dark glassmorphism + roxo já existente (semantic tokens do `index.css`).
 
-1. Migration: role `collaborator`, tabelas `squads`, `squad_members`, `squad_clients` + RLS.
-2. Card "Dash do Squad" na home (acima do card de Criativos), visível só para equipe.
-3. Página `/squad` com seletor de squad e tabela CRUD de clientes.
-4. Página `/squad/admin` para admin criar squads e atribuir colaboradores.
-5. Import inicial: squad "CS KP" + ~200 clientes da aba "Dados Clientes".
+## Próximo passo
 
-Fases 2/3/4 só depois que a Fase 1 estiver validada por você.
+Aprova esse plano que eu já parto para a migration + UI.

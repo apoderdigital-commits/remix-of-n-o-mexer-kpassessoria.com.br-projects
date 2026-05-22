@@ -21,6 +21,12 @@ const DASHBOARDS = [
   { key: "projecao", label: "Funil de Projeção de Vendas" },
 ];
 
+const SQUAD_FUNCTIONS = [
+  { key: "gestor_trafego", label: "Gestor de Tráfego" },
+  { key: "head", label: "Head" },
+  { key: "especialista_projetos", label: "Especialista de Projetos" },
+];
+
 const EMAIL_DOMAIN = "@kp.local";
 
 interface UserRow {
@@ -29,6 +35,7 @@ interface UserRow {
   full_name: string | null;
   phone: string | null;
   role: string;
+  squad_function: string | null;
   dashboards: string[];
   clients: { id: string; name: string }[];
   deleted_at?: string | null;
@@ -64,6 +71,7 @@ export default function UsersPage() {
         full_name: p.full_name,
         phone: p.phone || null,
         role,
+        squad_function: (p as any).squad_function || null,
         dashboards: userDash,
         clients: userClients,
         deleted_at: p.deleted_at || null,
@@ -89,6 +97,7 @@ export default function UsersPage() {
     password: "",
     fullName: "",
     role: "manager" as string,
+    squadFunction: "" as string,
     dashboards: [] as string[],
     clientIds: [] as string[],
     phone: "",
@@ -114,7 +123,7 @@ export default function UsersPage() {
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
+    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
   };
 
@@ -128,6 +137,7 @@ export default function UsersPage() {
       password: "",
       fullName: u.full_name || "",
       role: u.role,
+      squadFunction: u.squad_function || "",
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
       phone: u.phone || "",
@@ -182,10 +192,11 @@ export default function UsersPage() {
         await supabase.from("user_roles").delete().eq("user_id", editingUserId);
         await supabase.from("user_roles").insert({ user_id: editingUserId, role: form.role as any });
 
-        if (form.fullName || form.phone) {
+        {
           const profileUpdate: any = {};
           if (form.fullName) profileUpdate.full_name = form.fullName;
           profileUpdate.phone = form.phone.trim() || null;
+          profileUpdate.squad_function = form.squadFunction || null;
           await supabase.from("profiles").update(profileUpdate).eq("user_id", editingUserId);
         }
 
@@ -382,6 +393,28 @@ export default function UsersPage() {
                 Número com código do país (55) + DDD + número. Usado para enviar links de criativos via WhatsApp.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <Label>Função no Squad (Plataforma de Tarefas)</Label>
+              <Select
+                value={form.squadFunction || "none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, squadFunction: v === "none" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem função</SelectItem>
+                  {SQUAD_FUNCTIONS.map((sf) => (
+                    <SelectItem key={sf.key} value={sf.key}>{sf.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Define o responsável padrão pelas tarefas dessa função em todos os clientes. Salva apenas em modo de edição.
+              </p>
+            </div>
+
 
             {/* Dashboard access */}
             <div className="space-y-3">
