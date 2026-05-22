@@ -137,6 +137,7 @@ export default function UsersPage() {
       password: "",
       fullName: u.full_name || "",
       role: u.role,
+      squadFunction: u.squad_function || "",
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
       phone: u.phone || "",
