@@ -123,7 +123,7 @@ export default function UsersPage() {
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", dashboards: [], clientIds: [], phone: "" });
+    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "" });
     setEditingUserId(null);
   };
 
