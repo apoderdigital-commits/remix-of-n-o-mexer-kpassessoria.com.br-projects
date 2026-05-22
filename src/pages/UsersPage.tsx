@@ -394,6 +394,28 @@ export default function UsersPage() {
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label>Função no Squad (Plataforma de Tarefas)</Label>
+              <Select
+                value={form.squadFunction || "none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, squadFunction: v === "none" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem função</SelectItem>
+                  {SQUAD_FUNCTIONS.map((sf) => (
+                    <SelectItem key={sf.key} value={sf.key}>{sf.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Define o responsável padrão pelas tarefas dessa função em todos os clientes. Salva apenas em modo de edição.
+              </p>
+            </div>
+
+
             {/* Dashboard access */}
             <div className="space-y-3">
               <Label>Acesso a Dashboards</Label>
