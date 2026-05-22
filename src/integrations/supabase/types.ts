@@ -379,6 +379,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          squad_function: string | null
           updated_at: string
           user_id: string
         }
@@ -389,6 +390,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          squad_function?: string | null
           updated_at?: string
           user_id: string
         }
@@ -399,6 +401,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          squad_function?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -599,6 +602,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      squad_client_assignments: {
+        Row: {
+          created_at: string
+          function: string
+          id: string
+          squad_client_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          function: string
+          id?: string
+          squad_client_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          function?: string
+          id?: string
+          squad_client_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_client_assignments_squad_client_id_fkey"
+            columns: ["squad_client_id"]
+            isOneToOne: false
+            referencedRelation: "squad_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       squad_clients: {
         Row: {
@@ -1085,6 +1123,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      squad_tasks: {
+        Row: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          list_key: string
+          priority: string
+          squad_client_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_key: string
+          priority?: string
+          squad_client_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_key?: string
+          priority?: string
+          squad_client_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_tasks_squad_client_id_fkey"
+            columns: ["squad_client_id"]
+            isOneToOne: false
+            referencedRelation: "squad_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       squads: {
         Row: {
