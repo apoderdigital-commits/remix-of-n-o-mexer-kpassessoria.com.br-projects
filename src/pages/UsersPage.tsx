@@ -192,10 +192,11 @@ export default function UsersPage() {
         await supabase.from("user_roles").delete().eq("user_id", editingUserId);
         await supabase.from("user_roles").insert({ user_id: editingUserId, role: form.role as any });
 
-        if (form.fullName || form.phone) {
+        {
           const profileUpdate: any = {};
           if (form.fullName) profileUpdate.full_name = form.fullName;
           profileUpdate.phone = form.phone.trim() || null;
+          profileUpdate.squad_function = form.squadFunction || null;
           await supabase.from("profiles").update(profileUpdate).eq("user_id", editingUserId);
         }
 
