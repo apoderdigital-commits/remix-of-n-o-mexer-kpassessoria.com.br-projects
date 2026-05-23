@@ -449,17 +449,23 @@ async function buildSnapshot(since: Date, until: Date) {
       valor: Number(o.monetaryValue || 0),
       pipeline: o._pipelineName,
     };
-    if (status === "won") c.lists.vendas[cls].push(entry);
-    // Identifica stage para classificar proposta enviada x perdida via nome
+    if (status === "won" || (hasStageMappings && mappedStages.vendida.has(o.pipelineStageId))) c.lists.vendas[cls].push(entry);
+    // Classifica proposta enviada/perdida: prioriza mapeamento explícito
+    const stageId = o.pipelineStageId;
     const stageName = (pipelines.find((p: any) => p.id === o._pipelineId)
-      ?.stages?.find((s: any) => s.id === o.pipelineStageId)?.name || "").toLowerCase();
-    const isStageEnviada = /enviad/.test(stageName) && /proposta|proposal/.test(stageName);
-    const isStagePerdida = /perdid/.test(stageName) && /proposta|proposal/.test(stageName);
-    if (isStagePerdida || (proposalStageIdsAll.has(o.pipelineStageId) && status === "lost")) {
+      ?.stages?.find((s: any) => s.id === stageId)?.name || "").toLowerCase();
+    const isStageEnviada = hasStageMappings
+      ? mappedStages.proposta_enviada.has(stageId)
+      : (/enviad/.test(stageName) && /proposta|proposal/.test(stageName));
+    const isStagePerdida = hasStageMappings
+      ? mappedStages.proposta_perdida.has(stageId)
+      : (/perdid/.test(stageName) && /proposta|proposal/.test(stageName));
+    if (isStagePerdida || (!hasStageMappings && proposalStageIdsAll.has(stageId) && status === "lost")) {
       c.lists.propostasPerdidas[cls].push(entry);
-    } else if (isStageEnviada || (proposalStageIdsAll.has(o.pipelineStageId) && status !== "won")) {
+    } else if (isStageEnviada || (!hasStageMappings && proposalStageIdsAll.has(stageId) && status !== "won")) {
       c.lists.propostasAbertas[cls].push(entry);
     }
+
   }
   const closers = Array.from(closerMap.values());
 
