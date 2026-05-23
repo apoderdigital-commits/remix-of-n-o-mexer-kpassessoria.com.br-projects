@@ -113,7 +113,7 @@ export default function Comercial() {
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
       nonMqlsList: payload.nonMqlsList || [],
-      classes: payload.classes || { A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
+      classes: payload.classes || { A: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
     });
     setFase3({
       aggregateFunnel: payload.aggregateFunnel || [],
