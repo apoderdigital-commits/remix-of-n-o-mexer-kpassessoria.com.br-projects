@@ -94,12 +94,15 @@ export default function Comercial() {
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
-  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([]);
-  const [pipelineCfg, setPipelineCfg] = useState<Record<string, { classe?: string | null; kind?: string | null }>>({});
+  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string; stages?: { id: string; name: string }[] }[]>([]);
+  const [pipelineCfg, setPipelineCfg] = useState<Record<string, any>>({});
+  const [dataSources, setDataSources] = useState<any>(null);
+  const [dsCounts, setDsCounts] = useState<any>(null);
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
   const [semAgendOpen, setSemAgendOpen] = useState(false);
   const [mqlFilterOpen, setMqlFilterOpen] = useState<null | { title: string; rows: MqlRow[] }>(null);
+
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
