@@ -109,6 +109,7 @@ export default function Comercial() {
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
       noShowByHour: payload.noShowByHour || {},
+      agendadosByHour: payload.agendadosByHour || {},
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
       nonMqlsList: payload.nonMqlsList || [],
