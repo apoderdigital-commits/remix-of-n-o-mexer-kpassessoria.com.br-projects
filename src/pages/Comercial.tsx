@@ -27,14 +27,15 @@ interface Kpis {
   investimento: number; cac: number; roas: number; metaError?: string | null;
 }
 type ApptCategory = "MQL" | "A" | "B" | "C" | "Outro";
-interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory }
+interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory; sdrName?: string }
 interface Sdr {
   user: { id: string; name: string; email?: string };
   agendados: number; realizados: number; noshow: number; cancelados: number;
+  vendas?: Record<"A"|"B"|"C"|"Outro", number>;
   lists?: { agendado: ApptEntry[]; realizado: ApptEntry[]; noshow: ApptEntry[]; cancelado: ApptEntry[] };
 }
-interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; }
-interface ClassData { propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
+interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; sdrName?: string | null; categoria?: ApptCategory; }
+interface ClassData { leads: number; propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
 interface CloserEntry {
   contactId?: string | null; oppId?: string; nome: string; email?: string; phone?: string;
   startTime?: string; valor?: number; pipeline?: string | null;
@@ -48,6 +49,7 @@ interface Fase2 {
   sdrs: Sdr[];
   closers: Closer[];
   noShowByHour: Record<string, number>;
+  agendadosByHour: Record<string, number>;
   mqlSummary: { total: number; agendados: number; naoAgendados: number; realizados: number; noshow: number };
   mqlsList: MqlRow[];
   nonMqlsList: MqlRow[];
@@ -97,6 +99,7 @@ export default function Comercial() {
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
   const [semAgendOpen, setSemAgendOpen] = useState(false);
+  const [mqlFilterOpen, setMqlFilterOpen] = useState<null | { title: string; rows: MqlRow[] }>(null);
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
@@ -107,10 +110,11 @@ export default function Comercial() {
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
       noShowByHour: payload.noShowByHour || {},
+      agendadosByHour: payload.agendadosByHour || {},
       mqlSummary: payload.mqlSummary || { total: 0, agendados: 0, naoAgendados: 0, realizados: 0, noshow: 0 },
       mqlsList: payload.mqlsList || [],
       nonMqlsList: payload.nonMqlsList || [],
-      classes: payload.classes || { A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
+      classes: payload.classes || { A: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, B: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, C: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] }, Outro: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] } },
     });
     setFase3({
       aggregateFunnel: payload.aggregateFunnel || [],
@@ -208,14 +212,22 @@ export default function Comercial() {
 
   const sdrRanking = useMemo(() => {
     if (!fase2) return [];
-    return [...fase2.sdrs].map((s) => {
+    const allowedRoles = new Set(["sdr", "both"]);
+    const haveRoles = Object.keys(userRoles).length > 0;
+    return [...fase2.sdrs]
+      .filter((s) => {
+        const r = userRoles[s.user.id]?.role;
+        if (!haveRoles) return true; // sem config, mostra todos
+        return r ? allowedRoles.has(r) : false; // com config, exige role
+      })
+      .map((s) => {
       const g = goals[s.user.id] || { agendados: 0, realizados: 0, vendas: 0 };
       const showRate = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
       const score = (g.agendados ? (s.agendados / g.agendados) * 100 : 0)
         + (g.realizados ? (s.realizados / g.realizados) * 100 : 0);
       return { ...s, goal: g, showRate, score };
     }).sort((a, b) => (b.score - a.score) || (b.realizados - a.realizados));
-  }, [fase2, goals]);
+  }, [fase2, goals, userRoles]);
 
   const presets = [
     { label: "Hoje", apply: () => { const d = todayIso(); setSince(d); setUntil(d); } },
@@ -340,7 +352,6 @@ export default function Comercial() {
                 <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
                 
                 <TabsTrigger value="closers" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Closers</TabsTrigger>
-                <TabsTrigger value="followups" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Follow-ups</TabsTrigger>
                 <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
                 {isAdmin && (
                   <TabsTrigger value="config" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all gap-1.5">
@@ -476,16 +487,21 @@ export default function Comercial() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[
-                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200" },
-                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200" },
-                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground" },
-                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200" },
-                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200" },
+                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200", filter: (m: MqlRow) => true, title: "Todos os MQLs" },
+                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200", filter: (m: MqlRow) => m.situacao !== "sem_agendamento", title: "MQLs agendados" },
+                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground", filter: (m: MqlRow) => m.situacao === "sem_agendamento", title: "MQLs não agendados" },
+                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200", filter: (m: MqlRow) => m.situacao === "realizado", title: "MQLs realizados" },
+                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200", filter: (m: MqlRow) => m.situacao === "noshow", title: "MQLs no-show" },
                   ].map((c) => (
-                    <div key={c.l} className="rounded-xl bg-background/40 border border-white/5 px-3 py-2.5">
+                    <button
+                      key={c.l}
+                      type="button"
+                      onClick={() => setMqlFilterOpen({ title: c.title, rows: fase2.mqlsList.filter(c.filter) })}
+                      className="text-left rounded-xl bg-background/40 border border-white/5 px-3 py-2.5 hover:bg-background/60 hover:border-primary/30 transition-colors"
+                    >
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.l}</div>
                       <div className={`text-xl font-bold mt-0.5 ${c.c}`}>{fmtNum(c.v)}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </Card>
@@ -565,59 +581,76 @@ export default function Comercial() {
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>}
             </Card>
 
-            {/* Breakdown por classe (A / B / C) */}
-            {fase2 && (() => {
-              const sum = (cat: "MQL"|"A"|"B"|"C"|"Outro", bucket: "agendado"|"realizado") =>
-                fase2.sdrs.reduce((acc, s) =>
-                  acc + (s.lists?.[bucket]?.filter(x => x.category === cat).length || 0), 0);
-              const classRows = (["A", "B", "C"] as const).map((k) => ({
-                k,
-                agendados: sum(k, "agendado"),
-                realizados: sum(k, "realizado"),
-                vendas: fase2.classes[k].vendas,
-              }));
+            {/* Breakdown por classe (A / B / C) por SDR */}
+            {fase2 && sdrRanking.length > 0 && (() => {
               const colorMap: Record<string, { bar: string; chip: string; text: string }> = {
                 A: { bar: "from-emerald-500/30 to-emerald-500/5", chip: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40", text: "text-emerald-200" },
                 B: { bar: "from-amber-500/30 to-amber-500/5",   chip: "bg-amber-500/20 text-amber-200 border-amber-500/40",     text: "text-amber-200" },
                 C: { bar: "from-blue-500/30 to-blue-500/5",     chip: "bg-blue-500/20 text-blue-200 border-blue-500/40",        text: "text-blue-200" },
               };
+              const openClassDrill = (sdr: typeof sdrRanking[number], cls: "A"|"B"|"C", bucket: "agendado"|"realizado"|"noshow") => {
+                const items = (sdr.lists?.[bucket] || []).filter(x => x.category === cls);
+                if (!items.length) { toast.info("Sem registros"); return; }
+                setDrillDown({ sdrName: `${sdr.user.name} · Lead ${cls}`, tipo: bucket, items, agendados: sdr.agendados, realizados: sdr.realizados, noshow: sdr.noshow });
+              };
               return (
-                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
-                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead (período)
+                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl space-y-4">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead — por SDR
                   </div>
+
+                  {/* Totais por classe no período */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {classRows.map((r) => {
-                      const c = colorMap[r.k];
-                      const taxa = r.agendados > 0 ? (r.realizados / r.agendados) * 100 : 0;
-                      const conv = r.realizados > 0 ? (r.vendas / r.realizados) * 100 : 0;
-                      return (
-                        <div key={r.k} className={`rounded-xl bg-gradient-to-br ${c.bar} border border-white/5 p-4 space-y-3`}>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className={c.chip}>Classe {r.k}</Badge>
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Funil</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.agendados)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Comparecidos</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.realizados)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Vendidos</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.vendas)}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-white/5 pt-2">
-                            <span>Show rate: <span className="text-foreground font-semibold">{fmtPct(taxa)}</span></span>
-                            <span>Conv. venda: <span className="text-foreground font-semibold">{fmtPct(conv)}</span></span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {(["A","B","C"] as const).map((k) => (
+                      <div key={k} className={`rounded-xl bg-gradient-to-br ${colorMap[k].bar} border border-white/5 px-4 py-2.5 flex items-center justify-between`}>
+                        <Badge variant="outline" className={colorMap[k].chip}>Total Leads {k}</Badge>
+                        <div className={`text-2xl font-bold ${colorMap[k].text}`}>{fmtNum(fase2.classes[k].leads)}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tabela por SDR */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>SDR</TableHead>
+                          {(["A","B","C"] as const).map((k) => (
+                            <TableHead key={k} colSpan={4} className={`text-center ${colorMap[k].text}`}>Lead {k}</TableHead>
+                          ))}
+                        </TableRow>
+                        <TableRow>
+                          <TableHead />
+                          {(["A","B","C"] as const).flatMap((k) => [
+                            <TableHead key={`${k}-h-l`} className="text-right text-[10px] uppercase">Leads</TableHead>,
+                            <TableHead key={`${k}-h-a`} className="text-right text-[10px] uppercase">Agend.</TableHead>,
+                            <TableHead key={`${k}-h-c`} className="text-right text-[10px] uppercase">Comp.</TableHead>,
+                            <TableHead key={`${k}-h-v`} className="text-right text-[10px] uppercase">Vend.</TableHead>,
+                          ])}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sdrRanking.map((s) => (
+                          <TableRow key={s.user.id}>
+                            <TableCell className="font-medium">{s.user.name}</TableCell>
+                            {(["A","B","C"] as const).map((k) => {
+                              const ag = s.lists?.agendado.filter(x => x.category === k).length || 0;
+                              const co = s.lists?.realizado.filter(x => x.category === k).length || 0;
+                              const ve = s.vendas?.[k] || 0;
+                              const leads = ag; // contatos únicos atendidos pelo SDR nessa classe = nº de agendamentos
+                              const cls = colorMap[k];
+                              const btn = "hover:underline cursor-pointer";
+                              return [
+                                <TableCell key={`${k}-l`} className={`text-right text-xs ${cls.text}`}>{fmtNum(leads)}</TableCell>,
+                                <TableCell key={`${k}-a`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "agendado")}>{fmtNum(ag)}</TableCell>,
+                                <TableCell key={`${k}-c`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "realizado")}>{fmtNum(co)}</TableCell>,
+                                <TableCell key={`${k}-v`} className={`text-right text-xs ${cls.text}`}>{fmtNum(ve)}</TableCell>,
+                              ];
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </Card>
               );
@@ -825,81 +858,49 @@ export default function Comercial() {
           {/* No-show por horário */}
           <TabsContent value="noshow">
             <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {hourEntries.length > 0 ? (
-                <div className="space-y-2">
-                  {hourEntries.map(([hr, v]) => (
-                    <div key={hr} className="flex items-center gap-3">
-                      <div className="w-12 text-sm text-muted-foreground">{hr}</div>
-                      <div className="flex-1 h-6 bg-muted/30 rounded overflow-hidden">
-                        <div className="h-full bg-rose-500/60" style={{ width: `${(v / maxNoShow) * 100}%` }} />
-                      </div>
-                      <div className="w-10 text-right text-sm font-semibold">{v}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : <div className="text-center py-12 text-muted-foreground text-sm">Nenhum no-show registrado no período.</div>}
+              {fase2 && (() => {
+                const hours = Array.from(new Set([
+                  ...Object.keys(fase2.agendadosByHour || {}),
+                  ...Object.keys(fase2.noShowByHour || {}),
+                ])).sort();
+                if (hours.length === 0) return <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>;
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Horário</TableHead>
+                        <TableHead className="text-right">Agendados</TableHead>
+                        <TableHead className="text-right">Não compareceram</TableHead>
+                        <TableHead className="text-right">% No-show</TableHead>
+                        <TableHead>Distribuição</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {hours.map((hr) => {
+                        const ag = fase2.agendadosByHour?.[hr] || 0;
+                        const ns = fase2.noShowByHour?.[hr] || 0;
+                        const pct = ag > 0 ? (ns / ag) * 100 : 0;
+                        return (
+                          <TableRow key={hr}>
+                            <TableCell className="font-medium">{hr}</TableCell>
+                            <TableCell className="text-right">{fmtNum(ag)}</TableCell>
+                            <TableCell className="text-right text-rose-300">{fmtNum(ns)}</TableCell>
+                            <TableCell className="text-right font-semibold">{fmtPct(pct)}</TableCell>
+                            <TableCell>
+                              <div className="h-3 bg-muted/30 rounded overflow-hidden">
+                                <div className="h-full bg-rose-500/60" style={{ width: `${pct}%` }} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </Card>
           </TabsContent>
 
-          {/* Follow-ups */}
-          <TabsContent value="followups" className="space-y-4">
-            {fase3 && (() => {
-              const fu = fase3.followUps;
-              const sections: { title: string; icon: any; rows: any[]; cols: string[]; render: (r: any) => React.ReactNode[]; threshold: number }[] = [
-                {
-                  title: "Propostas paradas",
-                  icon: Clock,
-                  rows: fu.propostasParadas,
-                  threshold: fu.thresholds.propostaParadaDias,
-                  cols: ["Oportunidade", "Pipeline", "Valor", "Dias parado"],
-                  render: (r) => [
-                    <span className="font-medium">{r.nome}</span>,
-                    <span className="text-xs text-muted-foreground">{r.pipeline}</span>,
-                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
-                    <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/30">{r.diasParado}d</Badge>,
-                  ],
-                },
-                {
-                  title: "Oportunidades estagnadas",
-                  icon: Clock,
-                  rows: fu.opsEstagnadas,
-                  threshold: fu.thresholds.oppEstagnadaDias,
-                  cols: ["Oportunidade", "Pipeline / Stage", "Valor", "Dias parado"],
-                  render: (r) => [
-                    <span className="font-medium">{r.nome}</span>,
-                    <span className="text-xs text-muted-foreground">{r.pipeline} · {r.stage}</span>,
-                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
-                    <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/30">{r.diasParado}d</Badge>,
-                  ],
-                },
-              ];
-              return sections.map((sec) => (
-                <Card key={sec.title} className="p-4 bg-card/40 backdrop-blur border-border/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold flex items-center gap-2">
-                      <sec.icon className="h-4 w-4" /> {sec.title}
-                      <Badge variant="outline" className="ml-1">{sec.rows.length}</Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">≥ {sec.threshold} dias parado</span>
-                  </div>
-                  {sec.rows.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground text-xs">Tudo em dia.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader><TableRow>{sec.cols.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader>
-                      <TableBody>
-                        {sec.rows.map((r) => (
-                          <TableRow key={r.id}>
-                            {sec.render(r).map((cell, i) => <TableCell key={i}>{cell}</TableCell>)}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </Card>
-              ));
-            })()}
-          </TabsContent>
           {/* Configurações de SDRs / Closers */}
           {isAdmin && (
             <TabsContent value="config" className="space-y-4">
@@ -1082,6 +1083,7 @@ export default function Comercial() {
                       <TableHead>Contato</TableHead>
                       <TableHead>Entrada</TableHead>
                       <TableHead>Reunião</TableHead>
+                      <TableHead>SDR</TableHead>
                       <TableHead>Situação</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1097,6 +1099,7 @@ export default function Comercial() {
                         <TableCell className="text-xs">
                           {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
                         </TableCell>
+                        <TableCell className="text-xs text-cyan-300">{m.sdrName || "—"}</TableCell>
                         <TableCell>{situacaoBadge(m.situacao)}</TableCell>
                       </TableRow>
                     ))}
@@ -1105,6 +1108,53 @@ export default function Comercial() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lista filtrada (clique nos cards de MQL) */}
+      <Dialog open={!!mqlFilterOpen} onOpenChange={(o) => !o && setMqlFilterOpen(null)}>
+        <DialogContent className="max-w-4xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {mqlFilterOpen?.title}
+              <Badge variant="outline" className="ml-2">{mqlFilterOpen?.rows.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {mqlFilterOpen && mqlFilterOpen.rows.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Entrada</TableHead>
+                    <TableHead>Reunião</TableHead>
+                    <TableHead>SDR</TableHead>
+                    <TableHead>Situação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mqlFilterOpen.rows.slice(0, 500).map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">{m.nome}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
+                        {m.email && <div>{m.email}</div>}
+                      </TableCell>
+                      <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-cyan-300">{m.sdrName || "—"}</TableCell>
+                      <TableCell>{situacaoBadge(m.situacao)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">Sem registros.</div>
+          )}
         </DialogContent>
       </Dialog>
 

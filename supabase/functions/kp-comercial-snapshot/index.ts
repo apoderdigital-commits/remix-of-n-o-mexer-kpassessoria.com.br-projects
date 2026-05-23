@@ -266,6 +266,7 @@ async function buildSnapshot(since: Date, until: Date) {
       sdrMap.set(uid, {
         user: u,
         agendados: 0, realizados: 0, noshow: 0, cancelados: 0,
+        vendas: { A: 0, B: 0, C: 0, Outro: 0 },
         lists: {
           agendado: [] as any[],
           realizado: [] as any[],
@@ -276,12 +277,15 @@ async function buildSnapshot(since: Date, until: Date) {
     }
     return sdrMap.get(uid)!;
   };
+  const sdrByContact = new Map<string, { id: string; name: string }>();
   const noShowByHour: Record<string, number> = {};
+  const agendadosByHour: Record<string, number> = {};
   for (const a of allAppts) {
     const uid = a.assignedUserId || a.userId;
     if (!uid) continue;
     const s = initSdr(uid);
     s.agendados++;
+    if (a.contactId) sdrByContact.set(a.contactId, { id: s.user.id, name: s.user.name });
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const category = a.contactId ? classifyContact(a.contactId) : "Outro";
@@ -294,7 +298,13 @@ async function buildSnapshot(since: Date, until: Date) {
       phone: contact?.phone,
       startTime: a.startTime,
       category,
+      sdrName: s.user.name,
     };
+    if (a.startTime) {
+      const h = new Date(a.startTime).getHours();
+      const key = `${String(h).padStart(2, "0")}:00`;
+      agendadosByHour[key] = (agendadosByHour[key] || 0) + 1;
+    }
     let bucket: "agendado" | "realizado" | "noshow" | "cancelado" = "agendado";
     if (st.includes("show") && !st.includes("no")) { s.realizados++; bucket = "realizado"; }
     else if (st.includes("noshow") || st === "no-show" || st === "no_show") {
@@ -306,6 +316,18 @@ async function buildSnapshot(since: Date, until: Date) {
       }
     } else if (st.includes("cancel")) { s.cancelados++; bucket = "cancelado"; }
     s.lists[bucket].push(entry);
+  }
+  // Vendas por SDR/classe — atribui a venda ao SDR que originalmente agendou aquele contato
+  for (const o of allOpps) {
+    if ((o.status || "").toLowerCase() !== "won") continue;
+    if (!o.contactId) continue;
+    const sdr = sdrByContact.get(o.contactId);
+    if (!sdr) continue;
+    const s = sdrMap.get(sdr.id);
+    if (!s) continue;
+    const clsRaw = (pipelineClasseById.get(o._pipelineId) || "Outro");
+    const cls: "A"|"B"|"C"|"Outro" = (clsRaw === "A" || clsRaw === "B" || clsRaw === "C") ? clsRaw as any : "Outro";
+    s.vendas[cls]++;
   }
   const sdrs = Array.from(sdrMap.values()).sort((a, b) => b.agendados - a.agendados);
 
@@ -362,9 +384,15 @@ async function buildSnapshot(since: Date, until: Date) {
       pipeline: o._pipelineName,
     };
     if (status === "won") c.lists.vendas[cls].push(entry);
-    if (proposalStageIdsAll.has(o.pipelineStageId)) {
-      if (status === "lost") c.lists.propostasPerdidas[cls].push(entry);
-      else if (status !== "won") c.lists.propostasAbertas[cls].push(entry);
+    // Identifica stage para classificar proposta enviada x perdida via nome
+    const stageName = (pipelines.find((p: any) => p.id === o._pipelineId)
+      ?.stages?.find((s: any) => s.id === o.pipelineStageId)?.name || "").toLowerCase();
+    const isStageEnviada = /enviad/.test(stageName) && /proposta|proposal/.test(stageName);
+    const isStagePerdida = /perdid/.test(stageName) && /proposta|proposal/.test(stageName);
+    if (isStagePerdida || (proposalStageIdsAll.has(o.pipelineStageId) && status === "lost")) {
+      c.lists.propostasPerdidas[cls].push(entry);
+    } else if (isStageEnviada || (proposalStageIdsAll.has(o.pipelineStageId) && status !== "won")) {
+      c.lists.propostasAbertas[cls].push(entry);
     }
   }
   const closers = Array.from(closerMap.values());
@@ -379,12 +407,15 @@ async function buildSnapshot(since: Date, until: Date) {
       else if (apptStatus.includes("show")) situacao = "realizado";
       else situacao = "agendado";
     }
+    const sdr = sdrByContact.get(c.id);
     return {
       id: c.id,
       nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.contactName || "—",
       email: c.email, phone: c.phone,
       dateAdded: c.dateAdded, situacao,
       horario: appt?.startTime,
+      sdrName: sdr?.name || null,
+      categoria: classifyContact(c.id),
     };
   }).sort((a, b) => (b.dateAdded || "").localeCompare(a.dateAdded || ""));
 
@@ -419,14 +450,17 @@ async function buildSnapshot(since: Date, until: Date) {
 
   // ---------- CLASSES A/B/C ----------
   const classes: Record<string, any> = {
-    A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    A: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    B: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    C: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    Outro: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
   };
+  // Leads por classe = contatos distintos com opp em pipeline daquela classe (no período)
+  const leadsByClass: Record<string, Set<string>> = { A: new Set(), B: new Set(), C: new Set(), Outro: new Set() };
   for (const pf of pipelineFunnels) {
     classes[pf.classe].pipelines.push(pf.name);
     for (const o of allOpps.filter((x) => x._pipelineId === pf.id)) {
+      if (o.contactId) leadsByClass[pf.classe].add(o.contactId);
       if (proposalStageIdsAll.has(o.pipelineStageId)) classes[pf.classe].propostas++;
       if ((o.status || "").toLowerCase() === "won") {
         classes[pf.classe].vendas++;
@@ -434,6 +468,7 @@ async function buildSnapshot(since: Date, until: Date) {
       }
     }
   }
+  for (const k of ["A", "B", "C", "Outro"]) classes[k].leads = leadsByClass[k].size;
 
   // ---------- AGGREGATE FUNNEL ----------
   const aggregateFunnel = [
@@ -528,6 +563,7 @@ async function buildSnapshot(since: Date, until: Date) {
     sdrs,
     closers,
     noShowByHour,
+    agendadosByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
     nonMqlsList: nonMqlsList.slice(0, 500),
