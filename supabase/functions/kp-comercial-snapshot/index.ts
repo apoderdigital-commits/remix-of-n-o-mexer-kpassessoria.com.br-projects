@@ -384,9 +384,15 @@ async function buildSnapshot(since: Date, until: Date) {
       pipeline: o._pipelineName,
     };
     if (status === "won") c.lists.vendas[cls].push(entry);
-    if (proposalStageIdsAll.has(o.pipelineStageId)) {
-      if (status === "lost") c.lists.propostasPerdidas[cls].push(entry);
-      else if (status !== "won") c.lists.propostasAbertas[cls].push(entry);
+    // Identifica stage para classificar proposta enviada x perdida via nome
+    const stageName = (pipelines.find((p: any) => p.id === o._pipelineId)
+      ?.stages?.find((s: any) => s.id === o.pipelineStageId)?.name || "").toLowerCase();
+    const isStageEnviada = /enviad/.test(stageName) && /proposta|proposal/.test(stageName);
+    const isStagePerdida = /perdid/.test(stageName) && /proposta|proposal/.test(stageName);
+    if (isStagePerdida || (proposalStageIdsAll.has(o.pipelineStageId) && status === "lost")) {
+      c.lists.propostasPerdidas[cls].push(entry);
+    } else if (isStageEnviada || (proposalStageIdsAll.has(o.pipelineStageId) && status !== "won")) {
+      c.lists.propostasAbertas[cls].push(entry);
     }
   }
   const closers = Array.from(closerMap.values());
@@ -401,12 +407,15 @@ async function buildSnapshot(since: Date, until: Date) {
       else if (apptStatus.includes("show")) situacao = "realizado";
       else situacao = "agendado";
     }
+    const sdr = sdrByContact.get(c.id);
     return {
       id: c.id,
       nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.contactName || "—",
       email: c.email, phone: c.phone,
       dateAdded: c.dateAdded, situacao,
       horario: appt?.startTime,
+      sdrName: sdr?.name || null,
+      categoria: classifyContact(c.id),
     };
   }).sort((a, b) => (b.dateAdded || "").localeCompare(a.dateAdded || ""));
 
