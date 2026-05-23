@@ -858,81 +858,49 @@ export default function Comercial() {
           {/* No-show por horário */}
           <TabsContent value="noshow">
             <Card className="p-4 bg-card/40 backdrop-blur border-border/30">
-              {hourEntries.length > 0 ? (
-                <div className="space-y-2">
-                  {hourEntries.map(([hr, v]) => (
-                    <div key={hr} className="flex items-center gap-3">
-                      <div className="w-12 text-sm text-muted-foreground">{hr}</div>
-                      <div className="flex-1 h-6 bg-muted/30 rounded overflow-hidden">
-                        <div className="h-full bg-rose-500/60" style={{ width: `${(v / maxNoShow) * 100}%` }} />
-                      </div>
-                      <div className="w-10 text-right text-sm font-semibold">{v}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : <div className="text-center py-12 text-muted-foreground text-sm">Nenhum no-show registrado no período.</div>}
+              {fase2 && (() => {
+                const hours = Array.from(new Set([
+                  ...Object.keys(fase2.agendadosByHour || {}),
+                  ...Object.keys(fase2.noShowByHour || {}),
+                ])).sort();
+                if (hours.length === 0) return <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>;
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Horário</TableHead>
+                        <TableHead className="text-right">Agendados</TableHead>
+                        <TableHead className="text-right">Não compareceram</TableHead>
+                        <TableHead className="text-right">% No-show</TableHead>
+                        <TableHead>Distribuição</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {hours.map((hr) => {
+                        const ag = fase2.agendadosByHour?.[hr] || 0;
+                        const ns = fase2.noShowByHour?.[hr] || 0;
+                        const pct = ag > 0 ? (ns / ag) * 100 : 0;
+                        return (
+                          <TableRow key={hr}>
+                            <TableCell className="font-medium">{hr}</TableCell>
+                            <TableCell className="text-right">{fmtNum(ag)}</TableCell>
+                            <TableCell className="text-right text-rose-300">{fmtNum(ns)}</TableCell>
+                            <TableCell className="text-right font-semibold">{fmtPct(pct)}</TableCell>
+                            <TableCell>
+                              <div className="h-3 bg-muted/30 rounded overflow-hidden">
+                                <div className="h-full bg-rose-500/60" style={{ width: `${pct}%` }} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </Card>
           </TabsContent>
 
-          {/* Follow-ups */}
-          <TabsContent value="followups" className="space-y-4">
-            {fase3 && (() => {
-              const fu = fase3.followUps;
-              const sections: { title: string; icon: any; rows: any[]; cols: string[]; render: (r: any) => React.ReactNode[]; threshold: number }[] = [
-                {
-                  title: "Propostas paradas",
-                  icon: Clock,
-                  rows: fu.propostasParadas,
-                  threshold: fu.thresholds.propostaParadaDias,
-                  cols: ["Oportunidade", "Pipeline", "Valor", "Dias parado"],
-                  render: (r) => [
-                    <span className="font-medium">{r.nome}</span>,
-                    <span className="text-xs text-muted-foreground">{r.pipeline}</span>,
-                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
-                    <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/30">{r.diasParado}d</Badge>,
-                  ],
-                },
-                {
-                  title: "Oportunidades estagnadas",
-                  icon: Clock,
-                  rows: fu.opsEstagnadas,
-                  threshold: fu.thresholds.oppEstagnadaDias,
-                  cols: ["Oportunidade", "Pipeline / Stage", "Valor", "Dias parado"],
-                  render: (r) => [
-                    <span className="font-medium">{r.nome}</span>,
-                    <span className="text-xs text-muted-foreground">{r.pipeline} · {r.stage}</span>,
-                    <span className="text-xs">{fmtBRL(r.valor)}</span>,
-                    <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/30">{r.diasParado}d</Badge>,
-                  ],
-                },
-              ];
-              return sections.map((sec) => (
-                <Card key={sec.title} className="p-4 bg-card/40 backdrop-blur border-border/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold flex items-center gap-2">
-                      <sec.icon className="h-4 w-4" /> {sec.title}
-                      <Badge variant="outline" className="ml-1">{sec.rows.length}</Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">≥ {sec.threshold} dias parado</span>
-                  </div>
-                  {sec.rows.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground text-xs">Tudo em dia.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader><TableRow>{sec.cols.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader>
-                      <TableBody>
-                        {sec.rows.map((r) => (
-                          <TableRow key={r.id}>
-                            {sec.render(r).map((cell, i) => <TableCell key={i}>{cell}</TableCell>)}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </Card>
-              ));
-            })()}
-          </TabsContent>
           {/* Configurações de SDRs / Closers */}
           {isAdmin && (
             <TabsContent value="config" className="space-y-4">
