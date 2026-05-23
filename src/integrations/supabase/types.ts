@@ -1124,12 +1124,142 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_subtasks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          done: boolean
+          id: string
+          position: number
+          task_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          done?: boolean
+          id?: string
+          position?: number
+          task_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          done?: boolean
+          id?: string
+          position?: number
+          task_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      squad_task_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      squad_task_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      squad_task_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_days_offset: number | null
+          id: string
+          list_key: string
+          priority: string
+          squad_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_days_offset?: number | null
+          id?: string
+          list_key: string
+          priority?: string
+          squad_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_days_offset?: number | null
+          id?: string
+          list_key?: string
+          priority?: string
+          squad_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       squad_tasks: {
         Row: {
           assignee_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
+          cycle_key: string | null
           description: string | null
           due_date: string | null
           id: string
@@ -1145,6 +1275,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_key?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -1160,6 +1291,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_key?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
