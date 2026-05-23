@@ -109,6 +109,10 @@ export default function Comercial() {
     if (payload.kpis) setKpis(payload.kpis);
     if (payload.users) setGhlUsers(payload.users);
     if (payload.pipelines) setPipelinesList(payload.pipelines);
+    if (payload.dataSources) {
+      setDataSources(payload.dataSources);
+      setDsCounts({ sheet: payload.dataSources.sheetCounts, ghl: payload.dataSources.ghlCounts, sheetError: payload.dataSources.sheetError });
+    }
     setFase2({
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
@@ -126,6 +130,7 @@ export default function Comercial() {
       followUps: payload.followUps || { mqlsSemAgendamento: [], propostasParadas: [], opsEstagnadas: [], thresholds: { semAgendDias: 3, propostaParadaDias: 7, oppEstagnadaDias: 14 } },
     });
   };
+
 
   const fetchAll = async (force = false) => {
     setLoading(true);
