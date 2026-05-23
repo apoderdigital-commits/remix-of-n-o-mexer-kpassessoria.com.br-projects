@@ -154,10 +154,11 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes, pipeRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes, dsRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
       supabase.from("kp_comercial_pipeline_config").select("*"),
+      (supabase.from as any)("kp_comercial_data_sources").select("*").eq("id", true).maybeSingle(),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -172,10 +173,11 @@ export default function Comercial() {
       setGoals(map);
     }
     if (pipeRes.data) {
-      const map: Record<string, { classe?: string | null; kind?: string | null }> = {};
-      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = { classe: r.classe, kind: r.kind };
+      const map: Record<string, any> = {};
+      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = r;
       setPipelineCfg(map);
     }
+    if (dsRes?.data) setDataSources(dsRes.data);
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -202,9 +204,24 @@ export default function Comercial() {
     toast.success(`${pipeline.name}: ${kind || "—"}`);
   };
 
-  useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
+  type StageKey = "stages_reuniao_marcada"|"stages_comparecida"|"stages_proposta_enviada"|"stages_proposta_perdida"|"stages_vendida"|"stages_noshow";
+  const toggleStageMapping = async (pipeline: { id: string; name: string }, key: StageKey, stageId: string) => {
+    const current: string[] = pipelineCfg[pipeline.id]?.[key] || [];
+    const next = current.includes(stageId) ? current.filter((x) => x !== stageId) : [...current, stageId];
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, [key]: next };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], [key]: next } }));
+  };
 
-  const updateGoalLocal = (sdrId: string, key: keyof SdrGoal, val: number) => {
+  const updateDataSource = async (patch: Record<string, any>) => {
+    const next = { ...(dataSources || {}), ...patch };
+    setDataSources(next);
+    const { error } = await (supabase.from as any)("kp_comercial_data_sources").upsert({ id: true, ...patch }, { onConflict: "id" });
+    if (error) { toast.error("Erro ao salvar fonte: " + error.message); return; }
+    toast.success("Fonte atualizada — clique em Atualizar para recalcular");
+  };
+
     setGoals((g) => ({ ...g, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...g[sdrId], [key]: val } }));
   };
 
