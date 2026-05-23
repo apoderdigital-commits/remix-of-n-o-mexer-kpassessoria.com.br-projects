@@ -631,6 +631,14 @@ async function buildSnapshot(since: Date, until: Date) {
   return {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
+    dataSources: {
+      leads: ds.leads_source, mqls: ds.mqls_source,
+      comparecidas: ds.comparecidas_source, vendas: ds.vendas_source,
+      sheet: { id: ds.sheet_id, tab: ds.sheet_tab, mql_column: ds.sheet_mql_column, mql_value: ds.sheet_mql_value },
+      sheetCounts: { leads: sheetLeads, mqls: sheetMqls, rows: sheetRowsTotal },
+      ghlCounts: { leads: ghlLeadsTotais, mqls: ghlMqls },
+      sheetError,
+    },
     users,
     sdrs,
     closers,
@@ -639,7 +647,7 @@ async function buildSnapshot(since: Date, until: Date) {
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
     nonMqlsList: nonMqlsList.slice(0, 500),
-    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name })),
+    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name, stages: (p.stages || []).map((s: any) => ({ id: s.id, name: s.name })) })),
     classes,
     aggregateFunnel,
     pipelineFunnels,
@@ -659,6 +667,7 @@ async function buildSnapshot(since: Date, until: Date) {
     },
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
