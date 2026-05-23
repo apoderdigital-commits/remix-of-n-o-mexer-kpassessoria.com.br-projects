@@ -1083,6 +1083,7 @@ export default function Comercial() {
                       <TableHead>Contato</TableHead>
                       <TableHead>Entrada</TableHead>
                       <TableHead>Reunião</TableHead>
+                      <TableHead>SDR</TableHead>
                       <TableHead>Situação</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1098,6 +1099,7 @@ export default function Comercial() {
                         <TableCell className="text-xs">
                           {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
                         </TableCell>
+                        <TableCell className="text-xs text-cyan-300">{m.sdrName || "—"}</TableCell>
                         <TableCell>{situacaoBadge(m.situacao)}</TableCell>
                       </TableRow>
                     ))}
@@ -1106,6 +1108,53 @@ export default function Comercial() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lista filtrada (clique nos cards de MQL) */}
+      <Dialog open={!!mqlFilterOpen} onOpenChange={(o) => !o && setMqlFilterOpen(null)}>
+        <DialogContent className="max-w-4xl bg-card/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {mqlFilterOpen?.title}
+              <Badge variant="outline" className="ml-2">{mqlFilterOpen?.rows.length || 0}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          {mqlFilterOpen && mqlFilterOpen.rows.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Entrada</TableHead>
+                    <TableHead>Reunião</TableHead>
+                    <TableHead>SDR</TableHead>
+                    <TableHead>Situação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mqlFilterOpen.rows.slice(0, 500).map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">{m.nome}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {m.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{m.phone}</div>}
+                        {m.email && <div>{m.email}</div>}
+                      </TableCell>
+                      <TableCell className="text-xs">{m.dateAdded ? new Date(m.dateAdded).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {m.horario ? new Date(m.horario).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-cyan-300">{m.sdrName || "—"}</TableCell>
+                      <TableCell>{situacaoBadge(m.situacao)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">Sem registros.</div>
+          )}
         </DialogContent>
       </Dialog>
 
