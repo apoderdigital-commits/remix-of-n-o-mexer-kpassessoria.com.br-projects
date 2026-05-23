@@ -640,14 +640,12 @@ export default function Comercial() {
                               const leads = ag; // contatos únicos atendidos pelo SDR nessa classe = nº de agendamentos
                               const cls = colorMap[k];
                               const btn = "hover:underline cursor-pointer";
-                              return (
-                                <>
-                                  <TableCell key={`${k}-l`} className={`text-right text-xs ${cls.text}`}>{fmtNum(leads)}</TableCell>
-                                  <TableCell key={`${k}-a`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "agendado")}>{fmtNum(ag)}</TableCell>
-                                  <TableCell key={`${k}-c`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "realizado")}>{fmtNum(co)}</TableCell>
-                                  <TableCell key={`${k}-v`} className={`text-right text-xs ${cls.text}`}>{fmtNum(ve)}</TableCell>
-                                </>
-                              );
+                              return [
+                                <TableCell key={`${k}-l`} className={`text-right text-xs ${cls.text}`}>{fmtNum(leads)}</TableCell>,
+                                <TableCell key={`${k}-a`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "agendado")}>{fmtNum(ag)}</TableCell>,
+                                <TableCell key={`${k}-c`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "realizado")}>{fmtNum(co)}</TableCell>,
+                                <TableCell key={`${k}-v`} className={`text-right text-xs ${cls.text}`}>{fmtNum(ve)}</TableCell>,
+                              ];
                             })}
                           </TableRow>
                         ))}
