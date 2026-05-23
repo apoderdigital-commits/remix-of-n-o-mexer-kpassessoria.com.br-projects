@@ -27,14 +27,15 @@ interface Kpis {
   investimento: number; cac: number; roas: number; metaError?: string | null;
 }
 type ApptCategory = "MQL" | "A" | "B" | "C" | "Outro";
-interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory }
+interface ApptEntry { contactId: string | null; nome: string; email?: string; phone?: string; startTime?: string; category: ApptCategory; sdrName?: string }
 interface Sdr {
   user: { id: string; name: string; email?: string };
   agendados: number; realizados: number; noshow: number; cancelados: number;
+  vendas?: Record<"A"|"B"|"C"|"Outro", number>;
   lists?: { agendado: ApptEntry[]; realizado: ApptEntry[]; noshow: ApptEntry[]; cancelado: ApptEntry[] };
 }
-interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; }
-interface ClassData { propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
+interface MqlRow { id: string; nome: string; email?: string; phone?: string; dateAdded?: string; situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento"; horario?: string; sdrName?: string | null; categoria?: ApptCategory; }
+interface ClassData { leads: number; propostas: number; vendas: number; faturamento: number; pipelines: string[]; }
 interface CloserEntry {
   contactId?: string | null; oppId?: string; nome: string; email?: string; phone?: string;
   startTime?: string; valor?: number; pipeline?: string | null;
@@ -48,6 +49,7 @@ interface Fase2 {
   sdrs: Sdr[];
   closers: Closer[];
   noShowByHour: Record<string, number>;
+  agendadosByHour: Record<string, number>;
   mqlSummary: { total: number; agendados: number; naoAgendados: number; realizados: number; noshow: number };
   mqlsList: MqlRow[];
   nonMqlsList: MqlRow[];
