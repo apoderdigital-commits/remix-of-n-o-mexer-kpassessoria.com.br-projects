@@ -211,14 +211,22 @@ export default function Comercial() {
 
   const sdrRanking = useMemo(() => {
     if (!fase2) return [];
-    return [...fase2.sdrs].map((s) => {
+    const allowedRoles = new Set(["sdr", "both"]);
+    const haveRoles = Object.keys(userRoles).length > 0;
+    return [...fase2.sdrs]
+      .filter((s) => {
+        const r = userRoles[s.user.id]?.role;
+        if (!haveRoles) return true; // sem config, mostra todos
+        return r ? allowedRoles.has(r) : false; // com config, exige role
+      })
+      .map((s) => {
       const g = goals[s.user.id] || { agendados: 0, realizados: 0, vendas: 0 };
       const showRate = s.agendados > 0 ? (s.realizados / s.agendados) * 100 : 0;
       const score = (g.agendados ? (s.agendados / g.agendados) * 100 : 0)
         + (g.realizados ? (s.realizados / g.realizados) * 100 : 0);
       return { ...s, goal: g, showRate, score };
     }).sort((a, b) => (b.score - a.score) || (b.realizados - a.realizados));
-  }, [fase2, goals]);
+  }, [fase2, goals, userRoles]);
 
   const presets = [
     { label: "Hoje", apply: () => { const d = todayIso(); setSince(d); setUntil(d); } },
