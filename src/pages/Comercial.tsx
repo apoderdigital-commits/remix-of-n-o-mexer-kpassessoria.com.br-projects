@@ -222,8 +222,12 @@ export default function Comercial() {
     toast.success("Fonte atualizada — clique em Atualizar para recalcular");
   };
 
+  useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
+
+  const updateGoalLocal = (sdrId: string, key: keyof SdrGoal, val: number) => {
     setGoals((g) => ({ ...g, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...g[sdrId], [key]: val } }));
   };
+
 
   const persistGoal = async (sdrId: string) => {
     const g = goals[sdrId] || { agendados: 0, realizados: 0, vendas: 0 };
