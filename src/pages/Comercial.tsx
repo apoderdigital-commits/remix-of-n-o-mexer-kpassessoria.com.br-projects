@@ -581,59 +581,78 @@ export default function Comercial() {
               ) : <div className="text-center py-12 text-muted-foreground text-sm">Sem reuniões no período.</div>}
             </Card>
 
-            {/* Breakdown por classe (A / B / C) */}
-            {fase2 && (() => {
-              const sum = (cat: "MQL"|"A"|"B"|"C"|"Outro", bucket: "agendado"|"realizado") =>
-                fase2.sdrs.reduce((acc, s) =>
-                  acc + (s.lists?.[bucket]?.filter(x => x.category === cat).length || 0), 0);
-              const classRows = (["A", "B", "C"] as const).map((k) => ({
-                k,
-                agendados: sum(k, "agendado"),
-                realizados: sum(k, "realizado"),
-                vendas: fase2.classes[k].vendas,
-              }));
+            {/* Breakdown por classe (A / B / C) por SDR */}
+            {fase2 && sdrRanking.length > 0 && (() => {
               const colorMap: Record<string, { bar: string; chip: string; text: string }> = {
                 A: { bar: "from-emerald-500/30 to-emerald-500/5", chip: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40", text: "text-emerald-200" },
                 B: { bar: "from-amber-500/30 to-amber-500/5",   chip: "bg-amber-500/20 text-amber-200 border-amber-500/40",     text: "text-amber-200" },
                 C: { bar: "from-blue-500/30 to-blue-500/5",     chip: "bg-blue-500/20 text-blue-200 border-blue-500/40",        text: "text-blue-200" },
               };
+              const openClassDrill = (sdr: typeof sdrRanking[number], cls: "A"|"B"|"C", bucket: "agendado"|"realizado"|"noshow") => {
+                const items = (sdr.lists?.[bucket] || []).filter(x => x.category === cls);
+                if (!items.length) { toast.info("Sem registros"); return; }
+                setDrillDown({ sdrName: `${sdr.user.name} · Lead ${cls}`, tipo: bucket, items, agendados: sdr.agendados, realizados: sdr.realizados, noshow: sdr.noshow });
+              };
               return (
-                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
-                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead (período)
+                <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl space-y-4">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-300" /> Conversão por classe de lead — por SDR
                   </div>
+
+                  {/* Totais por classe no período */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {classRows.map((r) => {
-                      const c = colorMap[r.k];
-                      const taxa = r.agendados > 0 ? (r.realizados / r.agendados) * 100 : 0;
-                      const conv = r.realizados > 0 ? (r.vendas / r.realizados) * 100 : 0;
-                      return (
-                        <div key={r.k} className={`rounded-xl bg-gradient-to-br ${c.bar} border border-white/5 p-4 space-y-3`}>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className={c.chip}>Classe {r.k}</Badge>
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Funil</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.agendados)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Comparecidos</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.realizados)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase text-muted-foreground">Vendidos</div>
-                              <div className={`text-xl font-bold ${c.text}`}>{fmtNum(r.vendas)}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-white/5 pt-2">
-                            <span>Show rate: <span className="text-foreground font-semibold">{fmtPct(taxa)}</span></span>
-                            <span>Conv. venda: <span className="text-foreground font-semibold">{fmtPct(conv)}</span></span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {(["A","B","C"] as const).map((k) => (
+                      <div key={k} className={`rounded-xl bg-gradient-to-br ${colorMap[k].bar} border border-white/5 px-4 py-2.5 flex items-center justify-between`}>
+                        <Badge variant="outline" className={colorMap[k].chip}>Total Leads {k}</Badge>
+                        <div className={`text-2xl font-bold ${colorMap[k].text}`}>{fmtNum(fase2.classes[k].leads)}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tabela por SDR */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>SDR</TableHead>
+                          {(["A","B","C"] as const).map((k) => (
+                            <TableHead key={k} colSpan={4} className={`text-center ${colorMap[k].text}`}>Lead {k}</TableHead>
+                          ))}
+                        </TableRow>
+                        <TableRow>
+                          <TableHead />
+                          {(["A","B","C"] as const).flatMap(() => [
+                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Leads</TableHead>,
+                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Agend.</TableHead>,
+                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Comp.</TableHead>,
+                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Vend.</TableHead>,
+                          ])}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sdrRanking.map((s) => (
+                          <TableRow key={s.user.id}>
+                            <TableCell className="font-medium">{s.user.name}</TableCell>
+                            {(["A","B","C"] as const).map((k) => {
+                              const ag = s.lists?.agendado.filter(x => x.category === k).length || 0;
+                              const co = s.lists?.realizado.filter(x => x.category === k).length || 0;
+                              const ve = s.vendas?.[k] || 0;
+                              const leads = ag; // contatos únicos atendidos pelo SDR nessa classe = nº de agendamentos
+                              const cls = colorMap[k];
+                              const btn = "hover:underline cursor-pointer";
+                              return (
+                                <>
+                                  <TableCell key={`${k}-l`} className={`text-right text-xs ${cls.text}`}>{fmtNum(leads)}</TableCell>
+                                  <TableCell key={`${k}-a`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "agendado")}>{fmtNum(ag)}</TableCell>
+                                  <TableCell key={`${k}-c`} className={`text-right text-xs ${cls.text} ${btn}`} onClick={() => openClassDrill(s, k, "realizado")}>{fmtNum(co)}</TableCell>
+                                  <TableCell key={`${k}-v`} className={`text-right text-xs ${cls.text}`}>{fmtNum(ve)}</TableCell>
+                                </>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </Card>
               );
