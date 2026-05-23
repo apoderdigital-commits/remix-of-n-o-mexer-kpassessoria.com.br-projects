@@ -487,16 +487,21 @@ export default function Comercial() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[
-                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200" },
-                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200" },
-                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground" },
-                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200" },
-                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200" },
+                    { l: "Total MQLs", v: fase2.mqlSummary.total, c: "text-cyan-200", filter: (m: MqlRow) => true, title: "Todos os MQLs" },
+                    { l: "Agendados", v: fase2.mqlSummary.agendados, c: "text-blue-200", filter: (m: MqlRow) => m.situacao !== "sem_agendamento", title: "MQLs agendados" },
+                    { l: "Não agendados", v: fase2.mqlSummary.naoAgendados, c: "text-muted-foreground", filter: (m: MqlRow) => m.situacao === "sem_agendamento", title: "MQLs não agendados" },
+                    { l: "Realizados", v: fase2.mqlSummary.realizados, c: "text-emerald-200", filter: (m: MqlRow) => m.situacao === "realizado", title: "MQLs realizados" },
+                    { l: "No-show", v: fase2.mqlSummary.noshow, c: "text-rose-200", filter: (m: MqlRow) => m.situacao === "noshow", title: "MQLs no-show" },
                   ].map((c) => (
-                    <div key={c.l} className="rounded-xl bg-background/40 border border-white/5 px-3 py-2.5">
+                    <button
+                      key={c.l}
+                      type="button"
+                      onClick={() => setMqlFilterOpen({ title: c.title, rows: fase2.mqlsList.filter(c.filter) })}
+                      className="text-left rounded-xl bg-background/40 border border-white/5 px-3 py-2.5 hover:bg-background/60 hover:border-primary/30 transition-colors"
+                    >
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.l}</div>
                       <div className={`text-xl font-bold mt-0.5 ${c.c}`}>{fmtNum(c.v)}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </Card>
