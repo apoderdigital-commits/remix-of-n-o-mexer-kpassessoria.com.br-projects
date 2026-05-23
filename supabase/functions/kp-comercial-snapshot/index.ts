@@ -563,6 +563,7 @@ async function buildSnapshot(since: Date, until: Date) {
     sdrs,
     closers,
     noShowByHour,
+    agendadosByHour,
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
     nonMqlsList: nonMqlsList.slice(0, 500),
