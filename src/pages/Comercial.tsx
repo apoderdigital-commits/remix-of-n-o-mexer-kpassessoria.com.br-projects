@@ -621,11 +621,11 @@ export default function Comercial() {
                         </TableRow>
                         <TableRow>
                           <TableHead />
-                          {(["A","B","C"] as const).flatMap(() => [
-                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Leads</TableHead>,
-                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Agend.</TableHead>,
-                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Comp.</TableHead>,
-                            <TableHead key={Math.random()} className="text-right text-[10px] uppercase">Vend.</TableHead>,
+                          {(["A","B","C"] as const).flatMap((k) => [
+                            <TableHead key={`${k}-h-l`} className="text-right text-[10px] uppercase">Leads</TableHead>,
+                            <TableHead key={`${k}-h-a`} className="text-right text-[10px] uppercase">Agend.</TableHead>,
+                            <TableHead key={`${k}-h-c`} className="text-right text-[10px] uppercase">Comp.</TableHead>,
+                            <TableHead key={`${k}-h-v`} className="text-right text-[10px] uppercase">Vend.</TableHead>,
                           ])}
                         </TableRow>
                       </TableHeader>
