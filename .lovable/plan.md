@@ -1,107 +1,123 @@
+## Objetivo
 
-# Plataforma de Tarefas (estilo ClickUp)
+Tornar o Painel Comercial 100% configurável: você define **de qual pipeline/stage** vem cada métrica e **qual fonte** (Planilha · Meta · GHL) alimenta cada card. Os "500 leads irreais" somem porque os leads passam a vir da planilha.
 
-Nova página `/tarefas` para gestão de tarefas dos squads, organizada por cliente → lista → tarefa, com responsáveis vinculados às funções dos usuários.
+---
 
-## Estrutura conceitual
+## 1. Banco — 2 tabelas novas
 
+**`comercial_pipeline_config`** (singleton por workspace, sem `client_id`)
+- `role` (`sdr` | `closer`) — pipeline pode ser diferente por função
+- `pipeline_id` (texto, GHL)
+- `stages_reuniao_marcada` (text[])
+- `stages_comparecida` (text[])
+- `stages_proposta_enviada` (text[])
+- `stages_proposta_perdida` (text[])
+- `stages_vendida` (text[])
+- `stages_noshow` (text[])
+
+**`comercial_data_sources`** (singleton)
+- `leads_source` (`sheet` | `ghl`) — default `sheet`
+- `mqls_source` (`sheet` | `ghl`) — default `sheet`
+- `reunioes_source` (`ghl`) — fixo GHL (sem opção)
+- `comparecidas_source` (`ghl` | `sheet`)
+- `vendas_source` (`ghl` | `sheet`)
+- `sheet_id` (texto, default = planilha KP UTM RASTREIO)
+- `sheet_tab` (texto, default `Página4`)
+- `sheet_mql_column` (texto, default `MQL`)
+- `sheet_mql_value` (texto, default `SIM`)
+
+RLS: leitura/escrita só para admin/manager.
+
+---
+
+## 2. Aba Config — UI nova
+
+Reorganizada em 3 seções (substitui a atual "Funções da equipe"):
+
+### 2.1 Funções da equipe (mantém o que já existe)
+
+### 2.2 Pipelines & Stages
+Para cada função (**SDR** / **Closer**):
+- Dropdown "Pipeline" (lista vinda de `list-ghl-stages`)
+- Para cada métrica (Reunião marcada, Comparecida, Proposta enviada, Proposta perdida, Vendida, No-show) → chips multi-select de stages daquele pipeline (reusa o padrão visual de `GhlStageMappingEditor`)
+
+### 2.3 Fontes de dados
+Tabela com uma linha por métrica e radios de fonte:
+
+```text
+Métrica              Planilha   Meta Ads   GHL
+Leads totais            ( )        —       ( )
+MQLs                    ( )        —       ( )
+Taxa Ativação MQL    (calculada — não tem fonte)
+Reuniões marcadas       —          —       (●)  (fixo)
+Comparecidas            ( )        —       ( )
+Vendas                  ( )        —       ( )
+Investimento            —         (●)       —   (fixo)
 ```
-Cliente (pasta — vem de squad_clients)
- └─ Lista (8 fixas)
-     ├─ Jornada Inicial          (única)
-     ├─ Gestor de Tráfego Sem.   (semanal)
-     ├─ Gestor de Tráfego Mensal (mensal)
-     ├─ Head Semanal             (semanal)
-     ├─ Head Mensal              (mensal)
-     ├─ Ex. de Projetos Sem.     (semanal)
-     ├─ Ex. de Projetos Mensal   (mensal)
-     └─ Melhoria Contínua        (avulso)
-        └─ Tarefa (título, responsável, prioridade, vencimento, status)
-```
 
-As 8 listas são **fixas no código** (não viram tabela) — cada tarefa apenas guarda a chave da lista. Isso garante padronização entre clientes.
+Campos extras: Sheet ID · Aba · Coluna MQL · Valor MQL=positivo.
 
-## Fase 1 — escopo entregue agora
+---
 
-1. **Cadastro de função do usuário** (tela Usuários)
-   - Novo campo "Função no squad": `gestor_trafego` | `head` | `especialista_projetos` | `sem_funcao`.
-   - Mudou ali → reflete como responsável-padrão em todos os clientes.
-2. **Override por cliente** (tela do cliente, área admin)
-   - Admin pode trocar quem é o Gestor/Head/Especialista naquele cliente específico, sem mexer no global.
-3. **Página `/tarefas`**
-   - Sidebar esquerda: lista de clientes do squad (busca + contador de tarefas abertas).
-   - Conteúdo: 8 listas em accordion/colunas, cada uma com contador (abertas/total) e botão "+ Nova tarefa".
-   - Linha de tarefa: checkbox status, título editável, badge de prioridade, data de vencimento, avatar do responsável.
-   - Filtros no topo: minhas tarefas / todas, status, prioridade.
-4. **CRUD de tarefa** via dialog: título, descrição, lista, responsável (default = quem tem a função daquela lista no cliente), prioridade, vencimento, status.
-5. **Acesso**
-   - Admin: vê e edita tudo.
-   - Colaborador: vê todos os clientes do(s) seu(s) squad(s), mas só edita/conclui tarefas **atribuídas a ele**. Pode criar tarefas em "Melhoria Contínua".
+## 3. Cards do funil — seletor de fonte inline
 
-**Fora da Fase 1** (fica para depois, conforme você validou):
-- Templates por função/cadência + recorrência automática.
-- Visões "Minhas tarefas" e "Por cadência" como páginas próprias (na Fase 1 só o filtro "minhas" dentro do cliente).
-- Comentários, anexos, subtarefas.
+Cada card de KPI ganha um pequeno ícone `⋯` no canto que abre um popover com:
+- Fonte atual (badge: "via Planilha" / "via GHL" / "via Meta")
+- Botão "Trocar fonte" → atualiza `comercial_data_sources` e re-fetch
+Igual ao padrão do dashboard de Criativos.
+
+---
+
+## 4. Edge function `kp-comercial-snapshot` — refatoração
+
+Nova ordem:
+1. Lê `comercial_data_sources` + `comercial_pipeline_config`
+2. **Leads/MQLs**:
+   - Se `source=sheet`: faz fetch CSV de `https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={tab}`, filtra por data, conta linhas (leads) e linhas com coluna MQL=SIM (mqls)
+   - Se `source=ghl`: comportamento atual
+3. **Reuniões / Comparecidas / Vendas**:
+   - Busca opportunities **apenas** no `pipeline_id` configurado para a função
+   - Usa stages mapeadas em vez de regex no nome
+4. **Propostas (Closer)**:
+   - "Em aberto" = opps em `stages_proposta_enviada`
+   - "Perdida" = opps em `stages_proposta_perdida`
+5. **No-show**: usa `stages_noshow` mapeadas
+
+---
+
+## 5. Frontend `src/pages/Comercial.tsx`
+
+- Hook `useComercialConfig` (load + mutate)
+- Aba Config: 3 sub-seções acordeonáveis
+- Função `<DataSourcePopover metric="leads">` reutilizável nos cards
+- Badge "via Planilha" / "via GHL" abaixo do número em cada card
+
+---
+
+## 6. Migração de dados
+
+Cria registros default em ambas as tabelas:
+- `comercial_data_sources`: tudo `sheet` por default (você pediu deixar o usuário escolher; default razoável é planilha já que GHL infla)
+- `comercial_pipeline_config`: vazio — você preenche na primeira visita à Config
+
+Banner amarelo no topo da página se a config estiver incompleta: "⚠️ Configure pipelines em Config para ver dados reais."
+
+---
 
 ## Detalhes técnicos
 
-### Banco (migration)
+- Sheet fetch via CSV export público (já usado em `sync-google-sheet`); reusa parser de CSV
+- Stages do GHL listados via `list-ghl-stages` edge function existente
+- Tipo `Database` será regenerado após a migração
+- Sem mudanças em RLS de outras tabelas
 
-```sql
--- Função do colaborador no squad (1 por usuário)
-alter table profiles add column squad_function text;
-  -- valores: 'gestor_trafego' | 'head' | 'especialista_projetos' | null
+---
 
--- Override por cliente (opcional)
-create table squad_client_assignments (
-  id uuid pk,
-  squad_client_id uuid not null,   -- FK squad_clients.id
-  function text not null,          -- gestor_trafego | head | especialista_projetos
-  user_id uuid not null,           -- auth.users.id
-  unique(squad_client_id, function)
-);
+## Ordem de implementação
 
--- Tarefas
-create table squad_tasks (
-  id uuid pk,
-  squad_client_id uuid not null,   -- FK squad_clients.id
-  list_key text not null,          -- 'jornada_inicial' | 'gt_semanal' | 'gt_mensal'
-                                   --  'head_semanal' | 'head_mensal'
-                                   --  'ep_semanal' | 'ep_mensal' | 'melhoria_continua'
-  title text not null,
-  description text,
-  assignee_id uuid,                -- auth.users.id (resolvido na criação)
-  priority text default 'normal',  -- urgent | high | normal | low
-  status text default 'todo',      -- todo | doing | done
-  due_date date,
-  created_by uuid,
-  created_at, updated_at, completed_at
-);
-create index on squad_tasks(squad_client_id, list_key, status);
-```
-
-RLS:
-- `squad_tasks` SELECT: admin OR `user_in_squad(squad_client → squad_id)`.
-- UPDATE/DELETE: admin OR `assignee_id = auth.uid()` OR criador.
-- INSERT: admin OR membro do squad (sempre setando `created_by = auth.uid()`).
-- `squad_client_assignments`: admin gerencia; membros do squad leem.
-- `profiles.squad_function`: admin atualiza qualquer; usuário lê o próprio (já coberto).
-
-### Frontend
-
-- Rota nova `/tarefas` em `src/App.tsx` (ProtectedRoute, sem `adminOnly` — qualquer usuário logado entra; quem não tem squad vê estado vazio).
-- Card novo no Portal "Tarefas do Squad" acima do "Painel Comercial KP".
-- Páginas/arquivos:
-  - `src/pages/Tarefas.tsx` — layout sidebar de clientes + listas.
-  - `src/components/tarefas/ClientSidebar.tsx`
-  - `src/components/tarefas/TaskList.tsx` (uma das 8 listas)
-  - `src/components/tarefas/TaskRow.tsx`
-  - `src/components/tarefas/TaskDialog.tsx` (criar/editar)
-  - `src/components/tarefas/ClientAssignmentsCard.tsx` (admin, override por cliente)
-- Em `src/pages/UsersPage.tsx`: adicionar seletor de "Função no squad" por usuário.
-- Resolver responsável padrão: `assignment override` do cliente, senão primeiro `profiles.squad_function = X` do squad daquele cliente.
-- Mantém tema dark glassmorphism + roxo já existente (semantic tokens do `index.css`).
-
-## Próximo passo
-
-Aprova esse plano que eu já parto para a migration + UI.
+1. Migration (2 tabelas + RLS + defaults)
+2. Refator do edge function
+3. Aba Config nova (3 seções)
+4. Popover de fonte nos cards
+5. Banner de "config incompleta"

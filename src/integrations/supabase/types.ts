@@ -189,12 +189,57 @@ export type Database = {
           },
         ]
       }
+      kp_comercial_data_sources: {
+        Row: {
+          comparecidas_source: string
+          id: boolean
+          leads_source: string
+          mqls_source: string
+          sheet_id: string
+          sheet_mql_column: string
+          sheet_mql_value: string
+          sheet_tab: string
+          updated_at: string
+          vendas_source: string
+        }
+        Insert: {
+          comparecidas_source?: string
+          id?: boolean
+          leads_source?: string
+          mqls_source?: string
+          sheet_id?: string
+          sheet_mql_column?: string
+          sheet_mql_value?: string
+          sheet_tab?: string
+          updated_at?: string
+          vendas_source?: string
+        }
+        Update: {
+          comparecidas_source?: string
+          id?: boolean
+          leads_source?: string
+          mqls_source?: string
+          sheet_id?: string
+          sheet_mql_column?: string
+          sheet_mql_value?: string
+          sheet_tab?: string
+          updated_at?: string
+          vendas_source?: string
+        }
+        Relationships: []
+      }
       kp_comercial_pipeline_config: {
         Row: {
           classe: string | null
           kind: string | null
           pipeline_id: string
           pipeline_name: string | null
+          stages_comparecida: string[]
+          stages_noshow: string[]
+          stages_proposta_enviada: string[]
+          stages_proposta_perdida: string[]
+          stages_reuniao_marcada: string[]
+          stages_vendida: string[]
           updated_at: string
         }
         Insert: {
@@ -202,6 +247,12 @@ export type Database = {
           kind?: string | null
           pipeline_id: string
           pipeline_name?: string | null
+          stages_comparecida?: string[]
+          stages_noshow?: string[]
+          stages_proposta_enviada?: string[]
+          stages_proposta_perdida?: string[]
+          stages_reuniao_marcada?: string[]
+          stages_vendida?: string[]
           updated_at?: string
         }
         Update: {
@@ -209,6 +260,12 @@ export type Database = {
           kind?: string | null
           pipeline_id?: string
           pipeline_name?: string | null
+          stages_comparecida?: string[]
+          stages_noshow?: string[]
+          stages_proposta_enviada?: string[]
+          stages_proposta_perdida?: string[]
+          stages_reuniao_marcada?: string[]
+          stages_vendida?: string[]
           updated_at?: string
         }
         Relationships: []

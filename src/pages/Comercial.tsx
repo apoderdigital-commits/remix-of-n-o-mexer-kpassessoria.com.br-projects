@@ -94,18 +94,25 @@ export default function Comercial() {
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [ghlUsers, setGhlUsers] = useState<GhlUser[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, UserRoleRow>>({});
-  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([]);
-  const [pipelineCfg, setPipelineCfg] = useState<Record<string, { classe?: string | null; kind?: string | null }>>({});
+  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string; stages?: { id: string; name: string }[] }[]>([]);
+  const [pipelineCfg, setPipelineCfg] = useState<Record<string, any>>({});
+  const [dataSources, setDataSources] = useState<any>(null);
+  const [dsCounts, setDsCounts] = useState<any>(null);
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
   const [semAgendOpen, setSemAgendOpen] = useState(false);
   const [mqlFilterOpen, setMqlFilterOpen] = useState<null | { title: string; rows: MqlRow[] }>(null);
+
 
   const applyPayload = (payload: any) => {
     if (!payload) return;
     if (payload.kpis) setKpis(payload.kpis);
     if (payload.users) setGhlUsers(payload.users);
     if (payload.pipelines) setPipelinesList(payload.pipelines);
+    if (payload.dataSources) {
+      setDataSources(payload.dataSources);
+      setDsCounts({ sheet: payload.dataSources.sheetCounts, ghl: payload.dataSources.ghlCounts, sheetError: payload.dataSources.sheetError });
+    }
     setFase2({
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
@@ -123,6 +130,7 @@ export default function Comercial() {
       followUps: payload.followUps || { mqlsSemAgendamento: [], propostasParadas: [], opsEstagnadas: [], thresholds: { semAgendDias: 3, propostaParadaDias: 7, oppEstagnadaDias: 14 } },
     });
   };
+
 
   const fetchAll = async (force = false) => {
     setLoading(true);
@@ -146,10 +154,11 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes, pipeRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes, dsRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
       supabase.from("kp_comercial_pipeline_config").select("*"),
+      (supabase.from as any)("kp_comercial_data_sources").select("*").eq("id", true).maybeSingle(),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -164,10 +173,11 @@ export default function Comercial() {
       setGoals(map);
     }
     if (pipeRes.data) {
-      const map: Record<string, { classe?: string | null; kind?: string | null }> = {};
-      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = { classe: r.classe, kind: r.kind };
+      const map: Record<string, any> = {};
+      for (const r of pipeRes.data as any[]) map[r.pipeline_id] = r;
       setPipelineCfg(map);
     }
+    if (dsRes?.data) setDataSources(dsRes.data);
   };
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
@@ -194,11 +204,30 @@ export default function Comercial() {
     toast.success(`${pipeline.name}: ${kind || "—"}`);
   };
 
+  type StageKey = "stages_reuniao_marcada"|"stages_comparecida"|"stages_proposta_enviada"|"stages_proposta_perdida"|"stages_vendida"|"stages_noshow";
+  const toggleStageMapping = async (pipeline: { id: string; name: string }, key: StageKey, stageId: string) => {
+    const current: string[] = pipelineCfg[pipeline.id]?.[key] || [];
+    const next = current.includes(stageId) ? current.filter((x) => x !== stageId) : [...current, stageId];
+    const payload: any = { pipeline_id: pipeline.id, pipeline_name: pipeline.name, [key]: next };
+    const { error } = await supabase.from("kp_comercial_pipeline_config").upsert(payload, { onConflict: "pipeline_id" });
+    if (error) { toast.error("Erro: " + error.message); return; }
+    setPipelineCfg((p) => ({ ...p, [pipeline.id]: { ...p[pipeline.id], [key]: next } }));
+  };
+
+  const updateDataSource = async (patch: Record<string, any>) => {
+    const next = { ...(dataSources || {}), ...patch };
+    setDataSources(next);
+    const { error } = await (supabase.from as any)("kp_comercial_data_sources").upsert({ id: true, ...patch }, { onConflict: "id" });
+    if (error) { toast.error("Erro ao salvar fonte: " + error.message); return; }
+    toast.success("Fonte atualizada — clique em Atualizar para recalcular");
+  };
+
   useEffect(() => { void fetchAll(false); void fetchRoles(); /* eslint-disable-next-line */ }, []);
 
   const updateGoalLocal = (sdrId: string, key: keyof SdrGoal, val: number) => {
     setGoals((g) => ({ ...g, [sdrId]: { agendados: 0, realizados: 0, vendas: 0, ...g[sdrId], [key]: val } }));
   };
+
 
   const persistGoal = async (sdrId: string) => {
     const g = goals[sdrId] || { agendados: 0, realizados: 0, vendas: 0 };
@@ -373,7 +402,9 @@ export default function Comercial() {
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
                         <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
                       </div>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
+                        {dataSources ? `leads via ${dataSources.leads_source === "sheet" ? "planilha" : "GHL"} · MQLs via ${dataSources.mqls_source === "sheet" ? "planilha" : "GHL"}` : "tempo real"}
+                      </Badge>
                     </div>
                     <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
@@ -964,8 +995,146 @@ export default function Comercial() {
                 Resumo: <span className="text-cyan-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "sdr" || r.role === "both").length}</span> SDRs ·{" "}
                 <span className="text-emerald-300 font-semibold">{Object.values(userRoles).filter(r => r.role === "closer" || r.role === "both").length}</span> Closers
               </div>
+
+              {/* ============ FONTES DE DADOS ============ */}
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Database className="h-4 w-4 text-cyan-300" />
+                  <div className="text-sm font-semibold">Fontes de dados por métrica</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Escolha de onde puxar cada número. Investimento é sempre Meta Ads · Taxa de Ativação é calculada (MQLs ÷ Leads).
+                </p>
+                {dataSources && (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Métrica</TableHead>
+                          <TableHead className="text-center">Fonte</TableHead>
+                          <TableHead className="text-right text-[10px] uppercase text-muted-foreground">via Planilha</TableHead>
+                          <TableHead className="text-right text-[10px] uppercase text-muted-foreground">via GHL</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {([
+                          { key: "leads_source", label: "Leads totais", c: "leads" },
+                          { key: "mqls_source", label: "MQLs", c: "mqls" },
+                          { key: "comparecidas_source", label: "Comparecidas", c: null },
+                          { key: "vendas_source", label: "Vendas", c: null },
+                        ] as const).map((row) => {
+                          const cur = dataSources[row.key];
+                          return (
+                            <TableRow key={row.key}>
+                              <TableCell className="font-medium text-xs">{row.label}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1.5 justify-center">
+                                  {(["sheet","ghl"] as const).map((opt) => (
+                                    <Button key={opt} variant="outline" size="sm"
+                                      onClick={() => updateDataSource({ [row.key]: opt })}
+                                      className={`h-7 px-3 text-[11px] ${cur === opt ? "bg-primary/20 text-primary border-primary/40 ring-1 ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground"}`}>
+                                      {opt === "sheet" ? "Planilha" : "GHL"}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">
+                                {row.c && dsCounts?.sheet ? fmtNum(dsCounts.sheet[row.c] || 0) : "—"}
+                              </TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">
+                                {row.c && dsCounts?.ghl ? fmtNum(dsCounts.ghl[row.c] || 0) : "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/5">
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Sheet ID</Label>
+                        <Input value={dataSources.sheet_id || ""} onChange={(e) => setDataSources({ ...dataSources, sheet_id: e.target.value })} onBlur={() => updateDataSource({ sheet_id: dataSources.sheet_id })} className="h-8 text-xs bg-background/40 border-white/10" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Aba</Label>
+                        <Input value={dataSources.sheet_tab || ""} onChange={(e) => setDataSources({ ...dataSources, sheet_tab: e.target.value })} onBlur={() => updateDataSource({ sheet_tab: dataSources.sheet_tab })} className="h-8 text-xs bg-background/40 border-white/10" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Coluna MQL</Label>
+                        <Input value={dataSources.sheet_mql_column || ""} onChange={(e) => setDataSources({ ...dataSources, sheet_mql_column: e.target.value })} onBlur={() => updateDataSource({ sheet_mql_column: dataSources.sheet_mql_column })} className="h-8 text-xs bg-background/40 border-white/10" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Valor = MQL</Label>
+                        <Input value={dataSources.sheet_mql_value || ""} onChange={(e) => setDataSources({ ...dataSources, sheet_mql_value: e.target.value })} onBlur={() => updateDataSource({ sheet_mql_value: dataSources.sheet_mql_value })} className="h-8 text-xs bg-background/40 border-white/10" />
+                      </div>
+                    </div>
+                    {dsCounts?.sheetError && <div className="mt-2 text-[11px] text-rose-300">Erro na planilha: {dsCounts.sheetError}</div>}
+                  </>
+                )}
+              </Card>
+
+              {/* ============ MAPEAMENTO DE STAGES POR PIPELINE ============ */}
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Settings className="h-4 w-4 text-primary" />
+                  <div className="text-sm font-semibold">Mapeamento de etapas (stages) por pipeline</div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Para cada pipeline do GHL, marque quais etapas representam Reunião marcada, Comparecida, Proposta enviada, Proposta perdida, Vendida e No-show. Isso é o que define "proposta perdida" no painel dos Closers.
+                </p>
+                {pipelinesList.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">Clique em Atualizar para carregar os pipelines.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {pipelinesList.map((p) => {
+                      const cfg = pipelineCfg[p.id] || {};
+                      const stages = p.stages || [];
+                      if (!stages.length) return null;
+                      const metrics: { key: "stages_reuniao_marcada"|"stages_comparecida"|"stages_proposta_enviada"|"stages_proposta_perdida"|"stages_vendida"|"stages_noshow"; label: string; color: string }[] = [
+                        { key: "stages_reuniao_marcada", label: "Reunião marcada", color: "bg-blue-500/20 text-blue-200 border-blue-500/40" },
+                        { key: "stages_comparecida", label: "Comparecida", color: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40" },
+                        { key: "stages_proposta_enviada", label: "Proposta enviada", color: "bg-amber-500/20 text-amber-200 border-amber-500/40" },
+                        { key: "stages_proposta_perdida", label: "Proposta perdida", color: "bg-rose-500/20 text-rose-200 border-rose-500/40" },
+                        { key: "stages_vendida", label: "Vendida", color: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40" },
+                        { key: "stages_noshow", label: "No-show", color: "bg-zinc-500/20 text-zinc-200 border-zinc-500/40" },
+                      ];
+                      return (
+                        <div key={p.id} className="rounded-xl border border-white/5 bg-background/20 p-3 space-y-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="text-sm font-semibold">{p.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{stages.length} stages</div>
+                          </div>
+                          {metrics.map((m) => {
+                            const sel: string[] = cfg[m.key] || [];
+                            return (
+                              <div key={m.key} className="space-y-1">
+                                <div className="flex items-baseline justify-between">
+                                  <Badge variant="outline" className={`${m.color} text-[10px]`}>{m.label}</Badge>
+                                  <span className="text-[10px] text-muted-foreground">{sel.length} marc.</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {stages.map((s) => {
+                                    const on = sel.includes(s.id);
+                                    return (
+                                      <button key={s.id} type="button" onClick={() => toggleStageMapping(p, m.key, s.id)}
+                                        className={`text-[10px] px-2 py-0.5 rounded border transition ${on ? m.color + " font-semibold" : "bg-background/40 border-white/10 text-muted-foreground hover:text-foreground"}`}>
+                                        {s.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
             </TabsContent>
           )}
+
           </Tabs>
 
           <p className="text-xs text-muted-foreground/60 text-center pt-4">

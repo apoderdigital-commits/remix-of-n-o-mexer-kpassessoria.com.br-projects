@@ -105,19 +105,37 @@ async function buildSnapshot(since: Date, until: Date) {
   const pipRes = await fetch(`${GHL_BASE}/opportunities/pipelines?locationId=${locationId}`, { headers });
   const pipelines = ((pipRes.ok ? (await pipRes.json()).pipelines : []) || []);
 
-  // Overrides de classificação (A/B/C) e tipo (sdr/closer) por pipeline
+  // Configs persistidas
   const supabaseAdmin = sb();
-  const { data: pipeCfgRows } = await supabaseAdmin
-    .from("kp_comercial_pipeline_config").select("*");
-  const pipeCfg = new Map<string, { classe?: string; kind?: string }>();
-  for (const r of (pipeCfgRows || []) as any[]) {
-    pipeCfg.set(r.pipeline_id, { classe: r.classe || undefined, kind: r.kind || undefined });
-  }
+  const [{ data: pipeCfgRows }, { data: dsRow }] = await Promise.all([
+    supabaseAdmin.from("kp_comercial_pipeline_config").select("*"),
+    supabaseAdmin.from("kp_comercial_data_sources").select("*").eq("id", true).maybeSingle(),
+  ]);
+  const pipeCfg = new Map<string, any>();
+  for (const r of (pipeCfgRows || []) as any[]) pipeCfg.set(r.pipeline_id, r);
   const classifyPipeline = (id: string, name: string): "A" | "B" | "C" | "Outro" => {
     const ov = pipeCfg.get(id)?.classe;
     if (ov === "A" || ov === "B" || ov === "C" || ov === "Outro") return ov;
     return classifyPipelineByName(name);
   };
+  // Conjuntos de stages mapeadas (agregados de todos pipelines configurados)
+  const mappedStages = {
+    reuniao_marcada: new Set<string>(),
+    comparecida: new Set<string>(),
+    proposta_enviada: new Set<string>(),
+    proposta_perdida: new Set<string>(),
+    vendida: new Set<string>(),
+    noshow: new Set<string>(),
+  };
+  for (const r of (pipeCfgRows || []) as any[]) {
+    for (const s of (r.stages_reuniao_marcada || [])) mappedStages.reuniao_marcada.add(s);
+    for (const s of (r.stages_comparecida || [])) mappedStages.comparecida.add(s);
+    for (const s of (r.stages_proposta_enviada || [])) mappedStages.proposta_enviada.add(s);
+    for (const s of (r.stages_proposta_perdida || [])) mappedStages.proposta_perdida.add(s);
+    for (const s of (r.stages_vendida || [])) mappedStages.vendida.add(s);
+    for (const s of (r.stages_noshow || [])) mappedStages.noshow.add(s);
+  }
+  const hasStageMappings = mappedStages.proposta_enviada.size + mappedStages.proposta_perdida.size + mappedStages.vendida.size > 0;
 
   interface PipelineFunnel {
     id: string; name: string; classe: string;
@@ -163,12 +181,52 @@ async function buildSnapshot(since: Date, until: Date) {
     });
   }
 
+  // ---------- SHEET FETCH (leads/mqls via planilha quando configurado) ----------
+  const ds = (dsRow as any) || { leads_source: "sheet", mqls_source: "sheet", sheet_id: "1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c", sheet_tab: "Página4", sheet_mql_column: "MQL", sheet_mql_value: "SIM" };
+  let sheetLeads = 0, sheetMqls = 0, sheetError: string | null = null;
+  let sheetRowsTotal = 0;
+  try {
+    if (ds.leads_source === "sheet" || ds.mqls_source === "sheet") {
+      const url = `https://docs.google.com/spreadsheets/d/${ds.sheet_id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(ds.sheet_tab)}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Sheet HTTP ${r.status}`);
+      const txt = await r.text();
+      // CSV parser simples (handles quoted)
+      const parseLine = (line: string) => {
+        const out: string[] = []; let cur = ""; let q = false;
+        for (const ch of line) {
+          if (ch === '"') q = !q;
+          else if (ch === "," && !q) { out.push(cur); cur = ""; }
+          else cur += ch;
+        }
+        out.push(cur);
+        return out.map((c) => c.trim());
+      };
+      const lines = txt.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      if (lines.length >= 2) {
+        const header = parseLine(lines[0]).map((h) => h.toUpperCase().trim());
+        const mqlCol = header.findIndex((h) => h === String(ds.sheet_mql_column).toUpperCase());
+        const wanted = String(ds.sheet_mql_value).toUpperCase();
+        sheetRowsTotal = lines.length - 1;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseLine(lines[i]);
+          sheetLeads++;
+          if (mqlCol >= 0 && (cols[mqlCol] || "").toUpperCase() === wanted) sheetMqls++;
+        }
+      }
+    }
+  } catch (e: any) {
+    sheetError = e?.message || String(e);
+  }
+
   // ---------- KPIS DO TOPO ----------
-  const leadsTotais = allContacts.filter((c) => inRange(c.dateAdded)).length;
+  const ghlLeadsTotais = allContacts.filter((c) => inRange(c.dateAdded)).length;
   const mqlContacts = allContacts.filter((c) =>
     inRange(c.dateAdded) && (c.tags || []).some((t: string) => String(t).toLowerCase().includes("mql"))
   );
-  const mqls = mqlContacts.length;
+  const ghlMqls = mqlContacts.length;
+  const leadsTotais = ds.leads_source === "sheet" ? sheetLeads : ghlLeadsTotais;
+  const mqls = ds.mqls_source === "sheet" ? sheetMqls : ghlMqls;
   let agendados = 0, realizados = 0;
   for (const c of mqlContacts) {
     const a = apptByContact.get(c.id);
@@ -177,20 +235,28 @@ async function buildSnapshot(since: Date, until: Date) {
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     if (st.includes("show") && !st.includes("no")) realizados++;
   }
+  // Stages de proposta: usa mapeamento se configurado, senão regex nome
   const proposalStageIdsAll = new Set<string>();
-  for (const p of pipelines) {
-    for (const s of (p.stages || [])) {
-      if (/proposta|proposal/i.test(s.name || "")) proposalStageIdsAll.add(s.id);
+  if (hasStageMappings) {
+    for (const s of mappedStages.proposta_enviada) proposalStageIdsAll.add(s);
+    for (const s of mappedStages.proposta_perdida) proposalStageIdsAll.add(s);
+  } else {
+    for (const p of pipelines) {
+      for (const s of (p.stages || [])) {
+        if (/proposta|proposal/i.test(s.name || "")) proposalStageIdsAll.add(s.id);
+      }
     }
   }
   let propostas = 0, vendas = 0, faturamento = 0, totalOpps = allOpps.length;
   for (const o of allOpps) {
     if (proposalStageIdsAll.has(o.pipelineStageId)) propostas++;
-    if ((o.status || "").toLowerCase() === "won") {
+    const isWonByStage = hasStageMappings && mappedStages.vendida.has(o.pipelineStageId);
+    if ((o.status || "").toLowerCase() === "won" || isWonByStage) {
       vendas++;
       faturamento += Number(o.monetaryValue || 0);
     }
   }
+
 
   // ---------- META SPEND DIÁRIO ----------
   const dailySpend = new Map<string, number>();
@@ -383,17 +449,23 @@ async function buildSnapshot(since: Date, until: Date) {
       valor: Number(o.monetaryValue || 0),
       pipeline: o._pipelineName,
     };
-    if (status === "won") c.lists.vendas[cls].push(entry);
-    // Identifica stage para classificar proposta enviada x perdida via nome
+    if (status === "won" || (hasStageMappings && mappedStages.vendida.has(o.pipelineStageId))) c.lists.vendas[cls].push(entry);
+    // Classifica proposta enviada/perdida: prioriza mapeamento explícito
+    const stageId = o.pipelineStageId;
     const stageName = (pipelines.find((p: any) => p.id === o._pipelineId)
-      ?.stages?.find((s: any) => s.id === o.pipelineStageId)?.name || "").toLowerCase();
-    const isStageEnviada = /enviad/.test(stageName) && /proposta|proposal/.test(stageName);
-    const isStagePerdida = /perdid/.test(stageName) && /proposta|proposal/.test(stageName);
-    if (isStagePerdida || (proposalStageIdsAll.has(o.pipelineStageId) && status === "lost")) {
+      ?.stages?.find((s: any) => s.id === stageId)?.name || "").toLowerCase();
+    const isStageEnviada = hasStageMappings
+      ? mappedStages.proposta_enviada.has(stageId)
+      : (/enviad/.test(stageName) && /proposta|proposal/.test(stageName));
+    const isStagePerdida = hasStageMappings
+      ? mappedStages.proposta_perdida.has(stageId)
+      : (/perdid/.test(stageName) && /proposta|proposal/.test(stageName));
+    if (isStagePerdida || (!hasStageMappings && proposalStageIdsAll.has(stageId) && status === "lost")) {
       c.lists.propostasPerdidas[cls].push(entry);
-    } else if (isStageEnviada || (proposalStageIdsAll.has(o.pipelineStageId) && status !== "won")) {
+    } else if (isStageEnviada || (!hasStageMappings && proposalStageIdsAll.has(stageId) && status !== "won")) {
       c.lists.propostasAbertas[cls].push(entry);
     }
+
   }
   const closers = Array.from(closerMap.values());
 
@@ -559,6 +631,14 @@ async function buildSnapshot(since: Date, until: Date) {
   return {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
+    dataSources: {
+      leads: ds.leads_source, mqls: ds.mqls_source,
+      comparecidas: ds.comparecidas_source, vendas: ds.vendas_source,
+      sheet: { id: ds.sheet_id, tab: ds.sheet_tab, mql_column: ds.sheet_mql_column, mql_value: ds.sheet_mql_value },
+      sheetCounts: { leads: sheetLeads, mqls: sheetMqls, rows: sheetRowsTotal },
+      ghlCounts: { leads: ghlLeadsTotais, mqls: ghlMqls },
+      sheetError,
+    },
     users,
     sdrs,
     closers,
@@ -567,7 +647,7 @@ async function buildSnapshot(since: Date, until: Date) {
     mqlSummary,
     mqlsList: mqlsList.slice(0, 500),
     nonMqlsList: nonMqlsList.slice(0, 500),
-    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name })),
+    pipelines: pipelines.map((p: any) => ({ id: p.id, name: p.name, stages: (p.stages || []).map((s: any) => ({ id: s.id, name: s.name })) })),
     classes,
     aggregateFunnel,
     pipelineFunnels,
@@ -587,6 +667,7 @@ async function buildSnapshot(since: Date, until: Date) {
     },
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
