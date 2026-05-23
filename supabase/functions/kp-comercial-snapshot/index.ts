@@ -266,6 +266,7 @@ async function buildSnapshot(since: Date, until: Date) {
       sdrMap.set(uid, {
         user: u,
         agendados: 0, realizados: 0, noshow: 0, cancelados: 0,
+        vendas: { A: 0, B: 0, C: 0, Outro: 0 },
         lists: {
           agendado: [] as any[],
           realizado: [] as any[],
@@ -276,12 +277,15 @@ async function buildSnapshot(since: Date, until: Date) {
     }
     return sdrMap.get(uid)!;
   };
+  const sdrByContact = new Map<string, { id: string; name: string }>();
   const noShowByHour: Record<string, number> = {};
+  const agendadosByHour: Record<string, number> = {};
   for (const a of allAppts) {
     const uid = a.assignedUserId || a.userId;
     if (!uid) continue;
     const s = initSdr(uid);
     s.agendados++;
+    if (a.contactId) sdrByContact.set(a.contactId, { id: s.user.id, name: s.user.name });
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const category = a.contactId ? classifyContact(a.contactId) : "Outro";
@@ -294,7 +298,13 @@ async function buildSnapshot(since: Date, until: Date) {
       phone: contact?.phone,
       startTime: a.startTime,
       category,
+      sdrName: s.user.name,
     };
+    if (a.startTime) {
+      const h = new Date(a.startTime).getHours();
+      const key = `${String(h).padStart(2, "0")}:00`;
+      agendadosByHour[key] = (agendadosByHour[key] || 0) + 1;
+    }
     let bucket: "agendado" | "realizado" | "noshow" | "cancelado" = "agendado";
     if (st.includes("show") && !st.includes("no")) { s.realizados++; bucket = "realizado"; }
     else if (st.includes("noshow") || st === "no-show" || st === "no_show") {
@@ -306,6 +316,18 @@ async function buildSnapshot(since: Date, until: Date) {
       }
     } else if (st.includes("cancel")) { s.cancelados++; bucket = "cancelado"; }
     s.lists[bucket].push(entry);
+  }
+  // Vendas por SDR/classe — atribui a venda ao SDR que originalmente agendou aquele contato
+  for (const o of allOpps) {
+    if ((o.status || "").toLowerCase() !== "won") continue;
+    if (!o.contactId) continue;
+    const sdr = sdrByContact.get(o.contactId);
+    if (!sdr) continue;
+    const s = sdrMap.get(sdr.id);
+    if (!s) continue;
+    const clsRaw = (pipelineClasseById.get(o._pipelineId) || "Outro");
+    const cls: "A"|"B"|"C"|"Outro" = (clsRaw === "A" || clsRaw === "B" || clsRaw === "C") ? clsRaw as any : "Outro";
+    s.vendas[cls]++;
   }
   const sdrs = Array.from(sdrMap.values()).sort((a, b) => b.agendados - a.agendados);
 
