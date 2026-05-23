@@ -450,14 +450,17 @@ async function buildSnapshot(since: Date, until: Date) {
 
   // ---------- CLASSES A/B/C ----------
   const classes: Record<string, any> = {
-    A: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    B: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    C: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
-    Outro: { propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    A: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    B: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    C: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
+    Outro: { leads: 0, propostas: 0, vendas: 0, faturamento: 0, pipelines: [] },
   };
+  // Leads por classe = contatos distintos com opp em pipeline daquela classe (no período)
+  const leadsByClass: Record<string, Set<string>> = { A: new Set(), B: new Set(), C: new Set(), Outro: new Set() };
   for (const pf of pipelineFunnels) {
     classes[pf.classe].pipelines.push(pf.name);
     for (const o of allOpps.filter((x) => x._pipelineId === pf.id)) {
+      if (o.contactId) leadsByClass[pf.classe].add(o.contactId);
       if (proposalStageIdsAll.has(o.pipelineStageId)) classes[pf.classe].propostas++;
       if ((o.status || "").toLowerCase() === "won") {
         classes[pf.classe].vendas++;
@@ -465,6 +468,7 @@ async function buildSnapshot(since: Date, until: Date) {
       }
     }
   }
+  for (const k of ["A", "B", "C", "Outro"]) classes[k].leads = leadsByClass[k].size;
 
   // ---------- AGGREGATE FUNNEL ----------
   const aggregateFunnel = [
