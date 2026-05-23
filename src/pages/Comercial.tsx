@@ -402,7 +402,9 @@ export default function Comercial() {
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
                         <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
                       </div>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">tempo real</Badge>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
+                        {dataSources ? `leads via ${dataSources.leads_source === "sheet" ? "planilha" : "GHL"} · MQLs via ${dataSources.mqls_source === "sheet" ? "planilha" : "GHL"}` : "tempo real"}
+                      </Badge>
                     </div>
                     <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
