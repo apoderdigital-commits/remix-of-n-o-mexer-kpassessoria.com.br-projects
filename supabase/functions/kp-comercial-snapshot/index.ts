@@ -87,8 +87,24 @@ async function buildSnapshot(since: Date, until: Date) {
   // ---------- CALENDARS + APPTS ----------
   const calRes = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, { headers });
   const calendars = ((calRes.ok ? (await calRes.json()).calendars : []) || []);
+
+  // Quais calendários estão habilitados na config (se nenhum, usa todos por compat)
+  const supabaseAdminEarly = sb();
+  const { data: enabledCalRows } = await supabaseAdminEarly
+    .from("kp_comercial_calendars").select("ghl_calendar_id, enabled, name");
+  const enabledSet = new Set<string>();
+  const calendarMeta = new Map<string, { name: string; enabled: boolean }>();
+  for (const r of (enabledCalRows || []) as any[]) {
+    calendarMeta.set(r.ghl_calendar_id, { name: r.name || "", enabled: !!r.enabled });
+    if (r.enabled) enabledSet.add(r.ghl_calendar_id);
+  }
+  const hasCalendarConfig = (enabledCalRows || []).length > 0;
+  const calendarsToFetch = hasCalendarConfig
+    ? calendars.filter((c: any) => enabledSet.has(c.id))
+    : calendars;
+
   const allAppts: any[] = [];
-  for (const c of calendars) {
+  for (const c of calendarsToFetch) {
     const params = new URLSearchParams({
       locationId, calendarId: c.id,
       startTime: String(sinceMs), endTime: String(untilMs),
@@ -96,10 +112,11 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allAppts.push(e);
+    for (const e of (j.events || [])) allAppts.push({ ...e, _calendarName: c.name });
   }
   const apptByContact = new Map<string, any>();
   for (const a of allAppts) if (a.contactId) apptByContact.set(a.contactId, a);
+
 
   // ---------- PIPELINES + OPPS ----------
   const pipRes = await fetch(`${GHL_BASE}/opportunities/pipelines?locationId=${locationId}`, { headers });
@@ -182,7 +199,28 @@ async function buildSnapshot(since: Date, until: Date) {
   }
 
   // ---------- SHEET FETCH (leads/mqls via planilha quando configurado) ----------
-  const ds = (dsRow as any) || { leads_source: "sheet", mqls_source: "sheet", sheet_id: "1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c", sheet_tab: "Página4", sheet_mql_column: "MQL", sheet_mql_value: "SIM" };
+  const ds = (dsRow as any) || { leads_source: "sheet", mqls_source: "sheet", sheet_id: "1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c", sheet_tab: "Página4", sheet_mql_column: "MQL", sheet_mql_value: "SIM", opportunity_source_filter: "METAADS", opportunity_source_enabled: true, meetings_source: "pipeline" };
+
+  // ---------- META OPP BY CONTACT (filtro por source da opp) ----------
+  const sourceFilter = String(ds.opportunity_source_filter || "METAADS").trim().toUpperCase();
+  const sourceEnabled = ds.opportunity_source_enabled !== false;
+  const meetingsFromCalendar = ds.meetings_source === "calendar";
+  const metaOppByContact = new Map<string, any>();
+  const allSourcesSeen = new Map<string, number>();
+  for (const o of allOpps) {
+    const src = String(o.source || o.contact?.source || "").trim();
+    if (src) allSourcesSeen.set(src, (allSourcesSeen.get(src) || 0) + 1);
+    if (!o.contactId) continue;
+    if (sourceEnabled && src.toUpperCase() !== sourceFilter) continue;
+    const prev = metaOppByContact.get(o.contactId);
+    const ts = new Date(o.updatedAt || o.createdAt || 0).getTime();
+    const prevTs = prev ? new Date(prev.updatedAt || prev.createdAt || 0).getTime() : -1;
+    if (!prev || ts > prevTs) metaOppByContact.set(o.contactId, o);
+  }
+  const topSources = Array.from(allSourcesSeen.entries())
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([source, count]) => ({ source, count }));
+
   let sheetLeads = 0, sheetMqls = 0, sheetError: string | null = null;
   let sheetRowsTotal = 0;
   try {
@@ -364,12 +402,18 @@ async function buildSnapshot(since: Date, until: Date) {
   const sdrByContact = new Map<string, { id: string; name: string }>();
   const noShowByHour: Record<string, number> = {};
   const agendadosByHour: Record<string, number> = {};
+  let apptsFiltradosSemOpp = 0;
   for (const a of allAppts) {
-    const uid = a.assignedUserId || a.userId;
+    // Filtro por fonte da oportunidade (quando ativo)
+    const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
+    if (sourceEnabled && meetingsFromCalendar && !metaOpp) { apptsFiltradosSemOpp++; continue; }
+    // SDR: prioriza assignedTo da oportunidade METAADS; fallback ao dono do calendário
+    const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const s = initSdr(uid);
     s.agendados++;
     if (a.contactId) sdrByContact.set(a.contactId, { id: s.user.id, name: s.user.name });
+
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const category = a.contactId ? classifyContact(a.contactId) : "Outro";
@@ -437,9 +481,12 @@ async function buildSnapshot(since: Date, until: Date) {
   for (const a of allAppts) {
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     if (!(st.includes("show") && !st.includes("no"))) continue;
-    const uid = a.assignedUserId || a.userId;
+    const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
+    if (sourceEnabled && meetingsFromCalendar && !metaOpp) continue;
+    const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const c = initCloser(uid);
+
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const catRaw = a.contactId ? classifyContact(a.contactId) : "Outro";
     const cls: "A"|"B"|"C"|"Outro" = (catRaw === "A" || catRaw === "B" || catRaw === "C") ? catRaw : "Outro";
@@ -652,11 +699,27 @@ async function buildSnapshot(since: Date, until: Date) {
     dataSources: {
       leads: ds.leads_source, mqls: ds.mqls_source,
       comparecidas: ds.comparecidas_source, vendas: ds.vendas_source,
+      meetings: ds.meetings_source,
+      opportunity_source_filter: ds.opportunity_source_filter,
+      opportunity_source_enabled: ds.opportunity_source_enabled,
       sheet: { id: ds.sheet_id, tab: ds.sheet_tab, mql_column: ds.sheet_mql_column, mql_value: ds.sheet_mql_value },
       sheetCounts: { leads: sheetLeads, mqls: sheetMqls, rows: sheetRowsTotal },
       ghlCounts: { leads: ghlLeadsTotais, mqls: ghlMqls },
       sheetError,
     },
+    calendarsConfig: calendars.map((c: any) => ({
+      id: c.id,
+      name: c.name || calendarMeta.get(c.id)?.name || "",
+      enabled: hasCalendarConfig ? !!calendarMeta.get(c.id)?.enabled : true,
+    })),
+    appointmentSourceDebug: {
+      appointmentsBrutos: allAppts.length,
+      filtradosSemOppMeta: apptsFiltradosSemOpp,
+      sourceFilter, sourceEnabled, meetingsFromCalendar,
+      topSources,
+      metaOppsTotal: metaOppByContact.size,
+    },
+
     users,
     sdrs,
     closers,
@@ -717,6 +780,30 @@ Deno.serve(async (req) => {
       return data as any;
     };
 
+    if (mode === "sync_calendars") {
+      const apiKey = Deno.env.get("KP_GHL_API_KEY")!;
+      const locationId = Deno.env.get("KP_GHL_LOCATION_ID")!;
+      const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", Version: "2021-07-28" };
+      const r = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, { headers });
+      const j = r.ok ? await r.json() : { calendars: [] };
+      const cals = (j.calendars || []) as any[];
+      const { data: existing } = await supabase.from("kp_comercial_calendars").select("ghl_calendar_id, enabled");
+      const existingMap = new Map((existing || []).map((x: any) => [x.ghl_calendar_id, x.enabled]));
+      const rows = cals.map((c) => ({
+        ghl_calendar_id: c.id,
+        name: c.name || "",
+        enabled: existingMap.has(c.id) ? !!existingMap.get(c.id) : false,
+        updated_at: new Date().toISOString(),
+      }));
+      if (rows.length) {
+        await supabase.from("kp_comercial_calendars").upsert(rows, { onConflict: "ghl_calendar_id" });
+      }
+      const { data: all } = await supabase.from("kp_comercial_calendars").select("*").order("name");
+      return new Response(JSON.stringify({ calendars: all || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (mode === "read") {
       const latest = await readLatest();
       return new Response(JSON.stringify({
@@ -725,6 +812,7 @@ Deno.serve(async (req) => {
         data: latest?.payload || null,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     if (mode === "auto") {
       const latest = await readLatest();

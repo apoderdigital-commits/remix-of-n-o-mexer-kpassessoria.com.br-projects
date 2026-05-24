@@ -1,40 +1,63 @@
-## Problema
+# Reuniões do GHL Calendar por SDR, filtradas por fonte = METAADS
 
-1. Os campos **Sheet ID / Aba / Coluna MQL / Valor = MQL** estão vazios — sem isso, o edge function não consegue buscar da planilha e cai no fallback do GHL (mostrando 169 em vez de 26).
-2. Mesmo com fonte = "Planilha" selecionada, o card mostra **169** (valor GHL) porque os campos da planilha estão em branco.
-3. O usuário não deveria precisar preencher Sheet ID/Aba manualmente — já temos a planilha padrão definida.
+## Objetivo
+Puxar appointments do GHL Calendar, manter só os de contatos com oportunidade `source = METAADS`, e agregar as métricas (marcadas / confirmadas / comparecidas / no-show / canceladas) **por SDR** — usando o `assignedTo` da oportunidade como dono da reunião.
 
-## Solução
+## Regra de atribuição (importante)
+Para cada appointment:
+1. Buscar oportunidades do `contactId`.
+2. Filtrar pelas que têm `source ≈ METAADS`.
+3. Da oportunidade resultante, ler `assignedTo` → esse é o **SDR** da reunião.
+4. Se houver várias opps METAADS pro mesmo contato: pegar a mais recente (`updatedAt` desc).
+5. Se a opp não tiver `assignedTo`: fallback pro `assignedUserId` do appointment (dono do calendário).
+6. Mapear `ghl_user_id → role (SDR/Closer/Gestor)` via `kp_comercial_user_roles` (já existe). Só conta como reunião de SDR quando role = SDR; do contrário rotula como "Closer" ou "Outros".
 
-### 1. Auto-preencher defaults na migration / no load
-Quando `kp_comercial_data_sources` for criado (ou estiver com campos nulos/vazios), gravar:
-- `sheet_id` = `1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c`
-- `sheet_tab` = `Página4`
-- `sheet_mql_column` = `MQL`
-- `sheet_mql_value` = `SIM`
+## Endpoints GHL
+- `GET /calendars/?locationId=...` — lista calendários
+- `GET /calendars/events?locationId=...&calendarId=...&startTime=...&endTime=...` — appointments + status + `assignedUserId` + `contactId`
+- `GET /opportunities/search?location_id=...&contact_id=...` — opps do contato → `source` + `assignedTo` + `updatedAt`
+- `GET /users/?locationId=...` — nome/email dos usuários (já cacheado em `kp_comercial_user_roles`)
 
-Migration faz `UPDATE ... SET ... WHERE sheet_id IS NULL OR sheet_id = ''` para preencher o registro existente.
+## Mudanças
 
-### 2. UI: mostrar os defaults pré-preenchidos
-Em `Comercial.tsx`, na seção "Fontes de dados", inicializar os 4 inputs com os defaults acima quando o registro vier vazio do banco. Salvar automaticamente no primeiro load se estiverem em branco.
+### 1. Banco
+- Nova tabela `kp_comercial_calendars`:
+  ```
+  ghl_calendar_id text PK, name text, enabled boolean default false, updated_at timestamptz
+  ```
+  (Sem `ghl_user_id` fixo — o dono real vem da oportunidade, não do calendário.)
+- Adicionar em `kp_comercial_data_sources`: `opportunity_source_filter text default 'METAADS'`, `meetings_source text default 'pipeline'` (`pipeline` | `calendar`).
 
-### 3. Edge function: garantir que a contagem da planilha bata
-Investigar por que a coluna "VIA PLANILHA" mostra **169** em vez de **26**:
-- Hoje o fetch usa `/gviz/tq?tqx=out:csv&sheet=Página4` — pode estar puxando a planilha inteira sem filtrar por data.
-- Adicionar log dos primeiros registros (cabeçalho + 3 linhas) para descobrir o nome exato da coluna de **data** na Página4.
-- Filtrar linhas por `data >= since AND data <= until` antes de contar.
-- Conferir que `MQL = SIM` é case-insensitive e ignora espaços (`trim().toUpperCase() === "SIM"`).
+### 2. Edge function nova `kp-comercial-meetings`
+Entrada: `{ since, until }`. Saída:
+```jsonc
+{
+  totals: { marcadas, confirmadas, comparecidas, noshow, canceladas },
+  by_sdr: [
+    { ghl_user_id, name, role, marcadas, confirmadas, comparecidas, noshow, canceladas }
+  ],
+  debug: { appointments_brutos, filtrados_por_source, sem_opp, top_sources }
+}
+```
+Algoritmo:
+- Lista appointments de **todos os calendários `enabled`** no período.
+- Pré-carrega opps do período (`/opportunities/search` paginado, todas pipelines) → `Map<contactId, opps[]>` para evitar 1 chamada por contato.
+- Para cada appointment: encontra opp METAADS mais recente do contato → extrai `assignedTo` → incrementa contador do SDR.
 
-### 4. Badge no card
-Trocar `leads via GHL · MQLs via GHL` para refletir a fonte realmente selecionada (hoje parece estar travado em GHL mesmo com "Planilha" clicado). Verificar se o radio de fonte está persistindo no banco.
+### 3. UI `Comercial.tsx`
+- Seção **Calendários do GHL**: botão "Sincronizar" + lista com switch on/off por calendário.
+- Toggle de fonte nos cards de reunião: **Pipeline** ↔ **Calendário** (igual ao de leads).
+- Novo bloco **Reuniões por SDR** (tabela): nome do SDR, marcadas, confirmadas, comparecidas, no-show, taxa de comparecimento. Linha extra "Closer/Outros" agrupando o que não é SDR.
 
-## Ordem
-
-1. Migration: UPDATE `kp_comercial_data_sources` setando os 4 defaults
-2. `Comercial.tsx`: inputs vêm pré-preenchidos + persiste se ainda nulo + garante que o clique em "Planilha"/"GHL" salva imediatamente
-3. `kp-comercial-snapshot/index.ts`: log do CSV bruto, filtro por data, normalização do MQL
-4. Re-rodar snapshot e validar: card deve mostrar **26**, não 169
+### 4. Integração no snapshot
+`kp-comercial-snapshot` chama `kp-comercial-meetings` quando `meetings_source = 'calendar'` e grava `by_sdr` no payload — os blocos existentes de SDR ranking passam a ler dali quando essa fonte estiver ativa.
 
 ## Validação
+- Sincronizar → calendários da subconta aparecem; ativar Matheus + Julio.
+- Rodar snapshot da semana 18–24/05.
+- Conferir: soma de `marcadas` por SDR = `totals.marcadas`.
+- Spot-check: pegar 3 appointments na UI do GHL, abrir o contato → opp → ver se o SDR atribuído bate com o que aparece na tabela.
 
-Após aplicar, no card "Leads Totais" com período **18/05 – 24/05** deve aparecer **26** (planilha) e o GHL deve ficar como número de referência ao lado.
+## Fora de escopo
+- Pipelines de etapas (já configurado em `kp_comercial_pipeline_config`).
+- Leads/MQLs da planilha (plano separado).

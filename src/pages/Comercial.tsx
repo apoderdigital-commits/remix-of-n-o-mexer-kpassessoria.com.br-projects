@@ -98,6 +98,10 @@ export default function Comercial() {
   const [pipelineCfg, setPipelineCfg] = useState<Record<string, any>>({});
   const [dataSources, setDataSources] = useState<any>(null);
   const [dsCounts, setDsCounts] = useState<any>(null);
+  const [ghlCalendars, setGhlCalendars] = useState<{ ghl_calendar_id: string; name: string; enabled: boolean }[]>([]);
+  const [syncingCalendars, setSyncingCalendars] = useState(false);
+  const [apptDebug, setApptDebug] = useState<any>(null);
+
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
   const [semAgendOpen, setSemAgendOpen] = useState(false);
@@ -110,9 +114,14 @@ export default function Comercial() {
     if (payload.users) setGhlUsers(payload.users);
     if (payload.pipelines) setPipelinesList(payload.pipelines);
     if (payload.dataSources) {
-      setDataSources(payload.dataSources);
+      setDataSources((prev: any) => ({ ...(prev || {}), ...payload.dataSources }));
       setDsCounts({ sheet: payload.dataSources.sheetCounts, ghl: payload.dataSources.ghlCounts, sheetError: payload.dataSources.sheetError });
     }
+    if (payload.calendarsConfig) {
+      setGhlCalendars(payload.calendarsConfig.map((c: any) => ({ ghl_calendar_id: c.id, name: c.name, enabled: c.enabled })));
+    }
+    if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
+
     setFase2({
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
@@ -154,11 +163,12 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes, pipeRes, dsRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes, dsRes, calRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
       supabase.from("kp_comercial_pipeline_config").select("*"),
       (supabase.from as any)("kp_comercial_data_sources").select("*").eq("id", true).maybeSingle(),
+      (supabase.from as any)("kp_comercial_calendars").select("*").order("name"),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -178,7 +188,33 @@ export default function Comercial() {
       setPipelineCfg(map);
     }
     if (dsRes?.data) setDataSources(dsRes.data);
+    if (calRes?.data) setGhlCalendars(calRes.data as any);
   };
+
+  const syncCalendars = async () => {
+    setSyncingCalendars(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("kp-comercial-snapshot", { body: { mode: "sync_calendars" } });
+      if (error) throw error;
+      if ((data as any)?.calendars) {
+        setGhlCalendars((data as any).calendars);
+        toast.success(`${(data as any).calendars.length} calendários sincronizados`);
+      }
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar calendários: " + (e.message || ""));
+    } finally {
+      setSyncingCalendars(false);
+    }
+  };
+
+  const toggleCalendar = async (id: string, enabled: boolean) => {
+    setGhlCalendars((prev) => prev.map((c) => c.ghl_calendar_id === id ? { ...c, enabled } : c));
+    const { error } = await (supabase.from as any)("kp_comercial_calendars")
+      .update({ enabled, updated_at: new Date().toISOString() })
+      .eq("ghl_calendar_id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+  };
+
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
     const payload = { ghl_user_id: u.id, name: u.name, email: u.email || null, role, active: true };
@@ -1018,24 +1054,27 @@ export default function Comercial() {
                       </TableHeader>
                       <TableBody>
                         {([
-                          { key: "leads_source", label: "Leads totais", c: "leads" },
-                          { key: "mqls_source", label: "MQLs", c: "mqls" },
-                          { key: "comparecidas_source", label: "Comparecidas", c: null },
-                          { key: "vendas_source", label: "Vendas", c: null },
+                          { key: "leads_source", label: "Leads totais", c: "leads", opts: ["sheet","ghl"] as const },
+                          { key: "mqls_source", label: "MQLs", c: "mqls", opts: ["sheet","ghl"] as const },
+                          { key: "meetings_source", label: "Reuniões (marcadas/comparec./no-show)", c: null, opts: ["pipeline","calendar"] as const },
+                          { key: "comparecidas_source", label: "Comparecidas (KPI)", c: null, opts: ["sheet","ghl"] as const },
+                          { key: "vendas_source", label: "Vendas", c: null, opts: ["sheet","ghl"] as const },
                         ] as const).map((row) => {
+
                           const cur = dataSources[row.key];
                           return (
                             <TableRow key={row.key}>
                               <TableCell className="font-medium text-xs">{row.label}</TableCell>
                               <TableCell>
                                 <div className="flex gap-1.5 justify-center">
-                                  {(["sheet","ghl"] as const).map((opt) => (
+                                  {row.opts.map((opt) => (
                                     <Button key={opt} variant="outline" size="sm"
                                       onClick={() => updateDataSource({ [row.key]: opt })}
                                       className={`h-7 px-3 text-[11px] ${cur === opt ? "bg-primary/20 text-primary border-primary/40 ring-1 ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground"}`}>
-                                      {opt === "sheet" ? "Planilha" : "GHL"}
+                                      {opt === "sheet" ? "Planilha" : opt === "ghl" ? "GHL" : opt === "pipeline" ? "Pipeline" : "Calendário"}
                                     </Button>
                                   ))}
+
                                 </div>
                               </TableCell>
                               <TableCell className="text-right text-xs text-muted-foreground">
@@ -1069,9 +1108,73 @@ export default function Comercial() {
                       </div>
                     </div>
                     {dsCounts?.sheetError && <div className="mt-2 text-[11px] text-rose-300">Erro na planilha: {dsCounts.sheetError}</div>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/5">
+                      <div className="md:col-span-2">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Filtro de fonte da oportunidade (GHL)</Label>
+                        <Input
+                          value={dataSources.opportunity_source_filter || ""}
+                          onChange={(e) => setDataSources({ ...dataSources, opportunity_source_filter: e.target.value })}
+                          onBlur={() => updateDataSource({ opportunity_source_filter: dataSources.opportunity_source_filter })}
+                          placeholder="METAADS"
+                          className="h-8 text-xs bg-background/40 border-white/10"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Quando reuniões vêm do Calendário, só conta appointments cujo contato tenha oportunidade com esse <code>source</code>. O SDR vira o <code>assignedTo</code> dessa oportunidade.
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Filtro ativo</Label>
+                        <div className="flex gap-1.5 mt-1">
+                          {[true, false].map((v) => (
+                            <Button key={String(v)} variant="outline" size="sm"
+                              onClick={() => updateDataSource({ opportunity_source_enabled: v })}
+                              className={`h-7 px-3 text-[11px] ${!!dataSources.opportunity_source_enabled === v ? "bg-primary/20 text-primary border-primary/40 ring-1 ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground"}`}>
+                              {v ? "Sim" : "Não"}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {apptDebug && (
+                      <div className="mt-3 text-[10px] text-muted-foreground/80 bg-background/30 rounded p-2 border border-white/5">
+                        <span className="text-cyan-300">Debug appointments:</span> brutos {apptDebug.appointmentsBrutos} · filtrados sem opp METAADS {apptDebug.filtradosSemOppMeta} · opps META {apptDebug.metaOppsTotal}
+                        {apptDebug.topSources?.length > 0 && <> · top sources: {apptDebug.topSources.map((s: any) => `${s.source} (${s.count})`).join(", ")}</>}
+                      </div>
+                    )}
                   </>
                 )}
               </Card>
+
+              {/* ============ CALENDÁRIOS DO GHL ============ */}
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-emerald-300" />
+                    <div className="text-sm font-semibold">Calendários do GHL</div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={syncCalendars} disabled={syncingCalendars}
+                    className="h-7 px-3 text-[11px] bg-background/30 border-white/10">
+                    {syncingCalendars ? "Sincronizando..." : "Sincronizar"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Marque quais calendários entram nas métricas de reunião. Se nenhum estiver salvo, considera todos.
+                </p>
+                {ghlCalendars.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted-foreground">Clique em Sincronizar para carregar.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {ghlCalendars.map((c) => (
+                      <label key={c.ghl_calendar_id} className="flex items-center gap-2 text-xs px-3 py-2 rounded-md border border-white/5 bg-background/30 cursor-pointer hover:bg-background/50">
+                        <input type="checkbox" checked={c.enabled} onChange={(e) => toggleCalendar(c.ghl_calendar_id, e.target.checked)} className="accent-primary" />
+                        <span className="font-medium">{c.name || c.ghl_calendar_id}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
 
               {/* ============ MAPEAMENTO DE STAGES POR PIPELINE ============ */}
               <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">

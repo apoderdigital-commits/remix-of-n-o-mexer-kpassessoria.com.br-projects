@@ -189,12 +189,36 @@ export type Database = {
           },
         ]
       }
+      kp_comercial_calendars: {
+        Row: {
+          enabled: boolean
+          ghl_calendar_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          ghl_calendar_id: string
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          ghl_calendar_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kp_comercial_data_sources: {
         Row: {
           comparecidas_source: string
           id: boolean
           leads_source: string
+          meetings_source: string
           mqls_source: string
+          opportunity_source_enabled: boolean
+          opportunity_source_filter: string
           sheet_id: string
           sheet_mql_column: string
           sheet_mql_value: string
@@ -206,7 +230,10 @@ export type Database = {
           comparecidas_source?: string
           id?: boolean
           leads_source?: string
+          meetings_source?: string
           mqls_source?: string
+          opportunity_source_enabled?: boolean
+          opportunity_source_filter?: string
           sheet_id?: string
           sheet_mql_column?: string
           sheet_mql_value?: string
@@ -218,7 +245,10 @@ export type Database = {
           comparecidas_source?: string
           id?: boolean
           leads_source?: string
+          meetings_source?: string
           mqls_source?: string
+          opportunity_source_enabled?: boolean
+          opportunity_source_filter?: string
           sheet_id?: string
           sheet_mql_column?: string
           sheet_mql_value?: string
