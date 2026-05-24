@@ -1054,11 +1054,13 @@ export default function Comercial() {
                       </TableHeader>
                       <TableBody>
                         {([
-                          { key: "leads_source", label: "Leads totais", c: "leads" },
-                          { key: "mqls_source", label: "MQLs", c: "mqls" },
-                          { key: "comparecidas_source", label: "Comparecidas", c: null },
-                          { key: "vendas_source", label: "Vendas", c: null },
+                          { key: "leads_source", label: "Leads totais", c: "leads", opts: ["sheet","ghl"] as const },
+                          { key: "mqls_source", label: "MQLs", c: "mqls", opts: ["sheet","ghl"] as const },
+                          { key: "meetings_source", label: "Reuniões (marcadas/comparec./no-show)", c: null, opts: ["pipeline","calendar"] as const },
+                          { key: "comparecidas_source", label: "Comparecidas (KPI)", c: null, opts: ["sheet","ghl"] as const },
+                          { key: "vendas_source", label: "Vendas", c: null, opts: ["sheet","ghl"] as const },
                         ] as const).map((row) => {
+
                           const cur = dataSources[row.key];
                           return (
                             <TableRow key={row.key}>
