@@ -1108,9 +1108,73 @@ export default function Comercial() {
                       </div>
                     </div>
                     {dsCounts?.sheetError && <div className="mt-2 text-[11px] text-rose-300">Erro na planilha: {dsCounts.sheetError}</div>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/5">
+                      <div className="md:col-span-2">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Filtro de fonte da oportunidade (GHL)</Label>
+                        <Input
+                          value={dataSources.opportunity_source_filter || ""}
+                          onChange={(e) => setDataSources({ ...dataSources, opportunity_source_filter: e.target.value })}
+                          onBlur={() => updateDataSource({ opportunity_source_filter: dataSources.opportunity_source_filter })}
+                          placeholder="METAADS"
+                          className="h-8 text-xs bg-background/40 border-white/10"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Quando reuniões vêm do Calendário, só conta appointments cujo contato tenha oportunidade com esse <code>source</code>. O SDR vira o <code>assignedTo</code> dessa oportunidade.
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Filtro ativo</Label>
+                        <div className="flex gap-1.5 mt-1">
+                          {[true, false].map((v) => (
+                            <Button key={String(v)} variant="outline" size="sm"
+                              onClick={() => updateDataSource({ opportunity_source_enabled: v })}
+                              className={`h-7 px-3 text-[11px] ${!!dataSources.opportunity_source_enabled === v ? "bg-primary/20 text-primary border-primary/40 ring-1 ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground"}`}>
+                              {v ? "Sim" : "Não"}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {apptDebug && (
+                      <div className="mt-3 text-[10px] text-muted-foreground/80 bg-background/30 rounded p-2 border border-white/5">
+                        <span className="text-cyan-300">Debug appointments:</span> brutos {apptDebug.appointmentsBrutos} · filtrados sem opp METAADS {apptDebug.filtradosSemOppMeta} · opps META {apptDebug.metaOppsTotal}
+                        {apptDebug.topSources?.length > 0 && <> · top sources: {apptDebug.topSources.map((s: any) => `${s.source} (${s.count})`).join(", ")}</>}
+                      </div>
+                    )}
                   </>
                 )}
               </Card>
+
+              {/* ============ CALENDÁRIOS DO GHL ============ */}
+              <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-emerald-300" />
+                    <div className="text-sm font-semibold">Calendários do GHL</div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={syncCalendars} disabled={syncingCalendars}
+                    className="h-7 px-3 text-[11px] bg-background/30 border-white/10">
+                    {syncingCalendars ? "Sincronizando..." : "Sincronizar"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Marque quais calendários entram nas métricas de reunião. Se nenhum estiver salvo, considera todos.
+                </p>
+                {ghlCalendars.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted-foreground">Clique em Sincronizar para carregar.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {ghlCalendars.map((c) => (
+                      <label key={c.ghl_calendar_id} className="flex items-center gap-2 text-xs px-3 py-2 rounded-md border border-white/5 bg-background/30 cursor-pointer hover:bg-background/50">
+                        <input type="checkbox" checked={c.enabled} onChange={(e) => toggleCalendar(c.ghl_calendar_id, e.target.checked)} className="accent-primary" />
+                        <span className="font-medium">{c.name || c.ghl_calendar_id}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
 
               {/* ============ MAPEAMENTO DE STAGES POR PIPELINE ============ */}
               <Card className="p-5 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
