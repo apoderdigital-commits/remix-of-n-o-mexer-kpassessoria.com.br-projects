@@ -206,12 +206,30 @@ async function buildSnapshot(since: Date, until: Date) {
       if (lines.length >= 2) {
         const header = parseLine(lines[0]).map((h) => h.toUpperCase().trim());
         const mqlCol = header.findIndex((h) => h === String(ds.sheet_mql_column).toUpperCase());
-        const wanted = String(ds.sheet_mql_value).toUpperCase();
+        const dateCol = header.findIndex((h) => h === "DATA" || h === "DATE");
+        const wanted = String(ds.sheet_mql_value).toUpperCase().trim();
+        const parseSheetDate = (s: string): number | null => {
+          if (!s) return null;
+          const v = s.trim();
+          const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+          if (m) {
+            const d = +m[1], mo = +m[2] - 1;
+            let y = +m[3]; if (y < 100) y += 2000;
+            const t = new Date(y, mo, d).getTime();
+            return isNaN(t) ? null : t;
+          }
+          const t = new Date(v).getTime();
+          return isNaN(t) ? null : t;
+        };
         sheetRowsTotal = lines.length - 1;
         for (let i = 1; i < lines.length; i++) {
           const cols = parseLine(lines[i]);
+          if (dateCol >= 0) {
+            const t = parseSheetDate(cols[dateCol] || "");
+            if (t == null || t < sinceMs || t > untilMs) continue;
+          }
           sheetLeads++;
-          if (mqlCol >= 0 && (cols[mqlCol] || "").toUpperCase() === wanted) sheetMqls++;
+          if (mqlCol >= 0 && (cols[mqlCol] || "").toUpperCase().trim() === wanted) sheetMqls++;
         }
       }
     }
