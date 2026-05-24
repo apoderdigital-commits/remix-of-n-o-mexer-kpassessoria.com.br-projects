@@ -780,6 +780,30 @@ Deno.serve(async (req) => {
       return data as any;
     };
 
+    if (mode === "sync_calendars") {
+      const apiKey = Deno.env.get("KP_GHL_API_KEY")!;
+      const locationId = Deno.env.get("KP_GHL_LOCATION_ID")!;
+      const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", Version: "2021-07-28" };
+      const r = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, { headers });
+      const j = r.ok ? await r.json() : { calendars: [] };
+      const cals = (j.calendars || []) as any[];
+      const { data: existing } = await supabase.from("kp_comercial_calendars").select("ghl_calendar_id, enabled");
+      const existingMap = new Map((existing || []).map((x: any) => [x.ghl_calendar_id, x.enabled]));
+      const rows = cals.map((c) => ({
+        ghl_calendar_id: c.id,
+        name: c.name || "",
+        enabled: existingMap.has(c.id) ? !!existingMap.get(c.id) : false,
+        updated_at: new Date().toISOString(),
+      }));
+      if (rows.length) {
+        await supabase.from("kp_comercial_calendars").upsert(rows, { onConflict: "ghl_calendar_id" });
+      }
+      const { data: all } = await supabase.from("kp_comercial_calendars").select("*").order("name");
+      return new Response(JSON.stringify({ calendars: all || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (mode === "read") {
       const latest = await readLatest();
       return new Response(JSON.stringify({
@@ -788,6 +812,7 @@ Deno.serve(async (req) => {
         data: latest?.payload || null,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     if (mode === "auto") {
       const latest = await readLatest();
