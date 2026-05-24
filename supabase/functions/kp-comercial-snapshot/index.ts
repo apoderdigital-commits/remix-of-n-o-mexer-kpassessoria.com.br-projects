@@ -699,11 +699,27 @@ async function buildSnapshot(since: Date, until: Date) {
     dataSources: {
       leads: ds.leads_source, mqls: ds.mqls_source,
       comparecidas: ds.comparecidas_source, vendas: ds.vendas_source,
+      meetings: ds.meetings_source,
+      opportunity_source_filter: ds.opportunity_source_filter,
+      opportunity_source_enabled: ds.opportunity_source_enabled,
       sheet: { id: ds.sheet_id, tab: ds.sheet_tab, mql_column: ds.sheet_mql_column, mql_value: ds.sheet_mql_value },
       sheetCounts: { leads: sheetLeads, mqls: sheetMqls, rows: sheetRowsTotal },
       ghlCounts: { leads: ghlLeadsTotais, mqls: ghlMqls },
       sheetError,
     },
+    calendarsConfig: calendars.map((c: any) => ({
+      id: c.id,
+      name: c.name || calendarMeta.get(c.id)?.name || "",
+      enabled: hasCalendarConfig ? !!calendarMeta.get(c.id)?.enabled : true,
+    })),
+    appointmentSourceDebug: {
+      appointmentsBrutos: allAppts.length,
+      filtradosSemOppMeta: apptsFiltradosSemOpp,
+      sourceFilter, sourceEnabled, meetingsFromCalendar,
+      topSources,
+      metaOppsTotal: metaOppByContact.size,
+    },
+
     users,
     sdrs,
     closers,
