@@ -114,9 +114,14 @@ export default function Comercial() {
     if (payload.users) setGhlUsers(payload.users);
     if (payload.pipelines) setPipelinesList(payload.pipelines);
     if (payload.dataSources) {
-      setDataSources(payload.dataSources);
+      setDataSources((prev: any) => ({ ...(prev || {}), ...payload.dataSources }));
       setDsCounts({ sheet: payload.dataSources.sheetCounts, ghl: payload.dataSources.ghlCounts, sheetError: payload.dataSources.sheetError });
     }
+    if (payload.calendarsConfig) {
+      setGhlCalendars(payload.calendarsConfig.map((c: any) => ({ ghl_calendar_id: c.id, name: c.name, enabled: c.enabled })));
+    }
+    if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
+
     setFase2({
       sdrs: payload.sdrs || [],
       closers: payload.closers || [],
