@@ -402,12 +402,18 @@ async function buildSnapshot(since: Date, until: Date) {
   const sdrByContact = new Map<string, { id: string; name: string }>();
   const noShowByHour: Record<string, number> = {};
   const agendadosByHour: Record<string, number> = {};
+  let apptsFiltradosSemOpp = 0;
   for (const a of allAppts) {
-    const uid = a.assignedUserId || a.userId;
+    // Filtro por fonte da oportunidade (quando ativo)
+    const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
+    if (sourceEnabled && meetingsFromCalendar && !metaOpp) { apptsFiltradosSemOpp++; continue; }
+    // SDR: prioriza assignedTo da oportunidade METAADS; fallback ao dono do calendário
+    const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const s = initSdr(uid);
     s.agendados++;
     if (a.contactId) sdrByContact.set(a.contactId, { id: s.user.id, name: s.user.name });
+
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const category = a.contactId ? classifyContact(a.contactId) : "Outro";
