@@ -1067,13 +1067,14 @@ export default function Comercial() {
                               <TableCell className="font-medium text-xs">{row.label}</TableCell>
                               <TableCell>
                                 <div className="flex gap-1.5 justify-center">
-                                  {(["sheet","ghl"] as const).map((opt) => (
+                                  {row.opts.map((opt) => (
                                     <Button key={opt} variant="outline" size="sm"
                                       onClick={() => updateDataSource({ [row.key]: opt })}
                                       className={`h-7 px-3 text-[11px] ${cur === opt ? "bg-primary/20 text-primary border-primary/40 ring-1 ring-primary/40 font-semibold" : "bg-background/30 border-white/10 text-muted-foreground"}`}>
-                                      {opt === "sheet" ? "Planilha" : "GHL"}
+                                      {opt === "sheet" ? "Planilha" : opt === "ghl" ? "GHL" : opt === "pipeline" ? "Pipeline" : "Calendário"}
                                     </Button>
                                   ))}
+
                                 </div>
                               </TableCell>
                               <TableCell className="text-right text-xs text-muted-foreground">
