@@ -481,9 +481,12 @@ async function buildSnapshot(since: Date, until: Date) {
   for (const a of allAppts) {
     const st = (a.appointmentStatus || a.status || "").toLowerCase();
     if (!(st.includes("show") && !st.includes("no"))) continue;
-    const uid = a.assignedUserId || a.userId;
+    const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
+    if (sourceEnabled && meetingsFromCalendar && !metaOpp) continue;
+    const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const c = initCloser(uid);
+
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const catRaw = a.contactId ? classifyContact(a.contactId) : "Outro";
     const cls: "A"|"B"|"C"|"Outro" = (catRaw === "A" || catRaw === "B" || catRaw === "C") ? catRaw : "Outro";
