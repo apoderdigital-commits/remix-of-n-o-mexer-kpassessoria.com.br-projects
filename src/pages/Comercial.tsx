@@ -163,11 +163,12 @@ export default function Comercial() {
   };
 
   const fetchRoles = async () => {
-    const [rolesRes, goalsRes, pipeRes, dsRes] = await Promise.all([
+    const [rolesRes, goalsRes, pipeRes, dsRes, calRes] = await Promise.all([
       supabase.from("kp_comercial_user_roles").select("*"),
       supabase.from("kp_comercial_sdr_goals").select("*"),
       supabase.from("kp_comercial_pipeline_config").select("*"),
       (supabase.from as any)("kp_comercial_data_sources").select("*").eq("id", true).maybeSingle(),
+      (supabase.from as any)("kp_comercial_calendars").select("*").order("name"),
     ]);
     if (rolesRes.data) {
       const map: Record<string, UserRoleRow> = {};
@@ -187,7 +188,33 @@ export default function Comercial() {
       setPipelineCfg(map);
     }
     if (dsRes?.data) setDataSources(dsRes.data);
+    if (calRes?.data) setGhlCalendars(calRes.data as any);
   };
+
+  const syncCalendars = async () => {
+    setSyncingCalendars(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("kp-comercial-snapshot", { body: { mode: "sync_calendars" } });
+      if (error) throw error;
+      if ((data as any)?.calendars) {
+        setGhlCalendars((data as any).calendars);
+        toast.success(`${(data as any).calendars.length} calendários sincronizados`);
+      }
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar calendários: " + (e.message || ""));
+    } finally {
+      setSyncingCalendars(false);
+    }
+  };
+
+  const toggleCalendar = async (id: string, enabled: boolean) => {
+    setGhlCalendars((prev) => prev.map((c) => c.ghl_calendar_id === id ? { ...c, enabled } : c));
+    const { error } = await (supabase.from as any)("kp_comercial_calendars")
+      .update({ enabled, updated_at: new Date().toISOString() })
+      .eq("ghl_calendar_id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+  };
+
 
   const setUserRole = async (u: GhlUser, role: UserRoleRow["role"]) => {
     const payload = { ghl_user_id: u.id, name: u.name, email: u.email || null, role, active: true };
