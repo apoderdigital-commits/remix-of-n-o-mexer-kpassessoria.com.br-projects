@@ -1,123 +1,40 @@
-## Objetivo
+## Problema
 
-Tornar o Painel Comercial 100% configurável: você define **de qual pipeline/stage** vem cada métrica e **qual fonte** (Planilha · Meta · GHL) alimenta cada card. Os "500 leads irreais" somem porque os leads passam a vir da planilha.
+1. Os campos **Sheet ID / Aba / Coluna MQL / Valor = MQL** estão vazios — sem isso, o edge function não consegue buscar da planilha e cai no fallback do GHL (mostrando 169 em vez de 26).
+2. Mesmo com fonte = "Planilha" selecionada, o card mostra **169** (valor GHL) porque os campos da planilha estão em branco.
+3. O usuário não deveria precisar preencher Sheet ID/Aba manualmente — já temos a planilha padrão definida.
 
----
+## Solução
 
-## 1. Banco — 2 tabelas novas
+### 1. Auto-preencher defaults na migration / no load
+Quando `kp_comercial_data_sources` for criado (ou estiver com campos nulos/vazios), gravar:
+- `sheet_id` = `1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c`
+- `sheet_tab` = `Página4`
+- `sheet_mql_column` = `MQL`
+- `sheet_mql_value` = `SIM`
 
-**`comercial_pipeline_config`** (singleton por workspace, sem `client_id`)
-- `role` (`sdr` | `closer`) — pipeline pode ser diferente por função
-- `pipeline_id` (texto, GHL)
-- `stages_reuniao_marcada` (text[])
-- `stages_comparecida` (text[])
-- `stages_proposta_enviada` (text[])
-- `stages_proposta_perdida` (text[])
-- `stages_vendida` (text[])
-- `stages_noshow` (text[])
+Migration faz `UPDATE ... SET ... WHERE sheet_id IS NULL OR sheet_id = ''` para preencher o registro existente.
 
-**`comercial_data_sources`** (singleton)
-- `leads_source` (`sheet` | `ghl`) — default `sheet`
-- `mqls_source` (`sheet` | `ghl`) — default `sheet`
-- `reunioes_source` (`ghl`) — fixo GHL (sem opção)
-- `comparecidas_source` (`ghl` | `sheet`)
-- `vendas_source` (`ghl` | `sheet`)
-- `sheet_id` (texto, default = planilha KP UTM RASTREIO)
-- `sheet_tab` (texto, default `Página4`)
-- `sheet_mql_column` (texto, default `MQL`)
-- `sheet_mql_value` (texto, default `SIM`)
+### 2. UI: mostrar os defaults pré-preenchidos
+Em `Comercial.tsx`, na seção "Fontes de dados", inicializar os 4 inputs com os defaults acima quando o registro vier vazio do banco. Salvar automaticamente no primeiro load se estiverem em branco.
 
-RLS: leitura/escrita só para admin/manager.
+### 3. Edge function: garantir que a contagem da planilha bata
+Investigar por que a coluna "VIA PLANILHA" mostra **169** em vez de **26**:
+- Hoje o fetch usa `/gviz/tq?tqx=out:csv&sheet=Página4` — pode estar puxando a planilha inteira sem filtrar por data.
+- Adicionar log dos primeiros registros (cabeçalho + 3 linhas) para descobrir o nome exato da coluna de **data** na Página4.
+- Filtrar linhas por `data >= since AND data <= until` antes de contar.
+- Conferir que `MQL = SIM` é case-insensitive e ignora espaços (`trim().toUpperCase() === "SIM"`).
 
----
+### 4. Badge no card
+Trocar `leads via GHL · MQLs via GHL` para refletir a fonte realmente selecionada (hoje parece estar travado em GHL mesmo com "Planilha" clicado). Verificar se o radio de fonte está persistindo no banco.
 
-## 2. Aba Config — UI nova
+## Ordem
 
-Reorganizada em 3 seções (substitui a atual "Funções da equipe"):
+1. Migration: UPDATE `kp_comercial_data_sources` setando os 4 defaults
+2. `Comercial.tsx`: inputs vêm pré-preenchidos + persiste se ainda nulo + garante que o clique em "Planilha"/"GHL" salva imediatamente
+3. `kp-comercial-snapshot/index.ts`: log do CSV bruto, filtro por data, normalização do MQL
+4. Re-rodar snapshot e validar: card deve mostrar **26**, não 169
 
-### 2.1 Funções da equipe (mantém o que já existe)
+## Validação
 
-### 2.2 Pipelines & Stages
-Para cada função (**SDR** / **Closer**):
-- Dropdown "Pipeline" (lista vinda de `list-ghl-stages`)
-- Para cada métrica (Reunião marcada, Comparecida, Proposta enviada, Proposta perdida, Vendida, No-show) → chips multi-select de stages daquele pipeline (reusa o padrão visual de `GhlStageMappingEditor`)
-
-### 2.3 Fontes de dados
-Tabela com uma linha por métrica e radios de fonte:
-
-```text
-Métrica              Planilha   Meta Ads   GHL
-Leads totais            ( )        —       ( )
-MQLs                    ( )        —       ( )
-Taxa Ativação MQL    (calculada — não tem fonte)
-Reuniões marcadas       —          —       (●)  (fixo)
-Comparecidas            ( )        —       ( )
-Vendas                  ( )        —       ( )
-Investimento            —         (●)       —   (fixo)
-```
-
-Campos extras: Sheet ID · Aba · Coluna MQL · Valor MQL=positivo.
-
----
-
-## 3. Cards do funil — seletor de fonte inline
-
-Cada card de KPI ganha um pequeno ícone `⋯` no canto que abre um popover com:
-- Fonte atual (badge: "via Planilha" / "via GHL" / "via Meta")
-- Botão "Trocar fonte" → atualiza `comercial_data_sources` e re-fetch
-Igual ao padrão do dashboard de Criativos.
-
----
-
-## 4. Edge function `kp-comercial-snapshot` — refatoração
-
-Nova ordem:
-1. Lê `comercial_data_sources` + `comercial_pipeline_config`
-2. **Leads/MQLs**:
-   - Se `source=sheet`: faz fetch CSV de `https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={tab}`, filtra por data, conta linhas (leads) e linhas com coluna MQL=SIM (mqls)
-   - Se `source=ghl`: comportamento atual
-3. **Reuniões / Comparecidas / Vendas**:
-   - Busca opportunities **apenas** no `pipeline_id` configurado para a função
-   - Usa stages mapeadas em vez de regex no nome
-4. **Propostas (Closer)**:
-   - "Em aberto" = opps em `stages_proposta_enviada`
-   - "Perdida" = opps em `stages_proposta_perdida`
-5. **No-show**: usa `stages_noshow` mapeadas
-
----
-
-## 5. Frontend `src/pages/Comercial.tsx`
-
-- Hook `useComercialConfig` (load + mutate)
-- Aba Config: 3 sub-seções acordeonáveis
-- Função `<DataSourcePopover metric="leads">` reutilizável nos cards
-- Badge "via Planilha" / "via GHL" abaixo do número em cada card
-
----
-
-## 6. Migração de dados
-
-Cria registros default em ambas as tabelas:
-- `comercial_data_sources`: tudo `sheet` por default (você pediu deixar o usuário escolher; default razoável é planilha já que GHL infla)
-- `comercial_pipeline_config`: vazio — você preenche na primeira visita à Config
-
-Banner amarelo no topo da página se a config estiver incompleta: "⚠️ Configure pipelines em Config para ver dados reais."
-
----
-
-## Detalhes técnicos
-
-- Sheet fetch via CSV export público (já usado em `sync-google-sheet`); reusa parser de CSV
-- Stages do GHL listados via `list-ghl-stages` edge function existente
-- Tipo `Database` será regenerado após a migração
-- Sem mudanças em RLS de outras tabelas
-
----
-
-## Ordem de implementação
-
-1. Migration (2 tabelas + RLS + defaults)
-2. Refator do edge function
-3. Aba Config nova (3 seções)
-4. Popover de fonte nos cards
-5. Banner de "config incompleta"
+Após aplicar, no card "Leads Totais" com período **18/05 – 24/05** deve aparecer **26** (planilha) e o GHL deve ficar como número de referência ao lado.
