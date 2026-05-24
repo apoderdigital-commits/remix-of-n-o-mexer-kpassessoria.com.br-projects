@@ -199,7 +199,28 @@ async function buildSnapshot(since: Date, until: Date) {
   }
 
   // ---------- SHEET FETCH (leads/mqls via planilha quando configurado) ----------
-  const ds = (dsRow as any) || { leads_source: "sheet", mqls_source: "sheet", sheet_id: "1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c", sheet_tab: "Página4", sheet_mql_column: "MQL", sheet_mql_value: "SIM" };
+  const ds = (dsRow as any) || { leads_source: "sheet", mqls_source: "sheet", sheet_id: "1esmBP_vybIjhh2aw7miaS-oZMp9pDeroAUhYFaiTs9c", sheet_tab: "Página4", sheet_mql_column: "MQL", sheet_mql_value: "SIM", opportunity_source_filter: "METAADS", opportunity_source_enabled: true, meetings_source: "pipeline" };
+
+  // ---------- META OPP BY CONTACT (filtro por source da opp) ----------
+  const sourceFilter = String(ds.opportunity_source_filter || "METAADS").trim().toUpperCase();
+  const sourceEnabled = ds.opportunity_source_enabled !== false;
+  const meetingsFromCalendar = ds.meetings_source === "calendar";
+  const metaOppByContact = new Map<string, any>();
+  const allSourcesSeen = new Map<string, number>();
+  for (const o of allOpps) {
+    const src = String(o.source || o.contact?.source || "").trim();
+    if (src) allSourcesSeen.set(src, (allSourcesSeen.get(src) || 0) + 1);
+    if (!o.contactId) continue;
+    if (sourceEnabled && src.toUpperCase() !== sourceFilter) continue;
+    const prev = metaOppByContact.get(o.contactId);
+    const ts = new Date(o.updatedAt || o.createdAt || 0).getTime();
+    const prevTs = prev ? new Date(prev.updatedAt || prev.createdAt || 0).getTime() : -1;
+    if (!prev || ts > prevTs) metaOppByContact.set(o.contactId, o);
+  }
+  const topSources = Array.from(allSourcesSeen.entries())
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([source, count]) => ({ source, count }));
+
   let sheetLeads = 0, sheetMqls = 0, sheetError: string | null = null;
   let sheetRowsTotal = 0;
   try {
