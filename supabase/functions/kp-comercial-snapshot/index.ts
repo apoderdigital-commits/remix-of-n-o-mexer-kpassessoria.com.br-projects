@@ -87,8 +87,24 @@ async function buildSnapshot(since: Date, until: Date) {
   // ---------- CALENDARS + APPTS ----------
   const calRes = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, { headers });
   const calendars = ((calRes.ok ? (await calRes.json()).calendars : []) || []);
+
+  // Quais calendários estão habilitados na config (se nenhum, usa todos por compat)
+  const supabaseAdminEarly = sb();
+  const { data: enabledCalRows } = await supabaseAdminEarly
+    .from("kp_comercial_calendars").select("ghl_calendar_id, enabled, name");
+  const enabledSet = new Set<string>();
+  const calendarMeta = new Map<string, { name: string; enabled: boolean }>();
+  for (const r of (enabledCalRows || []) as any[]) {
+    calendarMeta.set(r.ghl_calendar_id, { name: r.name || "", enabled: !!r.enabled });
+    if (r.enabled) enabledSet.add(r.ghl_calendar_id);
+  }
+  const hasCalendarConfig = (enabledCalRows || []).length > 0;
+  const calendarsToFetch = hasCalendarConfig
+    ? calendars.filter((c: any) => enabledSet.has(c.id))
+    : calendars;
+
   const allAppts: any[] = [];
-  for (const c of calendars) {
+  for (const c of calendarsToFetch) {
     const params = new URLSearchParams({
       locationId, calendarId: c.id,
       startTime: String(sinceMs), endTime: String(untilMs),
@@ -96,10 +112,11 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allAppts.push(e);
+    for (const e of (j.events || [])) allAppts.push({ ...e, _calendarName: c.name });
   }
   const apptByContact = new Map<string, any>();
   for (const a of allAppts) if (a.contactId) apptByContact.set(a.contactId, a);
+
 
   // ---------- PIPELINES + OPPS ----------
   const pipRes = await fetch(`${GHL_BASE}/opportunities/pipelines?locationId=${locationId}`, { headers });
