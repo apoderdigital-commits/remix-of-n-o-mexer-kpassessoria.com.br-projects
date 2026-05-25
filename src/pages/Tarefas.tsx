@@ -321,12 +321,12 @@ export default function Tarefas() {
 
   // ---- Task dialog ----
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; listKey: string; editing: Task | null; }>({ open: false, listKey: "melhoria_continua", editing: null });
-  const [taskForm, setTaskForm] = useState({ title: "", description: "", assignee_id: "", priority: "normal", status: "todo", due_date: null as Date | null });
+  const [taskForm, setTaskForm] = useState({ title: "", description: "", assignee_id: "", priority: "normal", status: "todo", due_date: null as Date | null, standby_reason: "" });
 
   const openNewTask = (listKey: string) => {
     const cfg = LISTS.find((l) => l.key === listKey)!;
     const defaultAssignee = resolveAssignee(cfg.function) || user?.id || "";
-    setTaskForm({ title: "", description: "", assignee_id: defaultAssignee, priority: "normal", status: "todo", due_date: null });
+    setTaskForm({ title: "", description: "", assignee_id: defaultAssignee, priority: "normal", status: "todo", due_date: null, standby_reason: "" });
     setTaskDialog({ open: true, listKey, editing: null });
   };
 
@@ -335,6 +335,7 @@ export default function Tarefas() {
       title: t.title, description: t.description || "", assignee_id: t.assignee_id || "",
       priority: t.priority, status: t.status,
       due_date: t.due_date ? new Date(t.due_date + "T00:00:00") : null,
+      standby_reason: t.standby_reason || "",
     });
     setTaskDialog({ open: true, listKey: t.list_key, editing: t });
   };
@@ -346,7 +347,13 @@ export default function Tarefas() {
     const editing = taskDialog.editing;
     const newDueStr = taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null;
 
-    // If editing a Melhoria Contínua task and changing due_date, require reason
+    // Standby needs reason
+    if (taskForm.status === "standby" && !taskForm.standby_reason.trim()) {
+      toast.error("Informe o motivo do Stand By");
+      return;
+    }
+
+    // If editing a Melhoria Contínua task and changing due_date, require reason via dialog
     if (
       editing &&
       editing.list_key === "melhoria_continua" &&
@@ -358,16 +365,7 @@ export default function Tarefas() {
       if (!ok) return;
     }
 
-    // Status standby requires reason
-    if (taskForm.status === "standby" && (!editing || editing.status !== "standby")) {
-      const reason = await new Promise<string | null>((resolve) => {
-        setStandbyDialog({ task: editing || ({} as Task), reason: "" });
-        // we'll handle saving inside the standby dialog; abort current save flow
-        // Use a small trick: we patch the resolver via a ref-less approach below
-        (saveTask as any)._pendingResolve = resolve;
-      });
-      if (!reason) return;
-    }
+    const becameStandby = taskForm.status === "standby" && (!editing || editing.status !== "standby");
 
     const payload: any = {
       list_key: taskDialog.listKey,
@@ -378,7 +376,8 @@ export default function Tarefas() {
       status: taskForm.status,
       due_date: newDueStr,
       completed_at: taskForm.status === "done" ? new Date().toISOString() : null,
-      standby_at: taskForm.status === "standby" ? new Date().toISOString() : null,
+      standby_reason: taskForm.status === "standby" ? (taskForm.standby_reason.trim() || null) : null,
+      standby_at: becameStandby ? new Date().toISOString() : (taskForm.status === "standby" ? (editing?.standby_at || new Date().toISOString()) : null),
     };
 
     if (editing) {
