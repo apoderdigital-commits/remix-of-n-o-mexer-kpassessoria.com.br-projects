@@ -1382,7 +1382,7 @@ function ListBlock({
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
   defaultOpen?: boolean;
 }) {
-  const [openState, setOpenState] = useState(defaultOpen);
+  const [openState, setOpenState] = useState(defaultOpen && tasks.length > 0);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
