@@ -655,6 +655,9 @@ export default function Tarefas() {
               <TabsTrigger value="cadence" className="text-xs">Por cadência</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setGlobalTplOpen(true)}>
+            <FileText className="h-3.5 w-3.5" /> Templates de tarefas
+          </Button>
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
             <Checkbox checked={onlyMine} onCheckedChange={(v) => setOnlyMine(!!v)} /> Apenas minhas
           </label>
