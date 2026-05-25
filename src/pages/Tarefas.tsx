@@ -445,6 +445,43 @@ export default function Tarefas() {
       .update({ status: next, completed_at: next === "done" ? new Date().toISOString() : null })
       .eq("id", t.id);
     if (error) { toast.error(error.message); return; }
+
+    // Auto-spawn next occurrence for recurrent lists when completing
+    if (next === "done") {
+      const cfg = LISTS.find((l) => l.key === t.list_key);
+      if (cfg?.recurrence) {
+        const base = t.due_date ? new Date(t.due_date + "T00:00:00") : new Date();
+        const nextDate = cfg.recurrence === "weekly" ? addWeeks(base, 1) : addMonths(base, 1);
+        const nextDue = format(nextDate, "yyyy-MM-dd");
+        // Avoid duplicating: skip if an open task with same title/due already exists
+        const { data: dup } = await supabase
+          .from("squad_tasks")
+          .select("id")
+          .eq("squad_client_id", t.squad_client_id)
+          .eq("list_key", t.list_key)
+          .eq("title", t.title)
+          .eq("due_date", nextDue)
+          .neq("status", "done")
+          .maybeSingle();
+        if (!dup) {
+          await supabase.from("squad_tasks").insert({
+            squad_client_id: t.squad_client_id,
+            list_key: t.list_key,
+            title: t.title,
+            description: t.description,
+            assignee_id: t.assignee_id,
+            priority: t.priority,
+            status: "todo",
+            due_date: nextDue,
+            created_by: user!.id,
+            template_id: (t as any).template_id ?? null,
+            cycle_key: `auto-${nextDue}`,
+          });
+          toast.success("Próxima tarefa gerada");
+        }
+      }
+    }
+
     qc.invalidateQueries({ queryKey: ["tasks"] });
     qc.invalidateQueries({ queryKey: ["all_tasks"] });
   };
