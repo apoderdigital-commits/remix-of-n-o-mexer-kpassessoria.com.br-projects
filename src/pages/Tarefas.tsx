@@ -2655,6 +2655,7 @@ function GlobalTemplatesDialog({
             {editingId && <Button variant="ghost" onClick={() => { reset(); setEditingId(null); }}>Cancelar edição</Button>}
             <Button onClick={save}>{editingId ? "Salvar e propagar" : "Adicionar template"}</Button>
           </div>
+          </div>
         </div>
       </DialogContent>
 
