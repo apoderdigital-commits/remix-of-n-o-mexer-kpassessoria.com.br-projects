@@ -1318,6 +1318,20 @@ function TaskDialogContent({
             </div>
           </div>
 
+          {taskForm.status === "standby" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Motivo do Stand By <span className="text-red-400">*</span></Label>
+              <Textarea
+                value={taskForm.standby_reason}
+                onChange={(e) => setTaskForm((f: any) => ({ ...f, standby_reason: e.target.value }))}
+                placeholder="Por que esta tarefa está em stand by?"
+                rows={2}
+              />
+            </div>
+          )}
+
+
+
           {editing && (
             <>
               <SubtasksSection taskId={editing.id} currentUserId={currentUserId} />
