@@ -1382,21 +1382,17 @@ function ListBlock({
           </div>
         </div>
         <CollapsibleContent className="px-3 pb-3">
-          {tasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/30 rounded-md">Sem tarefas</p>
-          ) : (
-            <StatusGroupedList
-              tasks={tasks}
-              profileMap={profileMap}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggle={onToggle}
-              onStandby={onStandby}
-              onAdd={onAdd}
-            />
-          )}
+          <StatusGroupedList
+            tasks={tasks}
+            profileMap={profileMap}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggle={onToggle}
+            onStandby={onStandby}
+            onAdd={onAdd}
+          />
         </CollapsibleContent>
       </Collapsible>
     </Card>
