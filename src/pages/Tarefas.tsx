@@ -14,9 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useClientsHealth } from "@/hooks/useClientHealth";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
@@ -215,12 +217,14 @@ export default function Tarefas() {
 
   // Main view tab — default: home
   const [view, setView] = useState<"home" | "client" | "mine" | "cadence">("home");
+  const { data: clientsHealth } = useClientsHealth();
 
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Pastas de squad começam FECHADAS para visual mais limpo
   const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
-  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: p[id] === false ? true : false }));
+  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: !p[id] }));
   const formatSquadName = (name: string) => {
     const cleaned = (name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
     return `Squad de ${cleaned || name}`;
@@ -406,9 +410,12 @@ export default function Tarefas() {
     setTaskDialog({ open: false, listKey: "melhoria_continua", editing: null });
   };
 
-  const deleteTask = async (id: string) => {
-    if (!confirm("Excluir esta tarefa?")) return;
-    const { error } = await supabase.from("squad_tasks").delete().eq("id", id);
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const deleteTask = (id: string) => setDeleteTaskId(id);
+  const confirmDeleteTask = async () => {
+    if (!deleteTaskId) return;
+    const { error } = await supabase.from("squad_tasks").delete().eq("id", deleteTaskId);
+    setDeleteTaskId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Excluída");
     qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -667,7 +674,7 @@ export default function Tarefas() {
                   {clients?.length === 0 ? "Nenhum cliente no seu squad" : "Nenhum cliente encontrado"}
                 </p>
               ) : filteredClientsBySquad.map((group) => {
-                const isOpen = openSquads[group.squad.id] !== false; // default open
+                const isOpen = openSquads[group.squad.id] === true; // default fechado
                 return (
                   <div key={group.squad.id} className="rounded-md">
                     <button
@@ -772,6 +779,11 @@ export default function Tarefas() {
                     </Collapsible>
                   </Card>
                 )}
+
+                <ClientSummary
+                  tasks={clientTasks || []}
+                  health={clientsHealth?.[selectedClient.id]}
+                />
 
                 <div className="space-y-3">
                   {LISTS.map((l) => {
@@ -908,6 +920,24 @@ export default function Tarefas() {
           setCycleDialog((d) => ({ ...d, open: false }));
         }}
       />
+
+      {/* Delete task confirmation */}
+      <AlertDialog open={!!deleteTaskId} onOpenChange={(o) => !o && setDeleteTaskId(null)}>
+        <AlertDialogContent className="bg-card border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação é permanente. A tarefa será removida para todos os membros do squad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Excluir tarefa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirm complete */}
       <Dialog open={!!confirmComplete} onOpenChange={(o) => !o && setConfirmComplete(null)}>
@@ -1115,6 +1145,70 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
+// ---------- ClientSummary ----------
+function ClientSummary({ tasks, health }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined }) {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const day = startOfWeek.getDay(); // 0=dom
+  const diff = (day === 0 ? -6 : 1) - day; // segunda como início
+  startOfWeek.setDate(startOfWeek.getDate() + diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const done = tasks.filter((t) => t.status === "done");
+  const doneOnTime = done.filter((t) => {
+    if (!t.completed_at || !t.due_date) return false;
+    return new Date(t.completed_at).toISOString().slice(0, 10) <= t.due_date;
+  });
+  const onTimePct = done.length > 0 ? (doneOnTime.length / done.length) * 100 : null;
+
+  const weekPending = tasks.filter((t) => {
+    if (t.status === "done") return false;
+    if (!t.due_date) return false;
+    const d = new Date(t.due_date + "T00:00:00");
+    return d >= startOfWeek && d <= endOfWeek;
+  });
+
+  const healthMap = {
+    green: { label: "Saudável", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
+    yellow: { label: "Atenção", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
+    red: { label: "Crítico", cls: "bg-rose-500/15 text-rose-300 border-rose-500/30" },
+  } as const;
+  const h = health ? healthMap[health.level] : null;
+
+  const meta = 90;
+  const belowMeta = onTimePct !== null && onTimePct < meta;
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <Card className="p-3 bg-card/40 border-border/40">
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Entregues no prazo</p>
+        <p className="text-2xl font-bold mt-1">{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
+      </Card>
+      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30")}>
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">% no prazo</p>
+        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300")}>
+          {onTimePct === null ? "—" : `${onTimePct.toFixed(0)}%`}
+        </p>
+        <p className="text-[10px] mt-0.5 text-muted-foreground">Meta: ≥ {meta}% {belowMeta && <span className="text-rose-400 font-semibold">· abaixo da meta</span>}</p>
+      </Card>
+      <Card className="p-3 bg-card/40 border-border/40">
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Faltam concluir esta semana</p>
+        <p className="text-2xl font-bold mt-1">{weekPending.length}</p>
+      </Card>
+      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40")}>
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Saúde do cliente</p>
+        <p className="text-2xl font-bold mt-1">{h ? h.label : "—"}</p>
+        {health?.failing?.length ? (
+          <p className="text-[10px] mt-0.5 truncate" title={health.failing.join(" · ")}>{health.failing[0]}</p>
+        ) : null}
+      </Card>
+    </div>
+  );
+}
+
 // ---------- ListBlock ----------
 function ListBlock({
   cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin,
@@ -1124,7 +1218,7 @@ function ListBlock({
   onTemplates: () => void; onGenerate: () => void;
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
 }) {
-  const [openState, setOpenState] = useState(true);
+  const [openState, setOpenState] = useState(false);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
@@ -1612,11 +1706,15 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
       recurrence_interval_days: t.recurrence_interval_days?.toString() || "",
     });
   };
-  const remove = async (id: string) => {
-    if (!confirm("Excluir template?")) return;
-    await supabase.from("squad_task_templates").delete().eq("id", id);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const remove = (id: string) => setPendingDeleteId(id);
+  const confirmRemove = async () => {
+    if (!pendingDeleteId) return;
+    await supabase.from("squad_task_templates").delete().eq("id", pendingDeleteId);
+    setPendingDeleteId(null);
     qc.invalidateQueries({ queryKey: ["templates_dialog"] });
     qc.invalidateQueries({ queryKey: ["templates"] });
+    toast.success("Template excluído");
   };
 
   const toggleWeekday = (v: number) => {
@@ -1760,6 +1858,22 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
+        <AlertDialogContent className="bg-card border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O template será removido. As tarefas já geradas a partir dele continuam existindo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
