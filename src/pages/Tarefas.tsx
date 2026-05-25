@@ -1385,12 +1385,17 @@ function ListBlock({
           {tasks.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/30 rounded-md">Sem tarefas</p>
           ) : (
-            <div className="space-y-1.5">
-              {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} profileMap={profileMap} currentUserId={currentUserId} isAdmin={isAdmin}
-                  onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onStandby={onStandby} />
-              ))}
-            </div>
+            <StatusGroupedList
+              tasks={tasks}
+              profileMap={profileMap}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onToggle={onToggle}
+              onStandby={onStandby}
+              onAdd={onAdd}
+            />
           )}
         </CollapsibleContent>
       </Collapsible>
