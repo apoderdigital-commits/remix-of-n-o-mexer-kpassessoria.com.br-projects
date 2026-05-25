@@ -499,6 +499,7 @@ export default function Tarefas() {
       }
 
       for (const tpl of tpls) {
+        if (tpl.target_client_ids && tpl.target_client_ids.length > 0 && !tpl.target_client_ids.includes(c.id)) continue;
         if (existSet.has(`${c.id}::${tpl.title}`)) continue;
         const due = computeDueFromTemplate(tpl);
         const assignee = tpl.default_assignee_id || fallbackAssigneeId;
@@ -513,6 +514,7 @@ export default function Tarefas() {
           due_date: due,
           created_by: user!.id,
           cycle_key: cycleKey,
+          template_id: tpl.id,
         });
       }
     }
