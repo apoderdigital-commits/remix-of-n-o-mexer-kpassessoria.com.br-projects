@@ -450,9 +450,37 @@ export default function Tarefas() {
     if (next === "done") {
       const cfg = LISTS.find((l) => l.key === t.list_key);
       if (cfg?.recurrence) {
+        // Base = the due date of the task being completed (so weekday math is correct).
         const base = t.due_date ? new Date(t.due_date + "T00:00:00") : new Date();
-        const nextDate = cfg.recurrence === "weekly" ? addWeeks(base, 1) : addMonths(base, 1);
-        const nextDue = format(nextDate, "yyyy-MM-dd");
+        let nextDue: string | null = null;
+
+        // Prefer the template's recurrence rule (weekdays / interval) when available.
+        const tplId = (t as any).template_id as string | null | undefined;
+        if (tplId) {
+          const { data: tpl } = await supabase
+            .from("squad_task_templates")
+            .select("recurrence_mode, recurrence_weekdays, recurrence_interval_days")
+            .eq("id", tplId)
+            .maybeSingle();
+          if (tpl?.recurrence_mode === "weekdays" && tpl.recurrence_weekdays && tpl.recurrence_weekdays.length > 0) {
+            for (let i = 1; i <= 14; i++) {
+              const d = addDays(base, i);
+              if (tpl.recurrence_weekdays.includes(d.getDay())) {
+                nextDue = format(d, "yyyy-MM-dd");
+                break;
+              }
+            }
+          } else if (tpl?.recurrence_mode === "interval" && tpl.recurrence_interval_days && tpl.recurrence_interval_days > 0) {
+            nextDue = format(addDays(base, tpl.recurrence_interval_days), "yyyy-MM-dd");
+          }
+        }
+
+        // Fallback to list cadence (weekly/monthly).
+        if (!nextDue) {
+          const nextDate = cfg.recurrence === "weekly" ? addWeeks(base, 1) : addMonths(base, 1);
+          nextDue = format(nextDate, "yyyy-MM-dd");
+        }
+
         // Avoid duplicating: skip if an open task with same title/due already exists
         const { data: dup } = await supabase
           .from("squad_tasks")
@@ -474,10 +502,10 @@ export default function Tarefas() {
             status: "todo",
             due_date: nextDue,
             created_by: user!.id,
-            template_id: (t as any).template_id ?? null,
+            template_id: tplId ?? null,
             cycle_key: `auto-${nextDue}`,
           });
-          toast.success("Próxima tarefa gerada");
+          toast.success(`Próxima tarefa gerada para ${format(new Date(nextDue + "T00:00:00"), "dd/MM")}`);
         }
       }
     }
