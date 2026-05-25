@@ -465,6 +465,7 @@ export default function Tarefas() {
   // ---- Templates ----
   const [templatesDialog, setTemplatesDialog] = useState<{ open: boolean; listKey: string | null }>({ open: false, listKey: null });
   const openTemplates = (listKey: string) => setTemplatesDialog({ open: true, listKey });
+  const [globalTplOpen, setGlobalTplOpen] = useState(false);
 
   // ---- Generate cycle (Criar tarefa recorrente) ----
   const [cycleDialog, setCycleDialog] = useState<{ open: boolean; listKey: string | null; scope: "client" | "squad" }>({ open: false, listKey: null, scope: "client" });
