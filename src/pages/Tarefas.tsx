@@ -217,6 +217,7 @@ export default function Tarefas() {
 
   // Main view tab — default: home
   const [view, setView] = useState<"home" | "client" | "mine" | "cadence">("home");
+  const { data: clientsHealth } = useClientsHealth();
 
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
