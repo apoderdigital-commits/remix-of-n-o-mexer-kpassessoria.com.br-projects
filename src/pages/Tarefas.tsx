@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, getISOWeek, getISOWeekYear, addDays, isToday, isPast, parseISO } from "date-fns";
+import { format, getISOWeek, getISOWeekYear, addDays, addWeeks, addMonths, isToday, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,8 +21,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useClientsHealth } from "@/hooks/useClientHealth";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
-  ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
-  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen, Target,
+  ChevronDown, ChevronRight, ChevronUp, ListChecks, AlertCircle, Flag, RefreshCw,
+  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen, Target, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -445,6 +445,43 @@ export default function Tarefas() {
       .update({ status: next, completed_at: next === "done" ? new Date().toISOString() : null })
       .eq("id", t.id);
     if (error) { toast.error(error.message); return; }
+
+    // Auto-spawn next occurrence for recurrent lists when completing
+    if (next === "done") {
+      const cfg = LISTS.find((l) => l.key === t.list_key);
+      if (cfg?.recurrence) {
+        const base = t.due_date ? new Date(t.due_date + "T00:00:00") : new Date();
+        const nextDate = cfg.recurrence === "weekly" ? addWeeks(base, 1) : addMonths(base, 1);
+        const nextDue = format(nextDate, "yyyy-MM-dd");
+        // Avoid duplicating: skip if an open task with same title/due already exists
+        const { data: dup } = await supabase
+          .from("squad_tasks")
+          .select("id")
+          .eq("squad_client_id", t.squad_client_id)
+          .eq("list_key", t.list_key)
+          .eq("title", t.title)
+          .eq("due_date", nextDue)
+          .neq("status", "done")
+          .maybeSingle();
+        if (!dup) {
+          await supabase.from("squad_tasks").insert({
+            squad_client_id: t.squad_client_id,
+            list_key: t.list_key,
+            title: t.title,
+            description: t.description,
+            assignee_id: t.assignee_id,
+            priority: t.priority,
+            status: "todo",
+            due_date: nextDue,
+            created_by: user!.id,
+            template_id: (t as any).template_id ?? null,
+            cycle_key: `auto-${nextDue}`,
+          });
+          toast.success("Próxima tarefa gerada");
+        }
+      }
+    }
+
     qc.invalidateQueries({ queryKey: ["tasks"] });
     qc.invalidateQueries({ queryKey: ["all_tasks"] });
   };
@@ -1345,7 +1382,7 @@ function ListBlock({
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
   defaultOpen?: boolean;
 }) {
-  const [openState, setOpenState] = useState(defaultOpen);
+  const [openState, setOpenState] = useState(defaultOpen && tasks.length > 0);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
@@ -1413,7 +1450,6 @@ function StatusGroupedList({
   onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   onAdd: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ done: true });
   const byStatus = useMemo(() => {
     const map: Record<string, Task[]> = { todo: [], standby: [], done: [] };
     tasks.forEach((t) => {
@@ -1424,6 +1460,14 @@ function StatusGroupedList({
     map.done.sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
     return map;
   }, [tasks]);
+  // Default: collapsed if empty OR if it's "done" (Concluídas always start collapsed)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => ({
+    done: true,
+    todo: (byStatus.todo?.length ?? 0) === 0,
+    standby: (byStatus.standby?.length ?? 0) === 0,
+  }));
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const LIMIT = 5;
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden bg-background/20">
@@ -1440,6 +1484,9 @@ function StatusGroupedList({
       {STATUS_GROUPS.map((g, gi) => {
         const items = byStatus[g.key] || [];
         const isOpen = !collapsed[g.key];
+        const isExpanded = !!expanded[g.key];
+        const visible = isExpanded ? items : items.slice(0, LIMIT);
+        const hasMore = items.length > LIMIT;
         return (
           <div key={g.key} className={cn(gi > 0 && "border-t border-border/40")}>
             <button
@@ -1454,7 +1501,7 @@ function StatusGroupedList({
             </button>
             {isOpen && (
               <div>
-                {items.map((t) => (
+                {visible.map((t) => (
                   <TaskTableRow
                     key={t.id}
                     task={t}
@@ -1467,9 +1514,19 @@ function StatusGroupedList({
                     onStandby={onStandby}
                   />
                 ))}
+                {hasMore && (
+                  <button
+                    onClick={() => setExpanded((e) => ({ ...e, [g.key]: !e[g.key] }))}
+                    className="w-full text-left text-[11px] text-primary hover:text-primary/80 hover:bg-primary/5 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
+                  >
+                    {isExpanded
+                      ? <><ChevronUp className="h-3 w-3 ml-9" /> Recolher</>
+                      : <><ChevronDown className="h-3 w-3 ml-9" /> Mostrar mais ({items.length - LIMIT})</>}
+                  </button>
+                )}
                 <button
                   onClick={onAdd}
-                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition"
+                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
                 >
                   <Plus className="h-3 w-3 ml-9" /> Adicionar Tarefa
                 </button>
@@ -1647,63 +1704,78 @@ function TaskDialogContent({
   currentUserId: string | undefined;
   profileMap: Map<string, ProfileLite>;
 }) {
+  const listLabel = LISTS.find((l) => l.key === listKey)?.label;
+  const statusCfg = STATUSES.find((s) => s.key === taskForm.status);
+  const prioCfg = PRIORITIES.find((p) => p.key === taskForm.priority);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editing ? "Editar tarefa" : "Nova tarefa"} ·{" "}
-            <span className="text-muted-foreground text-sm font-normal">
-              {LISTS.find((l) => l.key === listKey)?.label}
-            </span>
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 mt-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Título</Label>
-            <Input autoFocus value={taskForm.title} onChange={(e) => setTaskForm((f: any) => ({ ...f, title: e.target.value }))} placeholder="Ex: Otimizar campanhas META" />
+      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0">
+        {/* Header band */}
+        <div className="px-6 pt-5 pb-4 border-b border-border/40 bg-gradient-to-b from-primary/10 to-transparent">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
+            <FileText className="h-3 w-3" />
+            <span className="uppercase tracking-wide font-semibold">{listLabel}</span>
+            {editing && <>
+              <span>·</span>
+              <span>Criada em {editing.created_at ? format(new Date(editing.created_at), "dd/MM/yyyy") : "—"}</span>
+            </>}
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Descrição (opcional)</Label>
-            <Textarea value={taskForm.description} onChange={(e) => setTaskForm((f: any) => ({ ...f, description: e.target.value }))} placeholder="Detalhes da tarefa..." rows={3} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Responsável</Label>
-              <Select value={taskForm.assignee_id || "none"} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, assignee_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem responsável</SelectItem>
-                  {selectableMembers.map((p) => (
-                    <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email?.split("@")[0] || "—"}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Prioridade</Label>
-              <Select value={taskForm.priority} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, priority: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <Select value={taskForm.status} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, status: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Vencimento</Label>
+          <Input
+            autoFocus
+            value={taskForm.title}
+            onChange={(e) => setTaskForm((f: any) => ({ ...f, title: e.target.value }))}
+            placeholder="Título da tarefa"
+            className="text-xl font-semibold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+          />
+        </div>
+
+        {/* Body scroll area */}
+        <div className="overflow-y-auto max-h-[calc(92vh-180px)] px-6 py-5 space-y-5">
+          {/* Meta grid (ClickUp-style) */}
+          <div className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2.5 text-sm items-center">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="h-3 w-3" /> Status</Label>
+            <Select value={taskForm.status} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, status: v }))}>
+              <SelectTrigger className="h-8 w-fit min-w-[140px] border-border/40">
+                <SelectValue>
+                  {statusCfg && <span className="text-xs font-semibold uppercase">{statusCfg.label}</span>}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Users className="h-3 w-3" /> Responsável</Label>
+            <Select value={taskForm.assignee_id || "none"} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, assignee_id: v === "none" ? "" : v }))}>
+              <SelectTrigger className="h-8 w-fit min-w-[200px] border-border/40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem responsável</SelectItem>
+                {selectableMembers.map((p) => (
+                  <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email?.split("@")[0] || "—"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Flag className="h-3 w-3" /> Prioridade</Label>
+            <Select value={taskForm.priority} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, priority: v }))}>
+              <SelectTrigger className="h-8 w-fit min-w-[140px] border-border/40">
+                <SelectValue>
+                  {prioCfg && <span className={cn("text-xs font-semibold inline-flex items-center gap-1", prioCfg.color.split(" ").find((c) => c.startsWith("text-")))}>
+                    <Flag className="h-3 w-3" /> {prioCfg.label}
+                  </span>}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PRIORITIES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> Vencimento</Label>
+            <div className="flex items-center gap-1">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start font-normal", !taskForm.due_date && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                  <Button variant="outline" size="sm" className={cn("h-8 font-normal border-border/40", !taskForm.due_date && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                     {taskForm.due_date ? format(taskForm.due_date, "dd/MM/yyyy") : "Sem data"}
                   </Button>
                 </PopoverTrigger>
@@ -1711,22 +1783,38 @@ function TaskDialogContent({
                   <Calendar mode="single" selected={taskForm.due_date || undefined} onSelect={(d) => setTaskForm((f: any) => ({ ...f, due_date: d || null }))} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
+              {taskForm.due_date && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setTaskForm((f: any) => ({ ...f, due_date: null }))}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           </div>
 
           {taskForm.status === "standby" && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Motivo do Stand By <span className="text-red-400">*</span></Label>
+            <div className="space-y-1.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+              <Label className="text-xs text-amber-300 font-semibold">Motivo do Stand By <span className="text-red-400">*</span></Label>
               <Textarea
                 value={taskForm.standby_reason}
                 onChange={(e) => setTaskForm((f: any) => ({ ...f, standby_reason: e.target.value }))}
                 placeholder="Por que esta tarefa está em stand by?"
                 rows={2}
+                className="bg-background/40"
               />
             </div>
           )}
 
-
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Descrição</Label>
+            <Textarea
+              value={taskForm.description}
+              onChange={(e) => setTaskForm((f: any) => ({ ...f, description: e.target.value }))}
+              placeholder="Adicione uma descrição..."
+              rows={4}
+              className="bg-background/40 border-border/40 resize-none"
+            />
+          </div>
 
           {editing && (
             <>
@@ -1736,12 +1824,10 @@ function TaskDialogContent({
             </>
           )}
         </div>
-        <DialogFooter className="gap-2 mt-4">
-          {taskForm.due_date && (
-            <Button variant="ghost" size="sm" onClick={() => setTaskForm((f: any) => ({ ...f, due_date: null }))}>Remover data</Button>
-          )}
+
+        <DialogFooter className="gap-2 px-6 py-3 border-t border-border/40 bg-background/40">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Fechar</Button>
-          <Button onClick={onSave}>{editing ? "Salvar" : "Criar tarefa"}</Button>
+          <Button onClick={onSave}>{editing ? "Salvar alterações" : "Criar tarefa"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
