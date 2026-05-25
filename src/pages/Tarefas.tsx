@@ -730,7 +730,7 @@ export default function Tarefas() {
                                     return (
                                       <button
                                         key={l.key}
-                                        onClick={() => { setSelectedClientId(c.id); setSelectedListKey(l.key); }}
+                                        onClick={() => { setSelectedClientId(c.id); setSelectedSquadId(null); setSelectedListKey(l.key); }}
                                         className={cn("w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs transition",
                                           lactive ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-secondary/40")}
                                       >
