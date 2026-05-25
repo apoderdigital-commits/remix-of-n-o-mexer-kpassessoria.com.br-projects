@@ -1788,6 +1788,22 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
+        <AlertDialogContent className="bg-card border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O template será removido. As tarefas já geradas a partir dele continuam existindo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
