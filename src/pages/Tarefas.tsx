@@ -1288,14 +1288,15 @@ function ClientSummary({ tasks, health, expanded = false }: { tasks: Task[]; hea
 
 // ---------- ListBlock ----------
 function ListBlock({
-  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin,
+  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin, defaultOpen = false,
 }: {
   cfg: typeof LISTS[number]; tasks: Task[]; total: number; open: number; respName: string; tplCount: number;
   onAdd: () => void; onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   onTemplates: () => void; onGenerate: () => void;
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
+  defaultOpen?: boolean;
 }) {
-  const [openState, setOpenState] = useState(false);
+  const [openState, setOpenState] = useState(defaultOpen);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
