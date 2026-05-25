@@ -409,9 +409,12 @@ export default function Tarefas() {
     setTaskDialog({ open: false, listKey: "melhoria_continua", editing: null });
   };
 
-  const deleteTask = async (id: string) => {
-    if (!confirm("Excluir esta tarefa?")) return;
-    const { error } = await supabase.from("squad_tasks").delete().eq("id", id);
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const deleteTask = (id: string) => setDeleteTaskId(id);
+  const confirmDeleteTask = async () => {
+    if (!deleteTaskId) return;
+    const { error } = await supabase.from("squad_tasks").delete().eq("id", deleteTaskId);
+    setDeleteTaskId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Excluída");
     qc.invalidateQueries({ queryKey: ["tasks"] });
