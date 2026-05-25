@@ -668,7 +668,7 @@ export default function Tarefas() {
                   {clients?.length === 0 ? "Nenhum cliente no seu squad" : "Nenhum cliente encontrado"}
                 </p>
               ) : filteredClientsBySquad.map((group) => {
-                const isOpen = openSquads[group.squad.id] !== false; // default open
+                const isOpen = openSquads[group.squad.id] === true; // default fechado
                 return (
                   <div key={group.squad.id} className="rounded-md">
                     <button
