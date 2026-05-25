@@ -1385,54 +1385,33 @@ function ListBlock({
   const [openState, setOpenState] = useState(defaultOpen && tasks.length > 0);
   const recurrent = cfg.recurrence !== null;
   return (
-    <Card className={cn("bg-gradient-to-r border", cfg.color)}>
-      <Collapsible open={openState} onOpenChange={setOpenState}>
-        <div className="w-full p-3 flex items-center gap-3">
-          <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left min-w-0">
-            {openState ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm">{cfg.label}</span>
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground bg-background/40 border border-border/30 rounded px-1.5 py-0.5">{cfg.cadence}</span>
-                <span className="text-[10px] font-semibold rounded-full bg-background/40 border border-border/30 px-2 py-0.5">{open}/{total}</span>
-                {recurrent && tplCount > 0 && (
-                  <span className="text-[10px] font-semibold rounded-full bg-primary/15 text-primary px-2 py-0.5">{tplCount} templates</span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Responsável padrão: {respName}</p>
-            </div>
-          </CollapsibleTrigger>
-          <div className="flex items-center gap-1 shrink-0">
-            {cfg.key === "melhoria_continua" && (
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates de tarefas">
-                <FileText className="h-3.5 w-3.5 mr-1" />Templates de tarefas
-              </Button>
-            )}
-            {recurrent && cfg.key === "melhoria_continua" && (
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onGenerate} title="Criar tarefa recorrente">
-                <RefreshCw className="h-3.5 w-3.5 mr-1" />Criar tarefa recorrente
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onAdd}>
-              <Plus className="h-3.5 w-3.5 mr-1" />Nova
+    <div className="space-y-2">
+      {(cfg.key === "melhoria_continua" || recurrent) && (
+        <div className="flex items-center justify-end gap-1">
+          {cfg.key === "melhoria_continua" && (
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates de tarefas">
+              <FileText className="h-3.5 w-3.5 mr-1" />Templates de tarefas
             </Button>
-          </div>
+          )}
+          {recurrent && cfg.key === "melhoria_continua" && (
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onGenerate} title="Criar tarefa recorrente">
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />Criar tarefa recorrente
+            </Button>
+          )}
         </div>
-        <CollapsibleContent className="px-3 pb-3">
-          <StatusGroupedList
-            tasks={tasks}
-            profileMap={profileMap}
-            currentUserId={currentUserId}
-            isAdmin={isAdmin}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onToggle={onToggle}
-            onStandby={onStandby}
-            onAdd={onAdd}
-          />
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+      )}
+      <StatusGroupedList
+        tasks={tasks}
+        profileMap={profileMap}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggle={onToggle}
+        onStandby={onStandby}
+        onAdd={onAdd}
+      />
+    </div>
   );
 }
 
