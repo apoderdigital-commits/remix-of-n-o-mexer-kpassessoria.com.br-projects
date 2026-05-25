@@ -22,7 +22,7 @@ import { useClientsHealth } from "@/hooks/useClientHealth";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
-  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen,
+  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -2429,88 +2429,110 @@ function GlobalTemplatesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" /> Templates de tarefas
-          </DialogTitle>
-          <DialogDescription>
-            Crie ou edite templates de tarefa sem precisar entrar em cada cliente. Editar um template aplica as mudanças em todas as tarefas já geradas a partir dele.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-1.5 mt-1">
-          <Label className="text-xs">Squad</Label>
-          <Select value={squadId} onValueChange={setSquadId}>
-            <SelectTrigger><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
-            <SelectContent>
-              {squads.map((s) => {
-                const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
-                return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Existing templates grouped by list */}
-        <div className="space-y-4 mt-3">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-            Templates do squad ({templates?.length || 0})
-          </Label>
-          {(!templates || templates.length === 0) && (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/40 rounded-md">
-              Nenhum template cadastrado para este squad
-            </p>
-          )}
-          {LISTS.filter((l) => (templatesByList[l.key] || []).length > 0).map((l) => (
-            <div key={l.key} className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className={cn("h-2 w-2 rounded-full bg-gradient-to-br", l.color)} />
-                <h5 className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                  {l.label} <span className="text-muted-foreground">({templatesByList[l.key].length})</span>
-                </h5>
+      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+        <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pt-6 pb-5 border-b border-border/30">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-lg">
+              <div className="h-8 w-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+                <FileText className="h-4 w-4" />
               </div>
-              {templatesByList[l.key].map((t) => {
-                const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
-                const isAll = !t.target_client_ids || t.target_client_ids.length === 0;
-                const targets = isAll ? "Todos os clientes" : `${t.target_client_ids!.length} cliente(s) específicos`;
-                return (
-                  <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{t.title}</div>
-                      {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
-                      <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
-                        <span>🎯 {targets}</span>
-                        {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
-                        {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
-                          <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
-                        )}
-                        {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
-                          <span>🔁 a cada {t.recurrence_interval_days}d</span>
-                        )}
-                      </div>
-                    </div>
-                    <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
-                      {PRIORITIES.find((p) => p.key === t.priority)?.label}
-                    </span>
-                    <TemplateScopePopover
-                      template={t}
-                      squadClients={squadClients}
-                      onApply={(target) => updateScope(t, target)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+              Templates de tarefas
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Crie ou edite templates de tarefa sem precisar entrar em cada cliente. Editar um template aplica as mudanças em todas as tarefas já geradas a partir dele.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5 mt-4">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Squad</Label>
+            <Select value={squadId} onValueChange={setSquadId}>
+              <SelectTrigger className="bg-background/60 border-border/50 h-10"><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
+              <SelectContent>
+                {squads.map((s) => {
+                  const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+                  return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
+        <div className="px-6 pb-6 pt-4 space-y-5">
+          {/* Existing templates grouped by list */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                Templates do squad
+              </Label>
+              <span className="text-[10px] font-bold rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                {templates?.length || 0}
+              </span>
+            </div>
+            {(!templates || templates.length === 0) && (
+              <div className="text-center py-8 border border-dashed border-border/40 rounded-lg bg-background/30">
+                <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Nenhum template cadastrado para este squad</p>
+              </div>
+            )}
+            {LISTS.filter((l) => (templatesByList[l.key] || []).length > 0).map((l) => (
+              <div key={l.key} className={cn("rounded-lg border bg-gradient-to-br p-3 space-y-2", l.color)}>
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
+                    {l.label}
+                  </h5>
+                  <span className="text-[10px] font-semibold rounded-full bg-background/60 border border-border/30 px-2 py-0.5 text-muted-foreground">
+                    {templatesByList[l.key].length}
+                  </span>
+                </div>
+                {templatesByList[l.key].map((t) => {
+                  const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
+                  const isAll = !t.target_client_ids || t.target_client_ids.length === 0;
+                  return (
+                    <div
+                      key={t.id}
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-md bg-background/60 backdrop-blur border border-border/30 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{t.title}</div>
+                        {t.description && <div className="text-[11px] text-muted-foreground truncate mt-0.5">{t.description}</div>}
+                        <div className="text-[10px] text-muted-foreground mt-1 flex gap-2.5 flex-wrap">
+                          <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border",
+                            isAll ? "border-emerald-500/30 text-emerald-300 bg-emerald-500/10" : "border-sky-500/30 text-sky-300 bg-sky-500/10")}>
+                            <Target className="h-2.5 w-2.5" />
+                            {isAll ? "Todos" : `${t.target_client_ids!.length} específico(s)`}
+                          </span>
+                          {resp && <span className="inline-flex items-center gap-1">👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
+                          {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
+                            <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
+                          )}
+                          {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
+                            <span>🔁 a cada {t.recurrence_interval_days}d</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
+                        {PRIORITIES.find((p) => p.key === t.priority)?.label}
+                      </span>
+                      <TemplateScopePopover
+                        template={t}
+                        squadClients={squadClients}
+                        onApply={(target) => updateScope(t, target)}
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(t)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
 
-        {/* Editor */}
-        <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
-          <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
+          {/* Editor */}
+          <div className="border-t border-border/30 pt-4 space-y-3 rounded-lg bg-background/30 p-4 border border-border/30">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {editingId ? "Editar template" : "Novo template"}
+            </h4>
           <div className="space-y-1.5">
             <Label className="text-xs">Lista de destino</Label>
             <Select value={listKey} onValueChange={setListKey}>
@@ -2633,8 +2655,10 @@ function GlobalTemplatesDialog({
             {editingId && <Button variant="ghost" onClick={() => { reset(); setEditingId(null); }}>Cancelar edição</Button>}
             <Button onClick={save}>{editingId ? "Salvar e propagar" : "Adicionar template"}</Button>
           </div>
+          </div>
         </div>
       </DialogContent>
+
 
       <AlertDialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
         <AlertDialogContent className="bg-card border-border/50">
@@ -2679,7 +2703,7 @@ function TemplateScopePopover({
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
-  const apply = async () => {
+  const confirm = async () => {
     if (mode === "specific" && selected.length === 0) {
       toast.error("Selecione ao menos um cliente");
       return;
@@ -2688,47 +2712,87 @@ function TemplateScopePopover({
     setOpen(false);
   };
 
-  const label = initialAll ? "Todos" : `${template.target_client_ids!.length} específico(s)`;
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" title="Definir em quais clientes aplicar">
-          🎯 {label}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 bg-card border-border/50" align="end">
-        <div className="space-y-3">
-          <div className="text-xs font-semibold">Aplicar este template em</div>
-          <Select value={mode} onValueChange={(v) => setMode(v as any)}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os clientes do squad ({squadClients.length})</SelectItem>
-              <SelectItem value="specific">Clientes específicos</SelectItem>
-            </SelectContent>
-          </Select>
-          {mode === "specific" && (
-            <div className="max-h-44 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-1">
-              {squadClients.length === 0 && (
-                <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
-              )}
-              {squadClients.map((c) => {
-                const on = selected.includes(c.id);
-                return (
-                  <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-secondary/40 rounded px-1.5 py-1">
-                    <Checkbox checked={on} onCheckedChange={() => toggle(c.id)} />
-                    <span className="truncate">{c.name}</span>
-                  </label>
-                );
-              })}
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-[11px] px-2.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+        onClick={() => setOpen(true)}
+      >
+        <Target className="h-3 w-3 mr-1" />
+        Aplicar tarefa
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Aplicar tarefa
+            </DialogTitle>
+            <DialogDescription>
+              Deseja aplicar <span className="text-foreground font-medium">"{template.title}"</span> em todos os clientes ou em alguns específicos?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMode("all")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition",
+                  mode === "all"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <div className="text-sm font-semibold">Todos os clientes</div>
+                <div className="text-[11px] text-muted-foreground">{squadClients.length} no squad</div>
+              </button>
+              <button
+                onClick={() => setMode("specific")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition",
+                  mode === "specific"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <div className="text-sm font-semibold">Específicos</div>
+                <div className="text-[11px] text-muted-foreground">Escolher clientes</div>
+              </button>
             </div>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button size="sm" className="h-7 text-xs" onClick={apply}>Aplicar</Button>
+
+            {mode === "specific" && (
+              <div className="max-h-56 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-0.5">
+                {squadClients.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
+                )}
+                {squadClients.map((c) => {
+                  const on = selected.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-secondary/40 rounded px-2 py-1.5">
+                      <Checkbox checked={on} onCheckedChange={() => toggle(c.id)} />
+                      <span className="truncate">{c.name}</span>
+                    </label>
+                  );
+                })}
+                {squadClients.length > 0 && (
+                  <div className="flex justify-between text-[10px] text-muted-foreground px-1 pt-1 border-t border-border/30 mt-1">
+                    <button className="hover:text-foreground" onClick={() => setSelected(squadClients.map((c) => c.id))}>Selecionar todos</button>
+                    <button className="hover:text-foreground" onClick={() => setSelected([])}>Limpar</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={confirm}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
