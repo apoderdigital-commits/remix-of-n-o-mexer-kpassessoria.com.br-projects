@@ -1405,10 +1405,9 @@ function ListBlock({
 
 // ---------- Status-grouped task list (ClickUp-style) ----------
 const STATUS_GROUPS = [
-  { key: "done",    label: "Concluído",    color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
-  { key: "todo",    label: "A fazer",      color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-  { key: "doing",   label: "Em andamento", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-  { key: "standby", label: "Stand By",     color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+  { key: "done",    label: "Concluídas", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
+  { key: "todo",    label: "A fazer",    color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+  { key: "standby", label: "Stand By",   color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
 ] as const;
 
 function StatusGroupedList({
@@ -1418,11 +1417,14 @@ function StatusGroupedList({
   onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   onAdd: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ done: true });
   const byStatus = useMemo(() => {
-    const map: Record<string, Task[]> = { todo: [], doing: [], standby: [], done: [] };
-    tasks.forEach((t) => { (map[t.status] ||= []).push(t); });
-    // most recent done first
+    const map: Record<string, Task[]> = { todo: [], standby: [], done: [] };
+    tasks.forEach((t) => {
+      if (t.status === "done") map.done.push(t);
+      else if (t.status === "standby") map.standby.push(t);
+      else map.todo.push(t); // todo + doing
+    });
     map.done.sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
     return map;
   }, [tasks]);
