@@ -221,6 +221,7 @@ export default function Tarefas() {
 
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedSquadId, setSelectedSquadId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Pastas começam FECHADAS
   const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
@@ -681,15 +682,20 @@ export default function Tarefas() {
                 const isOpen = openSquads[group.squad.id] === true; // default fechado
                 return (
                   <div key={group.squad.id} className="rounded-md">
-                    <button
-                      onClick={() => toggleSquad(group.squad.id)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/40 transition"
-                    >
-                      {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                    <div className={cn("w-full flex items-center gap-1 px-1.5 py-1.5 rounded-md transition",
+                      selectedSquadId === group.squad.id && !selectedClientId ? "bg-primary/15 border border-primary/40" : "hover:bg-secondary/40")}>
+                      <button onClick={() => toggleSquad(group.squad.id)} className="p-0.5 rounded hover:bg-secondary/60">
+                        {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </button>
                       {isOpen ? <FolderOpen className="h-4 w-4 text-primary" /> : <Folder className="h-4 w-4 text-primary" />}
-                      <span className="flex-1 text-left text-xs font-semibold text-foreground truncate">{formatSquadName(group.squad.name)}</span>
+                      <button
+                        onClick={() => { setSelectedSquadId(group.squad.id); setSelectedClientId(null); setSelectedListKey(null); }}
+                        className="flex-1 text-left text-xs font-semibold text-foreground truncate"
+                      >
+                        {formatSquadName(group.squad.name)}
+                      </button>
                       <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
-                    </button>
+                    </div>
                     {isOpen && (
                       <div className="space-y-1 pl-3 mt-1 border-l border-border/40 ml-3">
                         {group.items.map((c) => {
@@ -706,7 +712,7 @@ export default function Tarefas() {
                                 </button>
                                 {cOpen ? <FolderOpen className="h-3.5 w-3.5 text-primary/80" /> : <Folder className="h-3.5 w-3.5 text-primary/80" />}
                                 <button
-                                  onClick={() => { setSelectedClientId(c.id); setSelectedListKey(null); }}
+                                  onClick={() => { setSelectedClientId(c.id); setSelectedSquadId(null); setSelectedListKey(null); }}
                                   className={cn("flex-1 text-left truncate text-sm",
                                     active && !selectedListKey ? "text-foreground font-medium" : "text-muted-foreground")}
                                 >
@@ -724,7 +730,7 @@ export default function Tarefas() {
                                     return (
                                       <button
                                         key={l.key}
-                                        onClick={() => { setSelectedClientId(c.id); setSelectedListKey(l.key); }}
+                                        onClick={() => { setSelectedClientId(c.id); setSelectedSquadId(null); setSelectedListKey(l.key); }}
                                         className={cn("w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs transition",
                                           lactive ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-secondary/40")}
                                       >
@@ -767,10 +773,35 @@ export default function Tarefas() {
 
           {view === "client" && (
             !selectedClient ? (
-              <div className="text-center text-muted-foreground mt-20">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                Selecione um cliente para ver as tarefas.
-              </div>
+              selectedSquadId ? (() => {
+                const squad = squads?.find((s) => s.id === selectedSquadId);
+                const squadClientIds = (clients || []).filter((c) => c.squad_id === selectedSquadId).map((c) => c.id);
+                const squadTasks = (allTasks || []).filter((t) => squadClientIds.includes(t.squad_client_id));
+                // Aggregate health: pick worst level across squad clients
+                const order = { green: 0, yellow: 1, red: 2 } as const;
+                let aggHealth: import("@/hooks/useClientHealth").ClientHealth | undefined;
+                squadClientIds.forEach((cid) => {
+                  const h = clientsHealth?.[cid];
+                  if (!h) return;
+                  if (!aggHealth || order[h.level] > order[aggHealth.level]) aggHealth = h;
+                });
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold">{squad ? formatSquadName(squad.name) : "Squad"}</h2>
+                        <p className="text-xs text-muted-foreground">Visão geral · {squadClientIds.length} clientes · {squadTasks.length} tarefas</p>
+                      </div>
+                    </div>
+                    <ClientSummary tasks={squadTasks} health={aggHealth} expanded />
+                  </>
+                );
+              })() : (
+                <div className="text-center text-muted-foreground mt-20">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  Selecione um squad ou cliente para ver as tarefas.
+                </div>
+              )
             ) : (
               <>
                 <div className="flex items-center justify-between mb-4">
