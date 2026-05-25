@@ -1636,11 +1636,15 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
       recurrence_interval_days: t.recurrence_interval_days?.toString() || "",
     });
   };
-  const remove = async (id: string) => {
-    if (!confirm("Excluir template?")) return;
-    await supabase.from("squad_task_templates").delete().eq("id", id);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const remove = (id: string) => setPendingDeleteId(id);
+  const confirmRemove = async () => {
+    if (!pendingDeleteId) return;
+    await supabase.from("squad_task_templates").delete().eq("id", pendingDeleteId);
+    setPendingDeleteId(null);
     qc.invalidateQueries({ queryKey: ["templates_dialog"] });
     qc.invalidateQueries({ queryKey: ["templates"] });
+    toast.success("Template excluído");
   };
 
   const toggleWeekday = (v: number) => {
