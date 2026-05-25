@@ -780,6 +780,11 @@ export default function Tarefas() {
                   </Card>
                 )}
 
+                <ClientSummary
+                  tasks={clientTasks || []}
+                  health={clientsHealth?.[selectedClient.id]}
+                />
+
                 <div className="space-y-3">
                   {LISTS.map((l) => {
                     const list = tasksByList[l.key] || [];
