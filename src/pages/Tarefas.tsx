@@ -1145,6 +1145,70 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
+// ---------- ClientSummary ----------
+function ClientSummary({ tasks, health }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined }) {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const day = startOfWeek.getDay(); // 0=dom
+  const diff = (day === 0 ? -6 : 1) - day; // segunda como início
+  startOfWeek.setDate(startOfWeek.getDate() + diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const done = tasks.filter((t) => t.status === "done");
+  const doneOnTime = done.filter((t) => {
+    if (!t.completed_at || !t.due_date) return false;
+    return new Date(t.completed_at).toISOString().slice(0, 10) <= t.due_date;
+  });
+  const onTimePct = done.length > 0 ? (doneOnTime.length / done.length) * 100 : null;
+
+  const weekPending = tasks.filter((t) => {
+    if (t.status === "done") return false;
+    if (!t.due_date) return false;
+    const d = new Date(t.due_date + "T00:00:00");
+    return d >= startOfWeek && d <= endOfWeek;
+  });
+
+  const healthMap = {
+    green: { label: "Saudável", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
+    yellow: { label: "Atenção", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
+    red: { label: "Crítico", cls: "bg-rose-500/15 text-rose-300 border-rose-500/30" },
+  } as const;
+  const h = health ? healthMap[health.level] : null;
+
+  const meta = 90;
+  const belowMeta = onTimePct !== null && onTimePct < meta;
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <Card className="p-3 bg-card/40 border-border/40">
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Entregues no prazo</p>
+        <p className="text-2xl font-bold mt-1">{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
+      </Card>
+      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30")}>
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">% no prazo</p>
+        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300")}>
+          {onTimePct === null ? "—" : `${onTimePct.toFixed(0)}%`}
+        </p>
+        <p className="text-[10px] mt-0.5 text-muted-foreground">Meta: ≥ {meta}% {belowMeta && <span className="text-rose-400 font-semibold">· abaixo da meta</span>}</p>
+      </Card>
+      <Card className="p-3 bg-card/40 border-border/40">
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Faltam concluir esta semana</p>
+        <p className="text-2xl font-bold mt-1">{weekPending.length}</p>
+      </Card>
+      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40")}>
+        <p className="text-[10px] uppercase font-semibold text-muted-foreground">Saúde do cliente</p>
+        <p className="text-2xl font-bold mt-1">{h ? h.label : "—"}</p>
+        {health?.failing?.length ? (
+          <p className="text-[10px] mt-0.5 truncate" title={health.failing.join(" · ")}>{health.failing[0]}</p>
+        ) : null}
+      </Card>
+    </div>
+  );
+}
+
 // ---------- ListBlock ----------
 function ListBlock({
   cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin,
