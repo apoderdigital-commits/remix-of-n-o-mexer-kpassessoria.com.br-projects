@@ -20,7 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
-  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon,
+  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -219,6 +219,12 @@ export default function Tarefas() {
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
+  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: p[id] === false ? true : false }));
+  const formatSquadName = (name: string) => {
+    const cleaned = (name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+    return `Squad de ${cleaned || name}`;
+  };
 
   const selectedClient = selectedClientId ? clientMap.get(selectedClientId) : null;
 
@@ -660,30 +666,40 @@ export default function Tarefas() {
                 <p className="text-xs text-muted-foreground text-center mt-6">
                   {clients?.length === 0 ? "Nenhum cliente no seu squad" : "Nenhum cliente encontrado"}
                 </p>
-              ) : filteredClientsBySquad.map((group) => (
-                <div key={group.squad.id}>
-                  <div className="flex items-center justify-between px-2 mb-1">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{group.squad.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
+              ) : filteredClientsBySquad.map((group) => {
+                const isOpen = openSquads[group.squad.id] !== false; // default open
+                return (
+                  <div key={group.squad.id} className="rounded-md">
+                    <button
+                      onClick={() => toggleSquad(group.squad.id)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/40 transition"
+                    >
+                      {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                      {isOpen ? <FolderOpen className="h-4 w-4 text-primary" /> : <Folder className="h-4 w-4 text-primary" />}
+                      <span className="flex-1 text-left text-xs font-semibold text-foreground truncate">{formatSquadName(group.squad.name)}</span>
+                      <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="space-y-1 pl-4 mt-1 border-l border-border/40 ml-3">
+                        {group.items.map((c) => {
+                          const count = openCounts[c.id] || 0;
+                          const active = c.id === selectedClientId;
+                          return (
+                            <button key={c.id} onClick={() => setSelectedClientId(c.id)}
+                              className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
+                                active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
+                              <span className="truncate">{c.name}</span>
+                              {count > 0 && (
+                                <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    {group.items.map((c) => {
-                      const count = openCounts[c.id] || 0;
-                      const active = c.id === selectedClientId;
-                      return (
-                        <button key={c.id} onClick={() => setSelectedClientId(c.id)}
-                          className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
-                            active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
-                          <span className="truncate">{c.name}</span>
-                          {count > 0 && (
-                            <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </aside>
         )}
@@ -1044,7 +1060,8 @@ function HomeView({
           {groups.map((g) => (
             <div key={g.squad.id}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{g.squad.name}</span>
+                <FolderOpen className="h-4 w-4 text-primary" />
+                <span className="text-sm font-bold text-foreground">{`Squad de ${(g.squad.name || "").replace(/^squad\s*(head\s*)?/i, "").trim() || g.squad.name}`}</span>
                 <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">
                   {g.clients.reduce((acc, c) => acc + c.tasks.length, 0)} tarefas
                 </span>
