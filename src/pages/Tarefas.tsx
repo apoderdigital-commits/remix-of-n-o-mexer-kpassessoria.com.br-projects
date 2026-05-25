@@ -915,6 +915,24 @@ export default function Tarefas() {
         }}
       />
 
+      {/* Delete task confirmation */}
+      <AlertDialog open={!!deleteTaskId} onOpenChange={(o) => !o && setDeleteTaskId(null)}>
+        <AlertDialogContent className="bg-card border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação é permanente. A tarefa será removida para todos os membros do squad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Excluir tarefa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Confirm complete */}
       <Dialog open={!!confirmComplete} onOpenChange={(o) => !o && setConfirmComplete(null)}>
         <DialogContent className="bg-card border-border/50 max-w-sm">
