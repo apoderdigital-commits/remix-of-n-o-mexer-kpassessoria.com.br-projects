@@ -2511,7 +2511,7 @@ function GlobalTemplatesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+      <DialogContent className="bg-card border-border/50 w-[calc(100vw-2rem)] sm:w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-0">
         <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pt-6 pb-5 border-b border-border/30">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-lg">
