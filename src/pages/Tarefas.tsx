@@ -1125,7 +1125,7 @@ function ListBlock({
   onTemplates: () => void; onGenerate: () => void;
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
 }) {
-  const [openState, setOpenState] = useState(true);
+  const [openState, setOpenState] = useState(false);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
