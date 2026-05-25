@@ -222,13 +222,17 @@ export default function Tarefas() {
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  // Pastas de squad começam FECHADAS para visual mais limpo
+  // Pastas começam FECHADAS
   const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
+  const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: !p[id] }));
+  const toggleClient = (id: string) => setOpenClients((p) => ({ ...p, [id]: !p[id] }));
   const formatSquadName = (name: string) => {
     const cleaned = (name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
     return `Squad de ${cleaned || name}`;
   };
+  // Lista selecionada dentro do cliente (null = mostrar dash do cliente)
+  const [selectedListKey, setSelectedListKey] = useState<string | null>(null);
 
   const selectedClient = selectedClientId ? clientMap.get(selectedClientId) : null;
 
@@ -687,19 +691,52 @@ export default function Tarefas() {
                       <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
                     </button>
                     {isOpen && (
-                      <div className="space-y-1 pl-4 mt-1 border-l border-border/40 ml-3">
+                      <div className="space-y-1 pl-3 mt-1 border-l border-border/40 ml-3">
                         {group.items.map((c) => {
                           const count = openCounts[c.id] || 0;
                           const active = c.id === selectedClientId;
+                          const cOpen = openClients[c.id] === true;
+                          const clientLists = (allTasks || []).filter((t) => t.squad_client_id === c.id);
                           return (
-                            <button key={c.id} onClick={() => setSelectedClientId(c.id)}
-                              className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
-                                active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
-                              <span className="truncate">{c.name}</span>
-                              {count > 0 && (
-                                <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                            <div key={c.id}>
+                              <div className={cn("w-full flex items-center gap-1.5 px-1.5 py-1.5 rounded-md transition group",
+                                active && !selectedListKey ? "bg-primary/15 border border-primary/40" : "hover:bg-secondary/40")}>
+                                <button onClick={() => toggleClient(c.id)} className="p-0.5 rounded hover:bg-secondary/60">
+                                  {cOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                                </button>
+                                {cOpen ? <FolderOpen className="h-3.5 w-3.5 text-primary/80" /> : <Folder className="h-3.5 w-3.5 text-primary/80" />}
+                                <button
+                                  onClick={() => { setSelectedClientId(c.id); setSelectedListKey(null); }}
+                                  className={cn("flex-1 text-left truncate text-sm",
+                                    active && !selectedListKey ? "text-foreground font-medium" : "text-muted-foreground")}
+                                >
+                                  {c.name}
+                                </button>
+                                {count > 0 && (
+                                  <span className="text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                                )}
+                              </div>
+                              {cOpen && (
+                                <div className="space-y-0.5 pl-3 mt-0.5 border-l border-border/30 ml-3">
+                                  {LISTS.map((l) => {
+                                    const lcount = clientLists.filter((t) => t.list_key === l.key && t.status !== "done").length;
+                                    const lactive = active && selectedListKey === l.key;
+                                    return (
+                                      <button
+                                        key={l.key}
+                                        onClick={() => { setSelectedClientId(c.id); setSelectedListKey(l.key); }}
+                                        className={cn("w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs transition",
+                                          lactive ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-secondary/40")}
+                                      >
+                                        <ListChecks className="h-3 w-3 opacity-60 shrink-0" />
+                                        <span className="flex-1 text-left truncate">{l.label}</span>
+                                        {lcount > 0 && <span className="text-[10px] opacity-70">{lcount}</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               )}
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -783,10 +820,11 @@ export default function Tarefas() {
                 <ClientSummary
                   tasks={clientTasks || []}
                   health={clientsHealth?.[selectedClient.id]}
+                  expanded={!selectedListKey}
                 />
 
                 <div className="space-y-3">
-                  {LISTS.map((l) => {
+                  {(selectedListKey ? LISTS.filter((l) => l.key === selectedListKey) : []).map((l) => {
                     const list = tasksByList[l.key] || [];
                     const total = (clientTasks || []).filter((t) => t.list_key === l.key).length;
                     const open = (clientTasks || []).filter((t) => t.list_key === l.key && t.status !== "done").length;
@@ -802,10 +840,16 @@ export default function Tarefas() {
                         onTemplates={() => openTemplates(l.key)}
                         onGenerate={() => setCycleDialog({ open: true, listKey: l.key, scope: "client" })}
                         profileMap={profileMap} currentUserId={user?.id} isAdmin={isAdmin}
+                        defaultOpen
                       />
                     );
                   })}
                 </div>
+                {!selectedListKey && (
+                  <p className="text-center text-xs text-muted-foreground mt-6">
+                    Selecione uma sublista na barra lateral para ver as tarefas dessa cadência.
+                  </p>
+                )}
               </>
             )
           )}
@@ -1146,7 +1190,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 }
 
 // ---------- ClientSummary ----------
-function ClientSummary({ tasks, health }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined }) {
+function ClientSummary({ tasks, health, expanded = false }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined; expanded?: boolean }) {
   const today = new Date();
   const startOfWeek = new Date(today);
   const day = startOfWeek.getDay(); // 0=dom
@@ -1182,43 +1226,77 @@ function ClientSummary({ tasks, health }: { tasks: Task[]; health: import("@/hoo
   const belowMeta = onTimePct !== null && onTimePct < meta;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-      <Card className="p-3 bg-card/40 border-border/40">
+    <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-3 mb-4", expanded && "gap-4")}>
+      <Card className={cn("p-3 bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Entregues no prazo</p>
-        <p className="text-2xl font-bold mt-1">{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-4xl")}>{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
       </Card>
-      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30")}>
+      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">% no prazo</p>
-        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300")}>
+        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300", expanded && "text-4xl")}>
           {onTimePct === null ? "—" : `${onTimePct.toFixed(0)}%`}
         </p>
         <p className="text-[10px] mt-0.5 text-muted-foreground">Meta: ≥ {meta}% {belowMeta && <span className="text-rose-400 font-semibold">· abaixo da meta</span>}</p>
       </Card>
-      <Card className="p-3 bg-card/40 border-border/40">
+      <Card className={cn("p-3 bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Faltam concluir esta semana</p>
-        <p className="text-2xl font-bold mt-1">{weekPending.length}</p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-4xl")}>{weekPending.length}</p>
       </Card>
-      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40")}>
+      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Saúde do cliente</p>
-        <p className="text-2xl font-bold mt-1">{h ? h.label : "—"}</p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-3xl")}>{h ? h.label : "—"}</p>
         {health?.failing?.length ? (
           <p className="text-[10px] mt-0.5 truncate" title={health.failing.join(" · ")}>{health.failing[0]}</p>
         ) : null}
       </Card>
+      {expanded && (() => {
+        const overdue = tasks.filter((t) => t.status !== "done" && t.due_date && new Date(t.due_date + "T23:59:59") < new Date());
+        const standby = tasks.filter((t) => t.status === "standby");
+        const recentDone = doneOnTime.slice().sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || "")).slice(0, 8);
+        const SmallList = ({ title, items, tone, empty }: { title: string; items: Task[]; tone: string; empty: string }) => (
+          <Card className={cn("p-4 col-span-2 md:col-span-2 border", tone)}>
+            <p className="text-xs uppercase font-semibold mb-2 flex items-center justify-between">
+              <span>{title}</span>
+              <span className="text-[10px] opacity-70">{items.length}</span>
+            </p>
+            {items.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{empty}</p>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {items.slice(0, 10).map((t) => (
+                  <div key={t.id} className="text-xs flex items-center gap-2 bg-background/30 rounded px-2 py-1.5">
+                    <span className="flex-1 truncate">{t.title}</span>
+                    {t.due_date && <span className="text-[10px] opacity-70 shrink-0">{format(new Date(t.due_date + "T00:00:00"), "dd/MM")}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+        return (
+          <>
+            <SmallList title="Atrasadas" items={overdue} tone="bg-rose-500/5 border-rose-500/30" empty="Nenhuma tarefa atrasada 🎉" />
+            <SmallList title="Em Stand By" items={standby} tone="bg-amber-500/5 border-amber-500/30" empty="Nada em stand by" />
+            <SmallList title="Entregues no prazo (recentes)" items={recentDone} tone="bg-emerald-500/5 border-emerald-500/30" empty="Sem entregas registradas" />
+            <SmallList title="A vencer esta semana" items={weekPending} tone="bg-sky-500/5 border-sky-500/30" empty="Nada pra essa semana" />
+          </>
+        );
+      })()}
     </div>
   );
 }
 
 // ---------- ListBlock ----------
 function ListBlock({
-  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin,
+  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin, defaultOpen = false,
 }: {
   cfg: typeof LISTS[number]; tasks: Task[]; total: number; open: number; respName: string; tplCount: number;
   onAdd: () => void; onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   onTemplates: () => void; onGenerate: () => void;
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
+  defaultOpen?: boolean;
 }) {
-  const [openState, setOpenState] = useState(false);
+  const [openState, setOpenState] = useState(defaultOpen);
   const recurrent = cfg.recurrence !== null;
   return (
     <Card className={cn("bg-gradient-to-r border", cfg.color)}>
