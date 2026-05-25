@@ -988,6 +988,17 @@ export default function Tarefas() {
         selectableMembers={selectableMembers}
       />
 
+      {/* Global templates dialog (any squad / any list, from header) */}
+      <GlobalTemplatesDialog
+        open={globalTplOpen}
+        onOpenChange={setGlobalTplOpen}
+        squads={squads || []}
+        clients={clients || []}
+        profiles={profiles || []}
+        squadMembers={squadMembers || []}
+        currentUserId={user?.id}
+      />
+
       {/* Cycle dialog */}
       <CycleDialog
         open={cycleDialog.open}
