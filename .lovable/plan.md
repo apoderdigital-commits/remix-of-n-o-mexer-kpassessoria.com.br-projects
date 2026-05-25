@@ -1,63 +1,71 @@
-# Reuniões do GHL Calendar por SDR, filtradas por fonte = METAADS
+# Reforma da página de Tarefas
 
-## Objetivo
-Puxar appointments do GHL Calendar, manter só os de contatos com oportunidade `source = METAADS`, e agregar as métricas (marcadas / confirmadas / comparecidas / no-show / canceladas) **por SDR** — usando o `assignedTo` da oportunidade como dono da reunião.
+## 1. Limpeza
+- Apagar **todos** os registros em `squad_task_templates` (você relatou que o último template bugou).
 
-## Regra de atribuição (importante)
-Para cada appointment:
-1. Buscar oportunidades do `contactId`.
-2. Filtrar pelas que têm `source ≈ METAADS`.
-3. Da oportunidade resultante, ler `assignedTo` → esse é o **SDR** da reunião.
-4. Se houver várias opps METAADS pro mesmo contato: pegar a mais recente (`updatedAt` desc).
-5. Se a opp não tiver `assignedTo`: fallback pro `assignedUserId` do appointment (dono do calendário).
-6. Mapear `ghl_user_id → role (SDR/Closer/Gestor)` via `kp_comercial_user_roles` (já existe). Só conta como reunião de SDR quando role = SDR; do contrário rotula como "Closer" ou "Outros".
+## 2. Banco — novos campos e tabelas
 
-## Endpoints GHL
-- `GET /calendars/?locationId=...` — lista calendários
-- `GET /calendars/events?locationId=...&calendarId=...&startTime=...&endTime=...` — appointments + status + `assignedUserId` + `contactId`
-- `GET /opportunities/search?location_id=...&contact_id=...` — opps do contato → `source` + `assignedTo` + `updatedAt`
-- `GET /users/?locationId=...` — nome/email dos usuários (já cacheado em `kp_comercial_user_roles`)
+**`squad_task_templates`** (templates de tarefas)
+- `default_assignee_id uuid` — responsável padrão pré-selecionado.
+- `recurrence_mode text` (`weekdays` | `interval`) — como repetir.
+- `recurrence_weekdays int[]` — dias da semana (0=dom … 6=sáb) quando `weekdays`.
+- `recurrence_interval_days int` — "a cada N dias" quando `interval`.
+- (campos atuais `priority`, `description`, `due_days_offset` continuam.)
 
-## Mudanças
+**`squad_tasks`**
+- Novo status permitido: `standby`.
+- `standby_reason text` — preenchido quando status vira `standby`.
+- `standby_at timestamptz`.
 
-### 1. Banco
-- Nova tabela `kp_comercial_calendars`:
-  ```
-  ghl_calendar_id text PK, name text, enabled boolean default false, updated_at timestamptz
-  ```
-  (Sem `ghl_user_id` fixo — o dono real vem da oportunidade, não do calendário.)
-- Adicionar em `kp_comercial_data_sources`: `opportunity_source_filter text default 'METAADS'`, `meetings_source text default 'pipeline'` (`pipeline` | `calendar`).
+**Nova tabela `squad_task_date_changes`** (auditoria para o gestor)
+- `task_id`, `user_id`, `old_due_date`, `new_due_date`, `reason text`, `created_at`.
+- RLS: membros do squad veem; quem alterou insere.
 
-### 2. Edge function nova `kp-comercial-meetings`
-Entrada: `{ since, until }`. Saída:
-```jsonc
-{
-  totals: { marcadas, confirmadas, comparecidas, noshow, canceladas },
-  by_sdr: [
-    { ghl_user_id, name, role, marcadas, confirmadas, comparecidas, noshow, canceladas }
-  ],
-  debug: { appointments_brutos, filtrados_por_source, sem_opp, top_sources }
-}
-```
-Algoritmo:
-- Lista appointments de **todos os calendários `enabled`** no período.
-- Pré-carrega opps do período (`/opportunities/search` paginado, todas pipelines) → `Map<contactId, opps[]>` para evitar 1 chamada por contato.
-- Para cada appointment: encontra opp METAADS mais recente do contato → extrai `assignedTo` → incrementa contador do SDR.
+## 3. UI — renomeações
+- "Gerar ciclo" → **Criar tarefa recorrente**.
+- "Templates" (botão na lista) → **Templates de tarefas**.
 
-### 3. UI `Comercial.tsx`
-- Seção **Calendários do GHL**: botão "Sincronizar" + lista com switch on/off por calendário.
-- Toggle de fonte nos cards de reunião: **Pipeline** ↔ **Calendário** (igual ao de leads).
-- Novo bloco **Reuniões por SDR** (tabela): nome do SDR, marcadas, confirmadas, comparecidas, no-show, taxa de comparecimento. Linha extra "Closer/Outros" agrupando o que não é SDR.
+## 4. Formulário de **template** (Templates de tarefas)
+Adiciona/expõe:
+- Título, **Descrição** (já existe, fica em destaque),
+- **Responsável padrão** (dropdown dos membros do squad),
+- **Prioridade** (já existe),
+- **Vencimento (dias após gerar)** (já existe).
 
-### 4. Integração no snapshot
-`kp-comercial-snapshot` chama `kp-comercial-meetings` quando `meetings_source = 'calendar'` e grava `by_sdr` no payload — os blocos existentes de SDR ranking passam a ler dali quando essa fonte estiver ativa.
+## 5. Diálogo **Criar tarefa recorrente** (substitui o popover "Gerar ciclo")
+- Escopo: só este cliente / todos os clientes do squad (como hoje).
+- **Quando recriar** (modo de recorrência):
+  - `Dias da semana` → checkboxes Dom–Sáb.
+  - `A cada N dias` → input numérico.
+- Pré-preenche com o que estiver salvo no template; permite override por execução.
+- Persistido no template para uso posterior.
 
-## Validação
-- Sincronizar → calendários da subconta aparecem; ativar Matheus + Julio.
-- Rodar snapshot da semana 18–24/05.
-- Conferir: soma de `marcadas` por SDR = `totals.marcadas`.
-- Spot-check: pegar 3 appointments na UI do GHL, abrir o contato → opp → ver se o SDR atribuído bate com o que aparece na tabela.
+> Observação: a regeneração automática continua manual (botão), mas o `cycle_key` e as datas geradas passam a respeitar a recorrência escolhida.
+
+## 6. Nova aba **Home** (vira a tela inicial)
+- Substitui o auto-select do primeiro cliente.
+- Mostra: "Tarefas de hoje" agrupadas **por squad → por cliente**, com contadores (a fazer / em andamento / stand by / atrasadas).
+- Clicar num cliente abre a visão "Por cliente" naquele cliente.
+- Card com totais do dia no topo (estilo ClickUp Home da sua referência).
+
+## 7. Sidebar "Por cliente" agrupada por squad
+- Lista de clientes na sidebar passa a ser **agrupada por squad** (com header e contagem por squad), em vez de tudo misturado. Casa com a estrutura "Squad 01 → clientes" da sua referência.
+
+## 8. Conclusão de tarefa com confirmação
+- Ao marcar `done` via checkbox/dialog, abre um mini-dialog: **"Concluir tarefa?"** com botão Confirmar/Cancelar.
+
+## 9. Status **Stand By** com motivo
+- Novo item nos selects de status: "Stand By".
+- Ao escolher Stand By, abre dialog pedindo o motivo (obrigatório). Salva em `standby_reason` + `standby_at`.
+- Badge laranja-amarelado na linha da tarefa; tooltip mostra o motivo.
+
+## 10. Mudança de data na **Melhoria Contínua** com justificativa
+- Ao alterar `due_date` de uma tarefa cujo `list_key = 'melhoria_continua'`, antes de salvar abre dialog **"Por que está mudando a data?"** (motivo obrigatório).
+- Cada alteração grava em `squad_task_date_changes`, visível só pro gestor (admin) num bloco "Auditoria de prazos" no topo do cliente (lista enxuta: tarefa, de → para, motivo, autor, data).
 
 ## Fora de escopo
-- Pipelines de etapas (já configurado em `kp_comercial_pipeline_config`).
-- Leads/MQLs da planilha (plano separado).
+- Não vou mexer em pipeline comercial / Meta ADS / GHL.
+- Não vou criar recorrência automática agendada (cron). A geração continua disparada pelo botão "Criar tarefa recorrente".
+- Templates atuais serão apagados — você vai recriar com os campos novos.
+
+Confirma pra eu aplicar?

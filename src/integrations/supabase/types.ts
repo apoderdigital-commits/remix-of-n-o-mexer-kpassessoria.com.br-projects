@@ -1301,15 +1301,57 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_task_date_changes: {
+        Row: {
+          created_at: string
+          id: string
+          new_due_date: string | null
+          old_due_date: string | null
+          reason: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_due_date?: string | null
+          old_due_date?: string | null
+          reason: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_due_date?: string | null
+          old_due_date?: string | null
+          reason?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_task_date_changes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "squad_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       squad_task_templates: {
         Row: {
           created_at: string
           created_by: string | null
+          default_assignee_id: string | null
           description: string | null
           due_days_offset: number | null
           id: string
           list_key: string
           priority: string
+          recurrence_interval_days: number | null
+          recurrence_mode: string | null
+          recurrence_weekdays: number[] | null
           squad_id: string
           title: string
           updated_at: string
@@ -1317,11 +1359,15 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          default_assignee_id?: string | null
           description?: string | null
           due_days_offset?: number | null
           id?: string
           list_key: string
           priority?: string
+          recurrence_interval_days?: number | null
+          recurrence_mode?: string | null
+          recurrence_weekdays?: number[] | null
           squad_id: string
           title: string
           updated_at?: string
@@ -1329,11 +1375,15 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          default_assignee_id?: string | null
           description?: string | null
           due_days_offset?: number | null
           id?: string
           list_key?: string
           priority?: string
+          recurrence_interval_days?: number | null
+          recurrence_mode?: string | null
+          recurrence_weekdays?: number[] | null
           squad_id?: string
           title?: string
           updated_at?: string
@@ -1353,6 +1403,8 @@ export type Database = {
           list_key: string
           priority: string
           squad_client_id: string
+          standby_at: string | null
+          standby_reason: string | null
           status: string
           title: string
           updated_at: string
@@ -1369,6 +1421,8 @@ export type Database = {
           list_key: string
           priority?: string
           squad_client_id: string
+          standby_at?: string | null
+          standby_reason?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1385,6 +1439,8 @@ export type Database = {
           list_key?: string
           priority?: string
           squad_client_id?: string
+          standby_at?: string | null
+          standby_reason?: string | null
           status?: string
           title?: string
           updated_at?: string
