@@ -1353,6 +1353,7 @@ export type Database = {
           recurrence_mode: string | null
           recurrence_weekdays: number[] | null
           squad_id: string
+          target_client_ids: string[] | null
           title: string
           updated_at: string
         }
@@ -1369,6 +1370,7 @@ export type Database = {
           recurrence_mode?: string | null
           recurrence_weekdays?: number[] | null
           squad_id: string
+          target_client_ids?: string[] | null
           title: string
           updated_at?: string
         }
@@ -1385,6 +1387,7 @@ export type Database = {
           recurrence_mode?: string | null
           recurrence_weekdays?: number[] | null
           squad_id?: string
+          target_client_ids?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -1406,6 +1409,7 @@ export type Database = {
           standby_at: string | null
           standby_reason: string | null
           status: string
+          template_id: string | null
           title: string
           updated_at: string
         }
@@ -1424,6 +1428,7 @@ export type Database = {
           standby_at?: string | null
           standby_reason?: string | null
           status?: string
+          template_id?: string | null
           title: string
           updated_at?: string
         }
@@ -1442,6 +1447,7 @@ export type Database = {
           standby_at?: string | null
           standby_reason?: string | null
           status?: string
+          template_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -1451,6 +1457,13 @@ export type Database = {
             columns: ["squad_client_id"]
             isOneToOne: false
             referencedRelation: "squad_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "squad_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "squad_task_templates"
             referencedColumns: ["id"]
           },
         ]
