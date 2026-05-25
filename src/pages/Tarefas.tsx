@@ -102,6 +102,7 @@ interface Template {
   recurrence_mode: "weekdays" | "interval" | null;
   recurrence_weekdays: number[] | null;
   recurrence_interval_days: number | null;
+  target_client_ids: string[] | null;
 }
 interface Subtask { id: string; task_id: string; title: string; done: boolean; position: number; }
 interface Comment { id: string; task_id: string; user_id: string; body: string; created_at: string; }
@@ -464,6 +465,7 @@ export default function Tarefas() {
   // ---- Templates ----
   const [templatesDialog, setTemplatesDialog] = useState<{ open: boolean; listKey: string | null }>({ open: false, listKey: null });
   const openTemplates = (listKey: string) => setTemplatesDialog({ open: true, listKey });
+  const [globalTplOpen, setGlobalTplOpen] = useState(false);
 
   // ---- Generate cycle (Criar tarefa recorrente) ----
   const [cycleDialog, setCycleDialog] = useState<{ open: boolean; listKey: string | null; scope: "client" | "squad" }>({ open: false, listKey: null, scope: "client" });
@@ -498,6 +500,7 @@ export default function Tarefas() {
       }
 
       for (const tpl of tpls) {
+        if (tpl.target_client_ids && tpl.target_client_ids.length > 0 && !tpl.target_client_ids.includes(c.id)) continue;
         if (existSet.has(`${c.id}::${tpl.title}`)) continue;
         const due = computeDueFromTemplate(tpl);
         const assignee = tpl.default_assignee_id || fallbackAssigneeId;
@@ -512,6 +515,7 @@ export default function Tarefas() {
           due_date: due,
           created_by: user!.id,
           cycle_key: cycleKey,
+          template_id: tpl.id,
         });
       }
     }
@@ -652,6 +656,9 @@ export default function Tarefas() {
               <TabsTrigger value="cadence" className="text-xs">Por cadência</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setGlobalTplOpen(true)}>
+            <FileText className="h-3.5 w-3.5" /> Templates de tarefas
+          </Button>
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
             <Checkbox checked={onlyMine} onCheckedChange={(v) => setOnlyMine(!!v)} /> Apenas minhas
           </label>
@@ -979,6 +986,17 @@ export default function Tarefas() {
         squadId={selectedClient?.squad_id || null}
         currentUserId={user?.id}
         selectableMembers={selectableMembers}
+      />
+
+      {/* Global templates dialog (any squad / any list, from header) */}
+      <GlobalTemplatesDialog
+        open={globalTplOpen}
+        onOpenChange={setGlobalTplOpen}
+        squads={squads || []}
+        clients={clients || []}
+        profiles={profiles || []}
+        squadMembers={squadMembers || []}
+        currentUserId={user?.id}
       />
 
       {/* Cycle dialog */}
@@ -1791,6 +1809,12 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
     if (editingId) {
       const { error } = await supabase.from("squad_task_templates").update(payload).eq("id", editingId);
       if (error) { toast.error(error.message); return; }
+      // Cascade edits to all tasks already generated from this template
+      await supabase.from("squad_tasks").update({
+        title: payload.title,
+        description: payload.description,
+        priority: payload.priority,
+      }).eq("template_id", editingId);
     } else {
       payload.squad_id = squadId; payload.list_key = listKey; payload.created_by = currentUserId;
       const { error } = await supabase.from("squad_task_templates").insert(payload);
@@ -2060,6 +2084,376 @@ function CycleDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- Global Templates Manager (header button) ----------
+function GlobalTemplatesDialog({
+  open, onOpenChange, squads, clients, profiles, squadMembers, currentUserId,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  squads: SquadRow[];
+  clients: ClientRow[];
+  profiles: ProfileLite[];
+  squadMembers: { squad_id: string; user_id: string }[];
+  currentUserId: string | undefined;
+}) {
+  const qc = useQueryClient();
+  const [squadId, setSquadId] = useState<string>("");
+  const [listKey, setListKey] = useState<string>("");
+
+  useEffect(() => {
+    if (open) {
+      if (!squadId && squads.length) setSquadId(squads[0].id);
+      if (!listKey) setListKey(LISTS[0].key);
+    }
+  }, [open, squads]);
+
+  const squadClients = useMemo(() => clients.filter((c) => c.squad_id === squadId), [clients, squadId]);
+  const squadMemberProfiles = useMemo(() => {
+    const ids = new Set(squadMembers.filter((m) => m.squad_id === squadId).map((m) => m.user_id));
+    return profiles.filter((p) => ids.has(p.user_id));
+  }, [profiles, squadMembers, squadId]);
+
+  const { data: templates } = useQuery<Template[]>({
+    queryKey: ["templates_global", squadId, listKey],
+    enabled: open && !!squadId && !!listKey,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("squad_task_templates")
+        .select("*")
+        .eq("squad_id", squadId)
+        .eq("list_key", listKey)
+        .order("created_at");
+      return (data || []) as Template[];
+    },
+  });
+
+  const emptyForm = {
+    title: "",
+    description: "",
+    priority: "normal",
+    due_days_offset: "",
+    default_assignee_id: "",
+    recurrence_mode: "" as "" | "weekdays" | "interval",
+    recurrence_weekdays: [] as number[],
+    recurrence_interval_days: "",
+    scope: "all" as "all" | "specific",
+    target_client_ids: [] as string[],
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const reset = () => setForm(emptyForm);
+
+  useEffect(() => { reset(); setEditingId(null); }, [squadId, listKey]);
+  useEffect(() => { if (open) { reset(); setEditingId(null); } }, [open]);
+
+  const toggleWeekday = (v: number) => {
+    setForm((f) => ({
+      ...f,
+      recurrence_weekdays: f.recurrence_weekdays.includes(v)
+        ? f.recurrence_weekdays.filter((x) => x !== v)
+        : [...f.recurrence_weekdays, v].sort(),
+    }));
+  };
+  const toggleClient = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      target_client_ids: f.target_client_ids.includes(id)
+        ? f.target_client_ids.filter((x) => x !== id)
+        : [...f.target_client_ids, id],
+    }));
+  };
+
+  const save = async () => {
+    if (!form.title.trim() || !squadId || !listKey || !currentUserId) {
+      toast.error("Preencha o título");
+      return;
+    }
+    if (form.scope === "specific" && form.target_client_ids.length === 0) {
+      toast.error("Selecione ao menos um cliente");
+      return;
+    }
+    const payload: any = {
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      priority: form.priority,
+      list_key: listKey,
+      due_days_offset: form.due_days_offset.trim() === "" ? null : Number(form.due_days_offset),
+      default_assignee_id: form.default_assignee_id || null,
+      recurrence_mode: form.recurrence_mode || null,
+      recurrence_weekdays: form.recurrence_mode === "weekdays" ? form.recurrence_weekdays : null,
+      recurrence_interval_days:
+        form.recurrence_mode === "interval" && form.recurrence_interval_days.trim() !== ""
+          ? Number(form.recurrence_interval_days)
+          : null,
+      target_client_ids: form.scope === "specific" ? form.target_client_ids : null,
+    };
+
+    if (editingId) {
+      const { error } = await supabase.from("squad_task_templates").update(payload).eq("id", editingId);
+      if (error) { toast.error(error.message); return; }
+      // Cascade title/description/priority/list_key to all existing tasks linked to this template
+      await supabase.from("squad_tasks").update({
+        title: payload.title,
+        description: payload.description,
+        priority: payload.priority,
+        list_key: payload.list_key,
+      }).eq("template_id", editingId);
+      toast.success("Template atualizado em todos os clientes");
+    } else {
+      payload.squad_id = squadId;
+      payload.created_by = currentUserId;
+      const { error } = await supabase.from("squad_task_templates").insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Template criado");
+    }
+    reset(); setEditingId(null);
+    qc.invalidateQueries({ queryKey: ["templates_global"] });
+    qc.invalidateQueries({ queryKey: ["templates"] });
+  };
+
+  const startEdit = (t: Template) => {
+    setEditingId(t.id);
+    setListKey(t.list_key);
+    setForm({
+      title: t.title,
+      description: t.description || "",
+      priority: t.priority,
+      due_days_offset: t.due_days_offset?.toString() || "",
+      default_assignee_id: t.default_assignee_id || "",
+      recurrence_mode: (t.recurrence_mode || "") as any,
+      recurrence_weekdays: t.recurrence_weekdays || [],
+      recurrence_interval_days: t.recurrence_interval_days?.toString() || "",
+      scope: (t.target_client_ids && t.target_client_ids.length > 0) ? "specific" : "all",
+      target_client_ids: t.target_client_ids || [],
+    });
+  };
+
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const confirmRemove = async () => {
+    if (!pendingDeleteId) return;
+    await supabase.from("squad_task_templates").delete().eq("id", pendingDeleteId);
+    setPendingDeleteId(null);
+    qc.invalidateQueries({ queryKey: ["templates_global"] });
+    qc.invalidateQueries({ queryKey: ["templates"] });
+    toast.success("Template excluído");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" /> Templates de tarefas
+          </DialogTitle>
+          <DialogDescription>
+            Crie ou edite templates de tarefa sem precisar entrar em cada cliente. Editar um template aplica as mudanças em todas as tarefas já geradas a partir dele.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-3 mt-1">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Squad</Label>
+            <Select value={squadId} onValueChange={setSquadId}>
+              <SelectTrigger><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
+              <SelectContent>
+                {squads.map((s) => {
+                  const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+                  return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Lista</Label>
+            <Select value={listKey} onValueChange={setListKey}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma lista" /></SelectTrigger>
+              <SelectContent>
+                {LISTS.map((l) => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Existing templates */}
+        <div className="space-y-2 mt-3">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            Templates desta lista ({templates?.length || 0})
+          </Label>
+          {(!templates || templates.length === 0) && (
+            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/40 rounded-md">
+              Nenhum template cadastrado para esta lista
+            </p>
+          )}
+          {templates?.map((t) => {
+            const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
+            const targets = t.target_client_ids && t.target_client_ids.length > 0
+              ? `${t.target_client_ids.length} cliente(s) específicos`
+              : "Todos os clientes";
+            return (
+              <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate">{t.title}</div>
+                  {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
+                  <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
+                    <span>🎯 {targets}</span>
+                    {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
+                    {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
+                      <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
+                    )}
+                    {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
+                      <span>🔁 a cada {t.recurrence_interval_days}d</span>
+                    )}
+                  </div>
+                </div>
+                <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
+                  {PRIORITIES.find((p) => p.key === t.priority)?.label}
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Editor */}
+        <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
+          <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Título</Label>
+            <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Revisar campanhas da semana" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Descrição</Label>
+            <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} placeholder="Detalhes / instruções..." />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Responsável padrão</Label>
+              <Select value={form.default_assignee_id || "none"} onValueChange={(v) => setForm((f) => ({ ...f, default_assignee_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Usar regra do squad/função</SelectItem>
+                  {squadMemberProfiles.map((p) => (
+                    <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email?.split("@")[0] || "—"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Prioridade</Label>
+              <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Aplicar em quais clientes</Label>
+            <Select value={form.scope} onValueChange={(v) => setForm((f) => ({ ...f, scope: v as any }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os clientes do squad ({squadClients.length})</SelectItem>
+                <SelectItem value="specific">Apenas clientes específicos</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.scope === "specific" && (
+              <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-1">
+                {squadClients.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
+                )}
+                {squadClients.map((c) => {
+                  const on = form.target_client_ids.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-secondary/40 rounded px-1.5 py-1">
+                      <Checkbox checked={on} onCheckedChange={() => toggleClient(c.id)} />
+                      <span className="truncate">{c.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Recorrência (quando recriar ao gerar)</Label>
+            <Select value={form.recurrence_mode || "none"} onValueChange={(v) => setForm((f) => ({ ...f, recurrence_mode: (v === "none" ? "" : v) as any }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não recorrente (usar "dias após gerar")</SelectItem>
+                <SelectItem value="weekdays">Dias específicos da semana</SelectItem>
+                <SelectItem value="interval">A cada N dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {form.recurrence_mode === "weekdays" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Dias da semana</Label>
+              <div className="flex gap-1.5 flex-wrap">
+                {WEEKDAYS.map((w) => {
+                  const on = form.recurrence_weekdays.includes(w.v);
+                  return (
+                    <button
+                      key={w.v}
+                      type="button"
+                      onClick={() => toggleWeekday(w.v)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs rounded-md border transition",
+                        on ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 border-border/40 text-muted-foreground hover:border-border"
+                      )}
+                    >
+                      {w.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {form.recurrence_mode === "interval" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">A cada N dias</Label>
+              <Input type="number" min="1" value={form.recurrence_interval_days} onChange={(e) => setForm((f) => ({ ...f, recurrence_interval_days: e.target.value }))} placeholder="Ex: 3" />
+            </div>
+          )}
+
+          {!form.recurrence_mode && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Vencimento (dias após gerar)</Label>
+              <Input type="number" value={form.due_days_offset} onChange={(e) => setForm((f) => ({ ...f, due_days_offset: e.target.value }))} placeholder="Ex: 7" />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            {editingId && <Button variant="ghost" onClick={() => { reset(); setEditingId(null); }}>Cancelar edição</Button>}
+            <Button onClick={save}>{editingId ? "Salvar e propagar" : "Adicionar template"}</Button>
+          </div>
+        </div>
+      </DialogContent>
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
+        <AlertDialogContent className="bg-card border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O template será removido. As tarefas já geradas a partir dele continuam existindo, mas não estarão mais vinculadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
