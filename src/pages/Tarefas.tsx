@@ -2429,83 +2429,105 @@ function GlobalTemplatesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" /> Templates de tarefas
-          </DialogTitle>
-          <DialogDescription>
-            Crie ou edite templates de tarefa sem precisar entrar em cada cliente. Editar um template aplica as mudanças em todas as tarefas já geradas a partir dele.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-1.5 mt-1">
-          <Label className="text-xs">Squad</Label>
-          <Select value={squadId} onValueChange={setSquadId}>
-            <SelectTrigger><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
-            <SelectContent>
-              {squads.map((s) => {
-                const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
-                return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Existing templates grouped by list */}
-        <div className="space-y-4 mt-3">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-            Templates do squad ({templates?.length || 0})
-          </Label>
-          {(!templates || templates.length === 0) && (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/40 rounded-md">
-              Nenhum template cadastrado para este squad
-            </p>
-          )}
-          {LISTS.filter((l) => (templatesByList[l.key] || []).length > 0).map((l) => (
-            <div key={l.key} className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className={cn("h-2 w-2 rounded-full bg-gradient-to-br", l.color)} />
-                <h5 className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                  {l.label} <span className="text-muted-foreground">({templatesByList[l.key].length})</span>
-                </h5>
+      <DialogContent className="bg-card border-border/50 max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+        <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pt-6 pb-5 border-b border-border/30">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-lg">
+              <div className="h-8 w-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+                <FileText className="h-4 w-4" />
               </div>
-              {templatesByList[l.key].map((t) => {
-                const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
-                const isAll = !t.target_client_ids || t.target_client_ids.length === 0;
-                const targets = isAll ? "Todos os clientes" : `${t.target_client_ids!.length} cliente(s) específicos`;
-                return (
-                  <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{t.title}</div>
-                      {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
-                      <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
-                        <span>🎯 {targets}</span>
-                        {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
-                        {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
-                          <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
-                        )}
-                        {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
-                          <span>🔁 a cada {t.recurrence_interval_days}d</span>
-                        )}
-                      </div>
-                    </div>
-                    <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
-                      {PRIORITIES.find((p) => p.key === t.priority)?.label}
-                    </span>
-                    <TemplateScopePopover
-                      template={t}
-                      squadClients={squadClients}
-                      onApply={(target) => updateScope(t, target)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+              Templates de tarefas
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Crie ou edite templates de tarefa sem precisar entrar em cada cliente. Editar um template aplica as mudanças em todas as tarefas já geradas a partir dele.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5 mt-4">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Squad</Label>
+            <Select value={squadId} onValueChange={setSquadId}>
+              <SelectTrigger className="bg-background/60 border-border/50 h-10"><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
+              <SelectContent>
+                {squads.map((s) => {
+                  const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+                  return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        <div className="px-6 pb-6 pt-4 space-y-5">
+          {/* Existing templates grouped by list */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                Templates do squad
+              </Label>
+              <span className="text-[10px] font-bold rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                {templates?.length || 0}
+              </span>
+            </div>
+            {(!templates || templates.length === 0) && (
+              <div className="text-center py-8 border border-dashed border-border/40 rounded-lg bg-background/30">
+                <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Nenhum template cadastrado para este squad</p>
+              </div>
+            )}
+            {LISTS.filter((l) => (templatesByList[l.key] || []).length > 0).map((l) => (
+              <div key={l.key} className={cn("rounded-lg border bg-gradient-to-br p-3 space-y-2", l.color)}>
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
+                    {l.label}
+                  </h5>
+                  <span className="text-[10px] font-semibold rounded-full bg-background/60 border border-border/30 px-2 py-0.5 text-muted-foreground">
+                    {templatesByList[l.key].length}
+                  </span>
+                </div>
+                {templatesByList[l.key].map((t) => {
+                  const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
+                  const isAll = !t.target_client_ids || t.target_client_ids.length === 0;
+                  return (
+                    <div
+                      key={t.id}
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-md bg-background/60 backdrop-blur border border-border/30 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{t.title}</div>
+                        {t.description && <div className="text-[11px] text-muted-foreground truncate mt-0.5">{t.description}</div>}
+                        <div className="text-[10px] text-muted-foreground mt-1 flex gap-2.5 flex-wrap">
+                          <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border",
+                            isAll ? "border-emerald-500/30 text-emerald-300 bg-emerald-500/10" : "border-sky-500/30 text-sky-300 bg-sky-500/10")}>
+                            <Target className="h-2.5 w-2.5" />
+                            {isAll ? "Todos" : `${t.target_client_ids!.length} específico(s)`}
+                          </span>
+                          {resp && <span className="inline-flex items-center gap-1">👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
+                          {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
+                            <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
+                          )}
+                          {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
+                            <span>🔁 a cada {t.recurrence_interval_days}d</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
+                        {PRIORITIES.find((p) => p.key === t.priority)?.label}
+                      </span>
+                      <TemplateScopePopover
+                        template={t}
+                        squadClients={squadClients}
+                        onApply={(target) => updateScope(t, target)}
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(t)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+
 
 
         {/* Editor */}
