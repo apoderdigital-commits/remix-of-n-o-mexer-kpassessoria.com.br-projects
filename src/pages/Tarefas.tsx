@@ -773,10 +773,35 @@ export default function Tarefas() {
 
           {view === "client" && (
             !selectedClient ? (
-              <div className="text-center text-muted-foreground mt-20">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                Selecione um cliente para ver as tarefas.
-              </div>
+              selectedSquadId ? (() => {
+                const squad = squads?.find((s) => s.id === selectedSquadId);
+                const squadClientIds = (clients || []).filter((c) => c.squad_id === selectedSquadId).map((c) => c.id);
+                const squadTasks = (allTasks || []).filter((t) => squadClientIds.includes(t.squad_client_id));
+                // Aggregate health: pick worst level across squad clients
+                const order = { green: 0, yellow: 1, red: 2 } as const;
+                let aggHealth: import("@/hooks/useClientHealth").ClientHealth | undefined;
+                squadClientIds.forEach((cid) => {
+                  const h = clientsHealth?.[cid];
+                  if (!h) return;
+                  if (!aggHealth || order[h.level] > order[aggHealth.level]) aggHealth = h;
+                });
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold">{squad ? formatSquadName(squad.name) : "Squad"}</h2>
+                        <p className="text-xs text-muted-foreground">Visão geral · {squadClientIds.length} clientes · {squadTasks.length} tarefas</p>
+                      </div>
+                    </div>
+                    <ClientSummary tasks={squadTasks} health={aggHealth} expanded />
+                  </>
+                );
+              })() : (
+                <div className="text-center text-muted-foreground mt-20">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  Selecione um squad ou cliente para ver as tarefas.
+                </div>
+              )
             ) : (
               <>
                 <div className="flex items-center justify-between mb-4">
