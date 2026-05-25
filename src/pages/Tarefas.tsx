@@ -1440,8 +1440,11 @@ function ListBlock({
 const STATUS_GROUPS = [
   { key: "done",    label: "Concluídas", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
   { key: "todo",    label: "A fazer",    color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+  { key: "doing",   label: "Andamento",  color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
   { key: "standby", label: "Stand By",   color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
 ] as const;
+
+const DONE_LIMIT = 5;
 
 function StatusGroupedList({
   tasks, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, onStandby, onAdd,
@@ -1451,42 +1454,28 @@ function StatusGroupedList({
   onAdd: () => void;
 }) {
   const byStatus = useMemo(() => {
-    const map: Record<string, Task[]> = { todo: [], standby: [], done: [] };
+    const map: Record<string, Task[]> = { done: [], todo: [], doing: [], standby: [] };
     tasks.forEach((t) => {
       if (t.status === "done") map.done.push(t);
+      else if (t.status === "doing") map.doing.push(t);
       else if (t.status === "standby") map.standby.push(t);
-      else map.todo.push(t); // todo + doing
+      else map.todo.push(t);
     });
     map.done.sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
     return map;
   }, [tasks]);
-  // Default: collapsed if empty OR if it's "done" (Concluídas always start collapsed)
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => ({
-    done: true,
-    todo: (byStatus.todo?.length ?? 0) === 0,
-    standby: (byStatus.standby?.length ?? 0) === 0,
-  }));
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const LIMIT = 5;
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [showAllDone, setShowAllDone] = useState(false);
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden bg-background/20">
-      {/* Single shared column header */}
-      <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 px-3 py-2 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/40 bg-background/40">
-        <span></span>
-        <span></span>
-        <span>Nome</span>
-        <span>Responsável</span>
-        <span>Data de vencimento</span>
-        <span>Prioridade</span>
-        <span></span>
-      </div>
       {STATUS_GROUPS.map((g, gi) => {
         const items = byStatus[g.key] || [];
         const isOpen = !collapsed[g.key];
-        const isExpanded = !!expanded[g.key];
-        const visible = isExpanded ? items : items.slice(0, LIMIT);
-        const hasMore = items.length > LIMIT;
+        const isDone = g.key === "done";
+        const visible = isDone && !showAllDone ? items.slice(0, DONE_LIMIT) : items;
+        const hiddenCount = isDone ? Math.max(0, items.length - DONE_LIMIT) : 0;
         return (
           <div key={g.key} className={cn(gi > 0 && "border-t border-border/40")}>
             <button
@@ -1501,6 +1490,18 @@ function StatusGroupedList({
             </button>
             {isOpen && (
               <div>
+                {/* Per-section column header (visible when section has items) */}
+                {items.length > 0 && (
+                  <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground/70 border-t border-b border-border/30 bg-background/30">
+                    <span></span>
+                    <span></span>
+                    <span>Nome</span>
+                    <span>Responsável</span>
+                    <span>Data de vencimento</span>
+                    <span>Prioridade</span>
+                    <span></span>
+                  </div>
+                )}
                 {visible.map((t) => (
                   <TaskTableRow
                     key={t.id}
@@ -1514,14 +1515,14 @@ function StatusGroupedList({
                     onStandby={onStandby}
                   />
                 ))}
-                {hasMore && (
+                {isDone && hiddenCount > 0 && (
                   <button
-                    onClick={() => setExpanded((e) => ({ ...e, [g.key]: !e[g.key] }))}
+                    onClick={() => setShowAllDone((v) => !v)}
                     className="w-full text-left text-[11px] text-primary hover:text-primary/80 hover:bg-primary/5 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
                   >
-                    {isExpanded
+                    {showAllDone
                       ? <><ChevronUp className="h-3 w-3 ml-9" /> Recolher</>
-                      : <><ChevronDown className="h-3 w-3 ml-9" /> Mostrar mais ({items.length - LIMIT})</>}
+                      : <><ChevronDown className="h-3 w-3 ml-9" /> Ver todas ({items.length})</>}
                   </button>
                 )}
                 <button
