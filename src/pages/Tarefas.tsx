@@ -1502,6 +1502,7 @@ function StatCard({ label, value, color, subtitle }: { label: string; value: num
     <Card className="p-3 bg-card/40 border-border/40">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={cn("text-2xl font-bold mt-1", color)}>{value}</div>
+      {subtitle && <div className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</div>}
     </Card>
   );
 }
