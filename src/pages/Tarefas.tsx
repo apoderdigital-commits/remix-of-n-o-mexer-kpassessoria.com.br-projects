@@ -1366,10 +1366,12 @@ function ListBlock({
             </div>
           </CollapsibleTrigger>
           <div className="flex items-center gap-1 shrink-0">
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates de tarefas">
-              <FileText className="h-3.5 w-3.5 mr-1" />Templates de tarefas
-            </Button>
-            {recurrent && (
+            {cfg.key === "melhoria_continua" && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates de tarefas">
+                <FileText className="h-3.5 w-3.5 mr-1" />Templates de tarefas
+              </Button>
+            )}
+            {recurrent && cfg.key === "melhoria_continua" && (
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onGenerate} title="Criar tarefa recorrente">
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />Criar tarefa recorrente
               </Button>
