@@ -1497,7 +1497,7 @@ function MultiSelect({ label, icon, options, selected, onChange }: {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+function StatCard({ label, value, color, subtitle }: { label: string; value: number | string; color: string; subtitle?: string }) {
   return (
     <Card className="p-3 bg-card/40 border-border/40">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
