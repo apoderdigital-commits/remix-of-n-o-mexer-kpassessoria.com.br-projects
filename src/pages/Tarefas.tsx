@@ -2679,7 +2679,7 @@ function TemplateScopePopover({
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
-  const apply = async () => {
+  const confirm = async () => {
     if (mode === "specific" && selected.length === 0) {
       toast.error("Selecione ao menos um cliente");
       return;
@@ -2688,47 +2688,87 @@ function TemplateScopePopover({
     setOpen(false);
   };
 
-  const label = initialAll ? "Todos" : `${template.target_client_ids!.length} específico(s)`;
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" title="Definir em quais clientes aplicar">
-          🎯 {label}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 bg-card border-border/50" align="end">
-        <div className="space-y-3">
-          <div className="text-xs font-semibold">Aplicar este template em</div>
-          <Select value={mode} onValueChange={(v) => setMode(v as any)}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os clientes do squad ({squadClients.length})</SelectItem>
-              <SelectItem value="specific">Clientes específicos</SelectItem>
-            </SelectContent>
-          </Select>
-          {mode === "specific" && (
-            <div className="max-h-44 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-1">
-              {squadClients.length === 0 && (
-                <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
-              )}
-              {squadClients.map((c) => {
-                const on = selected.includes(c.id);
-                return (
-                  <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-secondary/40 rounded px-1.5 py-1">
-                    <Checkbox checked={on} onCheckedChange={() => toggle(c.id)} />
-                    <span className="truncate">{c.name}</span>
-                  </label>
-                );
-              })}
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-[11px] px-2.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+        onClick={() => setOpen(true)}
+      >
+        <Target className="h-3 w-3 mr-1" />
+        Aplicar tarefa
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Aplicar tarefa
+            </DialogTitle>
+            <DialogDescription>
+              Deseja aplicar <span className="text-foreground font-medium">"{template.title}"</span> em todos os clientes ou em alguns específicos?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMode("all")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition",
+                  mode === "all"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <div className="text-sm font-semibold">Todos os clientes</div>
+                <div className="text-[11px] text-muted-foreground">{squadClients.length} no squad</div>
+              </button>
+              <button
+                onClick={() => setMode("specific")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition",
+                  mode === "specific"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <div className="text-sm font-semibold">Específicos</div>
+                <div className="text-[11px] text-muted-foreground">Escolher clientes</div>
+              </button>
             </div>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button size="sm" className="h-7 text-xs" onClick={apply}>Aplicar</Button>
+
+            {mode === "specific" && (
+              <div className="max-h-56 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-0.5">
+                {squadClients.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
+                )}
+                {squadClients.map((c) => {
+                  const on = selected.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-secondary/40 rounded px-2 py-1.5">
+                      <Checkbox checked={on} onCheckedChange={() => toggle(c.id)} />
+                      <span className="truncate">{c.name}</span>
+                    </label>
+                  );
+                })}
+                {squadClients.length > 0 && (
+                  <div className="flex justify-between text-[10px] text-muted-foreground px-1 pt-1 border-t border-border/30 mt-1">
+                    <button className="hover:text-foreground" onClick={() => setSelected(squadClients.map((c) => c.id))}>Selecionar todos</button>
+                    <button className="hover:text-foreground" onClick={() => setSelected([])}>Limpar</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={confirm}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
