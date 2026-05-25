@@ -1794,6 +1794,12 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
     if (editingId) {
       const { error } = await supabase.from("squad_task_templates").update(payload).eq("id", editingId);
       if (error) { toast.error(error.message); return; }
+      // Cascade edits to all tasks already generated from this template
+      await supabase.from("squad_tasks").update({
+        title: payload.title,
+        description: payload.description,
+        priority: payload.priority,
+      }).eq("template_id", editingId);
     } else {
       payload.squad_id = squadId; payload.list_key = listKey; payload.created_by = currentUserId;
       const { error } = await supabase.from("squad_task_templates").insert(payload);
