@@ -1169,6 +1169,21 @@ export default function Tarefas() {
 }
 
 // ---------- Home view ----------
+type DatePreset = "today" | "week" | "month" | "all" | "range";
+
+function startOfWeekMon(d: Date) {
+  const x = new Date(d); x.setHours(0,0,0,0);
+  const day = x.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+function endOfWeekSun(d: Date) {
+  const s = startOfWeekMon(d);
+  const e = new Date(s); e.setDate(s.getDate() + 6); e.setHours(23,59,59,999);
+  return e;
+}
+
 function HomeView({
   clients, squads, allTasks, profileMap, currentUserId, onOpenClient, onEdit, onToggle, onStandby, isAdmin, onDelete,
 }: {
@@ -1178,23 +1193,31 @@ function HomeView({
   onEdit: (t: Task) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   isAdmin: boolean; onDelete: (id: string) => void;
 }) {
-  // Tasks for "today": due today OR overdue OR no due date but currently doing
-  const todayTasks = useMemo(() => {
-    return allTasks.filter((t) => {
-      if (t.status === "done") return false;
-      if (!t.due_date) return t.status === "doing";
-      const d = parseISO(t.due_date);
-      return isToday(d) || isPast(d);
-    });
-  }, [allTasks]);
+  // ---- Filters ----
+  const [preset, setPreset] = useState<DatePreset>("today");
+  const [from, setFrom] = useState<Date | undefined>(undefined);
+  const [to, setTo] = useState<Date | undefined>(undefined);
+  const [squadIds, setSquadIds] = useState<string[]>([]);
+  const [clientIds, setClientIds] = useState<string[]>([]);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
 
-  const totals = useMemo(() => ({
-    total: todayTasks.length,
-    todo: todayTasks.filter((t) => t.status === "todo").length,
-    doing: todayTasks.filter((t) => t.status === "doing").length,
-    standby: todayTasks.filter((t) => t.status === "standby").length,
-    overdue: todayTasks.filter((t) => t.due_date && isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date))).length,
-  }), [todayTasks]);
+  const range = useMemo(() => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const endToday = new Date(today); endToday.setHours(23,59,59,999);
+    if (preset === "today") return { from: today, to: endToday };
+    if (preset === "week") return { from: startOfWeekMon(today), to: endOfWeekSun(today) };
+    if (preset === "month") {
+      const s = new Date(today.getFullYear(), today.getMonth(), 1);
+      const e = new Date(today.getFullYear(), today.getMonth() + 1, 0); e.setHours(23,59,59,999);
+      return { from: s, to: e };
+    }
+    if (preset === "range" && from && to) {
+      const s = new Date(from); s.setHours(0,0,0,0);
+      const e = new Date(to); e.setHours(23,59,59,999);
+      return { from: s, to: e };
+    }
+    return null; // all
+  }, [preset, from, to]);
 
   const clientMap = useMemo(() => {
     const m = new Map<string, ClientRow>();
@@ -1202,10 +1225,67 @@ function HomeView({
     return m;
   }, [clients]);
 
-  // Group by squad → client
+  // Filter available clients by selected squads
+  const availableClients = useMemo(
+    () => clients.filter((c) => squadIds.length === 0 || squadIds.includes(c.squad_id)),
+    [clients, squadIds]
+  );
+
+  // Assignees from current task pool (people who have at least one task)
+  const allAssignees = useMemo(() => {
+    const set = new Set<string>();
+    allTasks.forEach((t) => t.assignee_id && set.add(t.assignee_id));
+    return Array.from(set)
+      .map((id) => ({ id, profile: profileMap.get(id) }))
+      .sort((a, b) => (a.profile?.full_name || "").localeCompare(b.profile?.full_name || ""));
+  }, [allTasks, profileMap]);
+
+  // ---- Apply filters ----
+  const filteredTasks = useMemo(() => {
+    return allTasks.filter((t) => {
+      const client = clientMap.get(t.squad_client_id);
+      if (!client) return false;
+      if (squadIds.length > 0 && !squadIds.includes(client.squad_id)) return false;
+      if (clientIds.length > 0 && !clientIds.includes(client.id)) return false;
+      if (assigneeIds.length > 0 && (!t.assignee_id || !assigneeIds.includes(t.assignee_id))) return false;
+      if (range) {
+        // Task is "in range" if: due_date in range OR completed_at in range
+        const dueOk = t.due_date ? (() => {
+          const d = new Date(t.due_date + "T12:00:00");
+          return d >= range.from && d <= range.to;
+        })() : false;
+        const compOk = t.completed_at ? (() => {
+          const d = new Date(t.completed_at);
+          return d >= range.from && d <= range.to;
+        })() : false;
+        if (!dueOk && !compOk) return false;
+      }
+      return true;
+    });
+  }, [allTasks, clientMap, squadIds, clientIds, assigneeIds, range]);
+
+  const stats = useMemo(() => {
+    const total = filteredTasks.length;
+    const todo = filteredTasks.filter((t) => t.status === "todo").length;
+    const doing = filteredTasks.filter((t) => t.status === "doing").length;
+    const standby = filteredTasks.filter((t) => t.status === "standby").length;
+    const done = filteredTasks.filter((t) => t.status === "done");
+    const now = new Date();
+    const overdue = filteredTasks.filter(
+      (t) => t.status !== "done" && t.due_date && new Date(t.due_date + "T23:59:59") < now
+    ).length;
+    const doneOnTime = done.filter((t) => {
+      if (!t.completed_at || !t.due_date) return false;
+      return new Date(t.completed_at).toISOString().slice(0, 10) <= t.due_date;
+    }).length;
+    const onTimePct = done.length > 0 ? (doneOnTime / done.length) * 100 : null;
+    return { total, todo, doing, standby, overdue, doneCount: done.length, doneOnTime, onTimePct };
+  }, [filteredTasks]);
+
+  // Group by squad → client (only non-done unless ALL preset selected explicitly)
   const groups = useMemo(() => {
     const map = new Map<string, Map<string, Task[]>>();
-    todayTasks.forEach((t) => {
+    filteredTasks.forEach((t) => {
       const c = clientMap.get(t.squad_client_id);
       if (!c) return;
       const sq = map.get(c.squad_id) || new Map<string, Task[]>();
@@ -1221,27 +1301,101 @@ function HomeView({
         .filter((x) => x.client)
         .sort((a, b) => b.tasks.length - a.tasks.length),
     })).filter((g) => g.clients.length > 0);
-  }, [todayTasks, clients, squads, clientMap]);
+  }, [filteredTasks, squads, clientMap]);
+
+  const periodLabel = useMemo(() => {
+    if (preset === "today") return format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+    if (preset === "week") return `Semana de ${format(startOfWeekMon(new Date()), "dd/MM")} a ${format(endOfWeekSun(new Date()), "dd/MM")}`;
+    if (preset === "month") return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+    if (preset === "range" && from && to) return `${format(from, "dd/MM/yy")} – ${format(to, "dd/MM/yy")}`;
+    return "Todo o período";
+  }, [preset, from, to]);
+
+  const clearFilters = () => {
+    setPreset("today"); setFrom(undefined); setTo(undefined);
+    setSquadIds([]); setClientIds([]); setAssigneeIds([]);
+  };
+
+  const hasAnyFilter = squadIds.length || clientIds.length || assigneeIds.length || preset !== "today";
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
         <HomeIcon className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-bold">Tarefas de hoje</h2>
-        <span className="text-xs text-muted-foreground">· {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
+        <h2 className="text-xl font-bold">Visão geral</h2>
+        <span className="text-xs text-muted-foreground">· {periodLabel}</span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard label="Total" value={totals.total} color="text-foreground" />
-        <StatCard label="A fazer" value={totals.todo} color="text-blue-400" />
-        <StatCard label="Em andamento" value={totals.doing} color="text-purple-400" />
-        <StatCard label="Stand By" value={totals.standby} color="text-amber-400" />
-        <StatCard label="Atrasadas" value={totals.overdue} color="text-red-400" />
+      {/* Filter bar */}
+      <Card className="bg-card/40 border-border/40 p-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={preset} onValueChange={(v) => setPreset(v as DatePreset)}>
+            <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="week">Esta semana</SelectItem>
+              <SelectItem value="month">Este mês</SelectItem>
+              <SelectItem value="range">Período custom</SelectItem>
+              <SelectItem value="all">Todo o período</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {preset === "range" && (
+            <>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" /> {from ? format(from, "dd/MM/yy") : "De"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={from} onSelect={setFrom} initialFocus />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" /> {to ? format(to, "dd/MM/yy") : "Até"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={to} onSelect={setTo} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+
+          <MultiSelect label="Squads" icon={<FolderOpen className="h-3.5 w-3.5" />} options={squads.map((s) => ({ id: s.id, label: `Squad de ${(s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim() || s.name}` }))} selected={squadIds} onChange={(ids) => { setSquadIds(ids); setClientIds([]); }} />
+          <MultiSelect label="Clientes" icon={<Folder className="h-3.5 w-3.5" />} options={availableClients.map((c) => ({ id: c.id, label: c.name }))} selected={clientIds} onChange={setClientIds} />
+          <MultiSelect label="Responsável" icon={<Users className="h-3.5 w-3.5" />} options={allAssignees.map((a) => ({ id: a.id, label: a.profile?.full_name || a.profile?.email?.split("@")[0] || "—" }))} selected={assigneeIds} onChange={setAssigneeIds} />
+
+          {hasAnyFilter ? (
+            <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5 mr-1" /> Limpar
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+        <StatCard label="Total" value={stats.total} color="text-foreground" />
+        <StatCard label="A fazer" value={stats.todo} color="text-blue-400" />
+        <StatCard label="Em andamento" value={stats.doing} color="text-purple-400" />
+        <StatCard label="Stand By" value={stats.standby} color="text-amber-400" />
+        <StatCard label="Atrasadas" value={stats.overdue} color="text-red-400" />
+        <StatCard label="Concluídas" value={stats.doneCount} color="text-emerald-400" />
+        <StatCard
+          label="% no prazo"
+          value={stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}
+          color={stats.onTimePct === null ? "text-muted-foreground" : stats.onTimePct >= 90 ? "text-emerald-400" : "text-rose-400"}
+          subtitle={stats.onTimePct === null ? undefined : `${stats.doneOnTime}/${stats.doneCount}`}
+        />
       </div>
 
       {groups.length === 0 ? (
         <div className="text-center text-muted-foreground mt-10 py-12 border border-dashed border-border/40 rounded-lg">
-          🎉 Sem tarefas para hoje.
+          🎉 Nenhuma tarefa encontrada com os filtros selecionados.
         </div>
       ) : (
         <div className="space-y-6">
@@ -1264,7 +1418,7 @@ function HomeView({
                       <div>
                         <div className="text-sm font-semibold">{cg.client.name}</div>
                         <div className="text-[11px] text-muted-foreground">
-                          {cg.tasks.length} tarefa{cg.tasks.length !== 1 ? "s" : ""} hoje
+                          {cg.tasks.length} tarefa{cg.tasks.length !== 1 ? "s" : ""}
                         </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -1294,11 +1448,61 @@ function HomeView({
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+function MultiSelect({ label, icon, options, selected, onChange }: {
+  label: string; icon?: React.ReactNode;
+  options: { id: string; label: string }[];
+  selected: string[]; onChange: (ids: string[]) => void;
+}) {
+  const [q, setQ] = useState("");
+  const filtered = useMemo(
+    () => options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())),
+    [options, q]
+  );
+  const toggle = (id: string) => {
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  };
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={cn("h-8 text-xs gap-1.5", selected.length > 0 && "border-primary/60 bg-primary/10 text-primary")}>
+          {icon} {label}
+          {selected.length > 0 && (
+            <span className="ml-1 rounded-full bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 font-bold">{selected.length}</span>
+          )}
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-2" align="start">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Buscar ${label.toLowerCase()}...`} className="h-8 text-xs mb-2" />
+        <div className="max-h-64 overflow-y-auto space-y-1">
+          {filtered.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Nenhum resultado</p>}
+          {filtered.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => toggle(o.id)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-secondary/40 text-left"
+            >
+              <Checkbox checked={selected.includes(o.id)} className="pointer-events-none" />
+              <span className="truncate">{o.label}</span>
+            </button>
+          ))}
+        </div>
+        {selected.length > 0 && (
+          <Button variant="ghost" size="sm" className="w-full mt-2 h-7 text-xs text-muted-foreground" onClick={() => onChange([])}>
+            Limpar seleção
+          </Button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function StatCard({ label, value, color, subtitle }: { label: string; value: number | string; color: string; subtitle?: string }) {
   return (
     <Card className="p-3 bg-card/40 border-border/40">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={cn("text-2xl font-bold mt-1", color)}>{value}</div>
+      {subtitle && <div className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</div>}
     </Card>
   );
 }
