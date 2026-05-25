@@ -221,6 +221,7 @@ export default function Tarefas() {
 
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedSquadId, setSelectedSquadId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Pastas começam FECHADAS
   const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
