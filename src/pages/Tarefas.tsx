@@ -2102,13 +2102,10 @@ function GlobalTemplatesDialog({
 }) {
   const qc = useQueryClient();
   const [squadId, setSquadId] = useState<string>("");
-  const [listKey, setListKey] = useState<string>("");
+  const [listKey, setListKey] = useState<string>(LISTS[0].key);
 
   useEffect(() => {
-    if (open) {
-      if (!squadId && squads.length) setSquadId(squads[0].id);
-      if (!listKey) setListKey(LISTS[0].key);
-    }
+    if (open && !squadId && squads.length) setSquadId(squads[0].id);
   }, [open, squads]);
 
   const squadClients = useMemo(() => clients.filter((c) => c.squad_id === squadId), [clients, squadId]);
@@ -2118,18 +2115,25 @@ function GlobalTemplatesDialog({
   }, [profiles, squadMembers, squadId]);
 
   const { data: templates } = useQuery<Template[]>({
-    queryKey: ["templates_global", squadId, listKey],
-    enabled: open && !!squadId && !!listKey,
+    queryKey: ["templates_global", squadId],
+    enabled: open && !!squadId,
     queryFn: async () => {
       const { data } = await supabase
         .from("squad_task_templates")
         .select("*")
         .eq("squad_id", squadId)
-        .eq("list_key", listKey)
         .order("created_at");
       return (data || []) as Template[];
     },
   });
+
+  const templatesByList = useMemo(() => {
+    const map: Record<string, Template[]> = {};
+    (templates || []).forEach((t) => {
+      (map[t.list_key] = map[t.list_key] || []).push(t);
+    });
+    return map;
+  }, [templates]);
 
   const emptyForm = {
     title: "",
@@ -2145,10 +2149,21 @@ function GlobalTemplatesDialog({
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const reset = () => setForm(emptyForm);
+  const reset = () => { setForm(emptyForm); setListKey(LISTS[0].key); };
 
-  useEffect(() => { reset(); setEditingId(null); }, [squadId, listKey]);
+  useEffect(() => { reset(); setEditingId(null); }, [squadId]);
   useEffect(() => { if (open) { reset(); setEditingId(null); } }, [open]);
+
+  const applyToAll = async (t: Template) => {
+    const { error } = await supabase
+      .from("squad_task_templates")
+      .update({ target_client_ids: null })
+      .eq("id", t.id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["templates_global"] });
+    qc.invalidateQueries({ queryKey: ["templates"] });
+    toast.success("Template aplicado a todos os clientes do squad");
+  };
 
   const toggleWeekday = (v: number) => {
     setForm((f) => ({
@@ -2254,21 +2269,86 @@ function GlobalTemplatesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-3 mt-1">
+        <div className="space-y-1.5 mt-1">
+          <Label className="text-xs">Squad</Label>
+          <Select value={squadId} onValueChange={setSquadId}>
+            <SelectTrigger><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
+            <SelectContent>
+              {squads.map((s) => {
+                const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+                return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Existing templates grouped by list */}
+        <div className="space-y-4 mt-3">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            Templates do squad ({templates?.length || 0})
+          </Label>
+          {(!templates || templates.length === 0) && (
+            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/40 rounded-md">
+              Nenhum template cadastrado para este squad
+            </p>
+          )}
+          {LISTS.filter((l) => (templatesByList[l.key] || []).length > 0).map((l) => (
+            <div key={l.key} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className={cn("h-2 w-2 rounded-full bg-gradient-to-br", l.color)} />
+                <h5 className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                  {l.label} <span className="text-muted-foreground">({templatesByList[l.key].length})</span>
+                </h5>
+              </div>
+              {templatesByList[l.key].map((t) => {
+                const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
+                const isAll = !t.target_client_ids || t.target_client_ids.length === 0;
+                const targets = isAll ? "Todos os clientes" : `${t.target_client_ids!.length} cliente(s) específicos`;
+                return (
+                  <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate">{t.title}</div>
+                      {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
+                      <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
+                        <span>🎯 {targets}</span>
+                        {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
+                        {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
+                          <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
+                        )}
+                        {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
+                          <span>🔁 a cada {t.recurrence_interval_days}d</span>
+                        )}
+                      </div>
+                    </div>
+                    <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
+                      {PRIORITIES.find((p) => p.key === t.priority)?.label}
+                    </span>
+                    {!isAll && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => applyToAll(t)}
+                        title="Aplicar este template em todos os clientes do squad"
+                      >
+                        Aplicar em todos
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+
+        {/* Editor */}
+        <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
+          <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
           <div className="space-y-1.5">
-            <Label className="text-xs">Squad</Label>
-            <Select value={squadId} onValueChange={setSquadId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um squad" /></SelectTrigger>
-              <SelectContent>
-                {squads.map((s) => {
-                  const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
-                  return <SelectItem key={s.id} value={s.id}>{`Squad de ${name || s.name}`}</SelectItem>;
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Lista</Label>
+            <Label className="text-xs">Lista de destino</Label>
             <Select value={listKey} onValueChange={setListKey}>
               <SelectTrigger><SelectValue placeholder="Selecione uma lista" /></SelectTrigger>
               <SelectContent>
@@ -2276,52 +2356,6 @@ function GlobalTemplatesDialog({
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Existing templates */}
-        <div className="space-y-2 mt-3">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-            Templates desta lista ({templates?.length || 0})
-          </Label>
-          {(!templates || templates.length === 0) && (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/40 rounded-md">
-              Nenhum template cadastrado para esta lista
-            </p>
-          )}
-          {templates?.map((t) => {
-            const resp = t.default_assignee_id ? squadMemberProfiles.find((m) => m.user_id === t.default_assignee_id) : null;
-            const targets = t.target_client_ids && t.target_client_ids.length > 0
-              ? `${t.target_client_ids.length} cliente(s) específicos`
-              : "Todos os clientes";
-            return (
-              <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{t.title}</div>
-                  {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
-                  <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
-                    <span>🎯 {targets}</span>
-                    {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
-                    {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
-                      <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
-                    )}
-                    {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
-                      <span>🔁 a cada {t.recurrence_interval_days}d</span>
-                    )}
-                  </div>
-                </div>
-                <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
-                  {PRIORITIES.find((p) => p.key === t.priority)?.label}
-                </span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Editor */}
-        <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
-          <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
           <div className="space-y-1.5">
             <Label className="text-xs">Título</Label>
             <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Revisar campanhas da semana" />
