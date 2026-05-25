@@ -691,19 +691,52 @@ export default function Tarefas() {
                       <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
                     </button>
                     {isOpen && (
-                      <div className="space-y-1 pl-4 mt-1 border-l border-border/40 ml-3">
+                      <div className="space-y-1 pl-3 mt-1 border-l border-border/40 ml-3">
                         {group.items.map((c) => {
                           const count = openCounts[c.id] || 0;
                           const active = c.id === selectedClientId;
+                          const cOpen = openClients[c.id] === true;
+                          const clientLists = (allTasks || []).filter((t) => t.squad_client_id === c.id);
                           return (
-                            <button key={c.id} onClick={() => setSelectedClientId(c.id)}
-                              className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
-                                active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
-                              <span className="truncate">{c.name}</span>
-                              {count > 0 && (
-                                <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                            <div key={c.id}>
+                              <div className={cn("w-full flex items-center gap-1.5 px-1.5 py-1.5 rounded-md transition group",
+                                active && !selectedListKey ? "bg-primary/15 border border-primary/40" : "hover:bg-secondary/40")}>
+                                <button onClick={() => toggleClient(c.id)} className="p-0.5 rounded hover:bg-secondary/60">
+                                  {cOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                                </button>
+                                {cOpen ? <FolderOpen className="h-3.5 w-3.5 text-primary/80" /> : <Folder className="h-3.5 w-3.5 text-primary/80" />}
+                                <button
+                                  onClick={() => { setSelectedClientId(c.id); setSelectedListKey(null); }}
+                                  className={cn("flex-1 text-left truncate text-sm",
+                                    active && !selectedListKey ? "text-foreground font-medium" : "text-muted-foreground")}
+                                >
+                                  {c.name}
+                                </button>
+                                {count > 0 && (
+                                  <span className="text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                                )}
+                              </div>
+                              {cOpen && (
+                                <div className="space-y-0.5 pl-3 mt-0.5 border-l border-border/30 ml-3">
+                                  {LISTS.map((l) => {
+                                    const lcount = clientLists.filter((t) => t.list_key === l.key && t.status !== "done").length;
+                                    const lactive = active && selectedListKey === l.key;
+                                    return (
+                                      <button
+                                        key={l.key}
+                                        onClick={() => { setSelectedClientId(c.id); setSelectedListKey(l.key); }}
+                                        className={cn("w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs transition",
+                                          lactive ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-secondary/40")}
+                                      >
+                                        <ListChecks className="h-3 w-3 opacity-60 shrink-0" />
+                                        <span className="flex-1 text-left truncate">{l.label}</span>
+                                        {lcount > 0 && <span className="text-[10px] opacity-70">{lcount}</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               )}
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
