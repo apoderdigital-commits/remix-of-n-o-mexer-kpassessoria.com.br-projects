@@ -2658,6 +2658,7 @@ function GlobalTemplatesDialog({
         </div>
       </DialogContent>
 
+
       <AlertDialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
         <AlertDialogContent className="bg-card border-border/50">
           <AlertDialogHeader>
