@@ -1503,7 +1503,9 @@ function TaskTableRow({
   })();
 
   return (
-    <div className="grid grid-cols-[28px_1fr_120px_110px_100px_auto] gap-2 items-center px-2 py-1.5 border-t border-border/20 hover:bg-background/40 transition">
+    <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 items-center px-3 py-1.5 border-t border-border/20 hover:bg-background/40 transition">
+      <span />
+
       <Checkbox checked={t.status === "done"} onCheckedChange={() => canEdit && onToggle(t)} disabled={!canEdit} />
       <div className="min-w-0">
         <div
