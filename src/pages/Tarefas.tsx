@@ -682,15 +682,20 @@ export default function Tarefas() {
                 const isOpen = openSquads[group.squad.id] === true; // default fechado
                 return (
                   <div key={group.squad.id} className="rounded-md">
-                    <button
-                      onClick={() => toggleSquad(group.squad.id)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/40 transition"
-                    >
-                      {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                    <div className={cn("w-full flex items-center gap-1 px-1.5 py-1.5 rounded-md transition",
+                      selectedSquadId === group.squad.id && !selectedClientId ? "bg-primary/15 border border-primary/40" : "hover:bg-secondary/40")}>
+                      <button onClick={() => toggleSquad(group.squad.id)} className="p-0.5 rounded hover:bg-secondary/60">
+                        {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </button>
                       {isOpen ? <FolderOpen className="h-4 w-4 text-primary" /> : <Folder className="h-4 w-4 text-primary" />}
-                      <span className="flex-1 text-left text-xs font-semibold text-foreground truncate">{formatSquadName(group.squad.name)}</span>
+                      <button
+                        onClick={() => { setSelectedSquadId(group.squad.id); setSelectedClientId(null); setSelectedListKey(null); }}
+                        className="flex-1 text-left text-xs font-semibold text-foreground truncate"
+                      >
+                        {formatSquadName(group.squad.name)}
+                      </button>
                       <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
-                    </button>
+                    </div>
                     {isOpen && (
                       <div className="space-y-1 pl-3 mt-1 border-l border-border/40 ml-3">
                         {group.items.map((c) => {
