@@ -2325,17 +2325,11 @@ function GlobalTemplatesDialog({
                     <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
                       {PRIORITIES.find((p) => p.key === t.priority)?.label}
                     </span>
-                    {!isAll && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 text-[10px] px-2"
-                        onClick={() => applyToAll(t)}
-                        title="Aplicar este template em todos os clientes do squad"
-                      >
-                        Aplicar em todos
-                      </Button>
-                    )}
+                    <TemplateScopePopover
+                      template={t}
+                      squadClients={squadClients}
+                      onApply={(target) => updateScope(t, target)}
+                    />
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setPendingDeleteId(t.id)}><Trash2 className="h-3 w-3" /></Button>
                   </div>
