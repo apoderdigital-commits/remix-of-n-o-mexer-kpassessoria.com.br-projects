@@ -102,6 +102,7 @@ interface Template {
   recurrence_mode: "weekdays" | "interval" | null;
   recurrence_weekdays: number[] | null;
   recurrence_interval_days: number | null;
+  target_client_ids: string[] | null;
 }
 interface Subtask { id: string; task_id: string; title: string; done: boolean; position: number; }
 interface Comment { id: string; task_id: string; user_id: string; body: string; created_at: string; }
