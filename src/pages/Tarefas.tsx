@@ -2102,13 +2102,10 @@ function GlobalTemplatesDialog({
 }) {
   const qc = useQueryClient();
   const [squadId, setSquadId] = useState<string>("");
-  const [listKey, setListKey] = useState<string>("");
+  const [listKey, setListKey] = useState<string>(LISTS[0].key);
 
   useEffect(() => {
-    if (open) {
-      if (!squadId && squads.length) setSquadId(squads[0].id);
-      if (!listKey) setListKey(LISTS[0].key);
-    }
+    if (open && !squadId && squads.length) setSquadId(squads[0].id);
   }, [open, squads]);
 
   const squadClients = useMemo(() => clients.filter((c) => c.squad_id === squadId), [clients, squadId]);
@@ -2118,18 +2115,25 @@ function GlobalTemplatesDialog({
   }, [profiles, squadMembers, squadId]);
 
   const { data: templates } = useQuery<Template[]>({
-    queryKey: ["templates_global", squadId, listKey],
-    enabled: open && !!squadId && !!listKey,
+    queryKey: ["templates_global", squadId],
+    enabled: open && !!squadId,
     queryFn: async () => {
       const { data } = await supabase
         .from("squad_task_templates")
         .select("*")
         .eq("squad_id", squadId)
-        .eq("list_key", listKey)
         .order("created_at");
       return (data || []) as Template[];
     },
   });
+
+  const templatesByList = useMemo(() => {
+    const map: Record<string, Template[]> = {};
+    (templates || []).forEach((t) => {
+      (map[t.list_key] = map[t.list_key] || []).push(t);
+    });
+    return map;
+  }, [templates]);
 
   const emptyForm = {
     title: "",
@@ -2145,10 +2149,21 @@ function GlobalTemplatesDialog({
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const reset = () => setForm(emptyForm);
+  const reset = () => { setForm(emptyForm); setListKey(LISTS[0].key); };
 
-  useEffect(() => { reset(); setEditingId(null); }, [squadId, listKey]);
+  useEffect(() => { reset(); setEditingId(null); }, [squadId]);
   useEffect(() => { if (open) { reset(); setEditingId(null); } }, [open]);
+
+  const applyToAll = async (t: Template) => {
+    const { error } = await supabase
+      .from("squad_task_templates")
+      .update({ target_client_ids: null })
+      .eq("id", t.id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["templates_global"] });
+    qc.invalidateQueries({ queryKey: ["templates"] });
+    toast.success("Template aplicado a todos os clientes do squad");
+  };
 
   const toggleWeekday = (v: number) => {
     setForm((f) => ({
