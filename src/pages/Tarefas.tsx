@@ -1403,7 +1403,170 @@ function ListBlock({
   );
 }
 
-// ---------- TaskRow ----------
+// ---------- Status-grouped task list (ClickUp-style) ----------
+const STATUS_GROUPS = [
+  { key: "done",    label: "Concluído",    color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
+  { key: "todo",    label: "A fazer",      color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+  { key: "doing",   label: "Em andamento", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+  { key: "standby", label: "Stand By",     color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+] as const;
+
+function StatusGroupedList({
+  tasks, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, onStandby, onAdd,
+}: {
+  tasks: Task[]; profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
+  onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
+  onAdd: () => void;
+}) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const byStatus = useMemo(() => {
+    const map: Record<string, Task[]> = { todo: [], doing: [], standby: [], done: [] };
+    tasks.forEach((t) => { (map[t.status] ||= []).push(t); });
+    // most recent done first
+    map.done.sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
+    return map;
+  }, [tasks]);
+
+  return (
+    <div className="space-y-3">
+      {STATUS_GROUPS.map((g) => {
+        const items = byStatus[g.key] || [];
+        const isOpen = !collapsed[g.key];
+        return (
+          <div key={g.key} className="space-y-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCollapsed((c) => ({ ...c, [g.key]: !c[g.key] }))}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Alternar grupo"
+              >
+                {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </button>
+              <span className={cn("text-[10px] font-bold uppercase rounded px-2 py-0.5 border", g.color)}>
+                {g.label}
+              </span>
+              <span className="text-xs text-muted-foreground">{items.length}</span>
+            </div>
+            {isOpen && (
+              <div className="rounded-md border border-border/30 overflow-hidden">
+                <div className="grid grid-cols-[28px_1fr_120px_110px_100px_auto] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/30 bg-background/30">
+                  <span></span>
+                  <span>Nome</span>
+                  <span>Responsável</span>
+                  <span>Data de vencimento</span>
+                  <span>Prioridade</span>
+                  <span></span>
+                </div>
+                {items.length === 0 ? (
+                  <button
+                    onClick={onAdd}
+                    className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground px-2 py-2 flex items-center gap-1.5"
+                  >
+                    <Plus className="h-3 w-3" /> Adicionar Tarefa
+                  </button>
+                ) : (
+                  <>
+                    {items.map((t) => (
+                      <TaskTableRow
+                        key={t.id}
+                        task={t}
+                        profileMap={profileMap}
+                        currentUserId={currentUserId}
+                        isAdmin={isAdmin}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onToggle={onToggle}
+                        onStandby={onStandby}
+                      />
+                    ))}
+                    <button
+                      onClick={onAdd}
+                      className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground px-2 py-1.5 flex items-center gap-1.5 border-t border-border/20"
+                    >
+                      <Plus className="h-3 w-3" /> Adicionar Tarefa
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TaskTableRow({
+  task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, onStandby,
+}: {
+  task: Task; profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
+  onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
+}) {
+  const canEdit = isAdmin || t.assignee_id === currentUserId || t.created_by === currentUserId;
+  const assignee = t.assignee_id ? profileMap.get(t.assignee_id) : null;
+  const prio = PRIORITIES.find((p) => p.key === t.priority)!;
+  const overdue = t.due_date && t.status !== "done" && new Date(t.due_date) < new Date(new Date().toDateString());
+  const dueLabel = (() => {
+    if (t.status === "done" && t.completed_at) {
+      const days = Math.floor((Date.now() - new Date(t.completed_at).getTime()) / 86400000);
+      if (days === 0) return "hoje";
+      if (days === 1) return "1 dia atrás";
+      return `${days} dias atrás`;
+    }
+    return t.due_date ? format(new Date(t.due_date + "T00:00:00"), "dd/MM") : "—";
+  })();
+
+  return (
+    <div className="grid grid-cols-[28px_1fr_120px_110px_100px_auto] gap-2 items-center px-2 py-1.5 border-t border-border/20 hover:bg-background/40 transition">
+      <Checkbox checked={t.status === "done"} onCheckedChange={() => canEdit && onToggle(t)} disabled={!canEdit} />
+      <div className="min-w-0">
+        <div
+          className={cn("text-sm truncate cursor-pointer", t.status === "done" && "line-through text-muted-foreground")}
+          onClick={() => onEdit(t)}
+          title={t.title}
+        >
+          {t.title}
+        </div>
+        {t.status === "standby" && t.standby_reason && (
+          <div className="text-[10px] text-amber-300/80 truncate" title={t.standby_reason}>⏸ {t.standby_reason}</div>
+        )}
+      </div>
+      <div className="min-w-0">
+        {assignee ? (
+          <span className="inline-flex items-center gap-1.5 text-xs">
+            <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
+              {initials(assignee.full_name, assignee.email)}
+            </span>
+            <span className="truncate text-muted-foreground">{assignee.full_name || assignee.email?.split("@")[0]}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
+      <div className={cn("text-xs", overdue ? "text-red-300" : "text-muted-foreground")}>{dueLabel}</div>
+      <div>
+        <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5 inline-flex items-center gap-1", prio.color)}>
+          <Flag className="h-2.5 w-2.5" /> {prio.label}
+        </span>
+      </div>
+      <div className="flex items-center gap-0.5 justify-end">
+        {canEdit && t.status !== "standby" && t.status !== "done" && (
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-400" onClick={() => onStandby(t)} title="Stand By">
+            <Pause className="h-3 w-3" />
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(t)} title="Abrir">
+          <Pencil className="h-3 w-3" />
+        </Button>
+        {canEdit && (
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(t.id)}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, onStandby, clientName }: {
   task: Task; profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
   onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void; clientName?: string;
