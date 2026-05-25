@@ -2527,12 +2527,12 @@ function GlobalTemplatesDialog({
             ))}
           </div>
 
-
-
-
-        {/* Editor */}
-        <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
-          <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
+          {/* Editor */}
+          <div className="border-t border-border/30 pt-4 space-y-3 rounded-lg bg-background/30 p-4 border border-border/30">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {editingId ? "Editar template" : "Novo template"}
+            </h4>
           <div className="space-y-1.5">
             <Label className="text-xs">Lista de destino</Label>
             <Select value={listKey} onValueChange={setListKey}>
