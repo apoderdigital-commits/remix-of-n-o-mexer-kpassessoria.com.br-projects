@@ -712,7 +712,7 @@ export default function Tarefas() {
                                 </button>
                                 {cOpen ? <FolderOpen className="h-3.5 w-3.5 text-primary/80" /> : <Folder className="h-3.5 w-3.5 text-primary/80" />}
                                 <button
-                                  onClick={() => { setSelectedClientId(c.id); setSelectedListKey(null); }}
+                                  onClick={() => { setSelectedClientId(c.id); setSelectedSquadId(null); setSelectedListKey(null); }}
                                   className={cn("flex-1 text-left truncate text-sm",
                                     active && !selectedListKey ? "text-foreground font-medium" : "text-muted-foreground")}
                                 >
