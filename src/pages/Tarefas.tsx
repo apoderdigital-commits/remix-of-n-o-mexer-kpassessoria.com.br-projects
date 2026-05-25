@@ -219,6 +219,12 @@ export default function Tarefas() {
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
+  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: p[id] === false ? true : false }));
+  const formatSquadName = (name: string) => {
+    const cleaned = (name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
+    return `Squad de ${cleaned || name}`;
+  };
 
   const selectedClient = selectedClientId ? clientMap.get(selectedClientId) : null;
 
