@@ -2114,7 +2114,7 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, 
   const listLabel = LISTS.find((l) => l.key === listKey)?.label;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-card border-border/50 w-[calc(100vw-2rem)] sm:w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Templates de tarefas · <span className="text-muted-foreground text-sm font-normal">{listLabel}</span></DialogTitle>
         </DialogHeader>
