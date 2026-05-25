@@ -1445,10 +1445,10 @@ function ListBlock({
 
 // ---------- Status-grouped task list (ClickUp-style) ----------
 const STATUS_GROUPS = [
-  { key: "done",    label: "Concluídas", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
-  { key: "todo",    label: "A fazer",    color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-  { key: "doing",   label: "Andamento",  color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-  { key: "standby", label: "Stand By",   color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+  { key: "done",    label: "Concluídas", color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40", dot: "bg-emerald-400" },
+  { key: "todo",    label: "A fazer",    color: "bg-rose-500/15 text-rose-300 border-rose-500/40",       dot: "bg-rose-400" },
+  { key: "doing",   label: "Andamento",  color: "bg-amber-500/15 text-amber-300 border-amber-500/40",     dot: "bg-amber-400" },
+  { key: "standby", label: "Stand By",   color: "bg-purple-500/15 text-purple-300 border-purple-500/40",  dot: "bg-purple-400" },
 ] as const;
 
 const DONE_LIMIT = 5;
@@ -1476,35 +1476,35 @@ function StatusGroupedList({
   const [showAllDone, setShowAllDone] = useState(false);
 
   return (
-    <div className="rounded-lg border border-border/40 overflow-hidden bg-background/20">
-      {STATUS_GROUPS.map((g, gi) => {
+    <div className="space-y-3">
+      {STATUS_GROUPS.map((g) => {
         const items = byStatus[g.key] || [];
         const isOpen = !collapsed[g.key];
         const isDone = g.key === "done";
         const visible = isDone && !showAllDone ? items.slice(0, DONE_LIMIT) : items;
         const hiddenCount = isDone ? Math.max(0, items.length - DONE_LIMIT) : 0;
         return (
-          <div key={g.key} className={cn(gi > 0 && "border-t border-border/40")}>
+          <div key={g.key} className="rounded-xl border border-border/40 bg-background/30 backdrop-blur-sm overflow-hidden shadow-sm">
             <button
               onClick={() => setCollapsed((c) => ({ ...c, [g.key]: !c[g.key] }))}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-background/40 transition text-left"
+              className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-background/40 transition text-left"
             >
-              {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-              <span className={cn("text-[10px] font-bold uppercase rounded px-2 py-0.5 border", g.color)}>
+              {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              <span className={cn("inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-1 border", g.color)}>
+                <span className={cn("h-1.5 w-1.5 rounded-full", g.dot)} />
                 {g.label}
               </span>
-              <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
+              <span className="text-xs text-muted-foreground font-medium tabular-nums">{items.length}</span>
             </button>
             {isOpen && (
-              <div>
-                {/* Per-section column header (visible when section has items) */}
+              <div className="bg-background/10">
                 {items.length > 0 && (
-                  <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground/70 border-t border-b border-border/30 bg-background/30">
+                  <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 border-t border-border/30 bg-background/20">
                     <span></span>
                     <span></span>
                     <span>Nome</span>
                     <span>Responsável</span>
-                    <span>Data de vencimento</span>
+                    <span>Vencimento</span>
                     <span>Prioridade</span>
                     <span></span>
                   </div>
@@ -1525,7 +1525,7 @@ function StatusGroupedList({
                 {isDone && hiddenCount > 0 && (
                   <button
                     onClick={() => setShowAllDone((v) => !v)}
-                    className="w-full text-left text-[11px] text-primary hover:text-primary/80 hover:bg-primary/5 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
+                    className="w-full text-left text-[11px] text-primary hover:text-primary/80 hover:bg-primary/5 px-4 py-2.5 flex items-center gap-1.5 transition border-t border-border/20"
                   >
                     {showAllDone
                       ? <><ChevronUp className="h-3 w-3 ml-9" /> Recolher</>
@@ -1534,9 +1534,9 @@ function StatusGroupedList({
                 )}
                 <button
                   onClick={onAdd}
-                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
+                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-4 py-2.5 flex items-center gap-1.5 transition border-t border-border/20"
                 >
-                  <Plus className="h-3 w-3 ml-9" /> Adicionar Tarefa
+                  <Plus className="h-3.5 w-3.5 ml-9" /> Adicionar Tarefa
                 </button>
               </div>
             )}
