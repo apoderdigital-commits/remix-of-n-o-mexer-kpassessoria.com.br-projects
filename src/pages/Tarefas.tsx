@@ -820,10 +820,11 @@ export default function Tarefas() {
                 <ClientSummary
                   tasks={clientTasks || []}
                   health={clientsHealth?.[selectedClient.id]}
+                  expanded={!selectedListKey}
                 />
 
                 <div className="space-y-3">
-                  {LISTS.map((l) => {
+                  {(selectedListKey ? LISTS.filter((l) => l.key === selectedListKey) : []).map((l) => {
                     const list = tasksByList[l.key] || [];
                     const total = (clientTasks || []).filter((t) => t.list_key === l.key).length;
                     const open = (clientTasks || []).filter((t) => t.list_key === l.key && t.status !== "done").length;
@@ -839,10 +840,16 @@ export default function Tarefas() {
                         onTemplates={() => openTemplates(l.key)}
                         onGenerate={() => setCycleDialog({ open: true, listKey: l.key, scope: "client" })}
                         profileMap={profileMap} currentUserId={user?.id} isAdmin={isAdmin}
+                        defaultOpen
                       />
                     );
                   })}
                 </div>
+                {!selectedListKey && (
+                  <p className="text-center text-xs text-muted-foreground mt-6">
+                    Selecione uma sublista na barra lateral para ver as tarefas dessa cadência.
+                  </p>
+                )}
               </>
             )
           )}
