@@ -2487,3 +2487,80 @@ function GlobalTemplatesDialog({
     </Dialog>
   );
 }
+
+function TemplateScopePopover({
+  template, squadClients, onApply,
+}: {
+  template: Template;
+  squadClients: ClientRow[];
+  onApply: (target: string[] | null) => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const initialAll = !template.target_client_ids || template.target_client_ids.length === 0;
+  const [mode, setMode] = useState<"all" | "specific">(initialAll ? "all" : "specific");
+  const [selected, setSelected] = useState<string[]>(template.target_client_ids || []);
+
+  useEffect(() => {
+    if (open) {
+      const all = !template.target_client_ids || template.target_client_ids.length === 0;
+      setMode(all ? "all" : "specific");
+      setSelected(template.target_client_ids || []);
+    }
+  }, [open, template]);
+
+  const toggle = (id: string) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const apply = async () => {
+    if (mode === "specific" && selected.length === 0) {
+      toast.error("Selecione ao menos um cliente");
+      return;
+    }
+    await onApply(mode === "all" ? null : selected);
+    setOpen(false);
+  };
+
+  const label = initialAll ? "Todos" : `${template.target_client_ids!.length} específico(s)`;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" title="Definir em quais clientes aplicar">
+          🎯 {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 bg-card border-border/50" align="end">
+        <div className="space-y-3">
+          <div className="text-xs font-semibold">Aplicar este template em</div>
+          <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os clientes do squad ({squadClients.length})</SelectItem>
+              <SelectItem value="specific">Clientes específicos</SelectItem>
+            </SelectContent>
+          </Select>
+          {mode === "specific" && (
+            <div className="max-h-44 overflow-y-auto rounded-md border border-border/40 bg-background/40 p-2 space-y-1">
+              {squadClients.length === 0 && (
+                <p className="text-xs text-muted-foreground py-2 text-center">Nenhum cliente neste squad</p>
+              )}
+              {squadClients.map((c) => {
+                const on = selected.includes(c.id);
+                return (
+                  <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-secondary/40 rounded px-1.5 py-1">
+                    <Checkbox checked={on} onCheckedChange={() => toggle(c.id)} />
+                    <span className="truncate">{c.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button size="sm" className="h-7 text-xs" onClick={apply}>Aplicar</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
