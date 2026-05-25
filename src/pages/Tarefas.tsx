@@ -1382,21 +1382,17 @@ function ListBlock({
           </div>
         </div>
         <CollapsibleContent className="px-3 pb-3">
-          {tasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border/30 rounded-md">Sem tarefas</p>
-          ) : (
-            <StatusGroupedList
-              tasks={tasks}
-              profileMap={profileMap}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggle={onToggle}
-              onStandby={onStandby}
-              onAdd={onAdd}
-            />
-          )}
+          <StatusGroupedList
+            tasks={tasks}
+            profileMap={profileMap}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggle={onToggle}
+            onStandby={onStandby}
+            onAdd={onAdd}
+          />
         </CollapsibleContent>
       </Collapsible>
     </Card>
@@ -1430,65 +1426,53 @@ function StatusGroupedList({
   }, [tasks]);
 
   return (
-    <div className="space-y-3">
-      {STATUS_GROUPS.map((g) => {
+    <div className="rounded-lg border border-border/40 overflow-hidden bg-background/20">
+      {/* Single shared column header */}
+      <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 px-3 py-2 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/40 bg-background/40">
+        <span></span>
+        <span></span>
+        <span>Nome</span>
+        <span>Responsável</span>
+        <span>Data de vencimento</span>
+        <span>Prioridade</span>
+        <span></span>
+      </div>
+      {STATUS_GROUPS.map((g, gi) => {
         const items = byStatus[g.key] || [];
         const isOpen = !collapsed[g.key];
         return (
-          <div key={g.key} className="space-y-1">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCollapsed((c) => ({ ...c, [g.key]: !c[g.key] }))}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Alternar grupo"
-              >
-                {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              </button>
+          <div key={g.key} className={cn(gi > 0 && "border-t border-border/40")}>
+            <button
+              onClick={() => setCollapsed((c) => ({ ...c, [g.key]: !c[g.key] }))}
+              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-background/40 transition text-left"
+            >
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
               <span className={cn("text-[10px] font-bold uppercase rounded px-2 py-0.5 border", g.color)}>
                 {g.label}
               </span>
-              <span className="text-xs text-muted-foreground">{items.length}</span>
-            </div>
+              <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
+            </button>
             {isOpen && (
-              <div className="rounded-md border border-border/30 overflow-hidden">
-                <div className="grid grid-cols-[28px_1fr_120px_110px_100px_auto] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/30 bg-background/30">
-                  <span></span>
-                  <span>Nome</span>
-                  <span>Responsável</span>
-                  <span>Data de vencimento</span>
-                  <span>Prioridade</span>
-                  <span></span>
-                </div>
-                {items.length === 0 ? (
-                  <button
-                    onClick={onAdd}
-                    className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground px-2 py-2 flex items-center gap-1.5"
-                  >
-                    <Plus className="h-3 w-3" /> Adicionar Tarefa
-                  </button>
-                ) : (
-                  <>
-                    {items.map((t) => (
-                      <TaskTableRow
-                        key={t.id}
-                        task={t}
-                        profileMap={profileMap}
-                        currentUserId={currentUserId}
-                        isAdmin={isAdmin}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onToggle={onToggle}
-                        onStandby={onStandby}
-                      />
-                    ))}
-                    <button
-                      onClick={onAdd}
-                      className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground px-2 py-1.5 flex items-center gap-1.5 border-t border-border/20"
-                    >
-                      <Plus className="h-3 w-3" /> Adicionar Tarefa
-                    </button>
-                  </>
-                )}
+              <div>
+                {items.map((t) => (
+                  <TaskTableRow
+                    key={t.id}
+                    task={t}
+                    profileMap={profileMap}
+                    currentUserId={currentUserId}
+                    isAdmin={isAdmin}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggle={onToggle}
+                    onStandby={onStandby}
+                  />
+                ))}
+                <button
+                  onClick={onAdd}
+                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition"
+                >
+                  <Plus className="h-3 w-3 ml-9" /> Adicionar Tarefa
+                </button>
               </div>
             )}
           </div>
@@ -1519,7 +1503,9 @@ function TaskTableRow({
   })();
 
   return (
-    <div className="grid grid-cols-[28px_1fr_120px_110px_100px_auto] gap-2 items-center px-2 py-1.5 border-t border-border/20 hover:bg-background/40 transition">
+    <div className="grid grid-cols-[28px_28px_1fr_140px_120px_110px_auto] gap-2 items-center px-3 py-1.5 border-t border-border/20 hover:bg-background/40 transition">
+      <span />
+
       <Checkbox checked={t.status === "done"} onCheckedChange={() => canEdit && onToggle(t)} disabled={!canEdit} />
       <div className="min-w-0">
         <div
