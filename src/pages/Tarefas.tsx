@@ -1450,7 +1450,6 @@ function StatusGroupedList({
   onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
   onAdd: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ done: true });
   const byStatus = useMemo(() => {
     const map: Record<string, Task[]> = { todo: [], standby: [], done: [] };
     tasks.forEach((t) => {
@@ -1461,6 +1460,14 @@ function StatusGroupedList({
     map.done.sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
     return map;
   }, [tasks]);
+  // Default: collapsed if empty OR if it's "done" (Concluídas always start collapsed)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => ({
+    done: true,
+    todo: (byStatus.todo?.length ?? 0) === 0,
+    standby: (byStatus.standby?.length ?? 0) === 0,
+  }));
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const LIMIT = 5;
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden bg-background/20">
@@ -1477,6 +1484,9 @@ function StatusGroupedList({
       {STATUS_GROUPS.map((g, gi) => {
         const items = byStatus[g.key] || [];
         const isOpen = !collapsed[g.key];
+        const isExpanded = !!expanded[g.key];
+        const visible = isExpanded ? items : items.slice(0, LIMIT);
+        const hasMore = items.length > LIMIT;
         return (
           <div key={g.key} className={cn(gi > 0 && "border-t border-border/40")}>
             <button
@@ -1491,7 +1501,7 @@ function StatusGroupedList({
             </button>
             {isOpen && (
               <div>
-                {items.map((t) => (
+                {visible.map((t) => (
                   <TaskTableRow
                     key={t.id}
                     task={t}
@@ -1504,9 +1514,19 @@ function StatusGroupedList({
                     onStandby={onStandby}
                   />
                 ))}
+                {hasMore && (
+                  <button
+                    onClick={() => setExpanded((e) => ({ ...e, [g.key]: !e[g.key] }))}
+                    className="w-full text-left text-[11px] text-primary hover:text-primary/80 hover:bg-primary/5 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
+                  >
+                    {isExpanded
+                      ? <><ChevronUp className="h-3 w-3 ml-9" /> Recolher</>
+                      : <><ChevronDown className="h-3 w-3 ml-9" /> Mostrar mais ({items.length - LIMIT})</>}
+                  </button>
+                )}
                 <button
                   onClick={onAdd}
-                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition"
+                  className="w-full text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-background/30 px-3 py-2 flex items-center gap-1.5 transition border-t border-border/20"
                 >
                   <Plus className="h-3 w-3 ml-9" /> Adicionar Tarefa
                 </button>
