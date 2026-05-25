@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, getISOWeek, getISOWeekYear, addDays } from "date-fns";
+import { format, getISOWeek, getISOWeekYear, addDays, isToday, isPast, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,14 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
-  FileText, Paperclip, MessageSquare, Send, Download, X,
+  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -52,7 +53,18 @@ const PRIORITIES = [
 const STATUSES = [
   { key: "todo", label: "A fazer" },
   { key: "doing", label: "Em andamento" },
+  { key: "standby", label: "Stand By" },
   { key: "done", label: "Concluído" },
+];
+
+const WEEKDAYS = [
+  { v: 0, label: "Dom" },
+  { v: 1, label: "Seg" },
+  { v: 2, label: "Ter" },
+  { v: 3, label: "Qua" },
+  { v: 4, label: "Qui" },
+  { v: 5, label: "Sex" },
+  { v: 6, label: "Sáb" },
 ];
 
 interface Task {
@@ -69,14 +81,30 @@ interface Task {
   completed_at: string | null;
   created_at: string;
   cycle_key: string | null;
+  standby_reason: string | null;
+  standby_at: string | null;
 }
 interface ClientRow { id: string; name: string; squad_id: string; }
+interface SquadRow { id: string; name: string; }
 interface Assignment { squad_client_id: string; function: string; user_id: string; }
 interface ProfileLite { user_id: string; full_name: string | null; email: string | null; squad_function: string | null; }
-interface Template { id: string; squad_id: string; list_key: string; title: string; description: string | null; priority: string; due_days_offset: number | null; }
+interface Template {
+  id: string;
+  squad_id: string;
+  list_key: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  due_days_offset: number | null;
+  default_assignee_id: string | null;
+  recurrence_mode: "weekdays" | "interval" | null;
+  recurrence_weekdays: number[] | null;
+  recurrence_interval_days: number | null;
+}
 interface Subtask { id: string; task_id: string; title: string; done: boolean; position: number; }
 interface Comment { id: string; task_id: string; user_id: string; body: string; created_at: string; }
 interface Attachment { id: string; task_id: string; user_id: string; file_path: string; file_name: string; mime_type: string | null; size_bytes: number | null; created_at: string; }
+interface DateChange { id: string; task_id: string; user_id: string; old_due_date: string | null; new_due_date: string | null; reason: string; created_at: string; }
 
 const initials = (name: string | null | undefined, email: string | null | undefined) => {
   const n = (name || email?.split("@")[0] || "?").trim();
@@ -89,6 +117,22 @@ const currentCycleKey = (rec: "weekly" | "monthly" | null): string | null => {
   if (rec === "weekly") return `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
   return format(d, "yyyy-MM");
 };
+
+// Compute the next due date given a template's recurrence
+function computeDueFromTemplate(tpl: Template): string | null {
+  const today = new Date();
+  if (tpl.recurrence_mode === "weekdays" && tpl.recurrence_weekdays && tpl.recurrence_weekdays.length > 0) {
+    for (let i = 0; i < 14; i++) {
+      const d = addDays(today, i);
+      if (tpl.recurrence_weekdays.includes(d.getDay())) return format(d, "yyyy-MM-dd");
+    }
+  }
+  if (tpl.recurrence_mode === "interval" && tpl.recurrence_interval_days && tpl.recurrence_interval_days > 0) {
+    return format(addDays(today, tpl.recurrence_interval_days), "yyyy-MM-dd");
+  }
+  if (tpl.due_days_offset != null) return format(addDays(today, tpl.due_days_offset), "yyyy-MM-dd");
+  return null;
+}
 
 export default function Tarefas() {
   const { user, isAdmin, signOut } = useAuth();
@@ -107,6 +151,21 @@ export default function Tarefas() {
       return (data || []).map((m) => m.squad_id);
     },
   });
+
+  const { data: squads } = useQuery<SquadRow[]>({
+    queryKey: ["all_squads_for_tarefas", memberships],
+    enabled: !!memberships?.length,
+    queryFn: async () => {
+      const { data } = await supabase.from("squads").select("id, name").in("id", memberships!).order("name");
+      return (data || []) as SquadRow[];
+    },
+  });
+
+  const squadMap = useMemo(() => {
+    const m = new Map<string, SquadRow>();
+    (squads || []).forEach((s) => m.set(s.id, s));
+    return m;
+  }, [squads]);
 
   const { data: clients } = useQuery<ClientRow[]>({
     queryKey: ["tarefas_clients", memberships],
@@ -154,15 +213,12 @@ export default function Tarefas() {
     },
   });
 
-  // Main view tab
-  const [view, setView] = useState<"client" | "mine" | "cadence">("client");
+  // Main view tab — default: home
+  const [view, setView] = useState<"home" | "client" | "mine" | "cadence">("home");
 
-  // Selected client
+  // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  useEffect(() => {
-    if (!selectedClientId && clients?.length) setSelectedClientId(clients[0].id);
-  }, [clients, selectedClientId]);
 
   const selectedClient = selectedClientId ? clientMap.get(selectedClientId) : null;
 
@@ -180,7 +236,7 @@ export default function Tarefas() {
     },
   });
 
-  // All tasks across my squads (for mine / cadence views and counts)
+  // All tasks across my squads (for mine / cadence / home views)
   const { data: allTasks } = useQuery<Task[]>({
     queryKey: ["all_tasks", clients?.map((c) => c.id).join(",")],
     enabled: !!clients?.length,
@@ -227,6 +283,24 @@ export default function Tarefas() {
     },
   });
 
+  // Date-change audit for selected client (admin)
+  const { data: dateChanges } = useQuery<(DateChange & { task_title: string })[]>({
+    queryKey: ["date_changes", selectedClientId],
+    enabled: !!selectedClientId && isAdmin,
+    queryFn: async () => {
+      const { data: tIds } = await supabase.from("squad_tasks").select("id, title").eq("squad_client_id", selectedClientId!);
+      const titleMap = new Map<string, string>((tIds || []).map((t: any) => [t.id, t.title]));
+      if (!tIds?.length) return [];
+      const { data } = await supabase
+        .from("squad_task_date_changes")
+        .select("*")
+        .in("task_id", tIds.map((t: any) => t.id))
+        .order("created_at", { ascending: false })
+        .limit(50);
+      return (data || []).map((d: any) => ({ ...d, task_title: titleMap.get(d.task_id) || "—" }));
+    },
+  });
+
   const resolveAssignee = (fn: string | null): string | null => {
     if (!fn || !selectedClient) return null;
     const override = assignments?.find((a) => a.function === fn);
@@ -239,6 +313,11 @@ export default function Tarefas() {
   // Filters
   const [onlyMine, setOnlyMine] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // ---- Confirmation / status / date dialogs ----
+  const [confirmComplete, setConfirmComplete] = useState<{ task: Task } | null>(null);
+  const [standbyDialog, setStandbyDialog] = useState<{ task: Task; reason: string } | null>(null);
+  const [dateReasonDialog, setDateReasonDialog] = useState<{ task: Task; newDate: Date | null; reason: string; resolve: (ok: boolean) => void } | null>(null);
 
   // ---- Task dialog ----
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; listKey: string; editing: Task | null; }>({ open: false, listKey: "melhoria_continua", editing: null });
@@ -264,6 +343,32 @@ export default function Tarefas() {
     if (!taskForm.title.trim()) { toast.error("Título obrigatório"); return; }
     if (!selectedClientId && !taskDialog.editing) return;
 
+    const editing = taskDialog.editing;
+    const newDueStr = taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null;
+
+    // If editing a Melhoria Contínua task and changing due_date, require reason
+    if (
+      editing &&
+      editing.list_key === "melhoria_continua" &&
+      newDueStr !== (editing.due_date || null)
+    ) {
+      const ok = await new Promise<boolean>((resolve) => {
+        setDateReasonDialog({ task: editing, newDate: taskForm.due_date, reason: "", resolve });
+      });
+      if (!ok) return;
+    }
+
+    // Status standby requires reason
+    if (taskForm.status === "standby" && (!editing || editing.status !== "standby")) {
+      const reason = await new Promise<string | null>((resolve) => {
+        setStandbyDialog({ task: editing || ({} as Task), reason: "" });
+        // we'll handle saving inside the standby dialog; abort current save flow
+        // Use a small trick: we patch the resolver via a ref-less approach below
+        (saveTask as any)._pendingResolve = resolve;
+      });
+      if (!reason) return;
+    }
+
     const payload: any = {
       list_key: taskDialog.listKey,
       title: taskForm.title.trim(),
@@ -271,13 +376,18 @@ export default function Tarefas() {
       assignee_id: taskForm.assignee_id || null,
       priority: taskForm.priority,
       status: taskForm.status,
-      due_date: taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null,
+      due_date: newDueStr,
       completed_at: taskForm.status === "done" ? new Date().toISOString() : null,
+      standby_at: taskForm.status === "standby" ? new Date().toISOString() : null,
     };
 
-    if (taskDialog.editing) {
-      const { error } = await supabase.from("squad_tasks").update(payload).eq("id", taskDialog.editing.id);
+    if (editing) {
+      const { error } = await supabase.from("squad_tasks").update(payload).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
+      // Log date change for Melhoria Contínua
+      if (editing.list_key === "melhoria_continua" && newDueStr !== (editing.due_date || null)) {
+        // already inserted via dialog confirm flow
+      }
       toast.success("Tarefa atualizada");
     } else {
       payload.squad_client_id = selectedClientId;
@@ -300,7 +410,17 @@ export default function Tarefas() {
     qc.invalidateQueries({ queryKey: ["all_tasks"] });
   };
 
-  const toggleStatus = async (t: Task) => {
+  // Toggle with confirmation
+  const requestToggle = (t: Task) => {
+    if (t.status === "done") {
+      // Reopen — no confirmation
+      doToggle(t);
+    } else {
+      setConfirmComplete({ task: t });
+    }
+  };
+
+  const doToggle = async (t: Task) => {
     const next = t.status === "done" ? "todo" : "done";
     const { error } = await supabase
       .from("squad_tasks")
@@ -328,18 +448,20 @@ export default function Tarefas() {
   const [templatesDialog, setTemplatesDialog] = useState<{ open: boolean; listKey: string | null }>({ open: false, listKey: null });
   const openTemplates = (listKey: string) => setTemplatesDialog({ open: true, listKey });
 
-  // ---- Generate cycle ----
-  const generateCycle = async (listKey: string, scope: "client" | "squad") => {
+  // ---- Generate cycle (Criar tarefa recorrente) ----
+  const [cycleDialog, setCycleDialog] = useState<{ open: boolean; listKey: string | null; scope: "client" | "squad" }>({ open: false, listKey: null, scope: "client" });
+
+  const runGenerateCycle = async (listKey: string, scope: "client" | "squad") => {
     const cfg = LISTS.find((l) => l.key === listKey)!;
-    const cycleKey = currentCycleKey(cfg.recurrence);
-    if (!cycleKey) { toast.error("Esta lista não tem recorrência"); return; }
     if (!selectedClient) return;
 
     const targetClients = scope === "client" ? [selectedClient] : (clients || []).filter((c) => c.squad_id === selectedClient.squad_id);
     const tpls = (templates || []).filter((t) => t.list_key === listKey);
     if (!tpls.length) { toast.error("Cadastre templates antes"); return; }
 
-    // Existing cycle tasks
+    // Cycle key: prefer the list cadence; fall back to today's date for non-recurrent lists
+    const cycleKey = currentCycleKey(cfg.recurrence) || `manual-${format(new Date(), "yyyy-MM-dd")}`;
+
     const { data: existing } = await supabase
       .from("squad_tasks")
       .select("squad_client_id, title")
@@ -350,24 +472,24 @@ export default function Tarefas() {
 
     const toInsert: any[] = [];
     for (const c of targetClients) {
-      // resolve assignee per client (override > function)
       const { data: aRows } = await supabase.from("squad_client_assignments").select("function,user_id").eq("squad_client_id", c.id);
       const override = (aRows || []).find((a: any) => a.function === cfg.function)?.user_id;
-      let assigneeId: string | null = override || null;
-      if (!assigneeId && cfg.function) {
+      let fallbackAssigneeId: string | null = override || null;
+      if (!fallbackAssigneeId && cfg.function) {
         const sUsers = (squadMembers || []).filter((m) => m.squad_id === c.squad_id).map((m) => m.user_id);
-        assigneeId = sUsers.find((uid) => profileMap.get(uid)?.squad_function === cfg.function) || null;
+        fallbackAssigneeId = sUsers.find((uid) => profileMap.get(uid)?.squad_function === cfg.function) || null;
       }
 
       for (const tpl of tpls) {
         if (existSet.has(`${c.id}::${tpl.title}`)) continue;
-        const due = tpl.due_days_offset != null ? format(addDays(new Date(), tpl.due_days_offset), "yyyy-MM-dd") : null;
+        const due = computeDueFromTemplate(tpl);
+        const assignee = tpl.default_assignee_id || fallbackAssigneeId;
         toInsert.push({
           squad_client_id: c.id,
           list_key: listKey,
           title: tpl.title,
           description: tpl.description,
-          assignee_id: assigneeId,
+          assignee_id: assignee,
           priority: tpl.priority,
           status: "todo",
           due_date: due,
@@ -380,7 +502,7 @@ export default function Tarefas() {
     if (!toInsert.length) { toast.info("Nenhuma nova tarefa — ciclo já gerado"); return; }
     const { error } = await supabase.from("squad_tasks").insert(toInsert);
     if (error) { toast.error(error.message); return; }
-    toast.success(`${toInsert.length} tarefas geradas (${cycleKey})`);
+    toast.success(`${toInsert.length} tarefas recorrentes criadas`);
     qc.invalidateQueries({ queryKey: ["tasks"] });
     qc.invalidateQueries({ queryKey: ["all_tasks"] });
   };
@@ -400,7 +522,6 @@ export default function Tarefas() {
     return r;
   };
 
-  // Client view tasks
   const filteredClientTasks = useMemo(() => applyFilters(clientTasks || []), [clientTasks, onlyMine, statusFilter, user]);
   const tasksByList = useMemo(() => {
     const map: Record<string, Task[]> = {};
@@ -409,14 +530,12 @@ export default function Tarefas() {
     return map;
   }, [filteredClientTasks]);
 
-  // Mine view: across all squads, only my tasks
   const myTasks = useMemo(() => {
     let r = (allTasks || []).filter((t) => t.assignee_id === user?.id);
     if (statusFilter !== "all") r = r.filter((t) => t.status === statusFilter);
     return r;
   }, [allTasks, user, statusFilter]);
 
-  // Cadence view: group by list_key
   const tasksByCadence = useMemo(() => {
     const list = applyFilters(allTasks || []);
     const map: Record<string, Task[]> = {};
@@ -425,9 +544,78 @@ export default function Tarefas() {
     return map;
   }, [allTasks, onlyMine, statusFilter, user]);
 
-  const filteredClients = (clients || []).filter((c) =>
-    !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Clients grouped by squad (for sidebar)
+  const clientsBySquad = useMemo(() => {
+    const map = new Map<string, ClientRow[]>();
+    (clients || []).forEach((c) => {
+      const arr = map.get(c.squad_id) || [];
+      arr.push(c);
+      map.set(c.squad_id, arr);
+    });
+    return map;
+  }, [clients]);
+
+  const filteredClientsBySquad = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const out: { squad: SquadRow; items: ClientRow[] }[] = [];
+    (squads || []).forEach((s) => {
+      const items = (clientsBySquad.get(s.id) || []).filter((c) => !q || c.name.toLowerCase().includes(q));
+      if (items.length > 0 || !q) out.push({ squad: s, items });
+    });
+    return out;
+  }, [squads, clientsBySquad, search]);
+
+  // ---- Save standby reason ----
+  const submitStandby = async () => {
+    if (!standbyDialog) return;
+    const { task, reason } = standbyDialog;
+    if (!reason.trim()) { toast.error("Informe o motivo"); return; }
+    const { error } = await supabase
+      .from("squad_tasks")
+      .update({ status: "standby", standby_reason: reason.trim(), standby_at: new Date().toISOString() })
+      .eq("id", task.id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+    qc.invalidateQueries({ queryKey: ["all_tasks"] });
+    setStandbyDialog(null);
+    toast.success("Tarefa em Stand By");
+  };
+
+  const requestStandby = (t: Task) => setStandbyDialog({ task: t, reason: "" });
+
+  // ---- Submit date change reason ----
+  const submitDateChange = async () => {
+    if (!dateReasonDialog) return;
+    const { task, newDate, reason, resolve } = dateReasonDialog;
+    if (!reason.trim()) { toast.error("Informe o motivo"); return; }
+    const newDueStr = newDate ? format(newDate, "yyyy-MM-dd") : null;
+    // Log the change first
+    await supabase.from("squad_task_date_changes").insert({
+      task_id: task.id,
+      user_id: user!.id,
+      old_due_date: task.due_date,
+      new_due_date: newDueStr,
+      reason: reason.trim(),
+    });
+    // Update the task date
+    await supabase.from("squad_tasks").update({ due_date: newDueStr }).eq("id", task.id);
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+    qc.invalidateQueries({ queryKey: ["all_tasks"] });
+    qc.invalidateQueries({ queryKey: ["date_changes"] });
+    setDateReasonDialog(null);
+    resolve(true);
+    toast.success("Data alterada");
+  };
+
+  const cancelDateChange = () => {
+    dateReasonDialog?.resolve(false);
+    setDateReasonDialog(null);
+  };
+
+  const openClientFromHome = (id: string) => {
+    setSelectedClientId(id);
+    setView("client");
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -441,6 +629,7 @@ export default function Tarefas() {
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={(v) => setView(v as any)}>
             <TabsList className="h-8">
+              <TabsTrigger value="home" className="text-xs">Home</TabsTrigger>
               <TabsTrigger value="client" className="text-xs">Por cliente</TabsTrigger>
               <TabsTrigger value="mine" className="text-xs">Minhas tarefas</TabsTrigger>
               <TabsTrigger value="cadence" className="text-xs">Por cadência</TabsTrigger>
@@ -467,30 +656,56 @@ export default function Tarefas() {
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input className="pl-7 h-8 text-sm" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <div className="flex-1 overflow-y-auto space-y-1">
-              {filteredClients.length === 0 ? (
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {filteredClientsBySquad.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center mt-6">
                   {clients?.length === 0 ? "Nenhum cliente no seu squad" : "Nenhum cliente encontrado"}
                 </p>
-              ) : filteredClients.map((c) => {
-                const count = openCounts[c.id] || 0;
-                const active = c.id === selectedClientId;
-                return (
-                  <button key={c.id} onClick={() => setSelectedClientId(c.id)}
-                    className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
-                      active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
-                    <span className="truncate">{c.name}</span>
-                    {count > 0 && (
-                      <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
-                    )}
-                  </button>
-                );
-              })}
+              ) : filteredClientsBySquad.map((group) => (
+                <div key={group.squad.id}>
+                  <div className="flex items-center justify-between px-2 mb-1">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{group.squad.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {group.items.map((c) => {
+                      const count = openCounts[c.id] || 0;
+                      const active = c.id === selectedClientId;
+                      return (
+                        <button key={c.id} onClick={() => setSelectedClientId(c.id)}
+                          className={cn("w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm transition",
+                            active ? "bg-primary/15 text-foreground border border-primary/40" : "hover:bg-secondary/40 text-muted-foreground")}>
+                          <span className="truncate">{c.name}</span>
+                          {count > 0 && (
+                            <span className="ml-2 text-[10px] font-semibold rounded-full bg-primary/20 text-primary px-1.5 py-0.5 min-w-[1.4rem] text-center">{count}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </aside>
         )}
 
         <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
+          {view === "home" && (
+            <HomeView
+              clients={clients || []}
+              squads={squads || []}
+              allTasks={allTasks || []}
+              profileMap={profileMap}
+              currentUserId={user?.id}
+              onOpenClient={openClientFromHome}
+              onEdit={openEditTask}
+              onToggle={requestToggle}
+              onStandby={requestStandby}
+              isAdmin={isAdmin}
+              onDelete={deleteTask}
+            />
+          )}
+
           {view === "client" && (
             !selectedClient ? (
               <div className="text-center text-muted-foreground mt-20">
@@ -502,12 +717,46 @@ export default function Tarefas() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-xl font-bold">{selectedClient.name}</h2>
-                    <p className="text-xs text-muted-foreground">{filteredClientTasks.length} tarefas visíveis</p>
+                    <p className="text-xs text-muted-foreground">{squadMap.get(selectedClient.squad_id)?.name || "—"} · {filteredClientTasks.length} tarefas visíveis</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => setAssignOpen(true)} className="gap-1.5">
                     <Settings2 className="h-3.5 w-3.5" /> Responsáveis
                   </Button>
                 </div>
+
+                {isAdmin && dateChanges && dateChanges.length > 0 && (
+                  <Card className="mb-4 bg-card/40 border-border/40">
+                    <Collapsible>
+                      <CollapsibleTrigger className="w-full p-3 flex items-center gap-2 text-left">
+                        <History className="h-4 w-4 text-amber-400" />
+                        <span className="text-sm font-semibold">Auditoria de prazos (Melhoria Contínua)</span>
+                        <span className="text-[10px] rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5">{dateChanges.length}</span>
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="px-3 pb-3 space-y-1">
+                        {dateChanges.map((d) => {
+                          const p = profileMap.get(d.user_id);
+                          return (
+                            <div key={d.id} className="text-xs bg-background/40 border border-border/30 rounded px-2 py-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold truncate">{d.task_title}</span>
+                                <span className="text-muted-foreground">{format(new Date(d.created_at), "dd/MM HH:mm")}</span>
+                              </div>
+                              <div className="text-muted-foreground mt-0.5">
+                                <span className="line-through">{d.old_due_date || "—"}</span>
+                                {" → "}
+                                <span className="text-foreground">{d.new_due_date || "—"}</span>
+                                {" · "}
+                                <span>{p?.full_name || p?.email?.split("@")[0] || "—"}</span>
+                              </div>
+                              <div className="mt-0.5">{d.reason}</div>
+                            </div>
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                )}
 
                 <div className="space-y-3">
                   {LISTS.map((l) => {
@@ -521,9 +770,10 @@ export default function Tarefas() {
                       <ListBlock
                         key={l.key} cfg={l} tasks={list} total={total} open={open} tplCount={tplCount}
                         respName={respProfile?.full_name || respProfile?.email?.split("@")[0] || (l.function ? "Não definido" : "Qualquer um")}
-                        onAdd={() => openNewTask(l.key)} onEdit={openEditTask} onDelete={deleteTask} onToggle={toggleStatus}
-                        onTemplates={() => openTemplates(l.key)} onGenerate={() => generateCycle(l.key, "client")}
-                        onGenerateSquad={() => generateCycle(l.key, "squad")}
+                        onAdd={() => openNewTask(l.key)} onEdit={openEditTask} onDelete={deleteTask}
+                        onToggle={requestToggle} onStandby={requestStandby}
+                        onTemplates={() => openTemplates(l.key)}
+                        onGenerate={() => setCycleDialog({ open: true, listKey: l.key, scope: "client" })}
                         profileMap={profileMap} currentUserId={user?.id} isAdmin={isAdmin}
                       />
                     );
@@ -539,7 +789,7 @@ export default function Tarefas() {
                 <h2 className="text-xl font-bold">Minhas tarefas</h2>
                 <p className="text-xs text-muted-foreground">{myTasks.length} tarefas em todos os clientes</p>
               </div>
-              <FlatTaskTable tasks={myTasks} clientMap={clientMap} profileMap={profileMap} onEdit={openEditTask} onToggle={toggleStatus} currentUserId={user?.id} isAdmin={isAdmin} onDelete={deleteTask} />
+              <FlatTaskTable tasks={myTasks} clientMap={clientMap} profileMap={profileMap} onEdit={openEditTask} onToggle={requestToggle} onStandby={requestStandby} currentUserId={user?.id} isAdmin={isAdmin} onDelete={deleteTask} />
             </div>
           )}
 
@@ -561,7 +811,7 @@ export default function Tarefas() {
                         <span className="text-[10px] font-semibold rounded-full bg-background/40 border border-border/30 px-2 py-0.5">{list.length}</span>
                       </div>
                       <div className="p-3">
-                        <FlatTaskTable tasks={list} clientMap={clientMap} profileMap={profileMap} onEdit={openEditTask} onToggle={toggleStatus} currentUserId={user?.id} isAdmin={isAdmin} onDelete={deleteTask} />
+                        <FlatTaskTable tasks={list} clientMap={clientMap} profileMap={profileMap} onEdit={openEditTask} onToggle={requestToggle} onStandby={requestStandby} currentUserId={user?.id} isAdmin={isAdmin} onDelete={deleteTask} />
                       </div>
                     </Card>
                   );
@@ -626,18 +876,236 @@ export default function Tarefas() {
         listKey={templatesDialog.listKey}
         squadId={selectedClient?.squad_id || null}
         currentUserId={user?.id}
+        selectableMembers={selectableMembers}
       />
+
+      {/* Cycle dialog */}
+      <CycleDialog
+        open={cycleDialog.open}
+        listKey={cycleDialog.listKey}
+        scope={cycleDialog.scope}
+        setScope={(s) => setCycleDialog((d) => ({ ...d, scope: s }))}
+        onClose={() => setCycleDialog((d) => ({ ...d, open: false }))}
+        templates={(templates || []).filter((t) => t.list_key === cycleDialog.listKey)}
+        onConfirm={async () => {
+          if (!cycleDialog.listKey) return;
+          await runGenerateCycle(cycleDialog.listKey, cycleDialog.scope);
+          setCycleDialog((d) => ({ ...d, open: false }));
+        }}
+      />
+
+      {/* Confirm complete */}
+      <Dialog open={!!confirmComplete} onOpenChange={(o) => !o && setConfirmComplete(null)}>
+        <DialogContent className="bg-card border-border/50 max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Concluir tarefa?</DialogTitle>
+            <DialogDescription>
+              {confirmComplete?.task.title}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setConfirmComplete(null)}>Cancelar</Button>
+            <Button onClick={async () => {
+              if (confirmComplete) { await doToggle(confirmComplete.task); setConfirmComplete(null); }
+            }}>Concluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Standby reason */}
+      <Dialog open={!!standbyDialog} onOpenChange={(o) => !o && setStandbyDialog(null)}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tarefa em Stand By</DialogTitle>
+            <DialogDescription>
+              {standbyDialog?.task.title} — por quê está em stand by?
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            autoFocus
+            value={standbyDialog?.reason || ""}
+            onChange={(e) => setStandbyDialog((s) => s ? { ...s, reason: e.target.value } : s)}
+            placeholder="Motivo (obrigatório)"
+            rows={3}
+          />
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setStandbyDialog(null)}>Cancelar</Button>
+            <Button onClick={submitStandby}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Date change reason */}
+      <Dialog open={!!dateReasonDialog} onOpenChange={(o) => !o && cancelDateChange()}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>Por que está mudando a data?</DialogTitle>
+            <DialogDescription>
+              {dateReasonDialog?.task.title}
+              <br />
+              <span className="text-xs">
+                {dateReasonDialog?.task.due_date || "sem data"} → {dateReasonDialog?.newDate ? format(dateReasonDialog.newDate, "yyyy-MM-dd") : "sem data"}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            autoFocus
+            value={dateReasonDialog?.reason || ""}
+            onChange={(e) => setDateReasonDialog((s) => s ? { ...s, reason: e.target.value } : s)}
+            placeholder="Justificativa (obrigatório)"
+            rows={3}
+          />
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={cancelDateChange}>Cancelar</Button>
+            <Button onClick={submitDateChange}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// ---------- Home view ----------
+function HomeView({
+  clients, squads, allTasks, profileMap, currentUserId, onOpenClient, onEdit, onToggle, onStandby, isAdmin, onDelete,
+}: {
+  clients: ClientRow[]; squads: SquadRow[]; allTasks: Task[];
+  profileMap: Map<string, ProfileLite>; currentUserId: string | undefined;
+  onOpenClient: (id: string) => void;
+  onEdit: (t: Task) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
+  isAdmin: boolean; onDelete: (id: string) => void;
+}) {
+  // Tasks for "today": due today OR overdue OR no due date but currently doing
+  const todayTasks = useMemo(() => {
+    return allTasks.filter((t) => {
+      if (t.status === "done") return false;
+      if (!t.due_date) return t.status === "doing";
+      const d = parseISO(t.due_date);
+      return isToday(d) || isPast(d);
+    });
+  }, [allTasks]);
+
+  const totals = useMemo(() => ({
+    total: todayTasks.length,
+    todo: todayTasks.filter((t) => t.status === "todo").length,
+    doing: todayTasks.filter((t) => t.status === "doing").length,
+    standby: todayTasks.filter((t) => t.status === "standby").length,
+    overdue: todayTasks.filter((t) => t.due_date && isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date))).length,
+  }), [todayTasks]);
+
+  const clientMap = useMemo(() => {
+    const m = new Map<string, ClientRow>();
+    clients.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [clients]);
+
+  // Group by squad → client
+  const groups = useMemo(() => {
+    const map = new Map<string, Map<string, Task[]>>();
+    todayTasks.forEach((t) => {
+      const c = clientMap.get(t.squad_client_id);
+      if (!c) return;
+      const sq = map.get(c.squad_id) || new Map<string, Task[]>();
+      const arr = sq.get(c.id) || [];
+      arr.push(t);
+      sq.set(c.id, arr);
+      map.set(c.squad_id, sq);
+    });
+    return squads.map((s) => ({
+      squad: s,
+      clients: Array.from(map.get(s.id)?.entries() || [])
+        .map(([cid, tasks]) => ({ client: clientMap.get(cid)!, tasks }))
+        .filter((x) => x.client)
+        .sort((a, b) => b.tasks.length - a.tasks.length),
+    })).filter((g) => g.clients.length > 0);
+  }, [todayTasks, clients, squads, clientMap]);
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-2">
+        <HomeIcon className="h-5 w-5 text-primary" />
+        <h2 className="text-xl font-bold">Tarefas de hoje</h2>
+        <span className="text-xs text-muted-foreground">· {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <StatCard label="Total" value={totals.total} color="text-foreground" />
+        <StatCard label="A fazer" value={totals.todo} color="text-blue-400" />
+        <StatCard label="Em andamento" value={totals.doing} color="text-purple-400" />
+        <StatCard label="Stand By" value={totals.standby} color="text-amber-400" />
+        <StatCard label="Atrasadas" value={totals.overdue} color="text-red-400" />
+      </div>
+
+      {groups.length === 0 ? (
+        <div className="text-center text-muted-foreground mt-10 py-12 border border-dashed border-border/40 rounded-lg">
+          🎉 Sem tarefas para hoje.
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groups.map((g) => (
+            <div key={g.squad.id}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{g.squad.name}</span>
+                <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                  {g.clients.reduce((acc, c) => acc + c.tasks.length, 0)} tarefas
+                </span>
+              </div>
+              <div className="space-y-2">
+                {g.clients.map((cg) => (
+                  <Card key={cg.client.id} className="bg-card/40 border-border/40">
+                    <button
+                      onClick={() => onOpenClient(cg.client.id)}
+                      className="w-full p-3 flex items-center justify-between hover:bg-secondary/30 transition rounded-t-lg text-left"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold">{cg.client.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {cg.tasks.length} tarefa{cg.tasks.length !== 1 ? "s" : ""} hoje
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <div className="px-3 pb-3 space-y-1">
+                      {cg.tasks.slice(0, 5).map((t) => (
+                        <TaskRow
+                          key={t.id} task={t} profileMap={profileMap}
+                          currentUserId={currentUserId} isAdmin={isAdmin}
+                          onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onStandby={onStandby}
+                        />
+                      ))}
+                      {cg.tasks.length > 5 && (
+                        <button onClick={() => onOpenClient(cg.client.id)} className="text-xs text-primary hover:underline">
+                          Ver mais {cg.tasks.length - 5}…
+                        </button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <Card className="p-3 bg-card/40 border-border/40">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("text-2xl font-bold mt-1", color)}>{value}</div>
+    </Card>
   );
 }
 
 // ---------- ListBlock ----------
 function ListBlock({
-  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onTemplates, onGenerate, onGenerateSquad, profileMap, currentUserId, isAdmin,
+  cfg, tasks, total, open, respName, tplCount, onAdd, onEdit, onDelete, onToggle, onStandby, onTemplates, onGenerate, profileMap, currentUserId, isAdmin,
 }: {
   cfg: typeof LISTS[number]; tasks: Task[]; total: number; open: number; respName: string; tplCount: number;
-  onAdd: () => void; onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void;
-  onTemplates: () => void; onGenerate: () => void; onGenerateSquad: () => void;
+  onAdd: () => void; onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void;
+  onTemplates: () => void; onGenerate: () => void;
   profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
 }) {
   const [openState, setOpenState] = useState(true);
@@ -661,21 +1129,13 @@ function ListBlock({
             </div>
           </CollapsibleTrigger>
           <div className="flex items-center gap-1 shrink-0">
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates">
-              <FileText className="h-3.5 w-3.5 mr-1" />Templates
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onTemplates} title="Templates de tarefas">
+              <FileText className="h-3.5 w-3.5 mr-1" />Templates de tarefas
             </Button>
             {recurrent && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" title="Gerar ciclo">
-                    <RefreshCw className="h-3.5 w-3.5 mr-1" />Gerar ciclo
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-1" align="end">
-                  <button onClick={onGenerate} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-secondary/50">Só este cliente</button>
-                  <button onClick={onGenerateSquad} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-secondary/50">Todos os clientes do squad</button>
-                </PopoverContent>
-              </Popover>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onGenerate} title="Criar tarefa recorrente">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />Criar tarefa recorrente
+              </Button>
             )}
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onAdd}>
               <Plus className="h-3.5 w-3.5 mr-1" />Nova
@@ -689,7 +1149,7 @@ function ListBlock({
             <div className="space-y-1.5">
               {tasks.map((t) => (
                 <TaskRow key={t.id} task={t} profileMap={profileMap} currentUserId={currentUserId} isAdmin={isAdmin}
-                  onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} />
+                  onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onStandby={onStandby} />
               ))}
             </div>
           )}
@@ -699,10 +1159,10 @@ function ListBlock({
   );
 }
 
-// ---------- TaskRow (compact) ----------
-function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, clientName }: {
+// ---------- TaskRow ----------
+function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete, onToggle, onStandby, clientName }: {
   task: Task; profileMap: Map<string, ProfileLite>; currentUserId: string | undefined; isAdmin: boolean;
-  onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; clientName?: string;
+  onEdit: (t: Task) => void; onDelete: (id: string) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void; clientName?: string;
 }) {
   const canEdit = isAdmin || t.assignee_id === currentUserId || t.created_by === currentUserId;
   const assignee = t.assignee_id ? profileMap.get(t.assignee_id) : null;
@@ -717,7 +1177,17 @@ function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete
           {t.title}
         </div>
         {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
+        {t.status === "standby" && t.standby_reason && (
+          <div className="text-[11px] text-amber-300 truncate mt-0.5" title={t.standby_reason}>
+            ⏸ {t.standby_reason}
+          </div>
+        )}
       </div>
+      {t.status === "standby" && (
+        <span className="text-[10px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-300 rounded px-1.5 py-0.5 inline-flex items-center gap-1">
+          <Pause className="h-2.5 w-2.5" /> Stand By
+        </span>
+      )}
       <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5 inline-flex items-center gap-1", prio.color)}>
         <Flag className="h-2.5 w-2.5" /> {prio.label}
       </span>
@@ -733,6 +1203,11 @@ function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete
           {initials(assignee.full_name, assignee.email)}
         </span>
       )}
+      {canEdit && t.status !== "standby" && t.status !== "done" && (
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-400" onClick={() => onStandby(t)} title="Stand By">
+          <Pause className="h-3 w-3" />
+        </Button>
+      )}
       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(t)} title="Abrir">
         <Pencil className="h-3 w-3" />
       </Button>
@@ -745,10 +1220,10 @@ function TaskRow({ task: t, profileMap, currentUserId, isAdmin, onEdit, onDelete
   );
 }
 
-// ---------- Flat task table (mine / cadence views) ----------
-function FlatTaskTable({ tasks, clientMap, profileMap, onEdit, onToggle, onDelete, currentUserId, isAdmin }: {
+// ---------- Flat task table ----------
+function FlatTaskTable({ tasks, clientMap, profileMap, onEdit, onToggle, onStandby, onDelete, currentUserId, isAdmin }: {
   tasks: Task[]; clientMap: Map<string, ClientRow>; profileMap: Map<string, ProfileLite>;
-  onEdit: (t: Task) => void; onToggle: (t: Task) => void; onDelete: (id: string) => void;
+  onEdit: (t: Task) => void; onToggle: (t: Task) => void; onStandby: (t: Task) => void; onDelete: (id: string) => void;
   currentUserId: string | undefined; isAdmin: boolean;
 }) {
   if (tasks.length === 0) {
@@ -758,14 +1233,14 @@ function FlatTaskTable({ tasks, clientMap, profileMap, onEdit, onToggle, onDelet
     <div className="space-y-1.5">
       {tasks.map((t) => (
         <TaskRow key={t.id} task={t} profileMap={profileMap} currentUserId={currentUserId} isAdmin={isAdmin}
-          onEdit={onEdit} onDelete={onDelete} onToggle={onToggle}
+          onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onStandby={onStandby}
           clientName={clientMap.get(t.squad_client_id)?.name} />
       ))}
     </div>
   );
 }
 
-// ---------- Task dialog with subtasks / comments / attachments ----------
+// ---------- Task dialog ----------
 function TaskDialogContent({
   open, onOpenChange, editing, listKey, taskForm, setTaskForm, selectableMembers, onSave, currentUserId, profileMap,
 }: {
@@ -1041,9 +1516,10 @@ function CommentsSection({ taskId, currentUserId, profileMap }: { taskId: string
   );
 }
 
-// ---------- Templates dialog ----------
-function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }: {
+// ---------- Templates de tarefas dialog ----------
+function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId, selectableMembers }: {
   open: boolean; onOpenChange: (o: boolean) => void; listKey: string | null; squadId: string | null; currentUserId: string | undefined;
+  selectableMembers: ProfileLite[];
 }) {
   const qc = useQueryClient();
   const { data: templates } = useQuery<Template[]>({
@@ -1055,9 +1531,14 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
     },
   });
 
-  const [form, setForm] = useState({ title: "", description: "", priority: "normal", due_days_offset: "" });
-  const reset = () => setForm({ title: "", description: "", priority: "normal", due_days_offset: "" });
+  const emptyForm = {
+    title: "", description: "", priority: "normal", due_days_offset: "",
+    default_assignee_id: "", recurrence_mode: "" as "" | "weekdays" | "interval",
+    recurrence_weekdays: [] as number[], recurrence_interval_days: "",
+  };
+  const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const reset = () => setForm(emptyForm);
 
   useEffect(() => { if (open) { reset(); setEditingId(null); } }, [open, listKey]);
 
@@ -1068,6 +1549,11 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
       description: form.description.trim() || null,
       priority: form.priority,
       due_days_offset: form.due_days_offset.trim() === "" ? null : Number(form.due_days_offset),
+      default_assignee_id: form.default_assignee_id || null,
+      recurrence_mode: form.recurrence_mode || null,
+      recurrence_weekdays: form.recurrence_mode === "weekdays" ? form.recurrence_weekdays : null,
+      recurrence_interval_days: form.recurrence_mode === "interval" && form.recurrence_interval_days.trim() !== ""
+        ? Number(form.recurrence_interval_days) : null,
     };
     if (editingId) {
       const { error } = await supabase.from("squad_task_templates").update(payload).eq("id", editingId);
@@ -1085,7 +1571,16 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
 
   const startEdit = (t: Template) => {
     setEditingId(t.id);
-    setForm({ title: t.title, description: t.description || "", priority: t.priority, due_days_offset: t.due_days_offset?.toString() || "" });
+    setForm({
+      title: t.title,
+      description: t.description || "",
+      priority: t.priority,
+      due_days_offset: t.due_days_offset?.toString() || "",
+      default_assignee_id: t.default_assignee_id || "",
+      recurrence_mode: (t.recurrence_mode || "") as any,
+      recurrence_weekdays: t.recurrence_weekdays || [],
+      recurrence_interval_days: t.recurrence_interval_days?.toString() || "",
+    });
   };
   const remove = async (id: string) => {
     if (!confirm("Excluir template?")) return;
@@ -1094,34 +1589,55 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
     qc.invalidateQueries({ queryKey: ["templates"] });
   };
 
+  const toggleWeekday = (v: number) => {
+    setForm((f) => ({
+      ...f,
+      recurrence_weekdays: f.recurrence_weekdays.includes(v)
+        ? f.recurrence_weekdays.filter((x) => x !== v)
+        : [...f.recurrence_weekdays, v].sort(),
+    }));
+  };
+
   const listLabel = LISTS.find((l) => l.key === listKey)?.label;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Templates · <span className="text-muted-foreground text-sm font-normal">{listLabel}</span></DialogTitle>
+          <DialogTitle>Templates de tarefas · <span className="text-muted-foreground text-sm font-normal">{listLabel}</span></DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Cadastre os modelos de tarefa que se repetem a cada ciclo. Use o botão "Gerar ciclo" da lista para criar essas tarefas para o cliente (ou para todos os clientes do squad).
+          Cadastre os modelos de tarefa que se repetem. Use o botão "Criar tarefa recorrente" da lista para gerar essas tarefas para o cliente (ou para todos os clientes do squad).
         </p>
         <div className="space-y-2 mt-2">
           {templates?.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Nenhum template cadastrado</p>}
-          {templates?.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm truncate">{t.title}</div>
-                {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
+          {templates?.map((t) => {
+            const resp = t.default_assignee_id ? selectableMembers.find((m) => m.user_id === t.default_assignee_id) : null;
+            return (
+              <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded bg-background/40 border border-border/30">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate">{t.title}</div>
+                  {t.description && <div className="text-[11px] text-muted-foreground truncate">{t.description}</div>}
+                  <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
+                    {resp && <span>👤 {resp.full_name || resp.email?.split("@")[0]}</span>}
+                    {t.recurrence_mode === "weekdays" && (t.recurrence_weekdays || []).length > 0 && (
+                      <span>📅 {t.recurrence_weekdays!.map((d) => WEEKDAYS[d].label).join(", ")}</span>
+                    )}
+                    {t.recurrence_mode === "interval" && t.recurrence_interval_days && (
+                      <span>🔁 a cada {t.recurrence_interval_days}d</span>
+                    )}
+                  </div>
+                </div>
+                <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
+                  {PRIORITIES.find((p) => p.key === t.priority)?.label}
+                </span>
+                {t.due_days_offset != null && (
+                  <span className="text-[10px] text-muted-foreground border border-border/40 rounded px-1.5 py-0.5">+{t.due_days_offset}d</span>
+                )}
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => remove(t.id)}><Trash2 className="h-3 w-3" /></Button>
               </div>
-              <span className={cn("text-[10px] font-semibold border rounded px-1.5 py-0.5", PRIORITIES.find((p) => p.key === t.priority)?.color)}>
-                {PRIORITIES.find((p) => p.key === t.priority)?.label}
-              </span>
-              {t.due_days_offset != null && (
-                <span className="text-[10px] text-muted-foreground border border-border/40 rounded px-1.5 py-0.5">+{t.due_days_offset}d</span>
-              )}
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(t)}><Pencil className="h-3 w-3" /></Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => remove(t.id)}><Trash2 className="h-3 w-3" /></Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="border-t border-border/30 pt-3 mt-3 space-y-3">
@@ -1132,9 +1648,21 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Descrição</Label>
-            <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
+            <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} placeholder="Detalhes / instruções..." />
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Responsável padrão</Label>
+              <Select value={form.default_assignee_id || "none"} onValueChange={(v) => setForm((f) => ({ ...f, default_assignee_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Usar regra do squad/função</SelectItem>
+                  {selectableMembers.map((p) => (
+                    <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email?.split("@")[0] || "—"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Prioridade</Label>
               <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
@@ -1144,16 +1672,140 @@ function TemplatesDialog({ open, onOpenChange, listKey, squadId, currentUserId }
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Recorrência (quando recriar ao gerar)</Label>
+            <Select value={form.recurrence_mode || "none"} onValueChange={(v) => setForm((f) => ({ ...f, recurrence_mode: (v === "none" ? "" : v) as any }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não recorrente (usar "dias após gerar")</SelectItem>
+                <SelectItem value="weekdays">Dias específicos da semana</SelectItem>
+                <SelectItem value="interval">A cada N dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {form.recurrence_mode === "weekdays" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Dias da semana</Label>
+              <div className="flex gap-1.5 flex-wrap">
+                {WEEKDAYS.map((w) => {
+                  const on = form.recurrence_weekdays.includes(w.v);
+                  return (
+                    <button
+                      key={w.v}
+                      type="button"
+                      onClick={() => toggleWeekday(w.v)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs rounded-md border transition",
+                        on ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 border-border/40 text-muted-foreground hover:border-border"
+                      )}
+                    >
+                      {w.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {form.recurrence_mode === "interval" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">A cada N dias</Label>
+              <Input type="number" min="1" value={form.recurrence_interval_days} onChange={(e) => setForm((f) => ({ ...f, recurrence_interval_days: e.target.value }))} placeholder="Ex: 3" />
+            </div>
+          )}
+
+          {!form.recurrence_mode && (
             <div className="space-y-1.5">
               <Label className="text-xs">Vencimento (dias após gerar)</Label>
               <Input type="number" value={form.due_days_offset} onChange={(e) => setForm((f) => ({ ...f, due_days_offset: e.target.value }))} placeholder="Ex: 7" />
             </div>
-          </div>
+          )}
+
           <div className="flex justify-end gap-2">
             {editingId && <Button variant="ghost" onClick={() => { reset(); setEditingId(null); }}>Cancelar</Button>}
             <Button onClick={save}>{editingId ? "Salvar" : "Adicionar template"}</Button>
           </div>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- Cycle dialog (Criar tarefa recorrente) ----------
+function CycleDialog({
+  open, onClose, listKey, scope, setScope, templates, onConfirm,
+}: {
+  open: boolean; onClose: () => void; listKey: string | null;
+  scope: "client" | "squad"; setScope: (s: "client" | "squad") => void;
+  templates: Template[]; onConfirm: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const listLabel = LISTS.find((l) => l.key === listKey)?.label;
+
+  const summary = (t: Template) => {
+    if (t.recurrence_mode === "weekdays" && t.recurrence_weekdays?.length) {
+      return `dias: ${t.recurrence_weekdays.map((d) => WEEKDAYS[d].label).join(", ")}`;
+    }
+    if (t.recurrence_mode === "interval" && t.recurrence_interval_days) {
+      return `a cada ${t.recurrence_interval_days}d`;
+    }
+    if (t.due_days_offset != null) return `+${t.due_days_offset}d após criar`;
+    return "sem prazo";
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="bg-card border-border/50 max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Criar tarefa recorrente · <span className="text-muted-foreground text-sm font-normal">{listLabel}</span></DialogTitle>
+          <DialogDescription>
+            Vai gerar as tarefas com base nos templates abaixo. A data de vencimento de cada tarefa segue a recorrência configurada no template.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Aplicar em</Label>
+            <Select value={scope} onValueChange={(v) => setScope(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client">Só este cliente</SelectItem>
+                <SelectItem value="squad">Todos os clientes do squad</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs">Templates que vão ser gerados ({templates.length})</Label>
+            {templates.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/40 rounded-md mt-1">
+                Nenhum template cadastrado para esta lista. Clique em "Templates de tarefas" antes.
+              </div>
+            ) : (
+              <div className="mt-1 space-y-1 max-h-60 overflow-y-auto">
+                {templates.map((t) => (
+                  <div key={t.id} className="text-xs px-2 py-1.5 rounded bg-background/40 border border-border/30 flex items-center justify-between gap-2">
+                    <span className="truncate">{t.title}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{summary(t)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button disabled={loading || templates.length === 0} onClick={async () => {
+            setLoading(true);
+            try { await onConfirm(); } finally { setLoading(false); }
+          }}>
+            {loading ? "Gerando..." : "Gerar tarefas"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
