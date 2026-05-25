@@ -2156,15 +2156,15 @@ function GlobalTemplatesDialog({
   useEffect(() => { reset(); setEditingId(null); }, [squadId]);
   useEffect(() => { if (open) { reset(); setEditingId(null); } }, [open]);
 
-  const applyToAll = async (t: Template) => {
+  const updateScope = async (t: Template, target: string[] | null) => {
     const { error } = await supabase
       .from("squad_task_templates")
-      .update({ target_client_ids: null })
+      .update({ target_client_ids: target })
       .eq("id", t.id);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["templates_global"] });
     qc.invalidateQueries({ queryKey: ["templates"] });
-    toast.success("Template aplicado a todos os clientes do squad");
+    toast.success(target === null ? "Aplicado a todos os clientes" : `Aplicado a ${target.length} cliente(s)`);
   };
 
   const toggleWeekday = (v: number) => {
