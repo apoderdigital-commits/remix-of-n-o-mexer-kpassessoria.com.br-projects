@@ -1190,7 +1190,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 }
 
 // ---------- ClientSummary ----------
-function ClientSummary({ tasks, health }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined }) {
+function ClientSummary({ tasks, health, expanded = false }: { tasks: Task[]; health: import("@/hooks/useClientHealth").ClientHealth | undefined; expanded?: boolean }) {
   const today = new Date();
   const startOfWeek = new Date(today);
   const day = startOfWeek.getDay(); // 0=dom
