@@ -2348,6 +2348,15 @@ function GlobalTemplatesDialog({
         <div className="border-t border-border/30 pt-3 mt-4 space-y-3">
           <h4 className="text-sm font-semibold">{editingId ? "Editar template" : "Novo template"}</h4>
           <div className="space-y-1.5">
+            <Label className="text-xs">Lista de destino</Label>
+            <Select value={listKey} onValueChange={setListKey}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma lista" /></SelectTrigger>
+              <SelectContent>
+                {LISTS.map((l) => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
             <Label className="text-xs">Título</Label>
             <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Revisar campanhas da semana" />
           </div>
