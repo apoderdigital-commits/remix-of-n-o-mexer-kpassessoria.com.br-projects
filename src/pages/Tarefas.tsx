@@ -1060,7 +1060,8 @@ function HomeView({
           {groups.map((g) => (
             <div key={g.squad.id}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{g.squad.name}</span>
+                <FolderOpen className="h-4 w-4 text-primary" />
+                <span className="text-sm font-bold text-foreground">{`Squad de ${(g.squad.name || "").replace(/^squad\s*(head\s*)?/i, "").trim() || g.squad.name}`}</span>
                 <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">
                   {g.clients.reduce((acc, c) => acc + c.tasks.length, 0)} tarefas
                 </span>
