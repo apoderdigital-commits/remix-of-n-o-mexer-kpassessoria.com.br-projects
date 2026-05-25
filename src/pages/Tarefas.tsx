@@ -1226,10 +1226,10 @@ function ClientSummary({ tasks, health, expanded = false }: { tasks: Task[]; hea
   const belowMeta = onTimePct !== null && onTimePct < meta;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-      <Card className="p-3 bg-card/40 border-border/40">
+    <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-3 mb-4", expanded && "gap-4")}>
+      <Card className={cn("p-3 bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Entregues no prazo</p>
-        <p className="text-2xl font-bold mt-1">{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-4xl")}>{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
       </Card>
       <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">% no prazo</p>
