@@ -219,8 +219,9 @@ export default function Tarefas() {
   // Selected client (no auto-select; user picks via home or sidebar)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Pastas de squad começam FECHADAS para visual mais limpo
   const [openSquads, setOpenSquads] = useState<Record<string, boolean>>({});
-  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: p[id] === false ? true : false }));
+  const toggleSquad = (id: string) => setOpenSquads((p) => ({ ...p, [id]: !p[id] }));
   const formatSquadName = (name: string) => {
     const cleaned = (name || "").replace(/^squad\s*(head\s*)?/i, "").trim();
     return `Squad de ${cleaned || name}`;
