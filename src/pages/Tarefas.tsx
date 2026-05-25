@@ -1231,24 +1231,57 @@ function ClientSummary({ tasks, health, expanded = false }: { tasks: Task[]; hea
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Entregues no prazo</p>
         <p className={cn("text-2xl font-bold mt-1", expanded && "text-4xl")}>{doneOnTime.length}<span className="text-xs text-muted-foreground font-normal"> / {done.length}</span></p>
       </Card>
-      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30")}>
+      <Card className={cn("p-3 border", belowMeta ? "bg-rose-500/5 border-rose-500/30" : "bg-emerald-500/5 border-emerald-500/30", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">% no prazo</p>
-        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300")}>
+        <p className={cn("text-2xl font-bold mt-1", belowMeta ? "text-rose-300" : "text-emerald-300", expanded && "text-4xl")}>
           {onTimePct === null ? "—" : `${onTimePct.toFixed(0)}%`}
         </p>
         <p className="text-[10px] mt-0.5 text-muted-foreground">Meta: ≥ {meta}% {belowMeta && <span className="text-rose-400 font-semibold">· abaixo da meta</span>}</p>
       </Card>
-      <Card className="p-3 bg-card/40 border-border/40">
+      <Card className={cn("p-3 bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Faltam concluir esta semana</p>
-        <p className="text-2xl font-bold mt-1">{weekPending.length}</p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-4xl")}>{weekPending.length}</p>
       </Card>
-      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40")}>
+      <Card className={cn("p-3 border", h ? h.cls : "bg-card/40 border-border/40", expanded && "p-5")}>
         <p className="text-[10px] uppercase font-semibold text-muted-foreground">Saúde do cliente</p>
-        <p className="text-2xl font-bold mt-1">{h ? h.label : "—"}</p>
+        <p className={cn("text-2xl font-bold mt-1", expanded && "text-3xl")}>{h ? h.label : "—"}</p>
         {health?.failing?.length ? (
           <p className="text-[10px] mt-0.5 truncate" title={health.failing.join(" · ")}>{health.failing[0]}</p>
         ) : null}
       </Card>
+      {expanded && (() => {
+        const overdue = tasks.filter((t) => t.status !== "done" && t.due_date && new Date(t.due_date + "T23:59:59") < new Date());
+        const standby = tasks.filter((t) => t.status === "standby");
+        const recentDone = doneOnTime.slice().sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || "")).slice(0, 8);
+        const SmallList = ({ title, items, tone, empty }: { title: string; items: Task[]; tone: string; empty: string }) => (
+          <Card className={cn("p-4 col-span-2 md:col-span-2 border", tone)}>
+            <p className="text-xs uppercase font-semibold mb-2 flex items-center justify-between">
+              <span>{title}</span>
+              <span className="text-[10px] opacity-70">{items.length}</span>
+            </p>
+            {items.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{empty}</p>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {items.slice(0, 10).map((t) => (
+                  <div key={t.id} className="text-xs flex items-center gap-2 bg-background/30 rounded px-2 py-1.5">
+                    <span className="flex-1 truncate">{t.title}</span>
+                    {t.due_date && <span className="text-[10px] opacity-70 shrink-0">{format(new Date(t.due_date + "T00:00:00"), "dd/MM")}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+        return (
+          <>
+            <SmallList title="Atrasadas" items={overdue} tone="bg-rose-500/5 border-rose-500/30" empty="Nenhuma tarefa atrasada 🎉" />
+            <SmallList title="Em Stand By" items={standby} tone="bg-amber-500/5 border-amber-500/30" empty="Nada em stand by" />
+            <SmallList title="Entregues no prazo (recentes)" items={recentDone} tone="bg-emerald-500/5 border-emerald-500/30" empty="Sem entregas registradas" />
+            <SmallList title="A vencer esta semana" items={weekPending} tone="bg-sky-500/5 border-sky-500/30" empty="Nada pra essa semana" />
+          </>
+        );
+      })()}
     </div>
   );
 }
