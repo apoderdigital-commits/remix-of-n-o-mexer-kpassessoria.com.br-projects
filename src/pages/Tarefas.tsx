@@ -22,7 +22,7 @@ import { useClientsHealth } from "@/hooks/useClientHealth";
 import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ListChecks, AlertCircle, Flag, RefreshCw,
-  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen,
+  FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
