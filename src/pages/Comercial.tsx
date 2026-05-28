@@ -308,8 +308,8 @@ export default function Comercial() {
   const funnelStages = kpis && fase2 ? (() => {
     const leads = kpis.leadsTotais;
     const mqls = kpis.mqls;
-    const marc = fase2.mqlSummary.agendados;
-    const comp = fase2.mqlSummary.realizados;
+    const marc = fase3?.aggregateFunnel.find((item) => item.stage === "Agendados")?.count ?? fase2.mqlSummary.agendados;
+    const comp = fase3?.aggregateFunnel.find((item) => item.stage === "Realizados")?.count ?? fase2.mqlSummary.realizados;
     const vend = kpis.vendas;
     const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
     return [
