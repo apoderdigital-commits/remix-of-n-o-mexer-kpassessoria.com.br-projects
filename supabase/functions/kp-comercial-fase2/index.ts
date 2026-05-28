@@ -107,9 +107,11 @@ Deno.serve(async (req) => {
     const noShowByHour: Record<string, number> = {};
     for (const a of allAppts) {
       if (!a.userId) continue;
+      const st = (a.appointmentStatus || a.status || "").toLowerCase();
+      // cancelled/invalid não conta como reunião marcada
+      if (st.includes("cancel") || st.includes("invalid")) continue;
       const s = initSdr(a.userId);
       s.agendados++;
-      const st = (a.appointmentStatus || a.status || "").toLowerCase();
       if (st.includes("show") && !st.includes("no")) s.realizados++;
       else if (st.includes("noshow") || st === "no-show" || st === "no_show") {
         s.noshow++;
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
           const key = `${String(h).padStart(2, "0")}:00`;
           noShowByHour[key] = (noShowByHour[key] || 0) + 1;
         }
-      } else if (st.includes("cancel")) s.cancelados++;
+      }
     }
     const sdrs = Array.from(sdrMap.values()).sort((a, b) => b.agendados - a.agendados);
 
