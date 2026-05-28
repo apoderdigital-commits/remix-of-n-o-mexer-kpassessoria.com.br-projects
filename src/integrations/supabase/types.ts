@@ -300,6 +300,48 @@ export type Database = {
         }
         Relationships: []
       }
+      kp_comercial_prospeccao: {
+        Row: {
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          event_at: string
+          event_type: string
+          id: string
+          lead_category: string
+          message: string | null
+          raw: Json
+          sdr_ghl_id: string | null
+          sdr_name: string | null
+        }
+        Insert: {
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          event_at?: string
+          event_type?: string
+          id?: string
+          lead_category?: string
+          message?: string | null
+          raw?: Json
+          sdr_ghl_id?: string | null
+          sdr_name?: string | null
+        }
+        Update: {
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          event_at?: string
+          event_type?: string
+          id?: string
+          lead_category?: string
+          message?: string | null
+          raw?: Json
+          sdr_ghl_id?: string | null
+          sdr_name?: string | null
+        }
+        Relationships: []
+      }
       kp_comercial_sdr_goals: {
         Row: {
           agendados: number
