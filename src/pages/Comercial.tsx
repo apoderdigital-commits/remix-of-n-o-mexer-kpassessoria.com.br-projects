@@ -1038,9 +1038,12 @@ export default function Comercial() {
                   <Database className="h-4 w-4 text-cyan-300" />
                   <div className="text-sm font-semibold">Fontes de dados por métrica</div>
                 </div>
-                <p className="text-xs text-muted-foreground mb-4">
+                <p className="text-xs text-muted-foreground mb-2">
                   Escolha de onde puxar cada número. Investimento é sempre Meta Ads · Taxa de Ativação é calculada (MQLs ÷ Leads).
                 </p>
+                <div className="mb-4 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] text-primary-foreground/90">
+                  <strong>Reuniões marcadas, comparecidas e no-show</strong> vêm sempre do <strong>calendário do GHL</strong> (status <code>confirmed</code> = marcada, <code>showed</code> = compareceu, <code>noshow</code> = não compareceu). Escolha abaixo quais calendários considerar.
+                </div>
                 {dataSources && (
                   <>
                     <Table>
