@@ -204,7 +204,9 @@ async function buildSnapshot(since: Date, until: Date) {
   // ---------- META OPP BY CONTACT (filtro por source da opp) ----------
   const sourceFilter = String(ds.opportunity_source_filter || "METAADS").trim().toUpperCase();
   const sourceEnabled = ds.opportunity_source_enabled !== false;
-  const meetingsFromCalendar = ds.meetings_source === "calendar";
+  // Reuniões marcadas/comparecidas/no-show vêm SEMPRE do calendário do GHL.
+  // O valor salvo em ds.meetings_source é ignorado.
+  const meetingsFromCalendar = true;
   const metaOppByContact = new Map<string, any>();
   const allSourcesSeen = new Map<string, number>();
   for (const o of allOpps) {
@@ -404,6 +406,11 @@ async function buildSnapshot(since: Date, until: Date) {
   const agendadosByHour: Record<string, number> = {};
   let apptsFiltradosSemOpp = 0;
   for (const a of allAppts) {
+    // Status do appointment no calendário: confirmed = marcada, showed = compareceu,
+    // noshow = não compareceu, cancelled/invalid = não conta como marcada.
+    const stRaw = (a.appointmentStatus || a.status || "").toLowerCase();
+    const isCancelled = stRaw.includes("cancel") || stRaw.includes("invalid");
+    if (isCancelled) continue;
     // Filtro por fonte da oportunidade (quando ativo)
     const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
     if (sourceEnabled && meetingsFromCalendar && !metaOpp) { apptsFiltradosSemOpp++; continue; }
