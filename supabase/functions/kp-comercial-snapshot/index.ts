@@ -60,6 +60,18 @@ async function buildSnapshot(since: Date, until: Date) {
     const t = new Date(s).getTime();
     return !isNaN(t) && t >= sinceMs && t <= untilMs;
   };
+  const getAppointmentBucket = (appt: any): "agendado" | "realizado" | "noshow" | "cancelado" | "outro" => {
+    const st = String(appt?.appointmentStatus || appt?.status || "").toLowerCase();
+    if (st.includes("cancel") || st.includes("invalid")) return "cancelado";
+    if (st.includes("noshow") || st === "no-show" || st === "no_show") return "noshow";
+    if (st.includes("show") && !st.includes("no")) return "realizado";
+    if (st.includes("confirm")) return "agendado";
+    return "outro";
+  };
+  const getAppointmentTime = (appt: any) => {
+    const t = new Date(appt?.startTime || appt?.endTime || appt?.updatedAt || appt?.createdAt || 0).getTime();
+    return Number.isNaN(t) ? -1 : t;
+  };
 
   // ---------- USERS ----------
   const usersRes = await fetch(`${GHL_BASE}/users/?locationId=${locationId}`, { headers });
@@ -115,7 +127,11 @@ async function buildSnapshot(since: Date, until: Date) {
     for (const e of (j.events || [])) allAppts.push({ ...e, _calendarName: c.name });
   }
   const apptByContact = new Map<string, any>();
-  for (const a of allAppts) if (a.contactId) apptByContact.set(a.contactId, a);
+  for (const a of allAppts) {
+    if (!a.contactId) continue;
+    const prev = apptByContact.get(a.contactId);
+    if (!prev || getAppointmentTime(a) >= getAppointmentTime(prev)) apptByContact.set(a.contactId, a);
+  }
 
 
   // ---------- PIPELINES + OPPS ----------
@@ -285,14 +301,24 @@ async function buildSnapshot(since: Date, until: Date) {
   const ghlMqls = mqlContacts.length;
   const leadsTotais = ds.leads_source === "sheet" ? sheetLeads : ghlLeadsTotais;
   const mqls = ds.mqls_source === "sheet" ? sheetMqls : ghlMqls;
-  let agendados = 0, realizados = 0;
-  for (const c of mqlContacts) {
-    const a = apptByContact.get(c.id);
-    if (!a) continue;
-    agendados++;
-    const st = (a.appointmentStatus || a.status || "").toLowerCase();
-    if (st.includes("show") && !st.includes("no")) realizados++;
+  const meetingSummary = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
+  for (const a of allAppts) {
+    const bucket = getAppointmentBucket(a);
+    if (bucket === "agendado") {
+      meetingSummary.agendados++;
+      meetingSummary.total++;
+    } else if (bucket === "realizado") {
+      meetingSummary.realizados++;
+      meetingSummary.total++;
+    } else if (bucket === "noshow") {
+      meetingSummary.noshow++;
+      meetingSummary.total++;
+    } else if (bucket === "cancelado") {
+      meetingSummary.cancelados++;
+    }
   }
+  const agendados = meetingSummary.agendados;
+  const realizados = meetingSummary.realizados;
   // Stages de proposta: usa mapeamento se configurado, senão regex nome
   const proposalStageIdsAll = new Set<string>();
   if (hasStageMappings) {
