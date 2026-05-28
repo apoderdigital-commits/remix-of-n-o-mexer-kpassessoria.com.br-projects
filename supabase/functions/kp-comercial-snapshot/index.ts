@@ -434,20 +434,16 @@ async function buildSnapshot(since: Date, until: Date) {
   for (const a of allAppts) {
     // Status do appointment no calendário: confirmed = marcada, showed = compareceu,
     // noshow = não compareceu, cancelled/invalid = não conta como marcada.
-    const stRaw = (a.appointmentStatus || a.status || "").toLowerCase();
-    const isCancelled = stRaw.includes("cancel") || stRaw.includes("invalid");
+    const bucketType = getAppointmentBucket(a);
+    const isCancelled = bucketType === "cancelado";
     if (isCancelled) continue;
-    // Filtro por fonte da oportunidade (quando ativo)
     const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
-    if (sourceEnabled && meetingsFromCalendar && !metaOpp) { apptsFiltradosSemOpp++; continue; }
-    // SDR: prioriza assignedTo da oportunidade METAADS; fallback ao dono do calendário
     const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const s = initSdr(uid);
     s.agendados++;
     if (a.contactId) sdrByContact.set(a.contactId, { id: s.user.id, name: s.user.name });
 
-    const st = (a.appointmentStatus || a.status || "").toLowerCase();
     const contact = a.contactId ? contactById.get(a.contactId) : null;
     const category = a.contactId ? classifyContact(a.contactId) : "Outro";
     const entry = {
@@ -467,15 +463,15 @@ async function buildSnapshot(since: Date, until: Date) {
       agendadosByHour[key] = (agendadosByHour[key] || 0) + 1;
     }
     let bucket: "agendado" | "realizado" | "noshow" | "cancelado" = "agendado";
-    if (st.includes("show") && !st.includes("no")) { s.realizados++; bucket = "realizado"; }
-    else if (st.includes("noshow") || st === "no-show" || st === "no_show") {
+    if (bucketType === "realizado") { s.realizados++; bucket = "realizado"; }
+    else if (bucketType === "noshow") {
       s.noshow++; bucket = "noshow";
       if (a.startTime) {
         const h = new Date(a.startTime).getHours();
         const key = `${String(h).padStart(2, "0")}:00`;
         noShowByHour[key] = (noShowByHour[key] || 0) + 1;
       }
-    } else if (st.includes("cancel")) { s.cancelados++; bucket = "cancelado"; }
+    } else if (bucketType === "cancelado") { s.cancelados++; bucket = "cancelado"; }
     s.lists[bucket].push(entry);
   }
   // Vendas por SDR/classe — atribui a venda ao SDR que originalmente agendou aquele contato
@@ -512,10 +508,9 @@ async function buildSnapshot(since: Date, until: Date) {
   };
   // Reuniões realizadas atribuídas (atende ao closer responsável pela reunião)
   for (const a of allAppts) {
-    const st = (a.appointmentStatus || a.status || "").toLowerCase();
-    if (!(st.includes("show") && !st.includes("no"))) continue;
+    const bucketType = getAppointmentBucket(a);
+    if (bucketType !== "realizado") continue;
     const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
-    if (sourceEnabled && meetingsFromCalendar && !metaOpp) continue;
     const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
     const c = initCloser(uid);
@@ -570,12 +565,12 @@ async function buildSnapshot(since: Date, until: Date) {
   // ---------- MQLs LIST ----------
   const mqlsList = mqlContacts.map((c) => {
     const appt = apptByContact.get(c.id);
-    const apptStatus = (appt?.appointmentStatus || appt?.status || "").toLowerCase();
     let situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento" = "sem_agendamento";
     if (appt) {
-      if (apptStatus.includes("noshow")) situacao = "noshow";
-      else if (apptStatus.includes("show")) situacao = "realizado";
-      else situacao = "agendado";
+      const bucketType = getAppointmentBucket(appt);
+      if (bucketType === "noshow") situacao = "noshow";
+      else if (bucketType === "realizado") situacao = "realizado";
+      else if (bucketType === "agendado") situacao = "agendado";
     }
     const sdr = sdrByContact.get(c.id);
     return {
@@ -602,12 +597,12 @@ async function buildSnapshot(since: Date, until: Date) {
     .filter((c) => inRange(c.dateAdded) && !(c.tags || []).some((t: string) => String(t).toLowerCase().includes("mql")))
     .map((c) => {
       const appt = apptByContact.get(c.id);
-      const apptStatus = (appt?.appointmentStatus || appt?.status || "").toLowerCase();
       let situacao: "agendado" | "realizado" | "noshow" | "sem_agendamento" = "sem_agendamento";
       if (appt) {
-        if (apptStatus.includes("noshow")) situacao = "noshow";
-        else if (apptStatus.includes("show")) situacao = "realizado";
-        else situacao = "agendado";
+        const bucketType = getAppointmentBucket(appt);
+        if (bucketType === "noshow") situacao = "noshow";
+        else if (bucketType === "realizado") situacao = "realizado";
+        else if (bucketType === "agendado") situacao = "agendado";
       }
       return {
         id: c.id,
@@ -751,6 +746,8 @@ async function buildSnapshot(since: Date, until: Date) {
       sourceFilter, sourceEnabled, meetingsFromCalendar,
       topSources,
       metaOppsTotal: metaOppByContact.size,
+      meetingsCounted: meetingSummary.total,
+      meetingsByStatus: meetingSummary,
     },
 
     users,
