@@ -721,9 +721,141 @@ async function buildSnapshot(since: Date, until: Date) {
     .filter((o) => o.diasParado >= OPP_ESTAG)
     .sort((a, b) => b.diasParado - a.diasParado);
 
+  // ---------- FUNIS (Tráfego / Recuperação / Prospecção / Geral) ----------
+  const normTag = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  const classifyLeadByTags = (c: any): "A" | "B" | "C" | "Outro" => {
+    const tags = (c?.tags || []).map(normTag);
+    if (tags.includes("leada")) return "A";
+    if (tags.includes("leadb")) return "B";
+    if (tags.includes("leadc")) return "C";
+    return "Outro";
+  };
+  type Cat = "A" | "B" | "C" | "Outro" | "Geral";
+  const emptyCat = () => ({ A: 0, B: 0, C: 0, Outro: 0, Geral: 0 });
+  const addCat = (obj: any, cat: Exclude<Cat, "Geral">, n = 1) => { obj[cat] += n; obj.Geral += n; };
+  const apptInPeriod = (a: any) => {
+    const t = new Date(a?.startTime || a?.endTime || 0).getTime();
+    return !isNaN(t) && t >= sinceMs && t <= untilMs;
+  };
+
+  // Tráfego — atribuição pela data de criação (dateAdded no período)
+  const trafego = { leads: emptyCat(), mqls: emptyCat(), agendamentos: emptyCat(), comparecimentos: emptyCat() };
+  for (const c of allContacts) {
+    if (!inRange(c.dateAdded)) continue;
+    addCat(trafego.leads, classifyLeadByTags(c));
+  }
+  for (const c of mqlContacts) {
+    const cat = classifyLeadByTags(c);
+    addCat(trafego.mqls, cat);
+  }
+  // Recuperação — leads criados ANTES do período com appt no período
+  const recuperacao = { agendamentos: emptyCat(), comparecimentos: emptyCat() };
+  for (const a of allAppts) {
+    const bucket = getAppointmentBucket(a);
+    if (bucket === "cancelado" || bucket === "outro") continue;
+    if (!apptInPeriod(a)) continue;
+    const c = a.contactId ? contactById.get(a.contactId) : null;
+    const cat = c ? classifyLeadByTags(c) : "Outro";
+    const createdT = c?.dateAdded ? new Date(c.dateAdded).getTime() : NaN;
+    const isRecup = !isNaN(createdT) && createdT < sinceMs;
+    const isTrafego = !isNaN(createdT) && createdT >= sinceMs && createdT <= untilMs;
+    if (isRecup) {
+      addCat(recuperacao.agendamentos, cat);
+      if (bucket === "realizado") addCat(recuperacao.comparecimentos, cat);
+    } else if (isTrafego) {
+      addCat(trafego.agendamentos, cat);
+      if (bucket === "realizado") addCat(trafego.comparecimentos, cat);
+    }
+  }
+
+  // Prospecção — eventos vindos da Stevo via webhook (tabela)
+  const { data: prospRows } = await supabaseAdmin
+    .from("kp_comercial_prospeccao")
+    .select("event_type, lead_category, sdr_name, sdr_ghl_id")
+    .gte("event_at", since.toISOString())
+    .lte("event_at", until.toISOString());
+  const prospeccao = { prospeccoes: emptyCat(), agendadas: emptyCat(), comparecidas: emptyCat(), noshow: emptyCat() };
+  const catOf = (v: any): Exclude<Cat, "Geral"> => (["A", "B", "C"].includes(v) ? v : "Outro");
+  for (const r of (prospRows || []) as any[]) {
+    const cat = catOf(r.lead_category);
+    if (r.event_type === "prospeccao") addCat(prospeccao.prospeccoes, cat);
+    else if (r.event_type === "agendada") addCat(prospeccao.agendadas, cat);
+    else if (r.event_type === "comparecida") addCat(prospeccao.comparecidas, cat);
+    else if (r.event_type === "noshow") addCat(prospeccao.noshow, cat);
+  }
+
+  // Geral consolidado (tráfego + recuperação [calendário] + prospecção)
+  const geral = {
+    agendamentos: meetingSummary.total + prospeccao.agendadas.Geral,
+    comparecimentos: meetingSummary.realizados + prospeccao.comparecidas.Geral,
+    noshows: meetingSummary.noshow + prospeccao.noshow.Geral,
+    vendas,
+  };
+
+  // ---------- SDR por funil ----------
+  const sdrFunilMap = new Map<string, any>();
+  const initSdrFunil = (uid: string) => {
+    if (!sdrFunilMap.has(uid)) {
+      const u = users.find((x: any) => x.id === uid) || { id: uid, name: "Desconhecido" };
+      sdrFunilMap.set(uid, {
+        user: u,
+        trafego: { agendamentos: emptyCat(), comparecimentos: emptyCat(), vendas: emptyCat() },
+        recuperacao: { agendamentos: emptyCat(), comparecimentos: emptyCat() },
+        prospeccao: { prospeccoes: emptyCat(), agendadas: emptyCat(), comparecidas: emptyCat() },
+      });
+    }
+    return sdrFunilMap.get(uid)!;
+  };
+  for (const a of allAppts) {
+    const bucket = getAppointmentBucket(a);
+    if (bucket === "cancelado" || bucket === "outro") continue;
+    if (!apptInPeriod(a)) continue;
+    const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
+    const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
+    if (!uid) continue;
+    const c = a.contactId ? contactById.get(a.contactId) : null;
+    const cat = c ? classifyLeadByTags(c) : "Outro";
+    const createdT = c?.dateAdded ? new Date(c.dateAdded).getTime() : NaN;
+    const isRecup = !isNaN(createdT) && createdT < sinceMs;
+    const s = initSdrFunil(uid);
+    const target = isRecup ? s.recuperacao : s.trafego;
+    addCat(target.agendamentos, cat);
+    if (bucket === "realizado") addCat(target.comparecimentos, cat);
+  }
+  for (const o of allOpps) {
+    if ((o.status || "").toLowerCase() !== "won" || !o.contactId) continue;
+    const sdr = sdrByContact.get(o.contactId);
+    if (!sdr) continue;
+    const s = sdrFunilMap.get(sdr.id);
+    if (!s) continue;
+    const c = contactById.get(o.contactId);
+    addCat(s.trafego.vendas, c ? classifyLeadByTags(c) : "Outro");
+  }
+  for (const r of (prospRows || []) as any[]) {
+    const uid = r.sdr_ghl_id || null;
+    let s = uid ? sdrFunilMap.get(uid) : null;
+    if (!s && r.sdr_name) {
+      for (const v of sdrFunilMap.values()) {
+        if (String(v.user.name || "").toLowerCase() === String(r.sdr_name).toLowerCase()) { s = v; break; }
+      }
+    }
+    if (!s) {
+      const id = uid || ("prosp:" + (r.sdr_name || "Desconhecido"));
+      s = initSdrFunil(id);
+      if (!uid) s.user = { id, name: r.sdr_name || "Prospecção" };
+    }
+    const cat = catOf(r.lead_category);
+    if (r.event_type === "prospeccao") addCat(s.prospeccao.prospeccoes, cat);
+    else if (r.event_type === "agendada") addCat(s.prospeccao.agendadas, cat);
+    else if (r.event_type === "comparecida") addCat(s.prospeccao.comparecidas, cat);
+  }
+  const sdrFunis = Array.from(sdrFunilMap.values());
+
   return {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
+    funis: { trafego, recuperacao, prospeccao, geral },
+    sdrFunis,
     dataSources: {
       leads: ds.leads_source, mqls: ds.mqls_source,
       comparecidas: ds.comparecidas_source, vendas: ds.vendas_source,
