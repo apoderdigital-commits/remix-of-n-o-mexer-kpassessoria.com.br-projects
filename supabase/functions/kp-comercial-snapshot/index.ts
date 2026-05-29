@@ -315,7 +315,10 @@ async function buildSnapshot(since: Date, until: Date) {
   // meetingSummaryAll (SEM filtro de tag) — usado SOMENTE no Funil Calendário (aba Geral):
   // mostra tudo que está marcado no calendário, independente de ter tag de lead.
   const meetingSummaryAll = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
+  const statusHistogram: Record<string, number> = {};
   for (const a of allAppts) {
+    const rawStatus = String(a?.appointmentStatus || a?.status || "(vazio)").toLowerCase();
+    statusHistogram[rawStatus] = (statusHistogram[rawStatus] || 0) + 1;
     const bucket = getAppointmentBucket(a);
     // Geral: conta tudo do calendário
     if (bucket === "agendado") { meetingSummaryAll.agendados++; meetingSummaryAll.total++; }
@@ -331,6 +334,7 @@ async function buildSnapshot(since: Date, until: Date) {
     else if (bucket === "noshow") { meetingSummary.noshow++; meetingSummary.total++; }
     else if (bucket === "cancelado") { meetingSummary.cancelados++; }
   }
+
 
 
   const agendados = meetingSummary.agendados;
