@@ -734,7 +734,7 @@ async function buildSnapshot(since: Date, until: Date) {
     .sort((a, b) => b.diasParado - a.diasParado);
 
   // ---------- FUNIS (Tráfego / Recuperação / Prospecção / Geral) ----------
-  const normTag = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  // normTag, hasLeadTag e contactById já definidos acima
   const classifyLeadByTags = (c: any): "A" | "B" | "C" | "Outro" => {
     const tags = (c?.tags || []).map(normTag);
     if (tags.includes("leada")) return "A";
