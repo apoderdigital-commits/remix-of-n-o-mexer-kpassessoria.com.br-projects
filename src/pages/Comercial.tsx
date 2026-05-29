@@ -524,7 +524,8 @@ export default function Comercial() {
                       <GeralFunis funis={funis} />
                     </div>
                   )}
-                </>�
+                </>
+
               ) : loading ? (
                 <div className="space-y-5">
                   <Skeleton className="h-96 w-full rounded-2xl" />
