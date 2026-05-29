@@ -310,25 +310,28 @@ async function buildSnapshot(since: Date, until: Date) {
   const contactById = new Map<string, any>();
   for (const c of allContacts) contactById.set(c.id, c);
 
+  // meetingSummary (com filtro de tag) — usado nos KPIs do topo / funis por tag
   const meetingSummary = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
+  // meetingSummaryAll (SEM filtro de tag) — usado SOMENTE no Funil Calendário (aba Geral):
+  // mostra tudo que está marcado no calendário, independente de ter tag de lead.
+  const meetingSummaryAll = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
   for (const a of allAppts) {
     const bucket = getAppointmentBucket(a);
-    // Só conta agendamento/comparecimento/no-show se o contato tiver tag de lead (leada/leadb/leadc)
+    // Geral: conta tudo do calendário
+    if (bucket === "agendado") { meetingSummaryAll.agendados++; meetingSummaryAll.total++; }
+    else if (bucket === "realizado") { meetingSummaryAll.realizados++; meetingSummaryAll.total++; }
+    else if (bucket === "noshow") { meetingSummaryAll.noshow++; meetingSummaryAll.total++; }
+    else if (bucket === "cancelado") { meetingSummaryAll.cancelados++; }
+
+    // Demais abas: só conta se o contato tiver tag de lead (leada/leadb/leadc)
     const c = a.contactId ? contactById.get(a.contactId) : null;
     if (!c || !hasLeadTag(c)) continue;
-    if (bucket === "agendado") {
-      meetingSummary.agendados++;
-      meetingSummary.total++;
-    } else if (bucket === "realizado") {
-      meetingSummary.realizados++;
-      meetingSummary.total++;
-    } else if (bucket === "noshow") {
-      meetingSummary.noshow++;
-      meetingSummary.total++;
-    } else if (bucket === "cancelado") {
-      meetingSummary.cancelados++;
-    }
+    if (bucket === "agendado") { meetingSummary.agendados++; meetingSummary.total++; }
+    else if (bucket === "realizado") { meetingSummary.realizados++; meetingSummary.total++; }
+    else if (bucket === "noshow") { meetingSummary.noshow++; meetingSummary.total++; }
+    else if (bucket === "cancelado") { meetingSummary.cancelados++; }
   }
+
 
   const agendados = meetingSummary.agendados;
   const realizados = meetingSummary.realizados;
