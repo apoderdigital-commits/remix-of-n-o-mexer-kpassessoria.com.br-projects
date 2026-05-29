@@ -115,7 +115,7 @@ async function buildSnapshot(since: Date, until: Date) {
     ? calendars.filter((c: any) => enabledSet.has(c.id))
     : calendars;
 
-  const allAppts: any[] = [];
+  const allApptsRaw: any[] = [];
   for (const c of calendarsToFetch) {
     const params = new URLSearchParams({
       locationId, calendarId: c.id,
@@ -124,8 +124,19 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allAppts.push({ ...e, _calendarName: c.name });
+    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name });
   }
+  // Dedup por id do appointment (evita contar o mesmo evento 2x se vier em mais de um calendário)
+  const allAppts: any[] = [];
+  const seenApptIds = new Set<string>();
+  let duplicateAppts = 0;
+  for (const e of allApptsRaw) {
+    const aid = String(e?.id || e?.appointmentId || "");
+    if (aid && seenApptIds.has(aid)) { duplicateAppts++; continue; }
+    if (aid) seenApptIds.add(aid);
+    allAppts.push(e);
+  }
+
   const apptByContact = new Map<string, any>();
   for (const a of allAppts) {
     if (!a.contactId) continue;
@@ -315,7 +326,10 @@ async function buildSnapshot(since: Date, until: Date) {
   // meetingSummaryAll (SEM filtro de tag) — usado SOMENTE no Funil Calendário (aba Geral):
   // mostra tudo que está marcado no calendário, independente de ter tag de lead.
   const meetingSummaryAll = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
+  const statusHistogram: Record<string, number> = {};
   for (const a of allAppts) {
+    const rawStatus = String(a?.appointmentStatus || a?.status || "(vazio)").toLowerCase();
+    statusHistogram[rawStatus] = (statusHistogram[rawStatus] || 0) + 1;
     const bucket = getAppointmentBucket(a);
     // Geral: conta tudo do calendário
     if (bucket === "agendado") { meetingSummaryAll.agendados++; meetingSummaryAll.total++; }
@@ -331,6 +345,7 @@ async function buildSnapshot(since: Date, until: Date) {
     else if (bucket === "noshow") { meetingSummary.noshow++; meetingSummary.total++; }
     else if (bucket === "cancelado") { meetingSummary.cancelados++; }
   }
+
 
 
   const agendados = meetingSummary.agendados;
@@ -905,13 +920,18 @@ async function buildSnapshot(since: Date, until: Date) {
     })),
     appointmentSourceDebug: {
       appointmentsBrutos: allAppts.length,
+      appointmentsRaw: allApptsRaw.length,
+      duplicateAppts,
       filtradosSemOppMeta: apptsFiltradosSemOpp,
       sourceFilter, sourceEnabled, meetingsFromCalendar,
       topSources,
       metaOppsTotal: metaOppByContact.size,
       meetingsCounted: meetingSummary.total,
       meetingsByStatus: meetingSummary,
+      meetingsByStatusAll: meetingSummaryAll,
+      statusHistogram,
     },
+
 
     users,
     sdrs,
