@@ -14,6 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import {
+  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, GeralFunis, SdrFunisTable,
+  type FunisData, type SdrFunil, type LeadCat,
+} from "@/components/comercial/FunisView";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
