@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
-  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, GeralFunis, SdrFunisTable,
+  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, SdrFunisTable,
   type FunisData, type SdrFunil, type LeadCat,
 } from "@/components/comercial/FunisView";
 
@@ -313,23 +313,22 @@ export default function Comercial() {
     { label: "Este mês", apply: () => { setSince(startOfMonth()); setUntil(todayIso()); } },
   ];
 
-  // Funil principal: Leads → MQLs → Reuniões → Comparecidas → Vendas (taxa ativação = MQLs/Leads exibida no estágio MQL)
-  const funnelStages = kpis && fase2 ? (() => {
-    const leads = kpis.leadsTotais;
-    const mqls = kpis.mqls;
-    const marc = fase3?.aggregateFunnel.find((item) => item.stage === "Agendados")?.count ?? fase2.mqlSummary.agendados;
-    const comp = fase3?.aggregateFunnel.find((item) => item.stage === "Realizados")?.count ?? fase2.mqlSummary.realizados;
-    const vend = kpis.vendas;
+  // Funil Calendário: Agendamentos → Comparecimentos → No-show → Vendas (somente reuniões do calendário)
+  const funnelStages = funis ? (() => {
+    const g = funis.geral;
+    const ag = g.agendamentos;
+    const co = g.comparecimentos;
+    const ns = g.noshows;
+    const ve = g.vendas;
     const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
     return [
-      { icon: Users,          label: "Leads Totais",       count: leads, pctTotal: 100,                    pctPrev: null,                       grad: "from-blue-500/80 to-blue-600/40",     iconBg: "bg-blue-500/20 text-blue-200" },
-      { icon: Target,         label: "MQLs",               count: mqls,  pctTotal: pct(mqls, leads),       pctPrev: pct(mqls, leads),           grad: "from-cyan-500/80 to-cyan-600/40",     iconBg: "bg-cyan-500/20 text-cyan-200" },
-      { icon: Percent,        label: "Taxa Ativação MQL",  count: null,  pctTotal: kpis.taxaAtivacaoMql,   pctPrev: null, isRate: true,         grad: "from-teal-500/80 to-teal-600/40",     iconBg: "bg-teal-500/20 text-teal-200" },
-      { icon: CalendarClock,  label: "Reuniões Marcadas",  count: marc,  pctTotal: pct(marc, leads),       pctPrev: pct(marc, mqls),            grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
-      { icon: CalendarCheck2, label: "Comparecidas",       count: comp,  pctTotal: pct(comp, leads),       pctPrev: pct(comp, marc),            grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
-      { icon: CheckCircle2,   label: "Vendas",             count: vend,  pctTotal: pct(vend, leads),       pctPrev: pct(vend, comp),            grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
+      { icon: CalendarClock,  label: "Agendamentos",    count: ag, pctTotal: 100,             pctPrev: null,            grad: "from-violet-500/80 to-violet-600/40",   iconBg: "bg-violet-500/20 text-violet-200" },
+      { icon: CalendarCheck2, label: "Comparecimentos", count: co, pctTotal: pct(co, ag),     pctPrev: pct(co, ag),     grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
+      { icon: Percent,        label: "No-show",         count: ns, pctTotal: pct(ns, ag),     pctPrev: pct(ns, ag),     grad: "from-rose-500/80 to-rose-600/40",       iconBg: "bg-rose-500/20 text-rose-200" },
+      { icon: CheckCircle2,   label: "Vendas",          count: ve, pctTotal: pct(ve, ag),     pctPrev: pct(ve, co),     grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
     ];
   })() : [];
+
 
   const cards = kpis ? [
     { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
@@ -441,18 +440,19 @@ export default function Comercial() {
             <TabsContent value="kpis" className="space-y-5">
               {kpis && fase2 ? (
                 <>
-                  {/* Funil principal */}
+                  {/* Funil Calendário */}
                   <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
                     <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
                     <div className="relative flex items-center justify-between mb-5">
                       <div>
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
-                        <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
+                        <div className="text-lg font-semibold mt-0.5">Funil Calendário</div>
                       </div>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
-                        {dataSources ? `leads via ${dataSources.leads_source === "sheet" ? "planilha" : "GHL"} · MQLs via ${dataSources.mqls_source === "sheet" ? "planilha" : "GHL"}` : "tempo real"}
+                        reuniões do calendário
                       </Badge>
                     </div>
+
                     <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
                         const width = Math.max(34, 100 - i * 13);
@@ -470,24 +470,16 @@ export default function Comercial() {
                                 style={{ width: `${width}%` }}
                               >
                                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
-                                  {s.isRate ? "—" : fmtNum(s.count || 0)}
+                                  {fmtNum(s.count || 0)}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-white/95">
-                                  {s.isRate ? (
-                                    <span className="bg-black/25 rounded-full px-2.5 py-0.5 backdrop-blur-sm font-bold text-sm">
-                                      {fmtPct(s.pctTotal)}
+                                  <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                    {fmtPct(s.pctTotal)} do topo
+                                  </span>
+                                  {s.pctPrev != null && i > 0 && (
+                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                      ↓ {fmtPct(s.pctPrev)}
                                     </span>
-                                  ) : (
-                                    <>
-                                      <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
-                                        {fmtPct(s.pctTotal)} do topo
-                                      </span>
-                                      {s.pctPrev != null && i > 0 && (
-                                        <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
-                                          ↓ {fmtPct(s.pctPrev)}
-                                        </span>
-                                      )}
-                                    </>
                                   )}
                                 </div>
                               </div>
@@ -495,6 +487,7 @@ export default function Comercial() {
                           </div>
                         );
                       })}
+
                     </div>
                   </Card>
 
@@ -517,13 +510,6 @@ export default function Comercial() {
                     ))}
                   </div>
 
-                  {/* Consolidado de reuniões (calendário + prospecção) */}
-                  {funis && (
-                    <div className="space-y-2">
-                      <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-1">Consolidado de reuniões</div>
-                      <GeralFunis funis={funis} />
-                    </div>
-                  )}
                 </>
 
               ) : loading ? (
