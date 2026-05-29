@@ -509,7 +509,7 @@ export default function Comercial() {
                       </Card>
                     ))}
                   </div>
-                  )}
+
                 </>
 
               ) : loading ? (
