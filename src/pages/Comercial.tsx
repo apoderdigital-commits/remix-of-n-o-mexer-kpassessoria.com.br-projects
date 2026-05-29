@@ -453,9 +453,25 @@ export default function Comercial() {
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
                         <div className="text-lg font-semibold mt-0.5">Funil Calendário</div>
                       </div>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
-                        reuniões do calendário
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Select value={geralCalendar} onValueChange={setGeralCalendar}>
+                          <SelectTrigger className="h-8 w-[220px] bg-background/40 border-white/10 text-xs">
+                            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
+                            <SelectValue placeholder="Todos os calendários" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value="__all__">Todos os calendários</SelectItem>
+                            {geralCalendars.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name || "Sem calendário"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
+                          reuniões do calendário
+                        </Badge>
+                      </div>
                     </div>
 
                     <div className="relative space-y-2 flex flex-col items-center">
