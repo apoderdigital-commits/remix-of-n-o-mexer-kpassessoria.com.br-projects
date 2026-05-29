@@ -131,6 +131,7 @@ export default function Comercial() {
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
     if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.geralCalendars) setGeralCalendars(payload.geralCalendars as any);
     if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
     setFase2({
