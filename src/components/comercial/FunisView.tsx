@@ -35,7 +35,6 @@ const CATS: { key: LeadCat; label: string }[] = [
   { key: "A", label: "Lead A" },
   { key: "B", label: "Lead B" },
   { key: "C", label: "Lead C" },
-  { key: "Outro", label: "Sem tag" },
 ];
 
 export function LeadCategoryFilter({ value, onChange }: { value: LeadCat; onChange: (v: LeadCat) => void }) {
@@ -135,10 +134,10 @@ function CatSummary({ counts }: { counts: CatCounts }) {
     { k: "A", l: "Lead A", c: "text-emerald-300" },
     { k: "B", l: "Lead B", c: "text-blue-300" },
     { k: "C", l: "Lead C", c: "text-amber-300" },
-    { k: "Outro", l: "Sem tag", c: "text-muted-foreground" },
   ];
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+
       {items.map((it) => (
         <Card key={it.k} className="p-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{it.l}</div>
