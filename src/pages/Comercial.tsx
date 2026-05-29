@@ -319,10 +319,11 @@ export default function Comercial() {
   // Funil Calendário: Agendamentos → Comparecimentos → No-show → Vendas (somente reuniões do calendário)
   const funnelStages = funis ? (() => {
     const g = funis.geral;
-    const ag = g.agendamentos;
-    const co = g.comparecimentos;
-    const ns = g.noshows;
-    const ve = g.vendas;
+    const selected = geralCalendar !== "__all__" ? geralCalendars.find((c) => c.id === geralCalendar) : null;
+    const ag = selected ? selected.agendamentos : g.agendamentos;
+    const co = selected ? selected.comparecimentos : g.comparecimentos;
+    const ns = selected ? selected.noshows : g.noshows;
+    const ve = selected ? 0 : g.vendas;
     const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
     return [
       { icon: CalendarClock,  label: "Agendamentos",    count: ag, pctTotal: 100,             pctPrev: null,            grad: "from-violet-500/80 to-violet-600/40",   iconBg: "bg-violet-500/20 text-violet-200" },
