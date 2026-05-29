@@ -313,23 +313,22 @@ export default function Comercial() {
     { label: "Este mês", apply: () => { setSince(startOfMonth()); setUntil(todayIso()); } },
   ];
 
-  // Funil principal: Leads → MQLs → Reuniões → Comparecidas → Vendas (taxa ativação = MQLs/Leads exibida no estágio MQL)
-  const funnelStages = kpis && fase2 ? (() => {
-    const leads = kpis.leadsTotais;
-    const mqls = kpis.mqls;
-    const marc = fase3?.aggregateFunnel.find((item) => item.stage === "Agendados")?.count ?? fase2.mqlSummary.agendados;
-    const comp = fase3?.aggregateFunnel.find((item) => item.stage === "Realizados")?.count ?? fase2.mqlSummary.realizados;
-    const vend = kpis.vendas;
+  // Funil Calendário: Agendamentos → Comparecimentos → No-show → Vendas (somente reuniões do calendário)
+  const funnelStages = funis ? (() => {
+    const g = funis.geral;
+    const ag = g.agendamentos;
+    const co = g.comparecimentos;
+    const ns = g.noshows;
+    const ve = g.vendas;
     const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
     return [
-      { icon: Users,          label: "Leads Totais",       count: leads, pctTotal: 100,                    pctPrev: null,                       grad: "from-blue-500/80 to-blue-600/40",     iconBg: "bg-blue-500/20 text-blue-200" },
-      { icon: Target,         label: "MQLs",               count: mqls,  pctTotal: pct(mqls, leads),       pctPrev: pct(mqls, leads),           grad: "from-cyan-500/80 to-cyan-600/40",     iconBg: "bg-cyan-500/20 text-cyan-200" },
-      { icon: Percent,        label: "Taxa Ativação MQL",  count: null,  pctTotal: kpis.taxaAtivacaoMql,   pctPrev: null, isRate: true,         grad: "from-teal-500/80 to-teal-600/40",     iconBg: "bg-teal-500/20 text-teal-200" },
-      { icon: CalendarClock,  label: "Reuniões Marcadas",  count: marc,  pctTotal: pct(marc, leads),       pctPrev: pct(marc, mqls),            grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
-      { icon: CalendarCheck2, label: "Comparecidas",       count: comp,  pctTotal: pct(comp, leads),       pctPrev: pct(comp, marc),            grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
-      { icon: CheckCircle2,   label: "Vendas",             count: vend,  pctTotal: pct(vend, leads),       pctPrev: pct(vend, comp),            grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
+      { icon: CalendarClock,  label: "Agendamentos",    count: ag, pctTotal: 100,             pctPrev: null,            grad: "from-violet-500/80 to-violet-600/40",   iconBg: "bg-violet-500/20 text-violet-200" },
+      { icon: CalendarCheck2, label: "Comparecimentos", count: co, pctTotal: pct(co, ag),     pctPrev: pct(co, ag),     grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
+      { icon: Percent,        label: "No-show",         count: ns, pctTotal: pct(ns, ag),     pctPrev: pct(ns, ag),     grad: "from-rose-500/80 to-rose-600/40",       iconBg: "bg-rose-500/20 text-rose-200" },
+      { icon: CheckCircle2,   label: "Vendas",          count: ve, pctTotal: pct(ve, ag),     pctPrev: pct(ve, co),     grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
     ];
   })() : [];
+
 
   const cards = kpis ? [
     { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
