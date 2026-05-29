@@ -751,10 +751,14 @@ async function buildSnapshot(since: Date, until: Date) {
     addCat(trafego.leads, classifyLeadByTags(c));
   }
 
-  for (const c of mqlContacts) {
-    const cat = classifyLeadByTags(c);
-    addCat(trafego.mqls, cat);
+  // MQLs = contatos de tráfego com tag leada ou leadb (criados no período)
+  for (const c of allContacts) {
+    if (!inRange(c.dateAdded)) continue;
+    const tags = (c?.tags || []).map(normTag);
+    if (!tags.includes("leada") && !tags.includes("leadb")) continue;
+    addCat(trafego.mqls, classifyLeadByTags(c));
   }
+
   // Recuperação — leads criados ANTES do período com appt no período
   const recuperacao = { agendamentos: emptyCat(), comparecimentos: emptyCat() };
   for (const a of allAppts) {
