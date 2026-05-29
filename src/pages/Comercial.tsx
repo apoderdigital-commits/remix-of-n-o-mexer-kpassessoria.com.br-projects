@@ -14,6 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import {
+  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, GeralFunis, SdrFunisTable,
+  type FunisData, type SdrFunil, type LeadCat,
+} from "@/components/comercial/FunisView";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
@@ -101,6 +105,9 @@ export default function Comercial() {
   const [ghlCalendars, setGhlCalendars] = useState<{ ghl_calendar_id: string; name: string; enabled: boolean }[]>([]);
   const [syncingCalendars, setSyncingCalendars] = useState(false);
   const [apptDebug, setApptDebug] = useState<any>(null);
+  const [funis, setFunis] = useState<FunisData | null>(null);
+  const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
+  const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
 
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
@@ -121,6 +128,8 @@ export default function Comercial() {
       setGhlCalendars(payload.calendarsConfig.map((c: any) => ({ ghl_calendar_id: c.id, name: c.name, enabled: c.enabled })));
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
+    if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
     setFase2({
       sdrs: payload.sdrs || [],
@@ -413,9 +422,11 @@ export default function Comercial() {
           <Tabs defaultValue="kpis" className="space-y-5">
             <div className="overflow-x-auto -mx-1 px-1">
               <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
-                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
-                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
-                
+                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Geral</TabsTrigger>
+                <TabsTrigger value="trafego" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Tráfego</TabsTrigger>
+                <TabsTrigger value="prospeccao" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Prospecção</TabsTrigger>
+                <TabsTrigger value="recuperacao" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Recuperação</TabsTrigger>
+                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">SDR</TabsTrigger>
                 <TabsTrigger value="closers" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Closers</TabsTrigger>
                 <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
                 {isAdmin && (
@@ -505,7 +516,16 @@ export default function Comercial() {
                       </Card>
                     ))}
                   </div>
+
+                  {/* Consolidado de reuniões (calendário + prospecção) */}
+                  {funis && (
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-1">Consolidado de reuniões</div>
+                      <GeralFunis funis={funis} />
+                    </div>
+                  )}
                 </>
+
               ) : loading ? (
                 <div className="space-y-5">
                   <Skeleton className="h-96 w-full rounded-2xl" />
@@ -526,8 +546,57 @@ export default function Comercial() {
               )}
             </TabsContent>
 
+            {/* Funil de Tráfego */}
+            <TabsContent value="trafego" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <TrafegoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
+            {/* Funil de Prospecção */}
+            <TabsContent value="prospeccao" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <ProspeccaoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
+            {/* Funil de Recuperação */}
+            <TabsContent value="recuperacao" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <RecuperacaoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
           {/* SDRs */}
           <TabsContent value="sdrs" className="space-y-4">
+            {/* Performance por SDR nos 3 funis (tráfego / recuperação / prospecção) */}
+            {sdrFunis.length > 0 && (
+              <div className="space-y-3">
+                <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                <SdrFunisTable sdrFunis={sdrFunis} filter={leadFilter} />
+              </div>
+            )}
             {/* Resumo MQL + botões de lista (migrados da aba MQLs) */}
             {fase2 && (
               <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
