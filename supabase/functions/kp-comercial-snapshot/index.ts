@@ -905,8 +905,6 @@ async function buildSnapshot(since: Date, until: Date) {
     calendarsConfig: calendars.map((c: any) => ({
       id: c.id,
       name: c.name || calendarMeta.get(c.id)?.name || "",
-      enabled: hasCalendarConfig ? !!calendarMeta.get(c.id)?.enabled : true,
-    })),
     appointmentSourceDebug: {
       appointmentsBrutos: allAppts.length,
       filtradosSemOppMeta: apptsFiltradosSemOpp,
@@ -914,6 +912,11 @@ async function buildSnapshot(since: Date, until: Date) {
       topSources,
       metaOppsTotal: metaOppByContact.size,
       meetingsCounted: meetingSummary.total,
+      meetingsByStatus: meetingSummary,
+      meetingsByStatusAll: meetingSummaryAll,
+      statusHistogram,
+    },
+
       meetingsByStatus: meetingSummary,
     },
 
