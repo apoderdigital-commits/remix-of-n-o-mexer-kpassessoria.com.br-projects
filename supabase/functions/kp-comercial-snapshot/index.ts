@@ -832,11 +832,13 @@ async function buildSnapshot(since: Date, until: Date) {
     const bucket = getAppointmentBucket(a);
     if (bucket === "cancelado" || bucket === "outro") continue;
     if (!apptInPeriod(a)) continue;
+    const c = a.contactId ? contactById.get(a.contactId) : null;
+    // Só conta agendamento/comparecimento se o contato tiver tag de lead (leada/leadb/leadc)
+    if (!c || !hasLeadTag(c)) continue;
     const metaOpp = a.contactId ? metaOppByContact.get(a.contactId) : null;
     const uid = (metaOpp?.assignedTo) || a.assignedUserId || a.userId;
     if (!uid) continue;
-    const c = a.contactId ? contactById.get(a.contactId) : null;
-    const cat = c ? classifyLeadByTags(c) : "Outro";
+    const cat = classifyLeadByTags(c);
     const createdT = c?.dateAdded ? new Date(c.dateAdded).getTime() : NaN;
     const isRecup = !isNaN(createdT) && createdT < sinceMs;
     const s = initSdrFunil(uid);
