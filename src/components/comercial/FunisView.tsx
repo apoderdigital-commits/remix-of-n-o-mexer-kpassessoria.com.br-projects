@@ -35,7 +35,6 @@ const CATS: { key: LeadCat; label: string }[] = [
   { key: "A", label: "Lead A" },
   { key: "B", label: "Lead B" },
   { key: "C", label: "Lead C" },
-  { key: "Outro", label: "Sem tag" },
 ];
 
 export function LeadCategoryFilter({ value, onChange }: { value: LeadCat; onChange: (v: LeadCat) => void }) {
