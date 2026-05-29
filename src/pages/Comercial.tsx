@@ -546,6 +546,48 @@ export default function Comercial() {
               )}
             </TabsContent>
 
+            {/* Funil de Tráfego */}
+            <TabsContent value="trafego" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <TrafegoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
+            {/* Funil de Prospecção */}
+            <TabsContent value="prospeccao" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <ProspeccaoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
+            {/* Funil de Recuperação */}
+            <TabsContent value="recuperacao" className="space-y-4">
+              {funis ? (
+                <>
+                  <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                  <RecuperacaoFunnel funis={funis} filter={leadFilter} />
+                </>
+              ) : loading ? (
+                <Skeleton className="h-96 w-full rounded-2xl" />
+              ) : (
+                <Card className="p-12 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl text-center text-muted-foreground">Sem dados no período.</Card>
+              )}
+            </TabsContent>
+
           {/* SDRs */}
           <TabsContent value="sdrs" className="space-y-4">
             {/* Resumo MQL + botões de lista (migrados da aba MQLs) */}
