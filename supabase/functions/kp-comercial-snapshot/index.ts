@@ -399,8 +399,7 @@ async function buildSnapshot(since: Date, until: Date) {
   };
 
   // ---------- CLASSIFICAÇÃO DE CONTATOS (MQL / A / B / C / Outro) ----------
-  const contactById = new Map<string, any>();
-  for (const c of allContacts) contactById.set(c.id, c);
+  // contactById já definido acima (junto com helpers de tag)
   const pipelineClasseById = new Map<string, string>();
   for (const pf of pipelineFunnels) pipelineClasseById.set(pf.id, pf.classe);
   const contactClasses = new Map<string, Set<string>>();
