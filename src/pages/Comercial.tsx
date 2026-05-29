@@ -469,27 +469,20 @@ export default function Comercial() {
                                 style={{ width: `${width}%` }}
                               >
                                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
-                                  {s.isRate ? "—" : fmtNum(s.count || 0)}
+                                <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
+                                  {fmtNum(s.count || 0)}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-white/95">
-                                  {s.isRate ? (
-                                    <span className="bg-black/25 rounded-full px-2.5 py-0.5 backdrop-blur-sm font-bold text-sm">
-                                      {fmtPct(s.pctTotal)}
+                                  <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
+                                    {fmtPct(s.pctTotal)} do topo
+                                  </span>
+                                  {s.pctPrev != null && i > 0 && (
+                                    <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                      ↓ {fmtPct(s.pctPrev)}
                                     </span>
-                                  ) : (
-                                    <>
-                                      <span className="bg-black/25 rounded-full px-2 py-0.5 backdrop-blur-sm font-semibold">
-                                        {fmtPct(s.pctTotal)} do topo
-                                      </span>
-                                      {s.pctPrev != null && i > 0 && (
-                                        <span className="hidden md:inline bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm">
-                                          ↓ {fmtPct(s.pctPrev)}
-                                        </span>
-                                      )}
-                                    </>
                                   )}
                                 </div>
-                              </div>
+
                             </div>
                           </div>
                         );
