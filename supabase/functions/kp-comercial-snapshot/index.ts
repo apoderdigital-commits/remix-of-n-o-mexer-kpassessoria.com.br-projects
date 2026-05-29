@@ -115,7 +115,7 @@ async function buildSnapshot(since: Date, until: Date) {
     ? calendars.filter((c: any) => enabledSet.has(c.id))
     : calendars;
 
-  const allAppts: any[] = [];
+  const allApptsRaw: any[] = [];
   for (const c of calendarsToFetch) {
     const params = new URLSearchParams({
       locationId, calendarId: c.id,
@@ -124,8 +124,19 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allAppts.push({ ...e, _calendarName: c.name });
+    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name });
   }
+  // Dedup por id do appointment (evita contar o mesmo evento 2x se vier em mais de um calendário)
+  const allAppts: any[] = [];
+  const seenApptIds = new Set<string>();
+  let duplicateAppts = 0;
+  for (const e of allApptsRaw) {
+    const aid = String(e?.id || e?.appointmentId || "");
+    if (aid && seenApptIds.has(aid)) { duplicateAppts++; continue; }
+    if (aid) seenApptIds.add(aid);
+    allAppts.push(e);
+  }
+
   const apptByContact = new Map<string, any>();
   for (const a of allAppts) {
     if (!a.contactId) continue;
