@@ -469,7 +469,7 @@ export default function Comercial() {
                                 style={{ width: `${width}%` }}
                               >
                                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
-                                <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">
+
                                   {fmtNum(s.count || 0)}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-white/95">
