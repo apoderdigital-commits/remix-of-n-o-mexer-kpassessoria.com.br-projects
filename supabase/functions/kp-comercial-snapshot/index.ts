@@ -124,7 +124,7 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name });
+    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name, _calendarId: c.id });
   }
   // Dedup por id do appointment (evita contar o mesmo evento 2x se vier em mais de um calendário)
   const allAppts: any[] = [];
