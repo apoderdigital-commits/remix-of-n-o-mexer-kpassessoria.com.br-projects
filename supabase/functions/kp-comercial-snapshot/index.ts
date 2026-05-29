@@ -301,9 +301,21 @@ async function buildSnapshot(since: Date, until: Date) {
   const ghlMqls = mqlContacts.length;
   const leadsTotais = ds.leads_source === "sheet" ? sheetLeads : ghlLeadsTotais;
   const mqls = ds.mqls_source === "sheet" ? sheetMqls : ghlMqls;
+  // Helpers de tag de lead (hoisted: usados aqui e nos funis abaixo)
+  const normTag = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  const hasLeadTag = (c: any) => {
+    const tags = (c?.tags || []).map(normTag);
+    return tags.includes("leada") || tags.includes("leadb") || tags.includes("leadc");
+  };
+  const contactById = new Map<string, any>();
+  for (const c of allContacts) contactById.set(c.id, c);
+
   const meetingSummary = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
   for (const a of allAppts) {
     const bucket = getAppointmentBucket(a);
+    // Só conta agendamento/comparecimento/no-show se o contato tiver tag de lead (leada/leadb/leadc)
+    const c = a.contactId ? contactById.get(a.contactId) : null;
+    if (!c || !hasLeadTag(c)) continue;
     if (bucket === "agendado") {
       meetingSummary.agendados++;
       meetingSummary.total++;
@@ -317,6 +329,7 @@ async function buildSnapshot(since: Date, until: Date) {
       meetingSummary.cancelados++;
     }
   }
+
   const agendados = meetingSummary.agendados;
   const realizados = meetingSummary.realizados;
   // Stages de proposta: usa mapeamento se configurado, senão regex nome
