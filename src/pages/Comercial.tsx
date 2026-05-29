@@ -440,18 +440,19 @@ export default function Comercial() {
             <TabsContent value="kpis" className="space-y-5">
               {kpis && fase2 ? (
                 <>
-                  {/* Funil principal */}
+                  {/* Funil Calendário */}
                   <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
                     <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
                     <div className="relative flex items-center justify-between mb-5">
                       <div>
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
-                        <div className="text-lg font-semibold mt-0.5">Do lead até a venda</div>
+                        <div className="text-lg font-semibold mt-0.5">Funil Calendário</div>
                       </div>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
-                        {dataSources ? `leads via ${dataSources.leads_source === "sheet" ? "planilha" : "GHL"} · MQLs via ${dataSources.mqls_source === "sheet" ? "planilha" : "GHL"}` : "tempo real"}
+                        reuniões do calendário
                       </Badge>
                     </div>
+
                     <div className="relative space-y-2 flex flex-col items-center">
                       {funnelStages.map((s, i) => {
                         const width = Math.max(34, 100 - i * 13);
