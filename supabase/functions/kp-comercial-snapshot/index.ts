@@ -920,6 +920,8 @@ async function buildSnapshot(since: Date, until: Date) {
     })),
     appointmentSourceDebug: {
       appointmentsBrutos: allAppts.length,
+      appointmentsRaw: allApptsRaw.length,
+      duplicateAppts,
       filtradosSemOppMeta: apptsFiltradosSemOpp,
       sourceFilter, sourceEnabled, meetingsFromCalendar,
       topSources,
