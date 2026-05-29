@@ -516,7 +516,15 @@ export default function Comercial() {
                       </Card>
                     ))}
                   </div>
-                </>
+
+                  {/* Consolidado de reuniões (calendário + prospecção) */}
+                  {funis && (
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-1">Consolidado de reuniões</div>
+                      <GeralFunis funis={funis} />
+                    </div>
+                  )}
+                </>�
               ) : loading ? (
                 <div className="space-y-5">
                   <Skeleton className="h-96 w-full rounded-2xl" />
