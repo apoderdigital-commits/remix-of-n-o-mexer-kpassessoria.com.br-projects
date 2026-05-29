@@ -105,6 +105,9 @@ export default function Comercial() {
   const [ghlCalendars, setGhlCalendars] = useState<{ ghl_calendar_id: string; name: string; enabled: boolean }[]>([]);
   const [syncingCalendars, setSyncingCalendars] = useState(false);
   const [apptDebug, setApptDebug] = useState<any>(null);
+  const [funis, setFunis] = useState<FunisData | null>(null);
+  const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
+  const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
 
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
