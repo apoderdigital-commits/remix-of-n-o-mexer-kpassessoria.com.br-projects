@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
-  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, GeralFunis, SdrFunisTable,
+  LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, SdrFunisTable,
   type FunisData, type SdrFunil, type LeadCat,
 } from "@/components/comercial/FunisView";
 
