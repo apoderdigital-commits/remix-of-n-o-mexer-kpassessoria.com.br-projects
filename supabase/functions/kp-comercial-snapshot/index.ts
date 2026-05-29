@@ -914,6 +914,7 @@ async function buildSnapshot(since: Date, until: Date) {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
     funis: { trafego, recuperacao, prospeccao, geral },
+    geralCalendars: Array.from(geralByCalendar.values()).sort((a, b) => b.agendamentos - a.agendamentos),
     sdrFunis,
     dataSources: {
       leads: ds.leads_source, mqls: ds.mqls_source,
