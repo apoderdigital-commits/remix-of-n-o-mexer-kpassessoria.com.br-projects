@@ -806,13 +806,16 @@ async function buildSnapshot(since: Date, until: Date) {
     else if (r.event_type === "noshow") addCat(prospeccao.noshow, cat);
   }
 
-  // Geral consolidado (tráfego + recuperação [calendário] + prospecção)
+  // Geral (Funil Calendário) — igual ao Tráfego: agendamento/comparecimento/no-show
+  // puxados da API de calendário do GHL, contando o contato agendado que tem tag
+  // de lead (leada/leadb/leadc). Não separa por A/B/C — geral é tudo somado.
   const geral = {
-    agendamentos: meetingSummary.total + prospeccao.agendadas.Geral,
-    comparecimentos: meetingSummary.realizados + prospeccao.comparecidas.Geral,
-    noshows: meetingSummary.noshow + prospeccao.noshow.Geral,
+    agendamentos: meetingSummary.total,
+    comparecimentos: meetingSummary.realizados,
+    noshows: meetingSummary.noshow,
     vendas,
   };
+
 
   // ---------- SDR por funil ----------
   const sdrFunilMap = new Map<string, any>();
