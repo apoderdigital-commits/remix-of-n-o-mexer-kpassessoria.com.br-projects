@@ -422,9 +422,11 @@ export default function Comercial() {
           <Tabs defaultValue="kpis" className="space-y-5">
             <div className="overflow-x-auto -mx-1 px-1">
               <TabsList className="bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl p-1 h-auto inline-flex gap-1 shadow-xl shadow-black/20">
-                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">KPIs</TabsTrigger>
-                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Reuniões / SDRs</TabsTrigger>
-                
+                <TabsTrigger value="kpis" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Geral</TabsTrigger>
+                <TabsTrigger value="trafego" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Tráfego</TabsTrigger>
+                <TabsTrigger value="prospeccao" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Prospecção</TabsTrigger>
+                <TabsTrigger value="recuperacao" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Recuperação</TabsTrigger>
+                <TabsTrigger value="sdrs" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">SDR</TabsTrigger>
                 <TabsTrigger value="closers" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">Closers</TabsTrigger>
                 <TabsTrigger value="noshow" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/30 transition-all">No-show</TabsTrigger>
                 {isAdmin && (
