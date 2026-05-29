@@ -590,6 +590,13 @@ export default function Comercial() {
 
           {/* SDRs */}
           <TabsContent value="sdrs" className="space-y-4">
+            {/* Performance por SDR nos 3 funis (tráfego / recuperação / prospecção) */}
+            {sdrFunis.length > 0 && (
+              <div className="space-y-3">
+                <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
+                <SdrFunisTable sdrFunis={sdrFunis} filter={leadFilter} />
+              </div>
+            )}
             {/* Resumo MQL + botões de lista (migrados da aba MQLs) */}
             {fase2 && (
               <Card className="p-4 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl">
