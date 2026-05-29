@@ -766,10 +766,13 @@ async function buildSnapshot(since: Date, until: Date) {
     if (bucket === "cancelado" || bucket === "outro") continue;
     if (!apptInPeriod(a)) continue;
     const c = a.contactId ? contactById.get(a.contactId) : null;
-    const cat = c ? classifyLeadByTags(c) : "Outro";
+    // Só conta agendamento/comparecimento se o contato tiver tag de lead (leada/leadb/leadc)
+    if (!c || !hasLeadTag(c)) continue;
+    const cat = classifyLeadByTags(c);
     const createdT = c?.dateAdded ? new Date(c.dateAdded).getTime() : NaN;
     const isRecup = !isNaN(createdT) && createdT < sinceMs;
     const isTrafego = !isNaN(createdT) && createdT >= sinceMs && createdT <= untilMs;
+
     if (isRecup) {
       addCat(recuperacao.agendamentos, cat);
       if (bucket === "realizado") addCat(recuperacao.comparecimentos, cat);
