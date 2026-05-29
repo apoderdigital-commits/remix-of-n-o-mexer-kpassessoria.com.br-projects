@@ -487,8 +487,6 @@ export default function Comercial() {
                         );
                       })}
 
-                        );
-                      })}
                     </div>
                   </Card>
 
