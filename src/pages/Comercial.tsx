@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -108,6 +109,8 @@ export default function Comercial() {
   const [funis, setFunis] = useState<FunisData | null>(null);
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
+  const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
+  const [geralCalendar, setGeralCalendar] = useState<string>("__all__");
 
   const [mqlListOpen, setMqlListOpen] = useState<null | "mql" | "nonmql">(null);
   const [closerDrill, setCloserDrill] = useState<null | { closerName: string; bucket: CloserBucket; classe: "A"|"B"|"C"|"Outro"|"Total"; items: CloserEntry[] }>(null);
@@ -129,6 +132,7 @@ export default function Comercial() {
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
     if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.geralCalendars) setGeralCalendars(payload.geralCalendars as any);
     if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
     setFase2({
@@ -316,10 +320,11 @@ export default function Comercial() {
   // Funil Calendário: Agendamentos → Comparecimentos → No-show → Vendas (somente reuniões do calendário)
   const funnelStages = funis ? (() => {
     const g = funis.geral;
-    const ag = g.agendamentos;
-    const co = g.comparecimentos;
-    const ns = g.noshows;
-    const ve = g.vendas;
+    const selected = geralCalendar !== "__all__" ? geralCalendars.find((c) => c.id === geralCalendar) : null;
+    const ag = selected ? selected.agendamentos : g.agendamentos;
+    const co = selected ? selected.comparecimentos : g.comparecimentos;
+    const ns = selected ? selected.noshows : g.noshows;
+    const ve = selected ? 0 : g.vendas;
     const pct = (n: number, base: number) => (base > 0 ? (n / base) * 100 : 0);
     return [
       { icon: CalendarClock,  label: "Agendamentos",    count: ag, pctTotal: 100,             pctPrev: null,            grad: "from-violet-500/80 to-violet-600/40",   iconBg: "bg-violet-500/20 text-violet-200" },
@@ -448,9 +453,25 @@ export default function Comercial() {
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Funil de conversão</div>
                         <div className="text-lg font-semibold mt-0.5">Funil Calendário</div>
                       </div>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
-                        reuniões do calendário
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Select value={geralCalendar} onValueChange={setGeralCalendar}>
+                          <SelectTrigger className="h-8 w-[220px] bg-background/40 border-white/10 text-xs">
+                            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
+                            <SelectValue placeholder="Todos os calendários" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value="__all__">Todos os calendários</SelectItem>
+                            {geralCalendars.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name || "Sem calendário"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] gap-1">
+                          reuniões do calendário
+                        </Badge>
+                      </div>
                     </div>
 
                     <div className="relative space-y-2 flex flex-col items-center">

@@ -124,7 +124,7 @@ async function buildSnapshot(since: Date, until: Date) {
     const r = await fetch(`${GHL_BASE}/calendars/events?${params}`, { headers });
     if (!r.ok) continue;
     const j = await r.json();
-    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name });
+    for (const e of (j.events || [])) allApptsRaw.push({ ...e, _calendarName: c.name, _calendarId: c.id });
   }
   // Dedup por id do appointment (evita contar o mesmo evento 2x se vier em mais de um calendário)
   const allAppts: any[] = [];
@@ -326,6 +326,8 @@ async function buildSnapshot(since: Date, until: Date) {
   // meetingSummaryAll (SEM filtro de tag) — usado SOMENTE no Funil Calendário (aba Geral):
   // mostra tudo que está marcado no calendário, independente de ter tag de lead.
   const meetingSummaryAll = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
+  // Quebra do Funil Calendário (aba Geral) por calendário — permite filtrar por calendário no frontend
+  const geralByCalendar = new Map<string, { id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }>();
   const statusHistogram: Record<string, number> = {};
   for (const a of allAppts) {
     const rawStatus = String(a?.appointmentStatus || a?.status || "(vazio)").toLowerCase();
@@ -336,6 +338,17 @@ async function buildSnapshot(since: Date, until: Date) {
     else if (bucket === "realizado") { meetingSummaryAll.realizados++; meetingSummaryAll.total++; }
     else if (bucket === "noshow") { meetingSummaryAll.noshow++; meetingSummaryAll.total++; }
     else if (bucket === "cancelado") { meetingSummaryAll.cancelados++; }
+
+    // Quebra por calendário (mesma semântica do meetingSummaryAll: ignora cancelados)
+    if (bucket === "agendado" || bucket === "realizado" || bucket === "noshow") {
+      const calId = String(a._calendarId || a.calendarId || "sem_calendario");
+      const calName = String(a._calendarName || "Sem calendário");
+      let row = geralByCalendar.get(calId);
+      if (!row) { row = { id: calId, name: calName, agendamentos: 0, comparecimentos: 0, noshows: 0 }; geralByCalendar.set(calId, row); }
+      row.agendamentos++;
+      if (bucket === "realizado") row.comparecimentos++;
+      else if (bucket === "noshow") row.noshows++;
+    }
 
     // Demais abas: só conta se o contato tiver tag de lead (leada/leadb/leadc)
     const c = a.contactId ? contactById.get(a.contactId) : null;
@@ -901,6 +914,7 @@ async function buildSnapshot(since: Date, until: Date) {
     period: { since: since.toISOString(), until: until.toISOString() },
     kpis,
     funis: { trafego, recuperacao, prospeccao, geral },
+    geralCalendars: Array.from(geralByCalendar.values()).sort((a, b) => b.agendamentos - a.agendamentos),
     sdrFunis,
     dataSources: {
       leads: ds.leads_source, mqls: ds.mqls_source,
