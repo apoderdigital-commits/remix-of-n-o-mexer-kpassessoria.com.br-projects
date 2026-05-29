@@ -128,6 +128,8 @@ export default function Comercial() {
       setGhlCalendars(payload.calendarsConfig.map((c: any) => ({ ghl_calendar_id: c.id, name: c.name, enabled: c.enabled })));
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
+    if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
     setFase2({
       sdrs: payload.sdrs || [],
