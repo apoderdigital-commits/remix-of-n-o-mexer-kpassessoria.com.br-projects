@@ -751,11 +751,7 @@ async function buildSnapshot(since: Date, until: Date) {
   };
 
   // Tráfego — atribuição pela data de criação (dateAdded no período)
-  // Leads = SOMENTE contatos de tráfego, identificados pelas tags leada/leadb/leadc
-  const hasLeadTag = (c: any) => {
-    const tags = (c?.tags || []).map(normTag);
-    return tags.includes("leada") || tags.includes("leadb") || tags.includes("leadc");
-  };
+  // Leads = SOMENTE contatos de tráfego, identificados pelas tags leada/leadb/leadc (hasLeadTag definido acima)
   const trafego = { leads: emptyCat(), mqls: emptyCat(), agendamentos: emptyCat(), comparecimentos: emptyCat() };
   for (const c of allContacts) {
     if (!inRange(c.dateAdded)) continue;
