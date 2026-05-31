@@ -25,6 +25,11 @@ export interface SdrFunil {
   prospeccao: { prospeccoes: CatCounts; agendadas: CatCounts; comparecidas: CatCounts };
 }
 
+// Listas de nomes por etapa do funil de tráfego (drill-down clicável)
+export type TrafegoStageKey = "leads" | "mqls" | "agendamentos" | "comparecimentos";
+export interface TrafegoListItem { nome: string; category: "A" | "B" | "C" | "Outro" }
+export type TrafegoLists = Record<TrafegoStageKey, TrafegoListItem[]>;
+
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
 const fmtPct = (v: number) => `${(v || 0).toFixed(1)}%`;
 const pick = (c: CatCounts | undefined, f: LeadCat) => (c ? c[f] ?? 0 : 0);
