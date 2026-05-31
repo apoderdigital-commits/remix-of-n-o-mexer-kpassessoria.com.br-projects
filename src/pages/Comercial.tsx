@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
   LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, SdrFunisTable,
-  type FunisData, type SdrFunil, type LeadCat,
+  type FunisData, type SdrFunil, type LeadCat, type TrafegoLists, type TrafegoStageKey,
 } from "@/components/comercial/FunisView";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
