@@ -109,6 +109,8 @@ export default function Comercial() {
   const [funis, setFunis] = useState<FunisData | null>(null);
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
+  const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
   const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
   const [geralCalendar, setGeralCalendar] = useState<string>("__all__");
 
