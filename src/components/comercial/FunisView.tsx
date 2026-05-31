@@ -25,6 +25,11 @@ export interface SdrFunil {
   prospeccao: { prospeccoes: CatCounts; agendadas: CatCounts; comparecidas: CatCounts };
 }
 
+// Listas de nomes por etapa do funil de tráfego (drill-down clicável)
+export type TrafegoStageKey = "leads" | "mqls" | "agendamentos" | "comparecimentos";
+export interface TrafegoListItem { nome: string; category: "A" | "B" | "C" | "Outro" }
+export type TrafegoLists = Record<TrafegoStageKey, TrafegoListItem[]>;
+
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
 const fmtPct = (v: number) => `${(v || 0).toFixed(1)}%`;
 const pick = (c: CatCounts | undefined, f: LeadCat) => (c ? c[f] ?? 0 : 0);
@@ -64,9 +69,10 @@ interface Stage {
   count: number;
   grad: string;
   iconBg: string;
+  key?: string;
 }
 
-function FunnelChart({ stages }: { stages: Stage[] }) {
+function FunnelChart({ stages, onStageClick }: { stages: Stage[]; onStageClick?: (key: string) => void }) {
   const top = stages[0]?.count || 0;
   return (
     <div className="relative space-y-2 flex flex-col items-center">
@@ -75,6 +81,7 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
         const prev = i > 0 ? stages[i - 1].count : 0;
         const pctTop = top > 0 ? (s.count / top) * 100 : 0;
         const pctPrev = prev > 0 ? (s.count / prev) * 100 : 0;
+        const clickable = !!onStageClick && !!s.key;
         return (
           <div key={s.label} className="flex items-center gap-3 w-full">
             <div className="w-44 shrink-0 flex items-center gap-2.5">
@@ -85,7 +92,11 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
             </div>
             <div className="flex-1 flex justify-center">
               <div
-                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out`}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? () => onStageClick!(s.key!) : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStageClick!(s.key!); } } : undefined}
+                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out ${clickable ? "cursor-pointer hover:brightness-110 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-white/40" : ""}`}
                 style={{ width: `${width}%` }}
               >
                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">{fmtNum(s.count)}</div>
@@ -108,7 +119,8 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
   );
 }
 
-function FunnelCard({ title, subtitle, badge, stages }: { title: string; subtitle: string; badge?: string; stages: Stage[] }) {
+
+function FunnelCard({ title, subtitle, badge, stages, onStageClick }: { title: string; subtitle: string; badge?: string; stages: Stage[]; onStageClick?: (key: string) => void }) {
   return (
     <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
       <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
@@ -123,14 +135,14 @@ function FunnelCard({ title, subtitle, badge, stages }: { title: string; subtitl
           </Badge>
         )}
       </div>
-      <FunnelChart stages={stages} />
+      <FunnelChart stages={stages} onStageClick={onStageClick} />
     </Card>
   );
 }
 
 // Mini cards de resumo por categoria
-function CatSummary({ counts }: { counts: CatCounts }) {
-  const items: { k: LeadCat; l: string; c: string }[] = [
+function CatSummary({ counts, onCatClick }: { counts: CatCounts; onCatClick?: (cat: "A" | "B" | "C") => void }) {
+  const items: { k: "A" | "B" | "C"; l: string; c: string }[] = [
     { k: "A", l: "Lead A", c: "text-emerald-300" },
     { k: "B", l: "Lead B", c: "text-blue-300" },
     { k: "C", l: "Lead C", c: "text-amber-300" },
@@ -139,7 +151,14 @@ function CatSummary({ counts }: { counts: CatCounts }) {
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 
       {items.map((it) => (
-        <Card key={it.k} className="p-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl">
+        <Card
+          key={it.k}
+          role={onCatClick ? "button" : undefined}
+          tabIndex={onCatClick ? 0 : undefined}
+          onClick={onCatClick ? () => onCatClick(it.k) : undefined}
+          onKeyDown={onCatClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCatClick(it.k); } } : undefined}
+          className={`p-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-xl ${onCatClick ? "cursor-pointer transition-all hover:border-primary/40 hover:bg-card/50 focus:outline-none focus:ring-2 focus:ring-primary/40" : ""}`}
+        >
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{it.l}</div>
           <div className={`text-2xl font-bold mt-1 ${it.c}`}>{fmtNum(counts[it.k])}</div>
         </Card>
@@ -149,14 +168,26 @@ function CatSummary({ counts }: { counts: CatCounts }) {
 }
 
 // ---------- Tráfego ----------
-export function TrafegoFunnel({ funis, filter }: { funis: FunisData; filter: LeadCat }) {
+export function TrafegoFunnel({
+  funis,
+  filter,
+  onStageClick,
+  onCatClick,
+}: {
+  funis: FunisData;
+  filter: LeadCat;
+  onStageClick?: (key: TrafegoStageKey) => void;
+  onCatClick?: (cat: "A" | "B" | "C") => void;
+}) {
   const t = funis.trafego;
-  const stages: Stage[] = [
-    { icon: Users, label: "Leads gerados", count: pick(t.leads, filter), grad: "from-blue-500/80 to-blue-600/40", iconBg: "bg-blue-500/20 text-blue-200" },
-    { icon: Target, label: "MQLs", count: pick(t.mqls, filter), grad: "from-cyan-500/80 to-cyan-600/40", iconBg: "bg-cyan-500/20 text-cyan-200" },
-    { icon: CalendarClock, label: "Agendamentos", count: pick(t.agendamentos, filter), grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
-    { icon: CalendarCheck2, label: "Comparecimentos", count: pick(t.comparecimentos, filter), grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
+  const allStages: (Stage & { key: TrafegoStageKey })[] = [
+    { key: "leads", icon: Users, label: "Leads gerados", count: pick(t.leads, filter), grad: "from-blue-500/80 to-blue-600/40", iconBg: "bg-blue-500/20 text-blue-200" },
+    { key: "mqls", icon: Target, label: "MQLs", count: pick(t.mqls, filter), grad: "from-cyan-500/80 to-cyan-600/40", iconBg: "bg-cyan-500/20 text-cyan-200" },
+    { key: "agendamentos", icon: CalendarClock, label: "Agendamentos", count: pick(t.agendamentos, filter), grad: "from-violet-500/80 to-violet-600/40", iconBg: "bg-violet-500/20 text-violet-200" },
+    { key: "comparecimentos", icon: CalendarCheck2, label: "Comparecimentos", count: pick(t.comparecimentos, filter), grad: "from-fuchsia-500/80 to-fuchsia-600/40", iconBg: "bg-fuchsia-500/20 text-fuchsia-200" },
   ];
+  // No filtro "Todos" mostra MQLs; ao filtrar por Lead A/B/C, esconde a etapa de MQLs.
+  const stages = filter === "Geral" ? allStages : allStages.filter((s) => s.key !== "mqls");
   return (
     <div className="space-y-4">
       <FunnelCard
@@ -164,11 +195,13 @@ export function TrafegoFunnel({ funis, filter }: { funis: FunisData; filter: Lea
         subtitle="Atribuição pela data de criação do MQL no período"
         badge={filter === "Geral" ? "Todos os leads" : `Lead ${filter === "Outro" ? "sem tag" : filter}`}
         stages={stages}
+        onStageClick={onStageClick ? (k) => onStageClick(k as TrafegoStageKey) : undefined}
       />
-      <CatSummary counts={t.mqls} />
+      <CatSummary counts={t.mqls} onCatClick={onCatClick} />
     </div>
   );
 }
+
 
 // ---------- Prospecção ----------
 export function ProspeccaoFunnel({ funis, filter }: { funis: FunisData; filter: LeadCat }) {

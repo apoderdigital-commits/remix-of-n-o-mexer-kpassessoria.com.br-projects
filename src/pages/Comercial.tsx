@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
   LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, SdrFunisTable,
-  type FunisData, type SdrFunil, type LeadCat,
+  type FunisData, type SdrFunil, type LeadCat, type TrafegoLists, type TrafegoStageKey,
 } from "@/components/comercial/FunisView";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -109,6 +109,8 @@ export default function Comercial() {
   const [funis, setFunis] = useState<FunisData | null>(null);
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
+  const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
   const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
   const [geralCalendar, setGeralCalendar] = useState<string>("__all__");
 
@@ -132,6 +134,7 @@ export default function Comercial() {
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
     if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.trafegoLists) setTrafegoLists(payload.trafegoLists as TrafegoLists);
     if (payload.geralCalendars) setGeralCalendars(payload.geralCalendars as any);
     if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
@@ -333,6 +336,30 @@ export default function Comercial() {
       { icon: CheckCircle2,   label: "Vendas",          count: ve, pctTotal: pct(ve, ag),     pctPrev: pct(ve, co),     grad: "from-emerald-500/80 to-emerald-600/40", iconBg: "bg-emerald-500/20 text-emerald-200" },
     ];
   })() : [];
+
+  // Drill-down do Funil de Tráfego: abre lista de nomes filtrada pela categoria atual
+  const stageLabels: Record<TrafegoStageKey, string> = {
+    leads: "Leads gerados",
+    mqls: "MQLs",
+    agendamentos: "Agendamentos",
+    comparecimentos: "Comparecimentos",
+  };
+  const openTrafegoStage = (key: TrafegoStageKey) => {
+    if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
+    const items = trafegoLists[key] || [];
+    const filtered = leadFilter === "Geral" ? items : items.filter((it) => it.category === leadFilter);
+    const nomes = filtered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const sufixo = leadFilter === "Geral" ? "" : ` · Lead ${leadFilter === "Outro" ? "sem tag" : leadFilter}`;
+    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes });
+  };
+  const openTrafegoCat = (cat: "A" | "B" | "C") => {
+    if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
+    const items = (trafegoLists.mqls || []).filter((it) => it.category === cat);
+    const nomes = items.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    setTrafegoDrill({ title: `MQLs · Lead ${cat}`, nomes });
+  };
+
+
 
 
   const cards = kpis ? [
@@ -558,7 +585,7 @@ export default function Comercial() {
               {funis ? (
                 <>
                   <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
-                  <TrafegoFunnel funis={funis} filter={leadFilter} />
+                  <TrafegoFunnel funis={funis} filter={leadFilter} onStageClick={openTrafegoStage} onCatClick={openTrafegoCat} />
                 </>
               ) : loading ? (
                 <Skeleton className="h-96 w-full rounded-2xl" />
@@ -1606,6 +1633,28 @@ export default function Comercial() {
             </div>
           ) : (
             <div className="text-center py-8 text-sm text-muted-foreground">Tudo em dia.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Drill-down do Funil de Tráfego — nomes dos contatos */}
+      <Dialog open={!!trafegoDrill} onOpenChange={(o) => !o && setTrafegoDrill(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {trafegoDrill?.title} <span className="text-muted-foreground font-normal">({trafegoDrill?.nomes.length || 0})</span>
+            </DialogTitle>
+          </DialogHeader>
+          {trafegoDrill && trafegoDrill.nomes.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto space-y-1 pr-1">
+              {trafegoDrill.nomes.map((nome, i) => (
+                <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5">
+                  {nome}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
           )}
         </DialogContent>
       </Dialog>
