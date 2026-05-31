@@ -134,6 +134,7 @@ export default function Comercial() {
     }
     if (payload.appointmentSourceDebug) setApptDebug(payload.appointmentSourceDebug);
     if (payload.funis) setFunis(payload.funis as FunisData);
+    if (payload.trafegoLists) setTrafegoLists(payload.trafegoLists as TrafegoLists);
     if (payload.geralCalendars) setGeralCalendars(payload.geralCalendars as any);
     if (payload.sdrFunis) setSdrFunis((payload.sdrFunis || []) as SdrFunil[]);
 
