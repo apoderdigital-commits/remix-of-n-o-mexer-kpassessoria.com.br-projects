@@ -337,6 +337,30 @@ export default function Comercial() {
     ];
   })() : [];
 
+  // Drill-down do Funil de Tráfego: abre lista de nomes filtrada pela categoria atual
+  const stageLabels: Record<TrafegoStageKey, string> = {
+    leads: "Leads gerados",
+    mqls: "MQLs",
+    agendamentos: "Agendamentos",
+    comparecimentos: "Comparecimentos",
+  };
+  const openTrafegoStage = (key: TrafegoStageKey) => {
+    if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
+    const items = trafegoLists[key] || [];
+    const filtered = leadFilter === "Geral" ? items : items.filter((it) => it.category === leadFilter);
+    const nomes = filtered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const sufixo = leadFilter === "Geral" ? "" : ` · Lead ${leadFilter === "Outro" ? "sem tag" : leadFilter}`;
+    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes });
+  };
+  const openTrafegoCat = (cat: "A" | "B" | "C") => {
+    if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
+    const items = (trafegoLists.mqls || []).filter((it) => it.category === cat);
+    const nomes = items.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    setTrafegoDrill({ title: `MQLs · Lead ${cat}`, nomes });
+  };
+
+
+
 
   const cards = kpis ? [
     { icon: DollarSign,   label: "Ticket Médio",        value: fmtBRL(kpis.ticketMedio),     ring: "ring-amber-500/20",    iconBg: "bg-amber-500/15 text-amber-300",        glow: "from-amber-500/20" },
