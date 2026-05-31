@@ -69,9 +69,10 @@ interface Stage {
   count: number;
   grad: string;
   iconBg: string;
+  key?: string;
 }
 
-function FunnelChart({ stages }: { stages: Stage[] }) {
+function FunnelChart({ stages, onStageClick }: { stages: Stage[]; onStageClick?: (key: string) => void }) {
   const top = stages[0]?.count || 0;
   return (
     <div className="relative space-y-2 flex flex-col items-center">
@@ -80,6 +81,7 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
         const prev = i > 0 ? stages[i - 1].count : 0;
         const pctTop = top > 0 ? (s.count / top) * 100 : 0;
         const pctPrev = prev > 0 ? (s.count / prev) * 100 : 0;
+        const clickable = !!onStageClick && !!s.key;
         return (
           <div key={s.label} className="flex items-center gap-3 w-full">
             <div className="w-44 shrink-0 flex items-center gap-2.5">
@@ -90,7 +92,11 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
             </div>
             <div className="flex-1 flex justify-center">
               <div
-                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out`}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? () => onStageClick!(s.key!) : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStageClick!(s.key!); } } : undefined}
+                className={`h-12 rounded-xl bg-gradient-to-r ${s.grad} shadow-lg flex items-center justify-between px-5 transition-all duration-700 ease-out ${clickable ? "cursor-pointer hover:brightness-110 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-white/40" : ""}`}
                 style={{ width: `${width}%` }}
               >
                 <div className="text-lg font-bold text-white drop-shadow-sm tracking-tight">{fmtNum(s.count)}</div>
@@ -112,6 +118,7 @@ function FunnelChart({ stages }: { stages: Stage[] }) {
     </div>
   );
 }
+
 
 function FunnelCard({ title, subtitle, badge, stages }: { title: string; subtitle: string; badge?: string; stages: Stage[] }) {
   return (
