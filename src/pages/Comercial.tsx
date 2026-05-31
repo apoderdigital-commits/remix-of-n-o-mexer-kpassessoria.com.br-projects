@@ -585,7 +585,7 @@ export default function Comercial() {
               {funis ? (
                 <>
                   <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
-                  <TrafegoFunnel funis={funis} filter={leadFilter} />
+                  <TrafegoFunnel funis={funis} filter={leadFilter} onStageClick={openTrafegoStage} onCatClick={openTrafegoCat} />
                 </>
               ) : loading ? (
                 <Skeleton className="h-96 w-full rounded-2xl" />
