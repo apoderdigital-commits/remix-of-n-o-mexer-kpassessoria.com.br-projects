@@ -1636,6 +1636,28 @@ export default function Comercial() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Drill-down do Funil de Tráfego — nomes dos contatos */}
+      <Dialog open={!!trafegoDrill} onOpenChange={(o) => !o && setTrafegoDrill(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {trafegoDrill?.title} <span className="text-muted-foreground font-normal">({trafegoDrill?.nomes.length || 0})</span>
+            </DialogTitle>
+          </DialogHeader>
+          {trafegoDrill && trafegoDrill.nomes.length > 0 ? (
+            <div className="max-h-[60vh] overflow-y-auto space-y-1 pr-1">
+              {trafegoDrill.nomes.map((nome, i) => (
+                <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5">
+                  {nome}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
