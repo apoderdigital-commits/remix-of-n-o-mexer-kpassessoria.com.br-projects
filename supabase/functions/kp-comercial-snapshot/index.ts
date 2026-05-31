@@ -784,10 +784,22 @@ async function buildSnapshot(since: Date, until: Date) {
   // Tráfego — atribuição pela data de criação (dateAdded no período)
   // Leads = SOMENTE contatos de tráfego, identificados pelas tags leada/leadb/leadc (hasLeadTag definido acima)
   const trafego = { leads: emptyCat(), mqls: emptyCat(), agendamentos: emptyCat(), comparecimentos: emptyCat() };
+  // Listas de nomes por etapa (para drill-down clicável no frontend)
+  const trafegoLists: {
+    leads: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+    mqls: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+    agendamentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+    comparecimentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+  } = { leads: [], mqls: [], agendamentos: [], comparecimentos: [] };
+  const contactName = (c: any) =>
+    `${c?.firstName || ""} ${c?.lastName || ""}`.trim() || c?.contactName || c?.email || "—";
+
   for (const c of allContacts) {
     if (!inRange(c.dateAdded)) continue;
     if (!hasLeadTag(c)) continue;
-    addCat(trafego.leads, classifyLeadByTags(c));
+    const cat = classifyLeadByTags(c);
+    addCat(trafego.leads, cat);
+    trafegoLists.leads.push({ nome: contactName(c), category: cat });
   }
 
   // MQLs = contatos de tráfego com tag leada ou leadb (criados no período)
@@ -795,7 +807,9 @@ async function buildSnapshot(since: Date, until: Date) {
     if (!inRange(c.dateAdded)) continue;
     const tags = (c?.tags || []).map(normTag);
     if (!tags.includes("leada") && !tags.includes("leadb")) continue;
-    addCat(trafego.mqls, classifyLeadByTags(c));
+    const cat = classifyLeadByTags(c);
+    addCat(trafego.mqls, cat);
+    trafegoLists.mqls.push({ nome: contactName(c), category: cat });
   }
 
   // Recuperação — leads criados ANTES do período com appt no período
@@ -817,7 +831,11 @@ async function buildSnapshot(since: Date, until: Date) {
       if (bucket === "realizado") addCat(recuperacao.comparecimentos, cat);
     } else if (isTrafego) {
       addCat(trafego.agendamentos, cat);
-      if (bucket === "realizado") addCat(trafego.comparecimentos, cat);
+      trafegoLists.agendamentos.push({ nome: contactName(c), category: cat });
+      if (bucket === "realizado") {
+        addCat(trafego.comparecimentos, cat);
+        trafegoLists.comparecimentos.push({ nome: contactName(c), category: cat });
+      }
     }
   }
 
