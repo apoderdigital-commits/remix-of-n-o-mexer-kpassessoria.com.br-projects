@@ -432,6 +432,7 @@ export default function Squad() {
     if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
     const curve = editingEng.curve_abc?.toUpperCase() || null;
     const sprint = editingEng.sprint?.toUpperCase() || null;
+    const ch = computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento);
     const payload: any = {
       squad_id: squadId,
       reference_month: editingEng.reference_month,
@@ -443,12 +444,14 @@ export default function Squad() {
       nps_individual: editingEng.nps_individual ?? null,
       observation: editingEng.observation || null,
       meta_status: editingEng.meta_status || null,
-      vendas: editingEng.vendas ?? null,
-      vendas_por_canais: editingEng.vendas_por_canais || null,
-      vendas_perc_canais: editingEng.vendas_perc_canais || null,
+      vendas_trafego: editingEng.vendas_trafego ?? null,
+      vendas_loja: editingEng.vendas_loja ?? null,
+      vendas: ch.vendasTotal || null,
+      vendas_por_canais: ch.vendasPorCanais || null,
+      vendas_perc_canais: ch.vendasPerc || null,
       faturamento: editingEng.faturamento ?? null,
-      faturamento_por_canais: editingEng.faturamento_por_canais || null,
-      faturamento_perc_canais: editingEng.faturamento_perc_canais || null,
+      faturamento_por_canais: ch.fatPorCanais || null,
+      faturamento_perc_canais: ch.fatPerc || null,
     };
     const res = editingEng.id
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
