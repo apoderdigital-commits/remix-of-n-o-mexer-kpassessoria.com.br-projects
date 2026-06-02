@@ -26,7 +26,7 @@ import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
   Smile, CalendarDays, Star, AlertCircle, NotebookPen, ClipboardList,
-  Target, DollarSign, ShoppingCart, Gauge, MessageSquare,
+  Target, DollarSign, ShoppingCart, Gauge, MessageSquare, Search, Store, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
@@ -134,6 +134,31 @@ function computeChannels(trafego: number | null | undefined, loja: number | null
   };
 }
 
+// Formata valores monetários em BRL (uso geral)
+const fmtBRL = (v: number | null | undefined) =>
+  "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+// Estatísticas de NPS a partir de uma lista de engajamentos (nps_individual)
+function buildNpsStats(list: Engagement[]) {
+  const scores = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
+  const total = scores.length;
+  const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
+  scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
+  const above8 = scores.filter((s) => s > 8).length;
+  const tens = scores.filter((s) => s === 10).length;
+  const below7 = scores.filter((s) => s < 7).length;
+  const middle = total - above8 - below7;
+  const npsScore = total > 0 ? Math.round(((above8 - below7) / total) * 100) : 0;
+  const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
+  return {
+    total, buckets,
+    pctAbove8: total > 0 ? Math.round((above8 / total) * 100) : 0,
+    pctTen: total > 0 ? Math.round((tens / total) * 100) : 0,
+    pctBelow7: total > 0 ? Math.round((below7 / total) * 100) : 0,
+    above8, tens, below7, middle, npsScore, avg,
+  };
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   AA: "bg-red-500/20 text-red-300 border-red-500/40",
   AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
@@ -213,6 +238,8 @@ export default function Squad() {
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
+  const [npsMonth, setNpsMonth] = useState<string>("all");
+  const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
   const [purgeMonth, setPurgeMonth] = useState<string | null>(null); // YYYY-MM-DD
@@ -630,18 +657,7 @@ export default function Squad() {
 
   // NPS distribuição a partir do engajamento (nps_individual)
   // Categorias (regra do squad): acima de 8, igual a 10, abaixo de 7
-  const npsDistribution = useMemo(() => {
-    const scores = engagement.map((e) => e.nps_individual).filter((v): v is number => v != null);
-    const total = scores.length;
-    const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
-    scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
-    const above8 = scores.filter((s) => s > 8).length;
-    const tens = scores.filter((s) => s === 10).length;
-    const below7 = scores.filter((s) => s < 7).length;
-    const middle = total - above8 - below7;
-    const npsScore = total > 0 ? Math.round(((above8 - below7) / total) * 100) : 0;
-    const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
-
+  const npsMonthly = useMemo(() => {
     const byMonth = new Map<string, number[]>();
     engagement.forEach((e) => {
       if (e.nps_individual == null || !e.reference_month) return;
@@ -649,7 +665,7 @@ export default function Squad() {
       if (!byMonth.has(k)) byMonth.set(k, []);
       byMonth.get(k)!.push(e.nps_individual);
     });
-    const monthly = Array.from(byMonth.entries())
+    return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, arr]) => {
         const t = arr.length;
@@ -662,15 +678,6 @@ export default function Squad() {
           nps: Math.round(((ab8 - bl7) / t) * 100),
         };
       });
-
-    return {
-      total, buckets,
-      pctAbove8: total > 0 ? Math.round((above8 / total) * 100) : 0,
-      pctTen: total > 0 ? Math.round((tens / total) * 100) : 0,
-      pctBelow7: total > 0 ? Math.round((below7 / total) * 100) : 0,
-      above8, tens, below7, middle,
-      npsScore, avg, monthly,
-    };
   }, [engagement]);
 
   const incompleteClients = useMemo(() => {
@@ -1082,12 +1089,166 @@ export default function Squad() {
               />
             </TabsContent>
 
-            {/* NPS — somente leitura, alimentado pelo Engajamento */}
+            {/* NPS — dashboard por cliente, filtrável por mês */}
             <TabsContent value="nps" className="space-y-4">
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-                Os dados desta aba são gerados automaticamente a partir das notas de NPS lançadas em <strong className="text-primary">Engajamento</strong>. Não é necessário cadastrar duas vezes.
-              </div>
-              <NpsChart dist={npsDistribution} />
+              {(() => {
+                const months = Array.from(new Set(engagement.map((e) => (e.reference_month || "").slice(0, 7)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+                const byMonth = npsMonth === "all" ? engagement : engagement.filter((e) => (e.reference_month || "").slice(0, 7) === npsMonth);
+                const q = npsSearch.trim().toLowerCase();
+                const filtered = q ? byMonth.filter((e) => (e.client_name || "").toLowerCase().includes(q)) : byMonth;
+                const stats = buildNpsStats(filtered);
+                const dist = { ...stats, monthly: npsMonthly };
+
+                // Agrupa por sprint (A, B, C, depois sem sprint)
+                const sprintOrder = ["A", "B", "C"];
+                const groups = new Map<string, Engagement[]>();
+                filtered.forEach((e) => {
+                  const s = (e.sprint || "").toUpperCase() || "—";
+                  if (!groups.has(s)) groups.set(s, []);
+                  groups.get(s)!.push(e);
+                });
+                const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
+                  const ia = sprintOrder.indexOf(a); const ib = sprintOrder.indexOf(b);
+                  return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                });
+
+                return (
+                  <>
+                    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                      As notas de NPS são alimentadas pela aba <strong className="text-primary">Engajamento</strong>. Aqui você vê um dashboard completo de cada cliente: NPS, engajamento, vendas e faturamento por canais.
+                    </div>
+
+                    {/* Filtros */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        <Label className="text-xs text-muted-foreground">Mês:</Label>
+                        <Select value={npsMonth} onValueChange={setNpsMonth}>
+                          <SelectTrigger className="w-[200px] bg-card/40 border-border/40"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos os meses</SelectItem>
+                            {months.map((m) => (
+                              <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="relative flex-1 min-w-[200px] max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={npsSearch}
+                          onChange={(e) => setNpsSearch(e.target.value)}
+                          placeholder="Pesquisar cliente..."
+                          className="pl-9 bg-card/40 border-border/40"
+                        />
+                      </div>
+                    </div>
+
+                    <NpsChart dist={dist} />
+
+                    {/* Dashboard por cliente, organizado por sprint */}
+                    {filtered.length === 0 ? (
+                      <div className="rounded-2xl border border-border/30 bg-card/40 p-10 text-center text-muted-foreground">
+                        Nenhum cliente encontrado{q ? " para esta pesquisa" : npsMonth !== "all" ? " neste mês" : ""}.
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {orderedGroups.map(([sprint, list]) => (
+                          <div key={sprint}>
+                            <div className="flex items-center gap-2 mb-2.5">
+                              <Badge variant="outline" className={CURVE_COLORS[sprint] || "border-border/40 text-muted-foreground"}>
+                                Sprint {sprint}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{list.length} {list.length === 1 ? "cliente" : "clientes"}</span>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                              {list.map((e) => {
+                                const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
+                                const nps = e.nps_individual;
+                                const npsTone = nps == null ? "text-muted-foreground" : nps > 8 ? "text-emerald-300" : nps < 7 ? "text-red-300" : "text-amber-300";
+                                return (
+                                  <Card key={e.id} className="bg-card/40 border-border/30 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-2">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <CardTitle className="text-sm leading-tight">{e.client_name}</CardTitle>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}`}>{e.curve_abc || "-"}</Badge>
+                                          <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}`}>{e.sprint || "-"}</Badge>
+                                        </div>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 text-xs">
+                                      {/* NPS + Engajamento */}
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="rounded-lg border border-border/30 bg-background/30 p-2.5">
+                                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">NPS</p>
+                                          <p className={`text-2xl font-bold ${npsTone}`}>{nps != null ? nps : "—"}</p>
+                                        </div>
+                                        <div className="rounded-lg border border-border/30 bg-background/30 p-2.5">
+                                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Engajamento</p>
+                                          <span className="inline-flex items-center gap-0.5 mt-1.5">
+                                            {e.engagement_score != null ? Array.from({ length: 5 }).map((_, i) => (
+                                              <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                                            )) : <span className="text-muted-foreground">—</span>}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Vendas */}
+                                      <div className="rounded-lg border border-border/30 bg-background/30 p-2.5 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground"><ShoppingCart className="h-3 w-3" /> Vendas</span>
+                                          <span className="font-bold text-foreground">{ch.vendasTotal || 0}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-muted-foreground">
+                                          <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-sky-400" /> Tráfego</span>
+                                          <span>{Number(e.vendas_trafego) || 0}{ch.vendasTotal ? ` (${Math.round(((Number(e.vendas_trafego) || 0) / ch.vendasTotal) * 100)}%)` : ""}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-muted-foreground">
+                                          <span className="inline-flex items-center gap-1"><Store className="h-3 w-3 text-fuchsia-400" /> Loja</span>
+                                          <span>{Number(e.vendas_loja) || 0}{ch.vendasTotal ? ` (${Math.round(((Number(e.vendas_loja) || 0) / ch.vendasTotal) * 100)}%)` : ""}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Faturamento */}
+                                      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-emerald-300/80"><DollarSign className="h-3 w-3" /> Faturamento</span>
+                                          <span className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-muted-foreground">
+                                          <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-sky-400" /> Tráfego</span>
+                                          <span>{fmtBRL(ch.fatTrafego)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-muted-foreground">
+                                          <span className="inline-flex items-center gap-1"><Store className="h-3 w-3 text-fuchsia-400" /> Loja</span>
+                                          <span>{fmtBRL(ch.fatLoja)}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Meta + Observação */}
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {e.meta_status && (
+                                          <Badge variant="outline" className={e.meta_status.toLowerCase().includes("dentro") ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40" : "bg-red-500/10 text-red-300 border-red-500/40"}>
+                                            <Target className="h-3 w-3 mr-1" />{e.meta_status}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {e.observation && (
+                                        <p className="text-muted-foreground border-t border-border/20 pt-2 leading-relaxed">{e.observation}</p>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </TabsContent>
 
             {/* ENGAJAMENTO — agrupado por mês */}
@@ -1202,6 +1363,8 @@ export default function Squad() {
                                 <TableHead className="text-center">Sprint</TableHead>
                                 <TableHead className="text-center">Engaj. (1-5)</TableHead>
                                 <TableHead className="text-center">NPS</TableHead>
+                                <TableHead className="text-center">Vendas</TableHead>
+                                <TableHead className="text-center">Faturamento</TableHead>
                                 <TableHead>Observação</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
                               </TableRow>
@@ -1234,6 +1397,31 @@ export default function Squad() {
                                       }>{e.nps_individual}</Badge>
                                     ) : "-"}
                                   </TableCell>
+                                  {(() => {
+                                    const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
+                                    return (
+                                      <>
+                                        <TableCell className="text-center">
+                                          {ch.vendasTotal > 0 ? (
+                                            <div className="leading-tight">
+                                              <span className="font-bold">{ch.vendasTotal}</span>
+                                              <span className="block text-[10px] text-muted-foreground">T {Number(e.vendas_trafego) || 0} · L {Number(e.vendas_loja) || 0}</span>
+                                            </div>
+                                          ) : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          {e.faturamento != null && Number(e.faturamento) > 0 ? (
+                                            <div className="leading-tight">
+                                              <span className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</span>
+                                              {ch.vendasTotal > 0 && (
+                                                <span className="block text-[10px] text-muted-foreground">T {fmtBRL(ch.fatTrafego)} · L {fmtBRL(ch.fatLoja)}</span>
+                                              )}
+                                            </div>
+                                          ) : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
+                                      </>
+                                    );
+                                  })()}
                                   <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
                                   <TableCell className="text-right">
                                     <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
