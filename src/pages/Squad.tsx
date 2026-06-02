@@ -405,6 +405,13 @@ export default function Squad() {
       engagement_score: editingEng.engagement_score ?? null,
       nps_individual: editingEng.nps_individual ?? null,
       observation: editingEng.observation || null,
+      meta_status: editingEng.meta_status || null,
+      vendas: editingEng.vendas ?? null,
+      vendas_por_canais: editingEng.vendas_por_canais || null,
+      vendas_perc_canais: editingEng.vendas_perc_canais || null,
+      faturamento: editingEng.faturamento ?? null,
+      faturamento_por_canais: editingEng.faturamento_por_canais || null,
+      faturamento_perc_canais: editingEng.faturamento_perc_canais || null,
     };
     const res = editingEng.id
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
