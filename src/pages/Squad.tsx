@@ -83,7 +83,8 @@ type Engagement = {
   curve_abc: string | null; sprint: string | null;
   engagement_score: number | null; nps_individual: number | null; observation: string | null;
   meta_status: string | null;
-  vendas: number | null; vendas_por_canais: string | null; vendas_perc_canais: string | null;
+  vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
+  vendas_por_canais: string | null; vendas_perc_canais: string | null;
   faturamento: number | null; faturamento_por_canais: string | null; faturamento_perc_canais: string | null;
 };
 type Agenda = {
