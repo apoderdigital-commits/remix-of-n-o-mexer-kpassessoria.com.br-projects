@@ -83,7 +83,8 @@ type Engagement = {
   curve_abc: string | null; sprint: string | null;
   engagement_score: number | null; nps_individual: number | null; observation: string | null;
   meta_status: string | null;
-  vendas: number | null; vendas_por_canais: string | null; vendas_perc_canais: string | null;
+  vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
+  vendas_por_canais: string | null; vendas_perc_canais: string | null;
   faturamento: number | null; faturamento_por_canais: string | null; faturamento_perc_canais: string | null;
 };
 type Agenda = {
@@ -97,6 +98,41 @@ const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
   invested_tp: "", contract_value: null, observations: "", renewal_60d: false, bm_verified: false,
 };
+
+// Calcula totais, porcentagens e faturamento por canal a partir das vendas de cada canal
+function computeChannels(trafego: number | null | undefined, loja: number | null | undefined, faturamento: number | null | undefined) {
+  const t = Number(trafego) || 0;
+  const l = Number(loja) || 0;
+  const total = t + l;
+  const fat = Number(faturamento) || 0;
+  const fmtMoney = (v: number) =>
+    "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (total <= 0) {
+    return {
+      vendasTotal: total,
+      vendasPorCanais: "",
+      vendasPerc: "",
+      fatTrafego: 0,
+      fatLoja: 0,
+      fatPorCanais: "",
+      fatPerc: "",
+    };
+  }
+  const pTraf = (t / total) * 100;
+  const pLoja = (l / total) * 100;
+  const fatTraf = fat * (t / total);
+  const fatLoja = fat * (l / total);
+  const pf = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  return {
+    vendasTotal: total,
+    vendasPorCanais: `Tráfego ${t}, Loja ${l}`,
+    vendasPerc: `Tráfego ${pf(pTraf)}%, Loja ${pf(pLoja)}%`,
+    fatTrafego: fatTraf,
+    fatLoja: fatLoja,
+    fatPorCanais: `Tráfego ${fmtMoney(fatTraf)}, Loja ${fmtMoney(fatLoja)}`,
+    fatPerc: `Tráfego ${pf(pTraf)}%, Loja ${pf(pLoja)}%`,
+  };
+}
 
 const PRIORITY_COLORS: Record<string, string> = {
   AA: "bg-red-500/20 text-red-300 border-red-500/40",
@@ -396,6 +432,7 @@ export default function Squad() {
     if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
     const curve = editingEng.curve_abc?.toUpperCase() || null;
     const sprint = editingEng.sprint?.toUpperCase() || null;
+    const ch = computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento);
     const payload: any = {
       squad_id: squadId,
       reference_month: editingEng.reference_month,
@@ -407,12 +444,14 @@ export default function Squad() {
       nps_individual: editingEng.nps_individual ?? null,
       observation: editingEng.observation || null,
       meta_status: editingEng.meta_status || null,
-      vendas: editingEng.vendas ?? null,
-      vendas_por_canais: editingEng.vendas_por_canais || null,
-      vendas_perc_canais: editingEng.vendas_perc_canais || null,
+      vendas_trafego: editingEng.vendas_trafego ?? null,
+      vendas_loja: editingEng.vendas_loja ?? null,
+      vendas: ch.vendasTotal || null,
+      vendas_por_canais: ch.vendasPorCanais || null,
+      vendas_perc_canais: ch.vendasPerc || null,
       faturamento: editingEng.faturamento ?? null,
-      faturamento_por_canais: editingEng.faturamento_por_canais || null,
-      faturamento_perc_canais: editingEng.faturamento_perc_canais || null,
+      faturamento_por_canais: ch.fatPorCanais || null,
+      faturamento_perc_canais: ch.fatPerc || null,
     };
     const res = editingEng.id
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
@@ -1573,16 +1612,20 @@ export default function Squad() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Vendas (total)</Label>
-                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label>Vendas Tráfego</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_trafego ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Vendas por canais</Label>
-                    <Input placeholder="Ex: Meta 5, Google 3" value={editingEng.vendas_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_por_canais: e.target.value })} />
+                    <Label>Vendas Loja</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_loja ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>% de vendas por canais</Label>
-                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.vendas_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_perc_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">Vendas (total) <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).vendasTotal || ""} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">% de vendas por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).vendasPerc} />
                   </div>
                 </div>
               </section>
@@ -1598,12 +1641,12 @@ export default function Squad() {
                     <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Faturamento por canais</Label>
-                    <Input placeholder="Ex: Meta R$ 5k, Google R$ 3k" value={editingEng.faturamento_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_por_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">Faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPorCanais} />
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label>% faturamento por canais</Label>
-                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.faturamento_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_perc_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">% faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPerc} />
                   </div>
                 </div>
               </section>
