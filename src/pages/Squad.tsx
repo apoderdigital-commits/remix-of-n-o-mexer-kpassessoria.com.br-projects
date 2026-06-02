@@ -1641,12 +1641,12 @@ export default function Squad() {
                     <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Faturamento por canais</Label>
-                    <Input placeholder="Ex: Meta R$ 5k, Google R$ 3k" value={editingEng.faturamento_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_por_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">Faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPorCanais} />
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label>% faturamento por canais</Label>
-                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.faturamento_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_perc_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">% faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPerc} />
                   </div>
                 </div>
               </section>
