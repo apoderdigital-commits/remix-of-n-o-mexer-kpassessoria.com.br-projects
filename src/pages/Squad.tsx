@@ -134,6 +134,10 @@ function computeChannels(trafego: number | null | undefined, loja: number | null
   };
 }
 
+// Formata valores monetários em BRL (uso geral)
+const fmtBRL = (v: number | null | undefined) =>
+  "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
 const PRIORITY_COLORS: Record<string, string> = {
   AA: "bg-red-500/20 text-red-300 border-red-500/40",
   AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
