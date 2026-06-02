@@ -1612,16 +1612,20 @@ export default function Squad() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Vendas (total)</Label>
-                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label>Vendas Tráfego</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_trafego ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Vendas por canais</Label>
-                    <Input placeholder="Ex: Meta 5, Google 3" value={editingEng.vendas_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_por_canais: e.target.value })} />
+                    <Label>Vendas Loja</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_loja ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>% de vendas por canais</Label>
-                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.vendas_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_perc_canais: e.target.value })} />
+                    <Label className="flex items-center gap-1.5">Vendas (total) <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).vendasTotal || ""} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">% de vendas por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).vendasPerc} />
                   </div>
                 </div>
               </section>
