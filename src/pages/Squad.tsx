@@ -27,6 +27,7 @@ import {
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
   Smile, CalendarDays, Star, AlertCircle, NotebookPen, ClipboardList,
   Target, DollarSign, ShoppingCart, Gauge, MessageSquare, Search, Store, TrendingUp,
+  ChevronDown, ChevronRight, FolderOpen, Folder,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
@@ -213,6 +214,170 @@ function formatBRL(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "—";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
+
+// ── NPS accordion: mês → sprint → clientes ──────────────────────────────────
+type NpsAccordionProps = {
+  sortedMonths: string[];
+  byMonthMap: Map<string, Engagement[]>;
+  sprintOrder: string[];
+  formatMonth: (s: string) => string;
+  CURVE_COLORS: Record<string, string>;
+  computeChannels: typeof computeChannels;
+  fmtBRL: (v: number | null | undefined) => string;
+};
+
+function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
+  e: Engagement;
+  CURVE_COLORS: Record<string, string>;
+  computeChannels: typeof computeChannels;
+  fmtBRL: NpsAccordionProps["fmtBRL"];
+}) {
+  const [open, setOpen] = useState(false);
+  const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
+  const nps = e.nps_individual;
+  const npsTone = nps == null ? "text-muted-foreground" : nps > 8 ? "text-emerald-400" : nps < 7 ? "text-red-400" : "text-amber-400";
+  const engStars = e.engagement_score ?? null;
+
+  return (
+    <div className="rounded-lg border border-border/30 bg-card/40 overflow-hidden">
+      {/* Row header — always visible */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+      >
+        {open
+          ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        }
+        <span className="flex-1 text-sm font-medium leading-tight truncate">{e.client_name}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}`}>{e.curve_abc || "-"}</Badge>
+          <span className={`text-sm font-bold w-7 text-right ${npsTone}`}>{nps != null ? nps : "—"}</span>
+          <span className="inline-flex gap-0.5">
+            {engStars != null ? Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className={`h-3 w-3 ${i < engStars ? "fill-amber-400 text-amber-400" : "text-muted-foreground/25"}`} />
+            )) : <span className="text-[10px] text-muted-foreground">—</span>}
+          </span>
+        </div>
+      </button>
+
+      {/* Expanded detail */}
+      {open && (
+        <div className="border-t border-border/20 px-3 pb-3 pt-2.5 space-y-2 text-xs">
+          <div className="grid grid-cols-2 gap-2">
+            {/* Vendas */}
+            <div className="rounded-md border border-border/30 bg-background/30 p-2 space-y-1">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> Vendas</p>
+              <p className="font-bold text-foreground">{ch.vendasTotal || 0}</p>
+              <div className="text-muted-foreground space-y-0.5">
+                <div className="flex justify-between"><span className="flex items-center gap-1"><TrendingUp className="h-2.5 w-2.5 text-sky-400" />Tráfego</span><span>{Number(e.vendas_trafego) || 0}</span></div>
+                <div className="flex justify-between"><span className="flex items-center gap-1"><Store className="h-2.5 w-2.5 text-fuchsia-400" />Loja</span><span>{Number(e.vendas_loja) || 0}</span></div>
+              </div>
+            </div>
+            {/* Faturamento */}
+            <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 space-y-1">
+              <p className="text-[10px] uppercase tracking-wide text-emerald-300/80 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Faturamento</p>
+              <p className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</p>
+              <div className="text-muted-foreground space-y-0.5">
+                <div className="flex justify-between"><span className="flex items-center gap-1"><TrendingUp className="h-2.5 w-2.5 text-sky-400" />Tráfego</span><span>{fmtBRL(ch.fatTrafego)}</span></div>
+                <div className="flex justify-between"><span className="flex items-center gap-1"><Store className="h-2.5 w-2.5 text-fuchsia-400" />Loja</span><span>{fmtBRL(ch.fatLoja)}</span></div>
+              </div>
+            </div>
+          </div>
+          {e.meta_status && (
+            <Badge variant="outline" className={e.meta_status.toLowerCase().includes("dentro") ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40" : "bg-red-500/10 text-red-300 border-red-500/40"}>
+              <Target className="h-3 w-3 mr-1" />{e.meta_status}
+            </Badge>
+          )}
+          {e.observation && (
+            <p className="text-muted-foreground border-t border-border/20 pt-2 leading-relaxed">{e.observation}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NpsMonthAccordion({ sortedMonths, byMonthMap, sprintOrder, formatMonth, CURVE_COLORS, computeChannels, fmtBRL }: NpsAccordionProps) {
+  const [openMonths, setOpenMonths] = useState<Set<string>>(() => new Set(sortedMonths.slice(0, 1)));
+
+  const toggleMonth = (m: string) => setOpenMonths((prev) => {
+    const next = new Set(prev);
+    next.has(m) ? next.delete(m) : next.add(m);
+    return next;
+  });
+
+  return (
+    <div className="space-y-2">
+      {sortedMonths.map((mk) => {
+        const list = byMonthMap.get(mk)!;
+        const isOpen = openMonths.has(mk);
+        const label = mk === "sem-mes" ? "Sem mês" : formatMonth(`${mk}-01`);
+
+        // Estatísticas rápidas do mês
+        const scores = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
+        const avg = scores.length ? (scores.reduce((s, n) => s + n, 0) / scores.length).toFixed(1) : null;
+
+        // Agrupa por sprint
+        const groups = new Map<string, Engagement[]>();
+        list.forEach((e) => {
+          const s = (e.sprint || "").toUpperCase() || "—";
+          if (!groups.has(s)) groups.set(s, []);
+          groups.get(s)!.push(e);
+        });
+        const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
+          const ia = sprintOrder.indexOf(a); const ib = sprintOrder.indexOf(b);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+
+        return (
+          <div key={mk} className="rounded-xl border border-border/30 overflow-hidden">
+            {/* Cabeçalho do mês */}
+            <button
+              type="button"
+              onClick={() => toggleMonth(mk)}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-card/60 hover:bg-card/80 transition-colors text-left"
+            >
+              {isOpen
+                ? <FolderOpen className="h-4 w-4 text-primary shrink-0" />
+                : <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
+              }
+              <span className="flex-1 font-semibold capitalize text-sm">{label}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-muted-foreground">{list.length} cliente{list.length !== 1 ? "s" : ""}</span>
+                {avg && <Badge variant="outline" className="text-[10px] border-border/40">NPS {avg}</Badge>}
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+              </div>
+            </button>
+
+            {/* Conteúdo expandido */}
+            {isOpen && (
+              <div className="px-3 pb-3 pt-2 space-y-3 bg-background/20">
+                {orderedGroups.map(([sprint, slist]) => (
+                  <div key={sprint}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[sprint] || "border-border/40 text-muted-foreground"}`}>
+                        Sprint {sprint}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{slist.length} cliente{slist.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {slist.map((e) => (
+                        <NpsClientRow key={e.id} e={e} CURVE_COLORS={CURVE_COLORS} computeChannels={computeChannels} fmtBRL={fmtBRL} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 export default function Squad() {
   const { isAdmin } = useAuth();
@@ -1146,106 +1311,35 @@ export default function Squad() {
 
                     <NpsChart dist={dist} />
 
-                    {/* Dashboard por cliente, organizado por sprint */}
-                    {filtered.length === 0 ? (
-                      <div className="rounded-2xl border border-border/30 bg-card/40 p-10 text-center text-muted-foreground">
-                        Nenhum cliente encontrado{q ? " para esta pesquisa" : npsMonth !== "all" ? " neste mês" : ""}.
-                      </div>
-                    ) : (
-                      <div className="space-y-5">
-                        {orderedGroups.map(([sprint, list]) => (
-                          <div key={sprint}>
-                            <div className="flex items-center gap-2 mb-2.5">
-                              <Badge variant="outline" className={CURVE_COLORS[sprint] || "border-border/40 text-muted-foreground"}>
-                                Sprint {sprint}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">{list.length} {list.length === 1 ? "cliente" : "clientes"}</span>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                              {list.map((e) => {
-                                const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
-                                const nps = e.nps_individual;
-                                const npsTone = nps == null ? "text-muted-foreground" : nps > 8 ? "text-emerald-300" : nps < 7 ? "text-red-300" : "text-amber-300";
-                                return (
-                                  <Card key={e.id} className="bg-card/40 border-border/30 backdrop-blur-sm overflow-hidden">
-                                    <CardHeader className="pb-2">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <CardTitle className="text-sm leading-tight">{e.client_name}</CardTitle>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[e.curve_abc || ""] || "border-border/40 text-muted-foreground"}`}>{e.curve_abc || "-"}</Badge>
-                                          <Badge variant="outline" className={`text-[10px] ${CURVE_COLORS[e.sprint || ""] || "border-border/40 text-muted-foreground"}`}>{e.sprint || "-"}</Badge>
-                                        </div>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-xs">
-                                      {/* NPS + Engajamento */}
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="rounded-lg border border-border/30 bg-background/30 p-2.5">
-                                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">NPS</p>
-                                          <p className={`text-2xl font-bold ${npsTone}`}>{nps != null ? nps : "—"}</p>
-                                        </div>
-                                        <div className="rounded-lg border border-border/30 bg-background/30 p-2.5">
-                                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Engajamento</p>
-                                          <span className="inline-flex items-center gap-0.5 mt-1.5">
-                                            {e.engagement_score != null ? Array.from({ length: 5 }).map((_, i) => (
-                                              <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
-                                            )) : <span className="text-muted-foreground">—</span>}
-                                          </span>
-                                        </div>
-                                      </div>
+                    {/* Dashboard por cliente — agrupado por mês (accordion) */}
+                    {(() => {
+                      // Agrupa por mês
+                      const byMonthMap = new Map<string, Engagement[]>();
+                      filtered.forEach((e) => {
+                        const mk = (e.reference_month || "").slice(0, 7) || "sem-mes";
+                        if (!byMonthMap.has(mk)) byMonthMap.set(mk, []);
+                        byMonthMap.get(mk)!.push(e);
+                      });
+                      const sortedMonths = Array.from(byMonthMap.keys()).sort((a, b) => b.localeCompare(a));
 
-                                      {/* Vendas */}
-                                      <div className="rounded-lg border border-border/30 bg-background/30 p-2.5 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground"><ShoppingCart className="h-3 w-3" /> Vendas</span>
-                                          <span className="font-bold text-foreground">{ch.vendasTotal || 0}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-muted-foreground">
-                                          <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-sky-400" /> Tráfego</span>
-                                          <span>{Number(e.vendas_trafego) || 0}{ch.vendasTotal ? ` (${Math.round(((Number(e.vendas_trafego) || 0) / ch.vendasTotal) * 100)}%)` : ""}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-muted-foreground">
-                                          <span className="inline-flex items-center gap-1"><Store className="h-3 w-3 text-fuchsia-400" /> Loja</span>
-                                          <span>{Number(e.vendas_loja) || 0}{ch.vendasTotal ? ` (${Math.round(((Number(e.vendas_loja) || 0) / ch.vendasTotal) * 100)}%)` : ""}</span>
-                                        </div>
-                                      </div>
+                      if (filtered.length === 0) return (
+                        <div className="rounded-2xl border border-border/30 bg-card/40 p-10 text-center text-muted-foreground">
+                          Nenhum cliente encontrado{q ? " para esta pesquisa" : npsMonth !== "all" ? " neste mês" : ""}.
+                        </div>
+                      );
 
-                                      {/* Faturamento */}
-                                      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-emerald-300/80"><DollarSign className="h-3 w-3" /> Faturamento</span>
-                                          <span className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-muted-foreground">
-                                          <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-sky-400" /> Tráfego</span>
-                                          <span>{fmtBRL(ch.fatTrafego)}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-muted-foreground">
-                                          <span className="inline-flex items-center gap-1"><Store className="h-3 w-3 text-fuchsia-400" /> Loja</span>
-                                          <span>{fmtBRL(ch.fatLoja)}</span>
-                                        </div>
-                                      </div>
-
-                                      {/* Meta + Observação */}
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        {e.meta_status && (
-                                          <Badge variant="outline" className={e.meta_status.toLowerCase().includes("dentro") ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40" : "bg-red-500/10 text-red-300 border-red-500/40"}>
-                                            <Target className="h-3 w-3 mr-1" />{e.meta_status}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      {e.observation && (
-                                        <p className="text-muted-foreground border-t border-border/20 pt-2 leading-relaxed">{e.observation}</p>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      return (
+                        <NpsMonthAccordion
+                          sortedMonths={sortedMonths}
+                          byMonthMap={byMonthMap}
+                          sprintOrder={sprintOrder}
+                          formatMonth={formatMonth}
+                          CURVE_COLORS={CURVE_COLORS}
+                          computeChannels={computeChannels}
+                          fmtBRL={fmtBRL}
+                        />
+                      );
+                    })()}
                   </>
                 );
               })()}
