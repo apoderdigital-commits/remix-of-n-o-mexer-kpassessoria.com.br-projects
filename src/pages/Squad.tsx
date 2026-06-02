@@ -1363,6 +1363,8 @@ export default function Squad() {
                                 <TableHead className="text-center">Sprint</TableHead>
                                 <TableHead className="text-center">Engaj. (1-5)</TableHead>
                                 <TableHead className="text-center">NPS</TableHead>
+                                <TableHead className="text-center">Vendas</TableHead>
+                                <TableHead className="text-center">Faturamento</TableHead>
                                 <TableHead>Observação</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
                               </TableRow>
