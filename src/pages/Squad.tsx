@@ -636,18 +636,7 @@ export default function Squad() {
 
   // NPS distribuição a partir do engajamento (nps_individual)
   // Categorias (regra do squad): acima de 8, igual a 10, abaixo de 7
-  const npsDistribution = useMemo(() => {
-    const scores = engagement.map((e) => e.nps_individual).filter((v): v is number => v != null);
-    const total = scores.length;
-    const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
-    scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
-    const above8 = scores.filter((s) => s > 8).length;
-    const tens = scores.filter((s) => s === 10).length;
-    const below7 = scores.filter((s) => s < 7).length;
-    const middle = total - above8 - below7;
-    const npsScore = total > 0 ? Math.round(((above8 - below7) / total) * 100) : 0;
-    const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
-
+  const npsMonthly = useMemo(() => {
     const byMonth = new Map<string, number[]>();
     engagement.forEach((e) => {
       if (e.nps_individual == null || !e.reference_month) return;
@@ -655,7 +644,7 @@ export default function Squad() {
       if (!byMonth.has(k)) byMonth.set(k, []);
       byMonth.get(k)!.push(e.nps_individual);
     });
-    const monthly = Array.from(byMonth.entries())
+    return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, arr]) => {
         const t = arr.length;
@@ -668,15 +657,6 @@ export default function Squad() {
           nps: Math.round(((ab8 - bl7) / t) * 100),
         };
       });
-
-    return {
-      total, buckets,
-      pctAbove8: total > 0 ? Math.round((above8 / total) * 100) : 0,
-      pctTen: total > 0 ? Math.round((tens / total) * 100) : 0,
-      pctBelow7: total > 0 ? Math.round((below7 / total) * 100) : 0,
-      above8, tens, below7, middle,
-      npsScore, avg, monthly,
-    };
   }, [engagement]);
 
   const incompleteClients = useMemo(() => {
