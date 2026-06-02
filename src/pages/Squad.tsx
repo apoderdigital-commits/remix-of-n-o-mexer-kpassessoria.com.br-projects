@@ -217,6 +217,8 @@ export default function Squad() {
   const [editingEng, setEditingEng] = useState<Partial<Engagement> | null>(null);
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
+  const [npsMonth, setNpsMonth] = useState<string>("all");
+  const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
   const [purgeMonth, setPurgeMonth] = useState<string | null>(null); // YYYY-MM-DD
