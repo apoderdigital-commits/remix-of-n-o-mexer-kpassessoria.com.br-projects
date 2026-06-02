@@ -26,7 +26,7 @@ import {
   Plus, Pencil, Trash2, ArrowLeft, Settings, Users, TrendingDown,
   Activity, AlertTriangle, BarChart3, CheckCircle2, XCircle, Play, FileText,
   Smile, CalendarDays, Star, AlertCircle, NotebookPen, ClipboardList,
-  Target, DollarSign, ShoppingCart, Gauge, MessageSquare,
+  Target, DollarSign, ShoppingCart, Gauge, MessageSquare, Search, Store, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
