@@ -138,6 +138,27 @@ function computeChannels(trafego: number | null | undefined, loja: number | null
 const fmtBRL = (v: number | null | undefined) =>
   "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
+// Estatísticas de NPS a partir de uma lista de engajamentos (nps_individual)
+function buildNpsStats(list: Engagement[]) {
+  const scores = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
+  const total = scores.length;
+  const buckets = Array.from({ length: 11 }, (_, i) => ({ score: i, count: 0 }));
+  scores.forEach((s) => { if (s >= 0 && s <= 10) buckets[Math.round(s)].count++; });
+  const above8 = scores.filter((s) => s > 8).length;
+  const tens = scores.filter((s) => s === 10).length;
+  const below7 = scores.filter((s) => s < 7).length;
+  const middle = total - above8 - below7;
+  const npsScore = total > 0 ? Math.round(((above8 - below7) / total) * 100) : 0;
+  const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
+  return {
+    total, buckets,
+    pctAbove8: total > 0 ? Math.round((above8 / total) * 100) : 0,
+    pctTen: total > 0 ? Math.round((tens / total) * 100) : 0,
+    pctBelow7: total > 0 ? Math.round((below7 / total) * 100) : 0,
+    above8, tens, below7, middle, npsScore, avg,
+  };
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   AA: "bg-red-500/20 text-red-300 border-red-500/40",
   AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
