@@ -1478,57 +1478,152 @@ export default function Squad() {
 
       {/* Engagement dialog */}
       <Dialog open={openEng} onOpenChange={setOpenEng}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>{editingEng?.id ? "Editar engajamento" : "Novo registro"}</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-transparent">
+            <DialogTitle className="flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-fuchsia-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                <Star className="h-4.5 w-4.5 text-white" />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-base font-bold leading-tight">{editingEng?.id ? "Editar engajamento" : "Novo registro"}</span>
+                <span className="text-xs font-normal text-muted-foreground">Acompanhamento mensal do cliente</span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
           {editingEng && (
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Mês *</Label><Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} /></div>
-              <div>
-                <Label>Cliente *</Label>
-                <Select
-                  value={editingEng.client_name || ""}
-                  onValueChange={(v) => {
-                    const c = clients.find((x) => x.name === v);
-                    setEditingEng({
-                      ...editingEng,
-                      client_name: v,
-                      curve_abc: editingEng.curve_abc || c?.curve_abc || null,
-                      sprint: editingEng.sprint || c?.sprint || null,
-                    });
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label>Curva ABC</Label>
-                <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Sprint</Label>
-                <Select value={editingEng.sprint || ""} onValueChange={(v) => setEditingEng({ ...editingEng, sprint: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Engajamento (1-5)</Label><Input type="number" min="1" max="5" value={editingEng.engagement_score ?? ""} onChange={(e) => setEditingEng({ ...editingEng, engagement_score: e.target.value === "" ? null : Number(e.target.value) })} /></div>
-              <div><Label>NPS individual (0-10)</Label><Input type="number" min="0" max="10" value={editingEng.nps_individual ?? ""} onChange={(e) => setEditingEng({ ...editingEng, nps_individual: e.target.value === "" ? null : Number(e.target.value) })} /></div>
-              <div className="col-span-2"><Label>Observação</Label><Textarea rows={2} value={editingEng.observation || ""} onChange={(e) => setEditingEng({ ...editingEng, observation: e.target.value })} /></div>
+            <div className="px-6 py-5 space-y-6">
+              {/* Identificação */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary">
+                  <Users className="h-3.5 w-3.5" /> Identificação
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Mês *</Label>
+                    <Input type="month" value={editingEng.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingEng({ ...editingEng, reference_month: e.target.value ? `${e.target.value}-01` : "" })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Cliente *</Label>
+                    <Select
+                      value={editingEng.client_name || ""}
+                      onValueChange={(v) => {
+                        const c = clients.find((x) => x.name === v);
+                        setEditingEng({
+                          ...editingEng,
+                          client_name: v,
+                          curve_abc: editingEng.curve_abc || c?.curve_abc || null,
+                          sprint: editingEng.sprint || c?.sprint || null,
+                        });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Curva ABC</Label>
+                    <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Sprint</Label>
+                    <Select value={editingEng.sprint || ""} onValueChange={(v) => setEditingEng({ ...editingEng, sprint: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
+
+              {/* Engajamento & NPS */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                  <Gauge className="h-3.5 w-3.5" /> Engajamento & NPS
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Engajamento (1-5)</Label>
+                    <Input type="number" min="1" max="5" placeholder="0" value={editingEng.engagement_score ?? ""} onChange={(e) => setEditingEng({ ...editingEng, engagement_score: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>NPS individual (0-10)</Label>
+                    <Input type="number" min="0" max="10" placeholder="0" value={editingEng.nps_individual ?? ""} onChange={(e) => setEditingEng({ ...editingEng, nps_individual: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Meta & Vendas */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                  <ShoppingCart className="h-3.5 w-3.5" /> Meta & Vendas
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Situação da meta</Label>
+                    <Select value={editingEng.meta_status || ""} onValueChange={(v) => setEditingEng({ ...editingEng, meta_status: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Dentro da meta">Dentro da meta</SelectItem>
+                        <SelectItem value="Fora da meta">Fora da meta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Vendas (total)</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Vendas por canais</Label>
+                    <Input placeholder="Ex: Meta 5, Google 3" value={editingEng.vendas_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_por_canais: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>% de vendas por canais</Label>
+                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.vendas_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_perc_canais: e.target.value })} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Faturamento */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-400">
+                  <DollarSign className="h-3.5 w-3.5" /> Faturamento
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Faturamento (total)</Label>
+                    <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Faturamento por canais</Label>
+                    <Input placeholder="Ex: Meta R$ 5k, Google R$ 3k" value={editingEng.faturamento_por_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_por_canais: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label>% faturamento por canais</Label>
+                    <Input placeholder="Ex: Meta 60%, Google 40%" value={editingEng.faturamento_perc_canais || ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento_perc_canais: e.target.value })} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Observação */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <MessageSquare className="h-3.5 w-3.5" /> Observação
+                </div>
+                <Textarea rows={2} placeholder="Anotações sobre o cliente neste mês..." value={editingEng.observation || ""} onChange={(e) => setEditingEng({ ...editingEng, observation: e.target.value })} />
+              </section>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t border-border/40 bg-card/40">
             <Button variant="ghost" onClick={() => setOpenEng(false)}>Cancelar</Button>
-            <Button onClick={saveEng}>Salvar</Button>
+            <Button onClick={saveEng} className="gap-1.5"><CheckCircle2 className="h-4 w-4" /> Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* Agenda dialog */}
       <Dialog open={openAg} onOpenChange={setOpenAg}>
