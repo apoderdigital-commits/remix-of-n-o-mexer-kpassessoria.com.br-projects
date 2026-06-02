@@ -1076,13 +1076,20 @@ export type Database = {
           curve_abc: string | null
           deleted_at: string | null
           engagement_score: number | null
+          faturamento: number | null
+          faturamento_perc_canais: string | null
+          faturamento_por_canais: string | null
           id: string
+          meta_status: string | null
           nps_individual: number | null
           observation: string | null
           reference_month: string
           sprint: string | null
           squad_id: string
           updated_at: string
+          vendas: number | null
+          vendas_perc_canais: string | null
+          vendas_por_canais: string | null
         }
         Insert: {
           client_name: string
@@ -1091,13 +1098,20 @@ export type Database = {
           curve_abc?: string | null
           deleted_at?: string | null
           engagement_score?: number | null
+          faturamento?: number | null
+          faturamento_perc_canais?: string | null
+          faturamento_por_canais?: string | null
           id?: string
+          meta_status?: string | null
           nps_individual?: number | null
           observation?: string | null
           reference_month: string
           sprint?: string | null
           squad_id: string
           updated_at?: string
+          vendas?: number | null
+          vendas_perc_canais?: string | null
+          vendas_por_canais?: string | null
         }
         Update: {
           client_name?: string
@@ -1106,13 +1120,20 @@ export type Database = {
           curve_abc?: string | null
           deleted_at?: string | null
           engagement_score?: number | null
+          faturamento?: number | null
+          faturamento_perc_canais?: string | null
+          faturamento_por_canais?: string | null
           id?: string
+          meta_status?: string | null
           nps_individual?: number | null
           observation?: string | null
           reference_month?: string
           sprint?: string | null
           squad_id?: string
           updated_at?: string
+          vendas?: number | null
+          vendas_perc_canais?: string | null
+          vendas_por_canais?: string | null
         }
         Relationships: []
       }
