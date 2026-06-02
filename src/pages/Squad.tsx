@@ -1397,6 +1397,31 @@ export default function Squad() {
                                       }>{e.nps_individual}</Badge>
                                     ) : "-"}
                                   </TableCell>
+                                  {(() => {
+                                    const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
+                                    return (
+                                      <>
+                                        <TableCell className="text-center">
+                                          {ch.vendasTotal > 0 ? (
+                                            <div className="leading-tight">
+                                              <span className="font-bold">{ch.vendasTotal}</span>
+                                              <span className="block text-[10px] text-muted-foreground">T {Number(e.vendas_trafego) || 0} · L {Number(e.vendas_loja) || 0}</span>
+                                            </div>
+                                          ) : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          {e.faturamento != null && Number(e.faturamento) > 0 ? (
+                                            <div className="leading-tight">
+                                              <span className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</span>
+                                              {ch.vendasTotal > 0 && (
+                                                <span className="block text-[10px] text-muted-foreground">T {fmtBRL(ch.fatTrafego)} · L {fmtBRL(ch.fatLoja)}</span>
+                                              )}
+                                            </div>
+                                          ) : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
+                                      </>
+                                    );
+                                  })()}
                                   <TableCell className="text-muted-foreground text-xs max-w-[240px] truncate" title={e.observation || ""}>{e.observation || "-"}</TableCell>
                                   <TableCell className="text-right">
                                     <Button size="icon" variant="ghost" onClick={() => { setEditingEng(e); setOpenEng(true); }}><Pencil className="h-4 w-4" /></Button>
