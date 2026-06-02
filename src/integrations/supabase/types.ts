@@ -1088,8 +1088,10 @@ export type Database = {
           squad_id: string
           updated_at: string
           vendas: number | null
+          vendas_loja: number | null
           vendas_perc_canais: string | null
           vendas_por_canais: string | null
+          vendas_trafego: number | null
         }
         Insert: {
           client_name: string
@@ -1110,8 +1112,10 @@ export type Database = {
           squad_id: string
           updated_at?: string
           vendas?: number | null
+          vendas_loja?: number | null
           vendas_perc_canais?: string | null
           vendas_por_canais?: string | null
+          vendas_trafego?: number | null
         }
         Update: {
           client_name?: string
@@ -1132,8 +1136,10 @@ export type Database = {
           squad_id?: string
           updated_at?: string
           vendas?: number | null
+          vendas_loja?: number | null
           vendas_perc_canais?: string | null
           vendas_por_canais?: string | null
+          vendas_trafego?: number | null
         }
         Relationships: []
       }
