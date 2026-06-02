@@ -99,6 +99,41 @@ const emptyClient: Partial<SquadClient> = {
   invested_tp: "", contract_value: null, observations: "", renewal_60d: false, bm_verified: false,
 };
 
+// Calcula totais, porcentagens e faturamento por canal a partir das vendas de cada canal
+function computeChannels(trafego: number | null | undefined, loja: number | null | undefined, faturamento: number | null | undefined) {
+  const t = Number(trafego) || 0;
+  const l = Number(loja) || 0;
+  const total = t + l;
+  const fat = Number(faturamento) || 0;
+  const fmtMoney = (v: number) =>
+    "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (total <= 0) {
+    return {
+      vendasTotal: total,
+      vendasPorCanais: "",
+      vendasPerc: "",
+      fatTrafego: 0,
+      fatLoja: 0,
+      fatPorCanais: "",
+      fatPerc: "",
+    };
+  }
+  const pTraf = (t / total) * 100;
+  const pLoja = (l / total) * 100;
+  const fatTraf = fat * (t / total);
+  const fatLoja = fat * (l / total);
+  const pf = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  return {
+    vendasTotal: total,
+    vendasPorCanais: `Tráfego ${t}, Loja ${l}`,
+    vendasPerc: `Tráfego ${pf(pTraf)}%, Loja ${pf(pLoja)}%`,
+    fatTrafego: fatTraf,
+    fatLoja: fatLoja,
+    fatPorCanais: `Tráfego ${fmtMoney(fatTraf)}, Loja ${fmtMoney(fatLoja)}`,
+    fatPerc: `Tráfego ${pf(pTraf)}%, Loja ${pf(pLoja)}%`,
+  };
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   AA: "bg-red-500/20 text-red-300 border-red-500/40",
   AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
