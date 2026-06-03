@@ -15,6 +15,7 @@ import Comercial from "./pages/Comercial.tsx";
 import Tarefas from "./pages/Tarefas.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import ClientView from "./pages/ClientView.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,8 @@ const AppRoutes = () => (
     <Route path="/squad/admin" element={<ProtectedRoute adminOnly><SquadAdmin /></ProtectedRoute>} />
     <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
     <Route path="/tarefas" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
+    {/* Rota pública — iframe embutido no GHL por subconta */}
+    <Route path="/view" element={<ClientView />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
