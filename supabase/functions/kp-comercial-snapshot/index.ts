@@ -82,27 +82,17 @@ async function buildSnapshot(since: Date, until: Date) {
   }));
 
   // ---------- CONTACTS ----------
-  // Busca todos os contatos sem limite de páginas, usando startAfter para paginação correta.
-  // A API do GHL não suporta filtro por data na listagem, então trazemos tudo e filtramos no código.
+  // Busca todos os contatos paginando por `page`. Sem filtro de data na API,
+  // filtramos no código. Limite de 100 páginas = 10.000 contatos.
   let allContacts: any[] = [];
   {
-    let startAfter: string | null = null;
-    let startAfterId: string | null = null;
-    for (let i = 0; i < 50; i++) { // até 5.000 contatos (50 páginas × 100)
-      let url = `${GHL_BASE}/contacts/?locationId=${locationId}&limit=100`;
-      if (startAfter) url += `&startAfter=${encodeURIComponent(startAfter)}`;
-      if (startAfterId) url += `&startAfterId=${encodeURIComponent(startAfterId)}`;
-      const r = await fetch(url, { headers });
+    for (let page = 1; page <= 100; page++) {
+      const r = await fetch(`${GHL_BASE}/contacts/?locationId=${locationId}&limit=100&page=${page}`, { headers });
       if (!r.ok) break;
       const j = await r.json();
       const batch: any[] = j.contacts || [];
       allContacts = allContacts.concat(batch);
       if (batch.length < 100) break;
-      // cursor para próxima página
-      const last = batch[batch.length - 1];
-      startAfter = last?.dateAdded || last?.createdAt || null;
-      startAfterId = last?.id || null;
-      if (!startAfter && !startAfterId) break;
     }
   }
 
@@ -330,6 +320,15 @@ async function buildSnapshot(since: Date, until: Date) {
   };
   const contactById = new Map<string, any>();
   for (const c of allContacts) contactById.set(c.id, c);
+
+  // Debug: amostra dos primeiros contatos com tag de lead no período (visível em counters.debug)
+  const debugLeads = allContacts
+    .filter((c) => inRange(c.dateAdded))
+    .slice(0, 5)
+    .map((c) => ({ id: c.id, name: `${c.firstName||""} ${c.lastName||""}`.trim(), tags: c.tags, dateAdded: c.dateAdded }));
+  const contactsInRange = allContacts.filter((c) => inRange(c.dateAdded)).length;
+  const contactsWithLeadTag = allContacts.filter((c) => inRange(c.dateAdded) && hasLeadTag(c)).length;
+  console.log(`[snapshot] total=${allContacts.length} inRange=${contactsInRange} withLeadTag=${contactsWithLeadTag}`);
 
   // meetingSummary (com filtro de tag) — usado nos KPIs do topo / funis por tag
   const meetingSummary = { agendados: 0, realizados: 0, noshow: 0, cancelados: 0, total: 0 };
@@ -1010,6 +1009,9 @@ async function buildSnapshot(since: Date, until: Date) {
       totalContacts: allContacts.length,
       totalPipelines: pipelines.length,
       totalOpps: allOpps.length,
+      contactsInRange,
+      contactsWithLeadTag,
+      debugLeads,
     },
   };
 }
