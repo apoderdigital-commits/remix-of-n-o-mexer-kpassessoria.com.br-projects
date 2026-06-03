@@ -216,20 +216,34 @@ function formatBRL(n: number | null | undefined): string {
 }
 
 // ── NPS accordion: mês → sprint → clientes ──────────────────────────────────
+type ComputeChannelsFn = (
+  trafego: number | null | undefined,
+  loja: number | null | undefined,
+  faturamento: number | null | undefined
+) => {
+  vendasTotal: number;
+  vendasPorCanais: string;
+  vendasPerc: string;
+  fatTrafego: number;
+  fatLoja: number;
+  fatPorCanais: string;
+  fatPerc: string;
+};
+
 type NpsAccordionProps = {
   sortedMonths: string[];
   byMonthMap: Map<string, Engagement[]>;
   sprintOrder: string[];
   formatMonth: (s: string) => string;
   CURVE_COLORS: Record<string, string>;
-  computeChannels: typeof computeChannels;
+  computeChannels: ComputeChannelsFn;
   fmtBRL: (v: number | null | undefined) => string;
 };
 
 function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
   e: Engagement;
   CURVE_COLORS: Record<string, string>;
-  computeChannels: typeof computeChannels;
+  computeChannels: ComputeChannelsFn;
   fmtBRL: NpsAccordionProps["fmtBRL"];
 }) {
   const [open, setOpen] = useState(false);

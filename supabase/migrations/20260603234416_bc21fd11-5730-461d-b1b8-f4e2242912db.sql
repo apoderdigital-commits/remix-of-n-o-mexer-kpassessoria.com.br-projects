@@ -1,0 +1,1 @@
+CREATE POLICY "Public read by location id" ON clients FOR SELECT TO anon USING (ghl_location_id IS NOT NULL AND deleted_at IS NULL);
