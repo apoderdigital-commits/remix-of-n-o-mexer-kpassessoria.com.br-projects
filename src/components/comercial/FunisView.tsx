@@ -30,6 +30,10 @@ export type TrafegoStageKey = "leads" | "mqls" | "agendamentos" | "compareciment
 export interface TrafegoListItem { nome: string; category: "A" | "B" | "C" | "Outro" }
 export type TrafegoLists = Record<TrafegoStageKey, TrafegoListItem[]>;
 
+// Listas de nomes por etapa do funil de recuperação
+export type RecuperacaoStageKey = "agendamentos" | "comparecimentos";
+export type RecuperacaoLists = Record<RecuperacaoStageKey, TrafegoListItem[]>;
+
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
 const fmtPct = (v: number) => `${(v || 0).toFixed(1)}%`;
 const pick = (c: CatCounts | undefined, f: LeadCat) => (c ? c[f] ?? 0 : 0);
@@ -231,11 +235,11 @@ export function ProspeccaoFunnel({ funis, filter }: { funis: FunisData; filter: 
 }
 
 // ---------- Recuperação ----------
-export function RecuperacaoFunnel({ funis, filter }: { funis: FunisData; filter: LeadCat }) {
+export function RecuperacaoFunnel({ funis, filter, onStageClick }: { funis: FunisData; filter: LeadCat; onStageClick?: (key: RecuperacaoStageKey) => void }) {
   const r = funis.recuperacao;
-  const stages: Stage[] = [
-    { icon: RotateCcw, label: "Agendamentos", count: pick(r.agendamentos, filter), grad: "from-orange-500/80 to-orange-600/40", iconBg: "bg-orange-500/20 text-orange-200" },
-    { icon: CalendarCheck2, label: "Comparecimentos", count: pick(r.comparecimentos, filter), grad: "from-amber-500/80 to-amber-600/40", iconBg: "bg-amber-500/20 text-amber-200" },
+  const stages: (Stage & { key: RecuperacaoStageKey })[] = [
+    { key: "agendamentos", icon: RotateCcw, label: "Agendamentos", count: pick(r.agendamentos, filter), grad: "from-orange-500/80 to-orange-600/40", iconBg: "bg-orange-500/20 text-orange-200" },
+    { key: "comparecimentos", icon: CalendarCheck2, label: "Comparecimentos", count: pick(r.comparecimentos, filter), grad: "from-amber-500/80 to-amber-600/40", iconBg: "bg-amber-500/20 text-amber-200" },
   ];
   return (
     <div className="space-y-4">
@@ -244,6 +248,7 @@ export function RecuperacaoFunnel({ funis, filter }: { funis: FunisData; filter:
         subtitle="Leads de tráfego criados antes do período, mas marcados dentro dele"
         badge={filter === "Geral" ? "Todos os leads" : `Lead ${filter === "Outro" ? "sem tag" : filter}`}
         stages={stages}
+        onStageClick={onStageClick ? (k) => onStageClick(k as RecuperacaoStageKey) : undefined}
       />
       <Card className="p-4 bg-card/30 border border-white/5 rounded-xl text-xs text-muted-foreground">
         Recuperação = lead chegou em um período anterior e a reunião foi marcada para o período selecionado.

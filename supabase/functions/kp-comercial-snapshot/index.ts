@@ -814,6 +814,10 @@ async function buildSnapshot(since: Date, until: Date) {
 
   // Recuperação — leads criados ANTES do período com appt no período
   const recuperacao = { agendamentos: emptyCat(), comparecimentos: emptyCat() };
+  const recuperacaoLists: {
+    agendamentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+    comparecimentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+  } = { agendamentos: [], comparecimentos: [] };
   for (const a of allAppts) {
     const bucket = getAppointmentBucket(a);
     if (bucket === "cancelado" || bucket === "outro") continue;
@@ -828,7 +832,11 @@ async function buildSnapshot(since: Date, until: Date) {
 
     if (isRecup) {
       addCat(recuperacao.agendamentos, cat);
-      if (bucket === "realizado") addCat(recuperacao.comparecimentos, cat);
+      recuperacaoLists.agendamentos.push({ nome: contactName(c), category: cat });
+      if (bucket === "realizado") {
+        addCat(recuperacao.comparecimentos, cat);
+        recuperacaoLists.comparecimentos.push({ nome: contactName(c), category: cat });
+      }
     } else if (isTrafego) {
       addCat(trafego.agendamentos, cat);
       trafegoLists.agendamentos.push({ nome: contactName(c), category: cat });
@@ -933,6 +941,7 @@ async function buildSnapshot(since: Date, until: Date) {
     kpis,
     funis: { trafego, recuperacao, prospeccao, geral },
     trafegoLists,
+    recuperacaoLists,
     geralCalendars: Array.from(geralByCalendar.values()).sort((a, b) => b.agendamentos - a.agendamentos),
     sdrFunis,
     dataSources: {
