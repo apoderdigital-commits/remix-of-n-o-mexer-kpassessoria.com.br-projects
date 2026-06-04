@@ -23,6 +23,7 @@ import {
   ArrowLeft, Plus, Search, CalendarIcon, Trash2, Pencil, LogOut, Settings2,
   ChevronDown, ChevronRight, ChevronUp, ListChecks, AlertCircle, Flag, RefreshCw,
   FileText, Paperclip, MessageSquare, Send, Download, X, Pause, History, Home as HomeIcon, Folder, FolderOpen, Target, Users,
+  LayoutList, Circle, Zap, PauseCircle, CheckCircle2, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -1327,69 +1328,105 @@ function HomeView({
       </div>
 
       {/* Filter bar */}
-      <Card className="bg-card/40 border-border/40 p-3 mb-4">
+      <div className="rounded-xl border border-border/40 bg-card/40 backdrop-blur p-3 mb-5 space-y-3">
+        {/* Row 1: period presets + date pickers */}
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={preset} onValueChange={(v) => setPreset(v as DatePreset)}>
-            <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hoje</SelectItem>
-              <SelectItem value="week">Esta semana</SelectItem>
-              <SelectItem value="month">Este mês</SelectItem>
-              <SelectItem value="range">Período custom</SelectItem>
-              <SelectItem value="all">Todo o período</SelectItem>
-            </SelectContent>
-          </Select>
+          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          {(["today","week","month","all"] as DatePreset[]).map((p) => {
+            const labels: Record<DatePreset, string> = { today: "Hoje", week: "Esta semana", month: "Este mês", range: "Período", all: "Todo o período" };
+            return (
+              <button key={p} onClick={() => setPreset(p)}
+                className={cn("h-7 px-3 rounded-full text-xs font-medium transition border",
+                  preset === p ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/30" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+                {labels[p]}
+              </button>
+            );
+          })}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button onClick={() => setPreset("range")}
+                className={cn("h-7 px-3 rounded-full text-xs font-medium transition border flex items-center gap-1.5",
+                  preset === "range" ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/30" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+                <CalendarIcon className="h-3 w-3" />
+                {preset === "range" && from && to ? `${format(from,"dd/MM")} – ${format(to,"dd/MM")}` : "Período custom"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3 flex gap-4" align="start">
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wide">De</p>
+                <Calendar mode="single" selected={from} onSelect={(d) => { setFrom(d); setPreset("range"); }} initialFocus />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wide">Até</p>
+                <Calendar mode="single" selected={to} onSelect={(d) => { setTo(d); setPreset("range"); }} initialFocus />
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
 
-          {preset === "range" && (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                    <CalendarIcon className="h-3.5 w-3.5" /> {from ? format(from, "dd/MM/yy") : "De"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={from} onSelect={setFrom} initialFocus />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                    <CalendarIcon className="h-3.5 w-3.5" /> {to ? format(to, "dd/MM/yy") : "Até"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={to} onSelect={setTo} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
-
+        {/* Row 2: entity filters + active pills */}
+        <div className="flex flex-wrap items-center gap-2">
           <MultiSelect label="Squads" icon={<FolderOpen className="h-3.5 w-3.5" />} options={squads.map((s) => ({ id: s.id, label: `Squad de ${(s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim() || s.name}` }))} selected={squadIds} onChange={(ids) => { setSquadIds(ids); setClientIds([]); }} />
           <MultiSelect label="Clientes" icon={<Folder className="h-3.5 w-3.5" />} options={availableClients.map((c) => ({ id: c.id, label: c.name }))} selected={clientIds} onChange={setClientIds} />
           <MultiSelect label="Responsável" icon={<Users className="h-3.5 w-3.5" />} options={allAssignees.map((a) => ({ id: a.id, label: a.profile?.full_name || a.profile?.email?.split("@")[0] || "—" }))} selected={assigneeIds} onChange={setAssigneeIds} />
 
-          {hasAnyFilter ? (
-            <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={clearFilters}>
-              <X className="h-3.5 w-3.5 mr-1" /> Limpar
-            </Button>
-          ) : null}
+          {/* Active filter pills */}
+          {squadIds.map((id) => {
+            const s = squads.find((x) => x.id === id);
+            if (!s) return null;
+            const name = (s.name || "").replace(/^squad\s*(head\s*)?/i, "").trim() || s.name;
+            return (
+              <span key={id} className="inline-flex items-center gap-1 h-6 pl-2.5 pr-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-[11px] font-medium">
+                {name}
+                <button onClick={() => setSquadIds((p) => p.filter((x) => x !== id))} className="rounded-full hover:bg-primary/20 p-0.5"><X className="h-3 w-3" /></button>
+              </span>
+            );
+          })}
+          {clientIds.map((id) => {
+            const c = availableClients.find((x) => x.id === id);
+            if (!c) return null;
+            return (
+              <span key={id} className="inline-flex items-center gap-1 h-6 pl-2.5 pr-1 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[11px] font-medium">
+                {c.name}
+                <button onClick={() => setClientIds((p) => p.filter((x) => x !== id))} className="rounded-full hover:bg-sky-500/20 p-0.5"><X className="h-3 w-3" /></button>
+              </span>
+            );
+          })}
+          {assigneeIds.map((id) => {
+            const a = allAssignees.find((x) => x.id === id);
+            if (!a) return null;
+            const name = a.profile?.full_name || a.profile?.email?.split("@")[0] || "—";
+            return (
+              <span key={id} className="inline-flex items-center gap-1 h-6 pl-2.5 pr-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[11px] font-medium">
+                {name}
+                <button onClick={() => setAssigneeIds((p) => p.filter((x) => x !== id))} className="rounded-full hover:bg-violet-500/20 p-0.5"><X className="h-3 w-3" /></button>
+              </span>
+            );
+          })}
+
+          {hasAnyFilter && (
+            <button onClick={clearFilters} className="h-6 px-2.5 rounded-full border border-border/40 text-muted-foreground text-[11px] hover:bg-secondary/40 flex items-center gap-1">
+              <X className="h-3 w-3" /> Limpar tudo
+            </button>
+          )}
         </div>
-      </Card>
+      </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-        <StatCard label="Total" value={stats.total} color="text-foreground" />
-        <StatCard label="A fazer" value={stats.todo} color="text-blue-400" />
-        <StatCard label="Em andamento" value={stats.doing} color="text-purple-400" />
-        <StatCard label="Stand By" value={stats.standby} color="text-amber-400" />
-        <StatCard label="Atrasadas" value={stats.overdue} color="text-red-400" />
-        <StatCard label="Concluídas" value={stats.doneCount} color="text-emerald-400" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+        <StatCard label="Total" value={stats.total} color="text-foreground" icon={<LayoutList className="h-3.5 w-3.5" />} bg="bg-card/60 border-border/40" />
+        <StatCard label="A fazer" value={stats.todo} color="text-blue-400" icon={<Circle className="h-3.5 w-3.5 text-blue-400" />} bg="bg-blue-500/5 border-blue-500/20" />
+        <StatCard label="Em andamento" value={stats.doing} color="text-purple-400" icon={<Zap className="h-3.5 w-3.5 text-purple-400" />} bg="bg-purple-500/5 border-purple-500/20" />
+        <StatCard label="Stand By" value={stats.standby} color="text-amber-400" icon={<PauseCircle className="h-3.5 w-3.5 text-amber-400" />} bg="bg-amber-500/5 border-amber-500/20" />
+        <StatCard label="Atrasadas" value={stats.overdue} color={stats.overdue > 0 ? "text-red-400" : "text-muted-foreground"} icon={<AlertTriangle className="h-3.5 w-3.5 text-red-400" />} bg={stats.overdue > 0 ? "bg-red-500/8 border-red-500/25" : "bg-card/40 border-border/40"} />
+        <StatCard label="Concluídas" value={stats.doneCount} color="text-emerald-400" icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />} bg="bg-emerald-500/5 border-emerald-500/20" />
         <StatCard
           label="% no prazo"
           value={stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}
           color={stats.onTimePct === null ? "text-muted-foreground" : stats.onTimePct >= 90 ? "text-emerald-400" : "text-rose-400"}
           subtitle={stats.onTimePct === null ? undefined : `${stats.doneOnTime}/${stats.doneCount}`}
+          icon={<Target className="h-3.5 w-3.5" />}
+          bg={stats.onTimePct === null ? "bg-card/40 border-border/40" : stats.onTimePct >= 90 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-rose-500/5 border-rose-500/20"}
         />
       </div>
 
@@ -1408,37 +1445,58 @@ function HomeView({
                   {g.clients.reduce((acc, c) => acc + c.tasks.length, 0)} tarefas
                 </span>
               </div>
-              <div className="space-y-2">
-                {g.clients.map((cg) => (
-                  <Card key={cg.client.id} className="bg-card/40 border-border/40">
-                    <button
-                      onClick={() => onOpenClient(cg.client.id)}
-                      className="w-full p-3 flex items-center justify-between hover:bg-secondary/30 transition rounded-t-lg text-left"
-                    >
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {g.clients.map((cg) => {
+                  const todo = cg.tasks.filter((t) => t.status === "todo").length;
+                  const doing = cg.tasks.filter((t) => t.status === "doing").length;
+                  const standby = cg.tasks.filter((t) => t.status === "standby").length;
+                  const done = cg.tasks.filter((t) => t.status === "done").length;
+                  const overdue = cg.tasks.filter((t) => t.status !== "done" && t.due_date && new Date(t.due_date + "T23:59:59") < new Date()).length;
+                  const total = cg.tasks.length;
+                  return (
+                  <Card key={cg.client.id} className="bg-card/40 border-border/40 overflow-hidden hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all">
+                    {/* Header */}
+                    <button onClick={() => onOpenClient(cg.client.id)} className="w-full px-3.5 pt-3 pb-2 flex items-start justify-between hover:bg-white/3 transition text-left">
                       <div>
-                        <div className="text-sm font-semibold">{cg.client.name}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {cg.tasks.length} tarefa{cg.tasks.length !== 1 ? "s" : ""}
+                        <div className="text-sm font-semibold leading-tight">{cg.client.name}</div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {todo > 0 && <span className="text-[10px] text-blue-400 font-medium">{todo} a fazer</span>}
+                          {doing > 0 && <span className="text-[10px] text-purple-400 font-medium">{doing} em andamento</span>}
+                          {standby > 0 && <span className="text-[10px] text-amber-400 font-medium">{standby} stand by</span>}
+                          {overdue > 0 && <span className="text-[10px] text-red-400 font-bold">⚠ {overdue} atrasada{overdue > 1 ? "s" : ""}</span>}
+                          {done > 0 && todo === 0 && doing === 0 && <span className="text-[10px] text-emerald-400 font-medium">✓ {done} concluída{done > 1 ? "s" : ""}</span>}
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     </button>
+                    {/* Mini progress bar */}
+                    {total > 0 && (
+                      <div className="flex h-1 mx-3.5 mb-2 rounded-full overflow-hidden gap-px">
+                        {todo > 0 && <div className="bg-blue-500/60" style={{ flex: todo }} />}
+                        {doing > 0 && <div className="bg-purple-500/70" style={{ flex: doing }} />}
+                        {standby > 0 && <div className="bg-amber-500/60" style={{ flex: standby }} />}
+                        {overdue > 0 && <div className="bg-red-500/70" style={{ flex: overdue }} />}
+                        {done > 0 && <div className="bg-emerald-500/60" style={{ flex: done }} />}
+                      </div>
+                    )}
+                    {/* Task rows */}
                     <div className="px-3 pb-3 space-y-1">
-                      {cg.tasks.slice(0, 5).map((t) => (
+                      {cg.tasks.slice(0, 4).map((t) => (
                         <TaskRow
                           key={t.id} task={t} profileMap={profileMap}
                           currentUserId={currentUserId} isAdmin={isAdmin}
                           onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onStandby={onStandby}
                         />
                       ))}
-                      {cg.tasks.length > 5 && (
-                        <button onClick={() => onOpenClient(cg.client.id)} className="text-xs text-primary hover:underline">
-                          Ver mais {cg.tasks.length - 5}…
+                      {cg.tasks.length > 4 && (
+                        <button onClick={() => onOpenClient(cg.client.id)} className="text-xs text-primary hover:underline w-full text-center pt-1">
+                          + {cg.tasks.length - 4} tarefas
                         </button>
                       )}
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -1497,11 +1555,14 @@ function MultiSelect({ label, icon, options, selected, onChange }: {
   );
 }
 
-function StatCard({ label, value, color, subtitle }: { label: string; value: number | string; color: string; subtitle?: string }) {
+function StatCard({ label, value, color, subtitle, icon, bg }: { label: string; value: number | string; color: string; subtitle?: string; icon?: React.ReactNode; bg?: string }) {
   return (
-    <Card className="p-3 bg-card/40 border-border/40">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={cn("text-2xl font-bold mt-1", color)}>{value}</div>
+    <Card className={cn("p-3 border relative overflow-hidden transition-all hover:shadow-md hover:shadow-black/20", bg || "bg-card/40 border-border/40")}>
+      <div className="flex items-start justify-between gap-1">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight">{label}</div>
+        {icon && <div className="shrink-0 opacity-60">{icon}</div>}
+      </div>
+      <div className={cn("text-2xl font-bold mt-1.5", color)}>{value}</div>
       {subtitle && <div className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</div>}
     </Card>
   );
@@ -2560,8 +2621,12 @@ function GlobalTemplatesDialog({
   const [squadId, setSquadId] = useState<string>("");
   const [listKey, setListKey] = useState<string>(LISTS[0].key);
 
+  // Sempre que o dialog abrir OU a lista de squads mudar, garante que
+  // squadId aponte para um squad válido (corrige bug de id inválido/vazio).
   useEffect(() => {
-    if (open && !squadId && squads.length) setSquadId(squads[0].id);
+    if (!open || !squads.length) return;
+    const valid = squads.some((s) => s.id === squadId);
+    if (!valid) setSquadId(squads[0].id);
   }, [open, squads]);
 
   const squadClients = useMemo(() => clients.filter((c) => c.squad_id === squadId), [clients, squadId]);
