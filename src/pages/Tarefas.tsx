@@ -2009,26 +2009,26 @@ function TaskDialogContent({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0f0f18] border-white/8 max-w-2xl max-h-[92vh] overflow-hidden p-0 gap-0 shadow-2xl shadow-black/60">
+      <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[92vh] overflow-hidden p-0 gap-0 shadow-2xl shadow-black/40">
 
-        {/* Header com cor da lista */}
-        <div className={cn("px-6 pt-5 pb-4 border-b border-white/8 bg-gradient-to-br", listMeta?.color || "from-primary/15 to-transparent")}>
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-border/40 bg-gradient-to-b from-primary/8 to-transparent">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{listMeta?.label || listKey}</span>
-            {listMeta?.cadence && <span className="text-[10px] rounded-full bg-white/8 border border-white/10 px-2 py-0.5 text-white/30">{listMeta.cadence}</span>}
-            {editing && <span className="text-[10px] text-white/25 ml-auto">Criada {editing.created_at ? format(new Date(editing.created_at), "dd/MM/yyyy") : "—"}</span>}
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{listMeta?.label || listKey}</span>
+            {listMeta?.cadence && <span className="text-[10px] rounded-full bg-muted/40 border border-border/40 px-2 py-0.5 text-muted-foreground">{listMeta.cadence}</span>}
+            {editing && <span className="text-[10px] text-muted-foreground/50 ml-auto">Criada {editing.created_at ? format(new Date(editing.created_at), "dd/MM/yyyy") : "—"}</span>}
           </div>
           <Input
             autoFocus
             value={taskForm.title}
             onChange={(e) => setTaskForm((f: any) => ({ ...f, title: e.target.value }))}
             placeholder="Título da tarefa..."
-            className="text-xl font-semibold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-white/20 text-white"
+            className="text-xl font-semibold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30"
           />
         </div>
 
         {/* Pills de meta */}
-        <div className="px-6 py-3 border-b border-white/6 flex flex-wrap gap-2 bg-white/2">
+        <div className="px-6 py-3 border-b border-border/30 flex flex-wrap gap-2 bg-muted/10">
           {/* Status */}
           <Select value={taskForm.status} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, status: v }))}>
             <SelectTrigger className={cn("h-7 w-auto px-3 rounded-full border text-[11px] font-semibold gap-1.5 focus:ring-0", statusColors[taskForm.status] || "border-border/40")}>
@@ -2065,13 +2065,16 @@ function TaskDialogContent({
                 "h-7 px-3 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition",
                 taskForm.due_date
                   ? isOverdue
-                    ? "bg-red-500/15 text-red-300 border-red-500/30"
-                    : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-                  : "border-white/10 text-white/40 hover:border-white/20"
+                    ? "bg-red-500/15 text-red-400 border-red-500/30"
+                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  : "border-border/40 text-muted-foreground hover:border-border"
               )}>
                 <CalendarIcon className="h-3 w-3" />
                 {taskForm.due_date ? format(taskForm.due_date, "dd/MM/yyyy") : "Sem data"}
-                {taskForm.due_date && <X className="h-2.5 w-2.5 ml-0.5 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setTaskForm((f: any) => ({ ...f, due_date: null })); }} />}
+                {taskForm.due_date && (
+                  <X className="h-2.5 w-2.5 ml-0.5 opacity-60 hover:opacity-100"
+                    onClick={(e) => { e.stopPropagation(); setTaskForm((f: any) => ({ ...f, due_date: null })); }} />
+                )}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -2085,26 +2088,27 @@ function TaskDialogContent({
 
           {/* Responsável */}
           <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-widest text-white/30 font-semibold flex items-center gap-1.5">
+            <Label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1.5">
               <Users className="h-3 w-3" /> Responsável
             </Label>
             <div className="flex flex-wrap gap-2 items-center">
               {/* Botão "Eu mesmo" */}
               {currentUserId && (
                 <button
+                  type="button"
                   onClick={() => setTaskForm((f: any) => ({ ...f, assignee_id: isMe ? "" : currentUserId }))}
                   className={cn(
-                    "flex items-center gap-2 h-9 pl-2 pr-3 rounded-xl border text-sm font-medium transition",
+                    "flex items-center gap-2 h-9 pl-2 pr-3 rounded-lg border text-sm font-medium transition",
                     isMe
-                      ? "bg-primary/20 border-primary/50 text-primary"
-                      : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:text-white/80"
+                      ? "bg-primary/15 border-primary/50 text-primary"
+                      : "bg-card/60 border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                   )}
                 >
-                  <span className={cn("h-6 w-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0",
-                    isMe ? "bg-primary/30 text-primary" : "bg-white/10 text-white/40")}>
+                  <span className={cn("h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0",
+                    isMe ? "bg-primary/25 text-primary" : "bg-muted text-muted-foreground")}>
                     {myName.slice(0,1).toUpperCase()}
                   </span>
-                  {myName} {isMe ? "(selecionado)" : "(eu)"}
+                  {myName} <span className="opacity-60 text-xs">(eu)</span>
                 </button>
               )}
 
@@ -2113,13 +2117,13 @@ function TaskDialogContent({
                 value={taskForm.assignee_id && !isMe ? taskForm.assignee_id : "none"}
                 onValueChange={(v) => setTaskForm((f: any) => ({ ...f, assignee_id: v === "none" ? "" : v }))}
               >
-                <SelectTrigger className={cn("h-9 w-auto min-w-[180px] rounded-xl border text-sm gap-2 focus:ring-0",
-                  taskForm.assignee_id && !isMe ? "bg-violet-500/10 border-violet-500/30 text-violet-300" : "bg-white/5 border-white/10 text-white/40")}>
-                  {taskForm.assignee_id && !isMe && assigneeInitials ? (
-                    <span className="h-6 w-6 rounded-lg bg-violet-500/25 text-violet-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+                <SelectTrigger className={cn("h-9 w-auto min-w-[180px] rounded-lg border text-sm gap-2 focus:ring-0 bg-card/60",
+                  taskForm.assignee_id && !isMe ? "border-primary/40 text-foreground" : "border-border/50 text-muted-foreground")}>
+                  {taskForm.assignee_id && !isMe && assigneeInitials && (
+                    <span className="h-6 w-6 rounded-md bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
                       {assigneeInitials}
                     </span>
-                  ) : null}
+                  )}
                   <SelectValue placeholder="Outro responsável…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2128,11 +2132,11 @@ function TaskDialogContent({
                     .filter((p) => p.user_id !== currentUserId)
                     .map((p) => {
                       const name = p.full_name || p.email?.split("@")[0] || "—";
-                      const ini = name.split(" ").map((n) => n[0]).slice(0,2).join("").toUpperCase();
+                      const ini = name.split(" ").map((n: string) => n[0]).slice(0,2).join("").toUpperCase();
                       return (
                         <SelectItem key={p.user_id} value={p.user_id}>
                           <span className="flex items-center gap-2">
-                            <span className="h-5 w-5 rounded-md bg-primary/20 text-primary text-[9px] font-bold flex items-center justify-center shrink-0">{ini}</span>
+                            <span className="h-5 w-5 rounded-md bg-primary/15 text-primary text-[9px] font-bold flex items-center justify-center shrink-0">{ini}</span>
                             {name}
                           </span>
                         </SelectItem>
@@ -2145,21 +2149,26 @@ function TaskDialogContent({
 
           {/* Stand By reason */}
           {taskForm.status === "standby" && (
-            <div className="space-y-1.5 rounded-xl border border-amber-500/30 bg-amber-500/8 p-3.5">
-              <Label className="text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+            <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3.5">
+              <Label className="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
                 <PauseCircle className="h-3.5 w-3.5" /> Motivo do Stand By <span className="text-red-400">*</span>
               </Label>
               <Textarea value={taskForm.standby_reason} onChange={(e) => setTaskForm((f: any) => ({ ...f, standby_reason: e.target.value }))}
-                placeholder="Por que esta tarefa está em stand by?" rows={2} className="bg-background/40 border-amber-500/20 text-sm resize-none" />
+                placeholder="Por que esta tarefa está em stand by?" rows={2}
+                className="bg-card/60 border-amber-500/20 text-sm resize-none focus-visible:ring-amber-500/30" />
             </div>
           )}
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-widest text-white/30 font-semibold">Descrição</Label>
-            <Textarea value={taskForm.description} onChange={(e) => setTaskForm((f: any) => ({ ...f, description: e.target.value }))}
-              placeholder="Adicione mais detalhes sobre esta tarefa..." rows={4}
-              className="bg-white/4 border-white/8 resize-none text-sm placeholder:text-white/20 focus:border-primary/40" />
+            <Label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Descrição</Label>
+            <Textarea
+              value={taskForm.description}
+              onChange={(e) => setTaskForm((f: any) => ({ ...f, description: e.target.value }))}
+              placeholder="Adicione mais detalhes sobre esta tarefa..."
+              rows={4}
+              className="bg-card/60 border-border/50 resize-none text-sm focus-visible:ring-primary/30 focus-visible:border-primary/40"
+            />
           </div>
 
           {editing && (
@@ -2171,8 +2180,8 @@ function TaskDialogContent({
           )}
         </div>
 
-        <DialogFooter className="gap-2 px-6 py-3 border-t border-white/6 bg-black/20">
-          <Button variant="ghost" className="text-white/40 hover:text-white/70" onClick={() => onOpenChange(false)}>Fechar</Button>
+        <DialogFooter className="gap-2 px-6 py-3 border-t border-border/40 bg-card/30">
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => onOpenChange(false)}>Fechar</Button>
           <Button onClick={onSave} className="gap-2 shadow-lg shadow-primary/20">
             {editing ? <><Pencil className="h-3.5 w-3.5" /> Salvar alterações</> : <><Plus className="h-3.5 w-3.5" /> Criar tarefa</>}
           </Button>
