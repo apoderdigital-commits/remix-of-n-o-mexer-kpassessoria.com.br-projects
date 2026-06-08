@@ -134,7 +134,8 @@ export default function Portal() {
               </div>
 
               <div className="grid gap-3">
-                {showSquadCard && (
+                {/* Plataforma de Tarefas — temporariamente oculta (código mantido) */}
+                {false && (
                   <Link to="/tarefas" className="group">
                     <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-violet-500/30 hover:border-violet-500/50 bg-gradient-to-r from-violet-500/20 to-violet-500/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/10">
                       <div className="flex items-center sm:items-start gap-3 sm:gap-4">
