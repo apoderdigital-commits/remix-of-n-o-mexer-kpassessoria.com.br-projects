@@ -150,8 +150,8 @@ export default function Login() {
         {/* Team image */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
-            src={teamBg}
-            alt="Equipe KP Assessoria"
+            src={loginBgPartners.url}
+            alt="Parceiros KP Assessoria"
             className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
             style={{ aspectRatio: '16/9' }}
           />
