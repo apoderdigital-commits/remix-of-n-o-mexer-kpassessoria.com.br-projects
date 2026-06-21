@@ -66,10 +66,10 @@ export async function buildReportMessageClient(opts: {
   const { clientId, metricSource } = opts;
   const reportType = opts.reportType ?? "weekly";
 
-  // Período: últimos 7 dias (teste)
+  // Período: igual ao "7d" da dashboard = subDays(hoje, 7) → 8 dias (hoje-7 .. hoje)
   const until = new Date();
   const since = new Date();
-  since.setDate(until.getDate() - 6);
+  since.setDate(until.getDate() - 7);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const period = { since: iso(since), until: iso(until) };
 
