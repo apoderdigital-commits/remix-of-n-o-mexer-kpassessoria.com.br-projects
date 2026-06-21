@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } from "lucide-react";
-import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
@@ -27,25 +26,14 @@ export default function Login() {
   const usernameRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Force autoplay on mobile
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
-    const tryPlay = () => {
-      video.play().catch(() => {});
-    };
-
+    const tryPlay = () => { video.play().catch(() => {}); };
     video.load();
     tryPlay();
-
-    // Retry on visibility change (e.g. tab focus)
-    const onVisibility = () => {
-      if (!document.hidden) tryPlay();
-    };
+    const onVisibility = () => { if (!document.hidden) tryPlay(); };
     document.addEventListener("visibilitychange", onVisibility);
-
-    // Retry on user interaction (some mobile browsers require it)
     const onInteraction = () => {
       tryPlay();
       window.removeEventListener("touchstart", onInteraction);
@@ -53,7 +41,6 @@ export default function Login() {
     };
     window.addEventListener("touchstart", onInteraction, { once: true });
     window.addEventListener("click", onInteraction, { once: true });
-
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("touchstart", onInteraction);
@@ -124,9 +111,8 @@ export default function Login() {
   const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
   const isCredentialStep = step === "username" || step === "password";
 
-  // Both screens rendered together — video always mounted for preloading
   return (
-    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden">
+    <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#080810]">
       {/* Preloaded video — always in DOM, hidden on screen 1 */}
       <video
         ref={videoRef}
@@ -140,48 +126,52 @@ export default function Login() {
         style={{ zIndex: 0 }}
       />
 
-      {/* Screen 1: Type selection with team photo */}
+      {/* Screen 1: Type selection */}
       <div
         className={`absolute inset-0 flex flex-col transition-all duration-500 ${
           isCredentialStep ? "opacity-0 pointer-events-none scale-105" : "opacity-100 scale-100"
         } ${screenTransition ? "opacity-0 scale-105" : ""}`}
         style={{ zIndex: isCredentialStep ? 0 : 10 }}
       >
-        {/* Team image */}
+        {/* Partner image with layered gradients */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
             src={loginBgPartners.url}
             alt="Parceiros KP Assessoria"
             className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
-            style={{ aspectRatio: '16/9' }}
+            style={{ aspectRatio: "16/9" }}
           />
-          <div className="hidden lg:block absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/20" />
+          <div className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#080810]/95 via-[#080810]/30 to-transparent" />
+          <div className="hidden lg:block absolute inset-0 bg-gradient-to-t from-[#080810] via-transparent to-[#080810]/50" />
+          <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-primary/8 to-transparent" />
         </div>
 
-        {/* Bottom bar */}
-        <div className="flex-1 lg:flex-none lg:absolute lg:bottom-0 lg:left-0 lg:right-0 z-10 bg-background border-t border-border/30 lg:bg-background/90 lg:backdrop-blur-md">
+        {/* Glassmorphism bottom bar */}
+        <div className="flex-1 lg:flex-none lg:absolute lg:bottom-0 lg:left-0 lg:right-0 z-10 bg-background/80 border-t border-white/5 lg:bg-background/75 lg:backdrop-blur-xl shadow-[0_-20px_60px_rgba(0,0,0,0.5)]">
           <div className="max-w-5xl mx-auto px-6 py-5 lg:py-8 flex flex-col h-full lg:h-auto">
             {/* Mobile branding */}
             <div className="lg:hidden flex items-center gap-3 mb-3">
-              <img src={kpLogo} alt="KP Assessoria" className="h-10 w-10 rounded-xl shadow-lg" />
+              <div className="relative">
+                <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md" />
+                <img src={kpLogo} alt="KP Assessoria" className="relative h-10 w-10 rounded-xl shadow-lg" />
+              </div>
               <div>
                 <h2 className="text-sm font-bold text-foreground tracking-tight">KP Assessoria</h2>
                 <p className="text-xs text-foreground/60">Aceleradora de vendas</p>
               </div>
             </div>
 
-            {/* Motivational phrase + description — mobile */}
+            {/* Motivational phrase — mobile */}
             <div className="lg:hidden flex-1 flex flex-col items-center justify-center text-center mb-4 relative">
-              <img src={brazilFlag} alt="Brasil" className="absolute w-[450%] h-auto object-contain opacity-15 pointer-events-none z-0 top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[15deg]" />
+              <img src={brazilFlag} alt="Brasil" className="absolute w-[450%] h-auto object-contain opacity-10 pointer-events-none z-0 top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[15deg]" />
               <div className="relative z-10">
                 <p className="text-xl font-black text-foreground/90 uppercase tracking-wide leading-tight">
                   Resultado não é opção
                 </p>
-                <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight">
+                <p className="text-xl font-black text-primary uppercase tracking-wide leading-tight drop-shadow-[0_0_20px_rgba(139,92,246,0.5)]">
                   É obrigação!
                 </p>
-
-                <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/80 text-base font-medium mx-auto">
+                <p className="mt-4 max-w-[280px] leading-relaxed text-foreground/70 text-base font-medium mx-auto">
                   Uma dashboard completa que te traz previsibilidade de verdade de saber o que está dando certo para escalar ainda mais as vendas!
                 </p>
               </div>
@@ -190,58 +180,61 @@ export default function Login() {
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
               {/* Desktop branding */}
               <div className="hidden lg:flex items-center gap-4 shrink-0">
-                <img src={kpLogo} alt="KP Assessoria" className="h-12 w-12 rounded-xl shadow-lg" />
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-xl bg-primary/25 blur-lg" />
+                  <img src={kpLogo} alt="KP Assessoria" className="relative h-12 w-12 rounded-xl shadow-lg" />
+                </div>
                 <div>
                   <h2 className="text-lg font-bold text-foreground tracking-tight">KP Assessoria</h2>
-                  <p className="text-xs text-foreground/60">Aceleradora de vendas para lojas automotivas</p>
+                  <p className="text-xs text-foreground/50">Aceleradora de vendas para lojas automotivas</p>
                 </div>
               </div>
 
-              <div className="hidden lg:block w-px h-12 bg-border/40" />
+              <div className="hidden lg:block w-px h-12 bg-white/8" />
 
               {/* Motivational phrase — desktop */}
               <div className="hidden lg:flex items-center gap-2 shrink-0">
-                <div className="text-xs font-bold uppercase tracking-wider text-foreground/70 leading-tight">
-                  <span>Resultado não é opção.</span>
+                <div className="text-xs font-bold uppercase tracking-wider leading-tight">
+                  <span className="text-foreground/70">Resultado não é opção.</span>
                   <br />
-                  <span className="text-primary">É obrigação!</span>
+                  <span className="text-primary drop-shadow-[0_0_12px_rgba(139,92,246,0.6)]">É obrigação!</span>
                   <span className="ml-1">🇧🇷</span>
                 </div>
               </div>
 
-              <div className="hidden lg:block w-px h-12 bg-border/40" />
+              <div className="hidden lg:block w-px h-12 bg-white/8" />
 
               {/* Type selection */}
               <div className="flex-1">
                 <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-                  <p className="text-sm font-semibold text-foreground mb-3">Como você deseja acessar?</p>
+                  <p className="text-sm font-semibold text-foreground/80 mb-3">Como você deseja acessar?</p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={() => selectType("collaborator")}
-                      className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-lg border border-border/60 bg-secondary/80 hover:bg-secondary hover:border-primary/40 transition-all duration-200 text-left group"
+                      className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-xl border border-white/8 bg-white/4 hover:bg-white/8 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(139,92,246,0.15)] transition-all duration-200 text-left group"
                     >
-                      <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+                      <div className="shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center group-hover:from-primary/40 group-hover:to-primary/20 transition-all duration-200">
                         <Shield className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground">Colaborador</p>
                         <p className="text-[11px] text-muted-foreground">Equipe interna</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     </button>
 
                     <button
                       onClick={() => selectType("client")}
-                      className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-lg border border-border/60 bg-secondary/80 hover:bg-secondary hover:border-primary/40 transition-all duration-200 text-left group"
+                      className="flex-1 flex items-center gap-4 px-5 py-3.5 rounded-xl border border-white/8 bg-white/4 hover:bg-white/8 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(139,92,246,0.15)] transition-all duration-200 text-left group"
                     >
-                      <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+                      <div className="shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center group-hover:from-primary/40 group-hover:to-primary/20 transition-all duration-200">
                         <Briefcase className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground">Cliente</p>
                         <p className="text-[11px] text-muted-foreground">Seus dashboards</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     </button>
                   </div>
                 </div>
@@ -249,46 +242,60 @@ export default function Login() {
             </div>
 
             <div className="flex items-center gap-3 mt-4 lg:mt-3">
-              <div className="h-1 w-8 rounded-full bg-primary transition-all duration-300" />
-              <div className="h-1 w-8 rounded-full bg-foreground/20 transition-all duration-300" />
-              <div className="h-1 w-8 rounded-full bg-foreground/20 transition-all duration-300" />
-              <span className="text-xs text-muted-foreground/50 ml-auto">Acesso restrito</span>
+              <div className="h-1 w-8 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)] transition-all duration-300" />
+              <div className="h-1 w-8 rounded-full bg-white/15 transition-all duration-300" />
+              <div className="h-1 w-8 rounded-full bg-white/15 transition-all duration-300" />
+              <span className="text-xs text-muted-foreground/40 ml-auto tracking-wide">Acesso restrito</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Screen 2: Credentials — overlaid on video */}
+      {/* Screen 2: Credentials */}
       <div
         className={`absolute inset-0 flex transition-all duration-500 ${
           isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ zIndex: isCredentialStep ? 10 : 0 }}
       >
-        {/* Video overlay — mobile */}
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" style={{ zIndex: 1 }} />
+        {/* Mobile video overlay */}
+        <div className="fixed inset-0 bg-[#080810]/85 backdrop-blur-sm lg:hidden" style={{ zIndex: 1 }} />
 
         {/* Left side — video (desktop only) */}
         <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
-          <div className="absolute inset-0 bg-background/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background" style={{ zIndex: 1 }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#080810]/50 via-transparent to-[#080810]/70" style={{ zIndex: 1 }} />
+          <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-primary/8 to-transparent" style={{ zIndex: 2 }} />
+
           <div className="relative z-10 text-center px-8 pt-10">
-            <img src={kpLogo} alt="KP Assessoria" className="h-20 w-20 rounded-2xl shadow-2xl mx-auto mb-4" />
+            <div className="relative inline-block mb-5">
+              <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl scale-110" />
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
+              <img src={kpLogo} alt="KP Assessoria" className="relative h-20 w-20 rounded-2xl shadow-2xl ring-1 ring-white/10" />
+            </div>
             <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
-            <p className="text-base text-foreground/70 mt-1">Aceleradora de vendas para lojas automotivas!</p>
-            <div className="flex items-center justify-center gap-3 mt-6">
-              <div className="h-1 w-8 rounded-full bg-primary/40" />
-              <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
-              <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+            <p className="text-sm text-foreground/50 mt-1.5 font-medium">Aceleradora de vendas para lojas automotivas</p>
+
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <div className="h-1 w-8 rounded-full bg-primary/30" />
+              <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
+              <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
             </div>
           </div>
         </div>
 
         {/* Right side — form */}
         <div className="flex-1 flex items-center justify-center relative z-10 lg:bg-background">
-          <div className="w-full max-w-md px-8">
+          <div className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 left-1/4 w-48 h-48 rounded-full bg-primary/3 blur-3xl pointer-events-none" />
+
+          <div className="w-full max-w-md px-8 relative z-10">
             {/* Mobile branding */}
             <div className="lg:hidden text-center mb-8">
-              <img src={kpLogo} alt="KP Assessoria" className="h-14 w-14 rounded-2xl shadow-2xl mx-auto mb-3" />
+              <div className="relative inline-block mb-3">
+                <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl scale-110" />
+                <img src={kpLogo} alt="KP Assessoria" className="relative h-14 w-14 rounded-2xl shadow-2xl ring-1 ring-white/10" />
+              </div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
             </div>
 
@@ -296,14 +303,14 @@ export default function Login() {
               <h2 className="text-2xl font-bold text-foreground mb-1">
                 Entrar como {typeLabel}
               </h2>
-              <button type="button" onClick={goBack} className="text-primary hover:underline inline-flex items-center gap-1 text-sm mb-8">
+              <button type="button" onClick={goBack} className="text-primary hover:text-primary/80 hover:underline inline-flex items-center gap-1 text-sm mb-8 transition-colors">
                 <ArrowLeft className="h-3 w-3" /> Voltar
               </button>
 
               {step === "username" && (
-                <form onSubmit={goToPassword} className="space-y-5">
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <form onSubmit={goToPassword} className="space-y-4">
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input
                       ref={usernameRef}
                       type="text"
@@ -314,18 +321,17 @@ export default function Login() {
                       placeholder="seu.usuario"
                       required
                       autoFocus
-                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
+                      className="pl-11 h-14 text-sm bg-white/4 border-white/10 focus:border-primary/50 focus:bg-white/6 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-foreground/25"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl">
+                  <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200">
                     Continuar <ArrowRight className="h-4 w-4" />
                   </Button>
                 </form>
               )}
 
               {step === "password" && (
-                <form onSubmit={handleLogin} className="space-y-5">
-                  {/* Hidden username for password managers */}
+                <form onSubmit={handleLogin} className="space-y-4">
                   <input
                     type="text"
                     name="username"
@@ -334,8 +340,8 @@ export default function Login() {
                     readOnly
                     hidden
                   />
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input
                       ref={passwordRef}
                       type="password"
@@ -345,33 +351,42 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 focus:border-primary/50 rounded-xl"
+                      className="pl-11 h-14 text-sm bg-white/4 border-white/10 focus:border-primary/50 focus:bg-white/6 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-foreground/25"
                     />
                   </div>
                   {failedAttempts >= 3 && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/40 bg-destructive/10">
+                    <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/8">
                       <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                       <div className="text-xs leading-relaxed text-foreground">
                         <p className="font-semibold text-destructive mb-1">Muitas tentativas incorretas</p>
-                        <p className="text-foreground/80">
+                        <p className="text-foreground/70">
                           Você errou a senha {failedAttempts} vezes. Por favor, entre em contato com o time pelo grupo do WhatsApp para recuperar seu acesso.
                         </p>
                       </div>
                     </div>
                   )}
-                  <Button type="submit" className="w-full h-14 text-sm font-semibold rounded-xl" disabled={loading}>
-                    {loading ? "Entrando..." : "Entrar"}
+                  <Button
+                    type="submit"
+                    className="w-full h-14 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200 disabled:shadow-none"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        Entrando...
+                      </span>
+                    ) : "Entrar"}
                   </Button>
                 </form>
               )}
 
-              <p className="text-xs text-muted-foreground/50 text-center mt-6">Acesso restrito a usuários autorizados</p>
+              <p className="text-xs text-muted-foreground/35 text-center mt-6 tracking-wide">Acesso restrito a usuários autorizados</p>
 
               {/* Mobile step indicators */}
               <div className="lg:hidden flex items-center justify-center gap-3 mt-4">
-                <div className="h-1 w-8 rounded-full bg-primary/40" />
-                <div className={`h-1 w-8 rounded-full ${step === "username" ? "bg-primary" : "bg-foreground/20"}`} />
-                <div className={`h-1 w-8 rounded-full ${step === "password" ? "bg-primary" : "bg-foreground/20"}`} />
+                <div className="h-1 w-8 rounded-full bg-primary/30" />
+                <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
+                <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
               </div>
             </div>
           </div>
