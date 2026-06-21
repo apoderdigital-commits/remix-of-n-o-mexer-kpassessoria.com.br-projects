@@ -284,7 +284,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       insight: "Estamos otimizando todo o projeto continuamente para buscar a maior taxa de qualificação possível dos leads.",
     },
     {
-      title: "Vendas Financiamento",
+      title: "Vendas Totais",
       value: ghlLoading && vendasFinSource === "ghl" ? "..." : displayVendasFin.toLocaleString("pt-BR"),
       icon: CreditCard,
       color: "text-amber-400",
