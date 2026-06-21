@@ -345,7 +345,7 @@ export default function ClientView() {
         <div ref={sellersRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <SellerRanking title="Leads Qualificados por Vendedor" data={sellerCpfRanking} color="hsl(142, 60%, 45%)" icon="✅" />
           <SellerRanking title="Vendas Consórcio por Vendedor" data={sellerConsortiumRanking} color="hsl(210, 70%, 58%)" icon="🤝" />
-          <SellerRanking title="Vendas Financiamento por Vendedor" data={sellerFinancingRanking} color="hsl(35, 80%, 55%)" icon="💳" />
+          <SellerRanking title="Vendas Totais por Vendedor" data={sellerFinancingRanking} color="hsl(35, 80%, 55%)" icon="💳" />
         </div>
 
         <EvolutionChart data={evolutionData} simulacoesTotal={ghlData?.simulacoes} />
