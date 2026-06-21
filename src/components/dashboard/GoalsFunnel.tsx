@@ -220,7 +220,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           value={displaySales}
           baseValue={ghlCpfApproved}
           metaPct={META_VENDAS}
-          metaLabel={`Mín. ${META_VENDAS}% dos CPFs aprovados precisam virar venda`}
+          metaLabel={`Mín. ${META_VENDAS}% dos Leads Qualificados precisam virar venda`}
           gradient="from-fuchsia-600 to-pink-600"
           textColor="text-fuchsia-300"
           highlight
