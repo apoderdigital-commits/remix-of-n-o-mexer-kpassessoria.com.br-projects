@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_report_configs: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          daily_days: number[]
+          daily_enabled: boolean
+          daily_time: string
+          enabled: boolean
+          id: string
+          metric_source: string
+          monthly_day: number
+          monthly_enabled: boolean
+          monthly_time: string
+          updated_at: string | null
+          weekly_day: number
+          weekly_enabled: boolean
+          weekly_time: string
+          whatsapp_jid: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          daily_days?: number[]
+          daily_enabled?: boolean
+          daily_time?: string
+          enabled?: boolean
+          id?: string
+          metric_source?: string
+          monthly_day?: number
+          monthly_enabled?: boolean
+          monthly_time?: string
+          updated_at?: string | null
+          weekly_day?: number
+          weekly_enabled?: boolean
+          weekly_time?: string
+          whatsapp_jid?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          daily_days?: number[]
+          daily_enabled?: boolean
+          daily_time?: string
+          enabled?: boolean
+          id?: string
+          metric_source?: string
+          monthly_day?: number
+          monthly_enabled?: boolean
+          monthly_time?: string
+          updated_at?: string | null
+          weekly_day?: number
+          weekly_enabled?: boolean
+          weekly_time?: string
+          whatsapp_jid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_configs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
