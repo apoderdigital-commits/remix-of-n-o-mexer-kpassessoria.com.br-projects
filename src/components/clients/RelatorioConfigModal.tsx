@@ -11,7 +11,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Send, FlaskConical } from "lucide-react";
+import { Send, FlaskConical, CalendarDays, CalendarRange, CalendarClock } from "lucide-react";
 
 const WEBHOOK_URL = "https://kpadm-n8n.a6hrr3.easypanel.host/webhook/relatorioautositekp";
 
@@ -24,28 +24,42 @@ interface ReportConfig {
   client_id: string;
   whatsapp_jid: string;
   enabled: boolean;
-  send_day: number;
-  send_time: string;
   metric_source: "ghl" | "planilha";
+  daily_enabled: boolean;
+  daily_days: number[];
+  daily_time: string;
+  weekly_enabled: boolean;
+  weekly_day: number;
+  weekly_time: string;
+  monthly_enabled: boolean;
+  monthly_day: number;
+  monthly_time: string;
 }
 
-const DAYS = [
-  { value: "0", label: "Domingo" },
-  { value: "1", label: "Segunda-feira" },
-  { value: "2", label: "Terça-feira" },
-  { value: "3", label: "Quarta-feira" },
-  { value: "4", label: "Quinta-feira" },
-  { value: "5", label: "Sexta-feira" },
-  { value: "6", label: "Sábado" },
+const WEEKDAYS = [
+  { value: 0, short: "Dom", label: "Domingo" },
+  { value: 1, short: "Seg", label: "Segunda-feira" },
+  { value: 2, short: "Ter", label: "Terça-feira" },
+  { value: 3, short: "Qua", label: "Quarta-feira" },
+  { value: 4, short: "Qui", label: "Quinta-feira" },
+  { value: 5, short: "Sex", label: "Sexta-feira" },
+  { value: 6, short: "Sáb", label: "Sábado" },
 ];
 
 const DEFAULT_CONFIG = (clientId: string): ReportConfig => ({
   client_id: clientId,
   whatsapp_jid: "",
   enabled: false,
-  send_day: 1,
-  send_time: "08:00",
   metric_source: "ghl",
+  daily_enabled: false,
+  daily_days: [],
+  daily_time: "08:00",
+  weekly_enabled: false,
+  weekly_day: 1,
+  weekly_time: "08:00",
+  monthly_enabled: false,
+  monthly_day: 1,
+  monthly_time: "08:00",
 });
 
 export function RelatorioConfigModal({ client, onClose }: Props) {
@@ -63,10 +77,21 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
         .select("*")
         .eq("client_id", client.id)
         .maybeSingle();
-      setConfig(data ?? DEFAULT_CONFIG(client.id));
+      setConfig({ ...DEFAULT_CONFIG(client.id), ...(data ?? {}) });
       setLoading(false);
     })();
   }, [client]);
+
+  const set = (patch: Partial<ReportConfig>) =>
+    setConfig((c) => ({ ...c, ...patch }));
+
+  const toggleDailyDay = (day: number) => {
+    setConfig((c) => {
+      const has = c.daily_days.includes(day);
+      const next = has ? c.daily_days.filter((d) => d !== day) : [...c.daily_days, day].sort((a, b) => a - b);
+      return { ...c, daily_days: next };
+    });
+  };
 
   const save = async () => {
     if (!client) return;
@@ -94,14 +119,12 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
     setTesting(true);
     try {
-      // Fetch client credentials from Supabase so n8n can query the APIs
       const { data: clientData } = await (supabase as any)
         .from("clients")
         .select("meta_account_id, meta_token_id, ghl_api_key, ghl_location_id, google_sheet_id")
         .eq("id", client.id)
         .single();
 
-      // Build last-7-days period
       const until = new Date();
       const since = new Date();
       since.setDate(until.getDate() - 6);
@@ -109,6 +132,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
 
       const payload = {
         test: true,
+        report_type: "weekly",
         client_id: client.id,
         client_name: client.name,
         whatsapp_jid: config.whatsapp_jid,
@@ -125,12 +149,8 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
           google_sheet_id: clientData?.google_sheet_id ?? null,
         },
         report_template: {
-          header: "📊 *Relatório Semanal - KP Assessoria*",
-          funnel_metas: {
-            qualificacoes_pct: 60,
-            leads_qualificados_pct: 20,
-            vendas_pct: 25,
-          },
+          header: "📊 *Relatório - KP Assessoria*",
+          funnel_metas: { qualificacoes_pct: 60, leads_qualificados_pct: 20, vendas_pct: 25 },
         },
       };
 
@@ -152,41 +172,31 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
   };
 
-  const set = (patch: Partial<ReportConfig>) =>
-    setConfig((c) => ({ ...c, ...patch }));
-
   return (
     <Dialog open={!!client} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="bg-card border-border/50 max-w-md">
+      <DialogContent className="bg-card border-border/50 max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" />
             Relatório Automático
           </DialogTitle>
-          {client && (
-            <p className="text-sm text-muted-foreground">{client.name}</p>
-          )}
+          {client && <p className="text-sm text-muted-foreground">{client.name}</p>}
         </DialogHeader>
 
         {loading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Carregando...
-          </div>
+          <div className="py-8 text-center text-sm text-muted-foreground">Carregando...</div>
         ) : (
           <div className="space-y-5 py-2">
 
-            {/* Enable toggle */}
+            {/* Master enable */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
               <div>
-                <p className="text-sm font-medium">Ativar disparo automático</p>
+                <p className="text-sm font-medium">Ativar disparos automáticos</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Envia o relatório no dia e horário configurados
+                  Chave geral — desligue para pausar tudo sem perder a configuração
                 </p>
               </div>
-              <Switch
-                checked={config.enabled}
-                onCheckedChange={(v) => set({ enabled: v })}
-              />
+              <Switch checked={config.enabled} onCheckedChange={(v) => set({ enabled: v })} />
             </div>
 
             {/* JID */}
@@ -200,43 +210,6 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
                 onChange={(e) => set({ whatsapp_jid: e.target.value })}
                 className="font-mono text-sm"
               />
-              <p className="text-[11px] text-muted-foreground/70">
-                Cole o JID do grupo onde o relatório será enviado
-              </p>
-            </div>
-
-            {/* Day + Time */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Dia da semana
-                </Label>
-                <Select
-                  value={String(config.send_day)}
-                  onValueChange={(v) => set({ send_day: Number(v) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAYS.map((d) => (
-                      <SelectItem key={d.value} value={d.value}>
-                        {d.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Horário
-                </Label>
-                <Input
-                  type="time"
-                  value={config.send_time}
-                  onChange={(e) => set({ send_time: e.target.value })}
-                />
-              </div>
             </div>
 
             {/* Metric source */}
@@ -248,25 +221,145 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
                 <button
                   onClick={() => set({ metric_source: "ghl" })}
                   className={`flex-1 py-2.5 text-sm font-medium transition-colors border-r border-border/40 ${
-                    config.metric_source === "ghl"
-                      ? "bg-cyan-500/15 text-cyan-300"
-                      : "text-muted-foreground hover:text-foreground"
+                    config.metric_source === "ghl" ? "bg-cyan-500/15 text-cyan-300" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  CRM
-                  <span className="text-[10px] ml-1 opacity-60">(padrão)</span>
+                  CRM <span className="text-[10px] ml-1 opacity-60">(padrão)</span>
                 </button>
                 <button
                   onClick={() => set({ metric_source: "planilha" })}
                   className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                    config.metric_source === "planilha"
-                      ? "bg-emerald-500/15 text-emerald-300"
-                      : "text-muted-foreground hover:text-foreground"
+                    config.metric_source === "planilha" ? "bg-emerald-500/15 text-emerald-300" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Planilha
                 </button>
               </div>
+            </div>
+
+            <div className="border-t border-border/40 pt-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                Frequência dos relatórios
+              </p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                Ative quantos quiser — pode combinar diário, semanal e mensal
+              </p>
+            </div>
+
+            {/* ── DIÁRIO ── */}
+            <div className={`rounded-xl border p-4 space-y-3 transition-colors ${
+              config.daily_enabled ? "border-blue-500/40 bg-blue-500/5" : "border-border/30 bg-muted/10"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium">Relatório Diário</span>
+                </div>
+                <Switch checked={config.daily_enabled} onCheckedChange={(v) => set({ daily_enabled: v })} />
+              </div>
+              {config.daily_enabled && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Dias de disparo</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEKDAYS.map((d) => {
+                        const active = config.daily_days.includes(d.value);
+                        return (
+                          <button
+                            key={d.value}
+                            onClick={() => toggleDailyDay(d.value)}
+                            className={`h-9 w-11 rounded-lg text-xs font-semibold transition-all ${
+                              active
+                                ? "bg-blue-500/20 text-blue-300 border border-blue-400/50"
+                                : "bg-muted/30 text-muted-foreground border border-border/40 hover:border-blue-400/30"
+                            }`}
+                          >
+                            {d.short}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60">
+                      {config.daily_days.length === 0
+                        ? "Nenhum dia selecionado = envia todos os dias"
+                        : `Envia ${config.daily_days.length}x por semana`}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Horário</Label>
+                    <Input
+                      type="time"
+                      value={config.daily_time}
+                      onChange={(e) => set({ daily_time: e.target.value })}
+                      className="w-32"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── SEMANAL ── */}
+            <div className={`rounded-xl border p-4 space-y-3 transition-colors ${
+              config.weekly_enabled ? "border-violet-500/40 bg-violet-500/5" : "border-border/30 bg-muted/10"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarRange className="h-4 w-4 text-violet-400" />
+                  <span className="text-sm font-medium">Relatório Semanal</span>
+                </div>
+                <Switch checked={config.weekly_enabled} onCheckedChange={(v) => set({ weekly_enabled: v })} />
+              </div>
+              {config.weekly_enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Dia do envio</Label>
+                    <Select value={String(config.weekly_day)} onValueChange={(v) => set({ weekly_day: Number(v) })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {WEEKDAYS.map((d) => (
+                          <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Horário</Label>
+                    <Input type="time" value={config.weekly_time} onChange={(e) => set({ weekly_time: e.target.value })} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── MENSAL ── */}
+            <div className={`rounded-xl border p-4 space-y-3 transition-colors ${
+              config.monthly_enabled ? "border-amber-500/40 bg-amber-500/5" : "border-border/30 bg-muted/10"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-medium">Relatório Mensal</span>
+                </div>
+                <Switch checked={config.monthly_enabled} onCheckedChange={(v) => set({ monthly_enabled: v })} />
+              </div>
+              {config.monthly_enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Dia do mês</Label>
+                    <Select value={String(config.monthly_day)} onValueChange={(v) => set({ monthly_day: Number(v) })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                          <SelectItem key={day} value={String(day)}>Dia {day}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Horário</Label>
+                    <Input type="time" value={config.monthly_time} onChange={(e) => set({ monthly_time: e.target.value })} />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -280,11 +373,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
                 <FlaskConical className="h-4 w-4" />
                 {testing ? "Enviando..." : "Enviar Teste"}
               </Button>
-              <Button
-                onClick={save}
-                disabled={saving || testing}
-                className="flex-1 gap-2"
-              >
+              <Button onClick={save} disabled={saving || testing} className="flex-1 gap-2">
                 <Send className="h-4 w-4" />
                 {saving ? "Salvando..." : "Salvar"}
               </Button>
