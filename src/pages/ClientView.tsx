@@ -317,7 +317,7 @@ export default function ClientView() {
 
         <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div ref={rankingRefs.cpf} className="rounded-xl">
-            <CreativeRanking title="🏆 Criativos por CPF Aprovado" data={cpfRanking} color="hsl(263, 50%, 68%)" category="cpf" clientId={clientId} since={since} until={until} />
+            <CreativeRanking title="🏆 Criativos por Lead Qualificado" data={cpfRanking} color="hsl(263, 50%, 68%)" category="cpf" clientId={clientId} since={since} until={until} />
           </div>
           <div ref={rankingRefs.consortium} className="rounded-xl">
             <CreativeRanking title="🤝 Criativos por Venda Consórcio" data={consortiumRanking} color="hsl(210, 70%, 58%)" category="consortium" clientId={clientId} since={since} until={until} />
@@ -343,7 +343,7 @@ export default function ClientView() {
         {monthlyTrend && monthlyTrend.length > 0 && <MonthlyTrend data={monthlyTrend} />}
 
         <div ref={sellersRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <SellerRanking title="CPFs Aprovados por Vendedor" data={sellerCpfRanking} color="hsl(142, 60%, 45%)" icon="✅" />
+          <SellerRanking title="Leads Qualificados por Vendedor" data={sellerCpfRanking} color="hsl(142, 60%, 45%)" icon="✅" />
           <SellerRanking title="Vendas Consórcio por Vendedor" data={sellerConsortiumRanking} color="hsl(210, 70%, 58%)" icon="🤝" />
           <SellerRanking title="Vendas Financiamento por Vendedor" data={sellerFinancingRanking} color="hsl(35, 80%, 55%)" icon="💳" />
         </div>
