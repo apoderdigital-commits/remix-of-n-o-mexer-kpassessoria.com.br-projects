@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } f
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
-import teamBg from "@/assets/team-bg.jpg";
+import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 
 const EMAIL_DOMAIN = "@kp.local";
 
@@ -150,8 +150,8 @@ export default function Login() {
         {/* Team image */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
-            src={teamBg}
-            alt="Equipe KP Assessoria"
+            src={loginBgPartners.url}
+            alt="Parceiros KP Assessoria"
             className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
             style={{ aspectRatio: '16/9' }}
           />
