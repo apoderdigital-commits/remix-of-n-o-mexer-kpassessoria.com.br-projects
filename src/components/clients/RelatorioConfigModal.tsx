@@ -67,7 +67,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG(""));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
+  const [testingType, setTestingType] = useState<"daily" | "weekly" | "monthly" | null>(null);
 
   useEffect(() => {
     if (!client) return;
@@ -112,24 +112,24 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
   };
 
-  const sendTest = async () => {
+  const sendTest = async (reportType: "daily" | "weekly" | "monthly") => {
     if (!client) return;
     if (!config.whatsapp_jid.trim()) {
       toast.error("Preencha o JID do grupo antes de testar");
       return;
     }
-    setTesting(true);
+    setTestingType(reportType);
     try {
       // 1. Monta a mensagem pronta direto no frontend (mesma lógica da dashboard)
       const built = await buildReportMessageClient({
         clientId: client.id,
         metricSource: config.metric_source,
-        reportType: "weekly",
+        reportType,
       });
 
       if (!built?.message) {
         toast.error("Não foi possível montar o relatório. Verifique os dados do cliente.");
-        setTesting(false);
+        setTestingType(null);
         return;
       }
 
@@ -142,7 +142,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
           client_id: client.id,
           client_name: client.name,
           whatsapp_jid: config.whatsapp_jid,
-          report_type: "weekly",
+          report_type: reportType,
           metric_source: config.metric_source,
           message: built.message,
           metrics: built.metrics,
@@ -158,7 +158,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     } catch {
       toast.error("Não foi possível alcançar o webhook. Verifique o n8n.");
     } finally {
-      setTesting(false);
+      setTestingType(null);
     }
   };
 
@@ -353,19 +353,36 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-1">
-              <Button
-                variant="outline"
-                onClick={sendTest}
-                disabled={testing || saving}
-                className="flex-1 gap-2 border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 hover:border-amber-400/50"
-              >
-                <FlaskConical className="h-4 w-4" />
-                {testing ? "Enviando..." : "Enviar Teste"}
-              </Button>
-              <Button onClick={save} disabled={saving || testing} className="flex-1 gap-2">
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-1.5">
+                <FlaskConical className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  Enviar teste
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { type: "daily", label: "Diário" },
+                  { type: "weekly", label: "Semanal" },
+                  { type: "monthly", label: "Mensal" },
+                ] as const).map((t) => {
+                  const busy = testingType === t.type;
+                  return (
+                    <Button
+                      key={t.type}
+                      variant="outline"
+                      onClick={() => sendTest(t.type)}
+                      disabled={!!testingType || saving}
+                      className="gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 hover:border-amber-400/50 text-xs"
+                    >
+                      {busy ? "..." : t.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button onClick={save} disabled={saving || !!testingType} className="w-full gap-2">
                 <Send className="h-4 w-4" />
-                {saving ? "Salvando..." : "Salvar"}
+                {saving ? "Salvando..." : "Salvar configuração"}
               </Button>
             </div>
 
