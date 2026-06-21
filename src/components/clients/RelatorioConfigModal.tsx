@@ -119,45 +119,40 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
     setTesting(true);
     try {
-      const { data: clientData } = await (supabase as any)
-        .from("clients")
-        .select("meta_account_id, meta_token_id, ghl_api_key, ghl_location_id, google_sheet_id")
-        .eq("id", client.id)
-        .single();
+      // 1. Backend monta a mensagem pronta (mesmas métricas da dashboard)
+      const { data: built, error: buildError } = await (supabase as any).functions.invoke(
+        "build-report-message",
+        {
+          body: {
+            client_id: client.id,
+            report_type: "weekly",
+            metric_source: config.metric_source,
+            whatsapp_jid: config.whatsapp_jid,
+          },
+        }
+      );
 
-      const until = new Date();
-      const since = new Date();
-      since.setDate(until.getDate() - 6);
-      const fmt = (d: Date) => d.toISOString().split("T")[0];
+      if (buildError || !built?.message) {
+        toast.error("Não foi possível montar o relatório. Verifique os dados do cliente.");
+        setTesting(false);
+        return;
+      }
 
-      const payload = {
-        test: true,
-        report_type: "weekly",
-        client_id: client.id,
-        client_name: client.name,
-        whatsapp_jid: config.whatsapp_jid,
-        metric_source: config.metric_source,
-        period: {
-          since: fmt(since),
-          until: fmt(until),
-          label: `${since.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} a ${until.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}`,
-        },
-        credentials: {
-          meta_account_id: clientData?.meta_account_id ?? null,
-          ghl_api_key: clientData?.ghl_api_key ?? null,
-          ghl_location_id: clientData?.ghl_location_id ?? null,
-          google_sheet_id: clientData?.google_sheet_id ?? null,
-        },
-        report_template: {
-          header: "📊 *Relatório - KP Assessoria*",
-          funnel_metas: { qualificacoes_pct: 60, leads_qualificados_pct: 20, vendas_pct: 25 },
-        },
-      };
-
+      // 2. Envia a mensagem PRONTA para o n8n (que só repassa ao WhatsApp)
       const res = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          test: true,
+          client_id: client.id,
+          client_name: client.name,
+          whatsapp_jid: config.whatsapp_jid,
+          report_type: "weekly",
+          metric_source: config.metric_source,
+          message: built.message,
+          metrics: built.metrics,
+          period: built.period,
+        }),
       });
 
       if (res.ok) {
