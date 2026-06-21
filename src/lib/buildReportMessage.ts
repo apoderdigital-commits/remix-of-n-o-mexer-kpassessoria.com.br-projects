@@ -73,31 +73,34 @@ export async function buildReportMessageClient(opts: {
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const period = { since: iso(since), until: iso(until) };
 
-  // Sincroniza a Meta do período antes de ler (senão investimento/leads ficam 0)
+  // ── Meta (investimento + leads) ──
+  // A própria fetch-meta-data sincroniza E retorna os totais — usamos o retorno direto.
+  let totalSpent = 0;
+  let totalLeads = 0;
   try {
-    await supabase.functions.invoke("fetch-meta-data", {
+    const { data: metaSync } = await supabase.functions.invoke("fetch-meta-data", {
       body: { client_id: clientId, since: period.since, until: period.until },
     });
+    if (metaSync?.success) {
+      totalSpent = Number(metaSync.total_spent) || 0;
+      totalLeads = Number(metaSync.total_leads) || 0;
+    }
   } catch (_) {
-    // segue com o que já estiver na tabela
+    // cai no fallback abaixo
   }
 
-  // ── Meta (investimento + leads) ──
-  const { data: campaigns } = await supabase
-    .from("meta_campaigns")
-    .select("amount_spent, leads_total, date")
-    .eq("client_id", clientId)
-    .gte("date", period.since)
-    .lte("date", period.until);
+  // Fallback: lê a tabela se o sync não trouxe os totais
+  if (totalSpent === 0 && totalLeads === 0) {
+    const { data: campaigns } = await supabase
+      .from("meta_campaigns")
+      .select("amount_spent, leads_total")
+      .eq("client_id", clientId)
+      .gte("date", period.since)
+      .lte("date", period.until);
+    totalSpent = (campaigns || []).reduce((s: number, c: any) => s + (Number(c.amount_spent) || 0), 0);
+    totalLeads = (campaigns || []).reduce((s: number, c: any) => s + (c.leads_total || 0), 0);
+  }
 
-  const totalSpent = (campaigns || []).reduce(
-    (s: number, c: any) => s + (Number(c.amount_spent) || 0),
-    0
-  );
-  const totalLeads = (campaigns || []).reduce(
-    (s: number, c: any) => s + (c.leads_total || 0),
-    0
-  );
   const cpl = totalLeads > 0 ? totalSpent / totalLeads : 0;
 
   // ── Leads (planilha + criativos) ──
