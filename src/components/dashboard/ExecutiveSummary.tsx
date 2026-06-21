@@ -165,7 +165,7 @@ export function ExecutiveSummary({
           {deltas ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
               <DeltaRow label="Leads" pct={deltas.leads} />
-              <DeltaRow label="CPFs aprovados" pct={deltas.cpf} />
+              <DeltaRow label="Leads qualificados" pct={deltas.cpf} />
               <DeltaRow label="Vendas" pct={deltas.sales} />
               <DeltaRow label="CPL" pct={deltas.cpl} invertColor />
             </div>
