@@ -46,8 +46,8 @@ const SERIES: SeriesDef[] = [
   },
   {
     key: "simulacoes",
-    name: "Simulações",
-    description: "Simulações de crédito registradas no CRM",
+    name: "Qualificações Realizadas",
+    description: "Leads avaliados, com financiamento ou pagamento à vista/cartão.",
     color: "hsl(190 80% 55%)",
     icon: BarChart3,
     goal: { baseKey: "leads", target: 60, label: "Sim/Leads" },
@@ -333,7 +333,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-foreground">Evolução Temporal</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Veja como leads, simulações, aprovações e vendas se comportam dia a dia no período selecionado.
+              Veja como leads, qualificações, aprovações e vendas se comportam dia a dia no período selecionado.
             </p>
           </div>
         </div>
