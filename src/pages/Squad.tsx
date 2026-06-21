@@ -1596,6 +1596,7 @@ export default function Squad() {
             <TabsContent value="agenda" className="space-y-4">
               <AgendaPanel
                 agenda={agenda}
+                activeClientsCount={clients.length}
                 onNew={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }}
                 onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
                 onRemove={removeAg}
@@ -2183,9 +2184,10 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, onNew, onEdit, onRemove, onToggleDone,
+  agenda, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
 }: {
   agenda: Agenda[];
+  activeClientsCount: number;
   onNew: () => void;
   onEdit: (a: Agenda) => void;
   onRemove: (id: string) => void;
@@ -2226,8 +2228,13 @@ function AgendaPanel({
       return d < today;
     }).length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    return { total, done, justified, scheduled, overdueUnjustified, pct };
-  }, [filtered]);
+    // Clientes distintos com reunião marcada no mês x total de clientes ativos
+    const meetingClients = new Set(
+      filtered.map((a) => (a.client_name || "").trim().toLowerCase()).filter(Boolean)
+    ).size;
+    const coverage = activeClientsCount > 0 ? Math.round((meetingClients / activeClientsCount) * 100) : 0;
+    return { total, done, justified, scheduled, overdueUnjustified, pct, meetingClients, coverage };
+  }, [filtered, activeClientsCount]);
 
   return (
     <div className="space-y-4">
@@ -2246,6 +2253,16 @@ function AgendaPanel({
         </Select>
         <div className="flex-1" />
         <Button onClick={onNew} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"><Plus className="h-4 w-4" /> Novo Alinhamento Mensal</Button>
+      </div>
+
+      <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm">
+          Clientes nas reuniões mensais:{" "}
+          <strong className="text-foreground">{stats.meetingClients}</strong>
+          <span className="text-muted-foreground"> de {activeClientsCount}</span>
+        </span>
+        <Badge className="bg-primary/15 text-primary border-primary/30">{stats.coverage}% de cobertura</Badge>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
