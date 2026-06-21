@@ -110,7 +110,7 @@ export function ScaleScenarios() {
                     <span className="font-bold">{data.leads.toLocaleString('pt-BR')}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-background/30">
-                    <span className="text-muted-foreground text-sm">Simulações</span>
+                    <span className="text-muted-foreground text-sm">Qualificações Realizadas</span>
                     <span className="font-bold">{data.simulacoes.toLocaleString('pt-BR')}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-background/30">
