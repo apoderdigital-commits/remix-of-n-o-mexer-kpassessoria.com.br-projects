@@ -73,6 +73,15 @@ export async function buildReportMessageClient(opts: {
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const period = { since: iso(since), until: iso(until) };
 
+  // Sincroniza a Meta do período antes de ler (senão investimento/leads ficam 0)
+  try {
+    await supabase.functions.invoke("fetch-meta-data", {
+      body: { client_id: clientId, since: period.since, until: period.until },
+    });
+  } catch (_) {
+    // segue com o que já estiver na tabela
+  }
+
   // ── Meta (investimento + leads) ──
   const { data: campaigns } = await supabase
     .from("meta_campaigns")
