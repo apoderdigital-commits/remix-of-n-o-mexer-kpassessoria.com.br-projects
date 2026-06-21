@@ -426,6 +426,7 @@ export default function Squad() {
   const [openAg, setOpenAg] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [consolidatedOpen, setConsolidatedOpen] = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [reportOpen, setReportOpen] = useState(false);
   const [notesReportOpen, setNotesReportOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
@@ -795,6 +796,12 @@ export default function Squad() {
     renew: clients.filter((c) => c.renewal_60d).length,
   }), [clients]);
 
+  // Filtro de prioridade (AA..CC) na aba de Clientes
+  const visibleClients = useMemo(
+    () => (priorityFilter === "all" ? clients : clients.filter((c) => c.prioritization === priorityFilter)),
+    [clients, priorityFilter]
+  );
+
   const serviceCounts = useMemo(() => {
     const counts = { TP: 0, CRM: 0, COM: 0 };
     for (const c of clients) {
@@ -1046,8 +1053,29 @@ export default function Squad() {
                 <StatCard label="Renovação 60d" value={stats.renew} icon={Activity} color="from-primary to-fuchsia-600" />
               </div>
 
-              <div className="flex justify-end">
-                <Button onClick={openNew} className="gap-1.5"><Plus className="h-4 w-4" /> Novo cliente</Button>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Prioridade:</span>
+                  {["all", "AA", "AB", "AC", "BA", "BB", "BC", "CA", "CB", "CC"].map((p) => {
+                    const active = priorityFilter === p;
+                    const count = p === "all" ? clients.length : clients.filter((c) => c.prioritization === p).length;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setPriorityFilter(p)}
+                        className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-colors ${
+                          active
+                            ? "border-primary/50 bg-primary/20 text-primary"
+                            : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground hover:border-primary/30"
+                        }`}
+                      >
+                        {p === "all" ? "Todos" : p}
+                        <span className="ml-1 opacity-60">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button onClick={openNew} className="gap-1.5 shrink-0"><Plus className="h-4 w-4" /> Novo cliente</Button>
               </div>
 
               <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
@@ -1067,9 +1095,11 @@ export default function Squad() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients.length === 0 ? (
-                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">Nenhum cliente neste squad.</TableCell></TableRow>
-                    ) : clients.map((c, i) => (
+                    {visibleClients.length === 0 ? (
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                        {clients.length === 0 ? "Nenhum cliente neste squad." : "Nenhum cliente nessa prioridade."}
+                      </TableCell></TableRow>
+                    ) : visibleClients.map((c, i) => (
                       <TableRow key={c.id} className="border-border/20">
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
                         <TableCell className="font-semibold">{c.name}</TableCell>
