@@ -215,7 +215,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label={`Vendas Financiamento${hasBothSources ? ` (${salesSource === "ghl" ? "CRM" : "Planilha"})` : ""}`}
+          label={`Vendas Totais${hasBothSources ? ` (${salesSource === "ghl" ? "CRM" : "Planilha"})` : ""}`}
           icon={Banknote}
           value={displaySales}
           baseValue={ghlCpfApproved}
@@ -243,7 +243,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
                 </>
               )}
               <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => onScrollTo("financing")}>
-                <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de Venda Financiamento
+                <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de Venda Total
               </Button>
             </div>
           }
@@ -253,7 +253,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
       <Dialog open={showSalesCompare} onOpenChange={setShowSalesCompare}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Vendas Financiamento | CRM × Planilha</DialogTitle>
+            <DialogTitle>Vendas Totais | CRM × Planilha</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
