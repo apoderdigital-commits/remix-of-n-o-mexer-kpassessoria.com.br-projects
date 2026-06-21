@@ -816,12 +816,13 @@ export default function Clients() {
                         </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => setReportConfigClient({ id: c.id, name: c.name })}
                           title="Configurar relatório automático"
-                          className="text-primary/70 hover:text-primary"
+                          className="gap-1.5 px-2 h-8 text-violet-400 border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-400/50 transition-all"
                         >
-                          <Send className="h-4 w-4" />
+                          <Send className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-medium">Relatório</span>
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => requestDelete(c)} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
