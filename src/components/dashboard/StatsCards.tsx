@@ -235,20 +235,20 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       currentForPrev: totalLeads > 0 ? totalSpent / totalLeads : 0,
     },
     {
-      title: "Simulações",
+      title: "Qualificações Realizadas",
       value: ghlLoading && simSource === "ghl" ? "..." : displaySimulacoes.toLocaleString("pt-BR"),
       icon: BarChart3,
       color: "text-cyan-400",
       accent: "190 80% 55%",
       sourceToggle: { source: simSource, onToggle: () => setSimSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: simSource === "ghl" && ghlData ? { label: "Sim/Leads", value: simRate, target: 60 } : undefined,
-      note: simSource === "planilha" ? "Leads qualificados (planilha)" : undefined,
+      note: `Leads avaliados, com financiamento ou pagamento à vista/cartão.${simSource === "planilha" ? " (Planilha)" : ""}`,
       insight: simSource === "ghl" && ghlData && totalLeads > 0
         ? (() => {
             const target = Math.round(totalLeads * 0.6);
             const diff = simulacoes - target;
             const status = diff >= 0
-              ? `acima da meta em ${diff} simulações`
+              ? `acima da meta em ${diff} qualificações`
               : `faltam ${Math.abs(diff)} para bater a meta`;
             return `Atual: ${simulacoes} (${simRate.toFixed(1)}%) · esperado: ${target} (60% dos leads). Estamos ${status}.`;
           })()
