@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.build-report-message]
 verify_jwt = false
+
+[functions.dispatch-reports]
+verify_jwt = false
