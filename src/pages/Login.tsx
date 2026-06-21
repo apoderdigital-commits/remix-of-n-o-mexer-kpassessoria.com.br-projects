@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } f
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
-import teamBg from "@/assets/team-bg.jpg";
+import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 
 const EMAIL_DOMAIN = "@kp.local";
 
