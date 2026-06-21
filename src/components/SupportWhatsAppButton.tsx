@@ -3,10 +3,9 @@ import { useLocation } from "react-router-dom";
 
 export function SupportWhatsAppButton() {
   const { pathname } = useLocation();
-  // Hide on squad dashboard (and admin)
   if (pathname.startsWith("/squad")) return null;
 
-  const href = "https://w.app/kpassessoriadashsuporte";
+  const href = "https://wa.me/message/CX2FK5HG77WOD1";
 
   return (
     <a
