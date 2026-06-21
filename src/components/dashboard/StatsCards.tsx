@@ -265,7 +265,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "142 65% 50%",
       sourceToggle: { source: cpfAprovSource, onToggle: () => setCpfAprovSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: cpfAprovSource === "ghl" && ghlData ? { label: "Aprov/Sim", value: aprovRate, target: 15 } : undefined,
-      costIndicator: displayCpfAprovado > 0 ? { label: "CPMQL", value: totalSpent / displayCpfAprovado, target: 35, denominatorLabel: "CPF aprovado" } : undefined,
+
       scrollTarget: "cpf" as const,
       compare: comparisons?.cpf ? { data: comparisons.cpf, format: fmtInt } : undefined,
       prev: cpfAprovSource === "ghl" ? previousPeriod?.cpfAprovado : undefined,
@@ -291,7 +291,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       accent: "35 85% 55%",
       sourceToggle: { source: vendasFinSource, onToggle: () => setVendasFinSource(s => s === "ghl" ? "planilha" : "ghl") },
       indicator: ghlData ? { label: "Fin/Aprov", value: vendasFinancRate, target: 20 } : undefined,
-      costIndicator: displayVendasFin > 0 ? { label: "CPV", value: totalSpent / displayVendasFin, target: 150, denominatorLabel: "venda" } : undefined,
+
       scrollTarget: "financing" as const,
       insight: ghlData && ghlAprovado > 0
         ? (() => {
