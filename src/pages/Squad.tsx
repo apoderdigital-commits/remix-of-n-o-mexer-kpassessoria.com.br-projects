@@ -2651,16 +2651,36 @@ function ChurnPanel({
   onEdit: (c: Churn) => void;
   onRemove: (id: string) => void;
 }) {
+  // Filtro por mês de saída
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const monthOptions = useMemo(() => {
+    const set = new Set(churns.map((c) => (c.churn_month || "").slice(0, 7)).filter(Boolean));
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [churns]);
+  const filteredChurns = useMemo(
+    () => (monthFilter === "all" ? churns : churns.filter((c) => (c.churn_month || "").slice(0, 7) === monthFilter)),
+    [churns, monthFilter]
+  );
+  // Resumo de motivos das saídas (do conjunto filtrado)
+  const reasonBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    filteredChurns.forEach((c) => {
+      const r = (c.reason || "").trim() || "Sem motivo informado";
+      map.set(r, (map.get(r) || 0) + 1);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredChurns]);
+
   // Group churns by churn_month (YYYY-MM)
   const grouped = useMemo(() => {
     const map = new Map<string, Churn[]>();
-    for (const c of churns) {
+    for (const c of filteredChurns) {
       const key = c.churn_month ? c.churn_month.slice(0, 7) : "sem-data";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(c);
     }
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [churns]);
+  }, [filteredChurns]);
 
   // Compute active base per month: current active + churns occurring on/after that month
   const totalChurns = churns.length;
@@ -2733,10 +2753,48 @@ function ChurnPanel({
         </Card>
       </div>
 
-      <div className="flex justify-end">
-        <Button onClick={onNew} className="gap-1.5">
-          <Plus className="h-4 w-4" /> Novo churn
-        </Button>
+      {/* Filtro por mês + motivos das saídas */}
+      <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <Label className="text-xs text-muted-foreground">Mês da saída:</Label>
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-[200px] bg-card/40 border-border/40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os meses</SelectItem>
+                {monthOptions.map((m) => (
+                  <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              {filteredChurns.length} {filteredChurns.length === 1 ? "saída" : "saídas"}
+            </span>
+          </div>
+          <Button onClick={onNew} className="gap-1.5">
+            <Plus className="h-4 w-4" /> Novo churn
+          </Button>
+        </div>
+
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Motivos das saídas</p>
+          {reasonBreakdown.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhuma saída no período.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {reasonBreakdown.map(([reason, count]) => (
+                <div
+                  key={reason}
+                  className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5"
+                >
+                  <span className="text-xs text-red-200">{reason}</span>
+                  <span className="text-xs font-bold text-red-300 bg-red-500/20 rounded px-1.5">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {grouped.length === 0 ? (
