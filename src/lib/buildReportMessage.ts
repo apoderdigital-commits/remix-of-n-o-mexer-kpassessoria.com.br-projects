@@ -66,12 +66,29 @@ export async function buildReportMessageClient(opts: {
   const { clientId, metricSource } = opts;
   const reportType = opts.reportType ?? "weekly";
 
-  // Período: igual ao "7d" da dashboard = subDays(hoje, 7) → 8 dias (hoje-7 .. hoje)
-  const until = new Date();
-  const since = new Date();
-  since.setDate(until.getDate() - 7);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const period = { since: iso(since), until: iso(until) };
+
+  // Período conforme o tipo (mesma lógica do automático)
+  const today = new Date();
+  let period: { since: string; until: string };
+  if (reportType === "daily") {
+    // ontem (dia completo)
+    const y = new Date(today);
+    y.setDate(today.getDate() - 1);
+    period = { since: iso(y), until: iso(y) };
+  } else if (reportType === "monthly") {
+    // mês anterior completo
+    const firstOfThis = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastPrev = new Date(firstOfThis);
+    lastPrev.setDate(0);
+    const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
+    period = { since: iso(firstPrev), until: iso(lastPrev) };
+  } else {
+    // weekly — igual ao "7d" da dashboard (hoje-7 .. hoje)
+    const since = new Date(today);
+    since.setDate(today.getDate() - 7);
+    period = { since: iso(since), until: iso(today) };
+  }
 
   // ── Meta (investimento + leads) ──
   // A própria fetch-meta-data sincroniza E retorna os totais — usamos o retorno direto.
