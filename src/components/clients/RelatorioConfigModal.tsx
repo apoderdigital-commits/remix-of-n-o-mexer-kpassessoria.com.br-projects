@@ -11,7 +11,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Send } from "lucide-react";
+import { Send, FlaskConical } from "lucide-react";
+
+const WEBHOOK_URL = "https://kpadm-n8n.a6hrr3.easypanel.host/webhook/relatorioautositekp";
 
 interface Props {
   client: { id: string; name: string } | null;
@@ -50,6 +52,7 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG(""));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     if (!client) return;
@@ -80,6 +83,37 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     } else {
       toast.success("Configuração salva!");
       onClose();
+    }
+  };
+
+  const sendTest = async () => {
+    if (!client) return;
+    if (!config.whatsapp_jid.trim()) {
+      toast.error("Preencha o JID do grupo antes de testar");
+      return;
+    }
+    setTesting(true);
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          test: true,
+          client_id: client.id,
+          client_name: client.name,
+          whatsapp_jid: config.whatsapp_jid,
+          metric_source: config.metric_source,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Teste enviado! Verifique o grupo do WhatsApp.");
+      } else {
+        toast.error(`Erro no webhook: ${res.status}`);
+      }
+    } catch {
+      toast.error("Não foi possível alcançar o webhook. Verifique o n8n.");
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -200,9 +234,27 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
               </div>
             </div>
 
-            <Button onClick={save} disabled={saving} className="w-full mt-1">
-              {saving ? "Salvando..." : "Salvar configuração"}
-            </Button>
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={sendTest}
+                disabled={testing || saving}
+                className="flex-1 gap-2 border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 hover:border-amber-400/50"
+              >
+                <FlaskConical className="h-4 w-4" />
+                {testing ? "Enviando..." : "Enviar Teste"}
+              </Button>
+              <Button
+                onClick={save}
+                disabled={saving || testing}
+                className="flex-1 gap-2"
+              >
+                <Send className="h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+
           </div>
         )}
       </DialogContent>
