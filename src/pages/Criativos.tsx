@@ -559,7 +559,7 @@ export default function Index() {
             </div>
             <div ref={rankingRefs.financing} className="rounded-xl">
               <CreativeRanking
-                title="💳 Criativos por Venda Financiamento"
+                title="💳 Criativos por Venda Total"
                 data={financingRanking}
                 color="hsl(35, 80%, 55%)"
                 category="financing"
