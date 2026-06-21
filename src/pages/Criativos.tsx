@@ -589,7 +589,7 @@ export default function Index() {
 
           <div ref={sellersRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SellerRanking
-              title="CPFs Aprovados por Vendedor"
+              title="Leads Qualificados por Vendedor"
               data={sellerCpfRanking}
               color="hsl(142, 60%, 45%)"
               icon="✅"
