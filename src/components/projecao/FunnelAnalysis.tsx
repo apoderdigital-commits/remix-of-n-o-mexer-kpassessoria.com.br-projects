@@ -165,9 +165,9 @@ export function FunnelAnalysis() {
     setSaving(false);
 
     if (error) {
-      toast.error('Erro ao salvar simulação');
+      toast.error('Erro ao salvar projeção');
     } else {
-      toast.success('Simulação salva com sucesso!');
+      toast.success('Projeção salva com sucesso!');
       if (data && data.length > 0) {
         setSimulations([data[0] as any, ...simulations]);
       }
@@ -180,7 +180,7 @@ export function FunnelAnalysis() {
     if (error) {
       toast.error('Erro ao excluir simulação');
     } else {
-      toast.success('Simulação excluída');
+      toast.success('Projeção excluída');
       setSimulations(simulations.filter((s) => s.id !== id));
       if (selectedSimulation?.id === id) {
         setSelectedSimulation(null);
@@ -203,7 +203,7 @@ export function FunnelAnalysis() {
   const funnelSteps = [
     { label: 'Investimento', value: `R$ ${investimentoNum.toLocaleString('pt-BR')}`, icon: DollarSign, gradient: 'from-violet-500 to-purple-600' },
     { label: 'Leads', value: leads.toLocaleString('pt-BR'), icon: Users, gradient: 'from-purple-500 to-fuchsia-600' },
-    { label: 'Pré-Atendimento', value: simulacoes.toLocaleString('pt-BR'), subtext: `${TAXA_SIMULACOES}%`, costPerUnit: `R$ ${custoPorPreAtendimento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Calculator, gradient: 'from-fuchsia-500 to-pink-600' },
+    { label: 'Qualificações Realizadas', value: simulacoes.toLocaleString('pt-BR'), subtext: `${TAXA_SIMULACOES}%`, costPerUnit: `R$ ${custoPorPreAtendimento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Calculator, gradient: 'from-fuchsia-500 to-pink-600' },
     { label: 'Qualificados', value: qualificados.toLocaleString('pt-BR'), subtext: `${TAXA_QUALIFICADOS}%`, costPerUnit: `R$ ${custoPorQualificado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Target, gradient: 'from-pink-500 to-rose-600' },
     { label: 'Vendas', value: vendas.toLocaleString('pt-BR'), subtext: `${TAXA_VENDAS}%`, icon: Award, gradient: 'from-rose-500 to-orange-500' },
   ];
@@ -547,7 +547,7 @@ export function FunnelAnalysis() {
               </div>
               <Button onClick={handleSave} disabled={saving} className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-xl shadow-primary/25" size="lg">
                 <Save className="mr-2 h-5 w-5" />
-                {saving ? 'Salvando...' : 'Salvar Simulação'}
+                {saving ? 'Salvando...' : 'Salvar Projeção'}
               </Button>
             </CardContent>
           </Card>
@@ -630,7 +630,7 @@ export function FunnelAnalysis() {
                                   {[
                                     { label: 'Investimento', value: `R$ ${Number(sim.investimento).toLocaleString('pt-BR')}`, icon: DollarSign, gradient: 'from-violet-500 to-purple-600' },
                                     { label: 'Leads', value: sim.leads.toLocaleString('pt-BR'), icon: Users, gradient: 'from-purple-500 to-fuchsia-600' },
-                                    { label: 'Pré-Atendimento', value: sim.simulacoes.toLocaleString('pt-BR'), subtext: `${sim.taxa_simulacoes}%`, costPerUnit: `R$ ${costs.custoPorPreAtendimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Calculator, gradient: 'from-fuchsia-500 to-pink-600' },
+                                    { label: 'Qualificações Realizadas', value: sim.simulacoes.toLocaleString('pt-BR'), subtext: `${sim.taxa_simulacoes}%`, costPerUnit: `R$ ${costs.custoPorPreAtendimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Calculator, gradient: 'from-fuchsia-500 to-pink-600' },
                                     { label: 'Qualificados', value: sim.qualificados.toLocaleString('pt-BR'), subtext: `${sim.taxa_qualificados}%`, costPerUnit: `R$ ${costs.custoPorQualificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Target, gradient: 'from-pink-500 to-rose-600' },
                                     { label: 'Vendas', value: sim.vendas.toLocaleString('pt-BR'), subtext: `${sim.taxa_vendas}%`, icon: Award, gradient: 'from-rose-500 to-orange-500' },
                                   ].map((step, index) => (
