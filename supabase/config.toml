@@ -2,3 +2,6 @@ project_id = "ymomudnyzgmtlpgdjqib"
 
 [functions.kp-prospeccao-webhook]
 verify_jwt = false
+
+[functions.build-report-message]
+verify_jwt = false
