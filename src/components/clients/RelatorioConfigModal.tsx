@@ -94,19 +94,54 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
     setTesting(true);
     try {
+      // Fetch client credentials from Supabase so n8n can query the APIs
+      const { data: clientData } = await (supabase as any)
+        .from("clients")
+        .select("meta_account_id, meta_token_id, ghl_api_key, ghl_location_id, google_sheet_id")
+        .eq("id", client.id)
+        .single();
+
+      // Build last-7-days period
+      const until = new Date();
+      const since = new Date();
+      since.setDate(until.getDate() - 6);
+      const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+      const payload = {
+        test: true,
+        client_id: client.id,
+        client_name: client.name,
+        whatsapp_jid: config.whatsapp_jid,
+        metric_source: config.metric_source,
+        period: {
+          since: fmt(since),
+          until: fmt(until),
+          label: `${since.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} a ${until.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}`,
+        },
+        credentials: {
+          meta_account_id: clientData?.meta_account_id ?? null,
+          ghl_api_key: clientData?.ghl_api_key ?? null,
+          ghl_location_id: clientData?.ghl_location_id ?? null,
+          google_sheet_id: clientData?.google_sheet_id ?? null,
+        },
+        report_template: {
+          header: "📊 *Relatório Semanal - KP Assessoria*",
+          funnel_metas: {
+            qualificacoes_pct: 60,
+            leads_qualificados_pct: 20,
+            vendas_pct: 25,
+          },
+        },
+      };
+
       const res = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          test: true,
-          client_id: client.id,
-          client_name: client.name,
-          whatsapp_jid: config.whatsapp_jid,
-          metric_source: config.metric_source,
-        }),
+        body: JSON.stringify(payload),
       });
+
       if (res.ok) {
-        toast.success("Teste enviado! Verifique o grupo do WhatsApp.");
+        toast.success("Relatório de teste enviado! Verifique o grupo do WhatsApp.");
       } else {
         toast.error(`Erro no webhook: ${res.status}`);
       }
