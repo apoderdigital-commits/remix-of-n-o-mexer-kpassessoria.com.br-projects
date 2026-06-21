@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, FlaskConical, CalendarDays, CalendarRange, CalendarClock } from "lucide-react";
+import { buildReportMessageClient } from "@/lib/buildReportMessage";
 
 const WEBHOOK_URL = "https://kpadm-n8n.a6hrr3.easypanel.host/webhook/relatorioautositekp";
 
@@ -119,20 +120,14 @@ export function RelatorioConfigModal({ client, onClose }: Props) {
     }
     setTesting(true);
     try {
-      // 1. Backend monta a mensagem pronta (mesmas métricas da dashboard)
-      const { data: built, error: buildError } = await (supabase as any).functions.invoke(
-        "build-report-message",
-        {
-          body: {
-            client_id: client.id,
-            report_type: "weekly",
-            metric_source: config.metric_source,
-            whatsapp_jid: config.whatsapp_jid,
-          },
-        }
-      );
+      // 1. Monta a mensagem pronta direto no frontend (mesma lógica da dashboard)
+      const built = await buildReportMessageClient({
+        clientId: client.id,
+        metricSource: config.metric_source,
+        reportType: "weekly",
+      });
 
-      if (buildError || !built?.message) {
+      if (!built?.message) {
         toast.error("Não foi possível montar o relatório. Verifique os dados do cliente.");
         setTesting(false);
         return;
