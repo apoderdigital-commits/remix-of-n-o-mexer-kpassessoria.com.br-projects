@@ -39,11 +39,10 @@ function computePeriod(reportType: string): { since: string; until: string } {
     const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
     return { since: iso(firstPrev), until: iso(lastPrev) };
   }
-  // weekly (default) — últimos 7 dias completos
-  const until = new Date(today);
-  until.setDate(today.getDate() - 1);
-  const since = new Date(until);
-  since.setDate(until.getDate() - 6);
+  // weekly (default) — igual ao "7d" da dashboard (hoje-7 .. hoje)
+  const until = today;
+  const since = new Date(today);
+  since.setDate(today.getDate() - 7);
   return { since: iso(since), until: iso(until) };
 }
 
@@ -124,21 +123,35 @@ Deno.serve(async (req) => {
         : computePeriod(report_type);
 
     // ── Meta (investimento + leads) ──
-    const { data: campaigns } = await supabase
-      .from("meta_campaigns")
-      .select("amount_spent, leads_total, date")
-      .eq("client_id", client_id)
-      .gte("date", period.since)
-      .lte("date", period.until);
-
-    const totalSpent = (campaigns || []).reduce(
-      (s: number, c: any) => s + (Number(c.amount_spent) || 0),
-      0
-    );
-    const totalLeads = (campaigns || []).reduce(
-      (s: number, c: any) => s + (c.leads_total || 0),
-      0
-    );
+    // Sincroniza e usa os totais retornados pela própria fetch-meta-data.
+    let totalSpent = 0;
+    let totalLeads = 0;
+    try {
+      const metaRes = await fetch(`${SUPABASE_URL}/functions/v1/fetch-meta-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+        body: JSON.stringify({ client_id, since: period.since, until: period.until }),
+      });
+      if (metaRes.ok) {
+        const m = await metaRes.json();
+        if (m?.success) {
+          totalSpent = Number(m.total_spent) || 0;
+          totalLeads = Number(m.total_leads) || 0;
+        }
+      }
+    } catch (_) {
+      // fallback abaixo
+    }
+    if (totalSpent === 0 && totalLeads === 0) {
+      const { data: campaigns } = await supabase
+        .from("meta_campaigns")
+        .select("amount_spent, leads_total")
+        .eq("client_id", client_id)
+        .gte("date", period.since)
+        .lte("date", period.until);
+      totalSpent = (campaigns || []).reduce((s: number, c: any) => s + (Number(c.amount_spent) || 0), 0);
+      totalLeads = (campaigns || []).reduce((s: number, c: any) => s + (c.leads_total || 0), 0);
+    }
     const cpl = totalLeads > 0 ? totalSpent / totalLeads : 0;
 
     // ── Funil ──
