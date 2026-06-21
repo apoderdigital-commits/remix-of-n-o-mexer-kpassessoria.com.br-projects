@@ -323,7 +323,7 @@ export default function ClientView() {
             <CreativeRanking title="🤝 Criativos por Venda Consórcio" data={consortiumRanking} color="hsl(210, 70%, 58%)" category="consortium" clientId={clientId} since={since} until={until} />
           </div>
           <div ref={rankingRefs.financing} className="rounded-xl">
-            <CreativeRanking title="💳 Criativos por Venda Financiamento" data={financingRanking} color="hsl(35, 80%, 55%)" category="financing" clientId={clientId} since={since} until={until} />
+            <CreativeRanking title="💳 Criativos por Venda Total" data={financingRanking} color="hsl(35, 80%, 55%)" category="financing" clientId={clientId} since={since} until={until} />
           </div>
         </div>
 
