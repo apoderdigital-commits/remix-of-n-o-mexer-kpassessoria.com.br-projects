@@ -55,7 +55,7 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
                 formatter={(v) => <span className="text-muted-foreground">{v}</span>}
               />
               <Bar dataKey="leads" name="Leads" fill="hsl(199 89% 48%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cpf" name="CPF Aprov." fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="cpf" name="Lead Qual." fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="sales" name="Vendas" fill="hsl(263 70% 58%)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
