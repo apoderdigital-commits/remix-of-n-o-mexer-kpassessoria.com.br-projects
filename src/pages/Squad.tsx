@@ -802,6 +802,17 @@ export default function Squad() {
     [clients, priorityFilter]
   );
 
+  // NPS ativos (clientes com nota preenchida) + média de engajamento — mês mais recente
+  const engHighlights = useMemo(() => {
+    const months = [...new Set(engagement.map((e) => e.reference_month).filter(Boolean))].sort();
+    const latest = months[months.length - 1] || null;
+    const rows = engagement.filter((e) => e.reference_month === latest);
+    const npsCount = rows.filter((e) => e.nps_individual != null).length;
+    const scores = rows.map((e) => e.engagement_score).filter((v): v is number => v != null);
+    const avgEng = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
+    return { latest, npsCount, avgEng };
+  }, [engagement]);
+
   const serviceCounts = useMemo(() => {
     const counts = { TP: 0, CRM: 0, COM: 0 };
     for (const c of clients) {
@@ -1046,11 +1057,13 @@ export default function Squad() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
                 <StatCard label="BM Verificada" value={stats.bm} icon={CheckCircle2} color="from-green-500 to-emerald-600" />
                 <StatCard label="Renovação 60d" value={stats.renew} icon={Activity} color="from-primary to-fuchsia-600" />
+                <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" />
+                <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" />
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -2136,7 +2149,7 @@ export default function Squad() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: number | string; icon: any; color: string }) {
   return (
     <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 shadow-lg">
       <div className="flex items-start justify-between">
