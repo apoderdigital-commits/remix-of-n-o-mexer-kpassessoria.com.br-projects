@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Users, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -54,8 +53,13 @@ function StatusDot({ ok }: { ok: boolean }) {
   );
 }
 
+const NO_SQUAD = "__none__";
+
 export function ClientSelector({ clients, selectedId, onSelect }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false);
+  const [squadOpen, setSquadOpen] = React.useState(false);
+  const [squadFilter, setSquadFilter] = React.useState<string>("");
+
   const selected = clients.find((c) => c.id === selectedId);
   const selectedName = selected?.name;
 
@@ -69,20 +73,29 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
     staleTime: 5 * 60 * 1000,
   });
 
-  const grouped = React.useMemo(() => {
-    const squadMap = new Map<string, { id: string; name: string; items: Client[] }>();
-    (squads || []).forEach((s) => squadMap.set(s.id, { id: s.id, name: s.name, items: [] }));
-    const noSquad: Client[] = [];
-    clients.forEach((c) => {
-      if (c.squad_id && squadMap.has(c.squad_id)) {
-        squadMap.get(c.squad_id)!.items.push(c);
-      } else {
-        noSquad.push(c);
-      }
-    });
-    const groups = Array.from(squadMap.values()).filter((g) => g.items.length > 0);
-    return { groups, noSquad };
-  }, [clients, squads]);
+  // Se já tem um cliente selecionado, alinha o filtro ao squad dele
+  React.useEffect(() => {
+    if (selected && !squadFilter) {
+      setSquadFilter(selected.squad_id || NO_SQUAD);
+    }
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const hasNoSquadClients = React.useMemo(
+    () => clients.some((c) => !c.squad_id),
+    [clients]
+  );
+
+  // Clientes do squad escolhido
+  const squadClients = React.useMemo(() => {
+    if (!squadFilter) return [];
+    if (squadFilter === NO_SQUAD) return clients.filter((c) => !c.squad_id);
+    return clients.filter((c) => c.squad_id === squadFilter);
+  }, [clients, squadFilter]);
+
+  const squadLabel =
+    squadFilter === NO_SQUAD
+      ? "Sem squad"
+      : squads?.find((s) => s.id === squadFilter)?.name || "Selecionar squad";
 
   const checks = selected
     ? [
@@ -107,69 +120,122 @@ export function ClientSelector({ clients, selectedId, onSelect }: ClientSelector
       }}
     >
       <Check
-        className={cn(
-          "mr-2 h-4 w-4",
-          selectedId === c.id ? "opacity-100" : "opacity-0"
-        )}
+        className={cn("mr-2 h-4 w-4", selectedId === c.id ? "opacity-100" : "opacity-0")}
       />
       {c.name}
     </CommandItem>
   );
 
-  const trigger = (
-    <Popover open={open} onOpenChange={setOpen}>
+  // ── Botão 1: filtro de squad ──
+  const squadButton = (
+    <Popover open={squadOpen} onOpenChange={setSquadOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
-          aria-expanded={open}
-          className="w-[280px] justify-between bg-secondary border-border/50 text-left font-normal"
+          aria-expanded={squadOpen}
+          className="w-[190px] justify-between bg-secondary border-border/50 text-left font-normal"
         >
           <span className="flex items-center gap-2 min-w-0">
-            {selected && (
-              <StatusDot ok={!!allOk} />
-            )}
-            <span className="truncate">
-              {selectedName || "Selecione um cliente"}
-            </span>
+            <Users className="h-4 w-4 shrink-0 text-primary/80" />
+            <span className="truncate">{squadLabel}</span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0 bg-card border-border/50">
+      <PopoverContent className="w-[190px] p-0 bg-card border-border/50">
         <Command>
-          <CommandInput placeholder="Buscar cliente..." />
           <CommandList>
-            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-            {grouped.groups.map((g, idx) => (
-              <React.Fragment key={g.id}>
-                {idx > 0 && <CommandSeparator />}
-                <CommandGroup heading={g.name}>
-                  {g.items.map(renderItem)}
-                </CommandGroup>
-              </React.Fragment>
-            ))}
-            {grouped.noSquad.length > 0 && (
-              <>
-                {grouped.groups.length > 0 && <CommandSeparator />}
-                <CommandGroup heading={grouped.groups.length > 0 ? "Sem squad" : undefined}>
-                  {grouped.noSquad.map(renderItem)}
-                </CommandGroup>
-              </>
-            )}
+            <CommandGroup heading="Squads">
+              {(squads || []).map((s) => (
+                <CommandItem
+                  key={s.id}
+                  value={s.name}
+                  onSelect={() => {
+                    setSquadFilter(s.id);
+                    setSquadOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn("mr-2 h-4 w-4", squadFilter === s.id ? "opacity-100" : "opacity-0")}
+                  />
+                  {s.name}
+                </CommandItem>
+              ))}
+              {hasNoSquadClients && (
+                <CommandItem
+                  value="Sem squad"
+                  onSelect={() => {
+                    setSquadFilter(NO_SQUAD);
+                    setSquadOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn("mr-2 h-4 w-4", squadFilter === NO_SQUAD ? "opacity-100" : "opacity-0")}
+                  />
+                  Sem squad
+                </CommandItem>
+              )}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
   );
 
-  if (!selected) return trigger;
+  // ── Botão 2: seletor de cliente (só ativo com squad escolhido) ──
+  const squadChosen = !!squadFilter;
+
+  const clientButton = (
+    <Popover open={open} onOpenChange={(o) => squadChosen && setOpen(o)}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={!squadChosen}
+          className="w-[260px] justify-between bg-secondary border-border/50 text-left font-normal disabled:opacity-60"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            {!squadChosen && <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+            {squadChosen && selected && <StatusDot ok={!!allOk} />}
+            <span className="truncate">
+              {!squadChosen
+                ? "Selecione um squad primeiro"
+                : selectedName || "Selecione um cliente"}
+            </span>
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0 bg-card border-border/50">
+        <Command>
+          <CommandInput placeholder="Buscar cliente..." />
+          <CommandList>
+            <CommandEmpty>Nenhum cliente neste squad.</CommandEmpty>
+            <CommandGroup heading={squadLabel}>
+              {squadClients.map(renderItem)}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+
+  const row = (
+    <div className="flex items-center gap-2">
+      {squadButton}
+      {clientButton}
+    </div>
+  );
+
+  if (!selected) return row;
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span>{trigger}</span>
+          <span>{row}</span>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-card border-border/50 p-3">
           <div className="text-xs font-medium mb-2 text-muted-foreground">
