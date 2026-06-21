@@ -258,7 +258,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       currentForPrev: displaySimulacoes,
     },
     {
-      title: "CPF Aprovado",
+      title: "Lead Qualificado",
       value: ghlLoading && cpfAprovSource === "ghl" ? "..." : displayCpfAprovado.toLocaleString("pt-BR"),
       icon: CheckCircle,
       color: "text-green-400",
@@ -329,7 +329,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
       currentForPrev: displayVendasCons,
     },
     {
-      title: "Criativos c/ CPF Aprov.",
+      title: "Criativos c/ Lead Qual.",
       value: uniqueCreativesCpf.toLocaleString("pt-BR"),
       icon: Image,
       color: "text-emerald-400",
