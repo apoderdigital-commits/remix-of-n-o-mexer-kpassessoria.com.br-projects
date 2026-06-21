@@ -171,8 +171,8 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
-  const [vendasFinSource, setVendasFinSource] = useState<"ghl" | "planilha">("planilha");
-  const [vendasConsSource, setVendasConsSource] = useState<"ghl" | "planilha">("planilha");
+  const [vendasFinSource, setVendasFinSource] = useState<"ghl" | "planilha">("ghl");
+  const [vendasConsSource, setVendasConsSource] = useState<"ghl" | "planilha">("ghl");
 
   const costPerLead = totalLeads > 0 ? (totalSpent / totalLeads).toFixed(2) : "—";
 
