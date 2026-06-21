@@ -15,6 +15,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ClientSelector } from "@/components/dashboard/ClientSelector";
 import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
 import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
+import { CostBanner } from "@/components/dashboard/CostBanner";
 import {
   useClients,
   useAccessibleClients,
@@ -525,6 +526,12 @@ export default function Index() {
               vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
               vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
             } : null}
+          />
+
+          <CostBanner
+            totalSpent={totalSpent}
+            vendasFinanciamento={ghlData?.vendas_financiamento ?? (salesFinancing + salesLegacy)}
+            cpfAprovado={ghlData?.cpf_aprovado ?? planilhaCpfApproved}
           />
 
           <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
