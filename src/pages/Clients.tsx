@@ -14,12 +14,13 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound, Send } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
+import { RelatorioConfigModal } from "@/components/clients/RelatorioConfigModal";
 import { HealthBadge } from "@/components/clients/HealthBadge";
 import { useClientsHealth, type HealthLevel } from "@/hooks/useClientHealth";
 
@@ -153,6 +154,9 @@ export default function Clients() {
 
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Report config state
+  const [reportConfigClient, setReportConfigClient] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Trash state
@@ -810,6 +814,15 @@ export default function Clients() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setReportConfigClient({ id: c.id, name: c.name })}
+                          title="Configurar relatório automático"
+                          className="text-primary/70 hover:text-primary"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => requestDelete(c)} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -822,6 +835,12 @@ export default function Clients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Report config modal */}
+      <RelatorioConfigModal
+        client={reportConfigClient}
+        onClose={() => setReportConfigClient(null)}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog
