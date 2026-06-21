@@ -259,13 +259,11 @@ export default function Login() {
         style={{ zIndex: isCredentialStep ? 10 : 0 }}
       >
         {/* Mobile video overlay */}
-        <div className="fixed inset-0 bg-[#080810]/85 backdrop-blur-sm lg:hidden" style={{ zIndex: 1 }} />
+        <div className="fixed inset-0 bg-[#080810]/20 backdrop-blur-[2px] lg:hidden" style={{ zIndex: 1 }} />
 
         {/* Left side — video (desktop only) */}
         <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background" style={{ zIndex: 1 }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#080810]/50 via-transparent to-[#080810]/70" style={{ zIndex: 1 }} />
-          <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-primary/8 to-transparent" style={{ zIndex: 2 }} />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/10 via-transparent to-background" style={{ zIndex: 1 }} />
 
           <div className="relative z-10 text-center px-8 pt-10">
             <div className="relative inline-block mb-5">
@@ -321,7 +319,7 @@ export default function Login() {
                       placeholder="seu.usuario"
                       required
                       autoFocus
-                      className="pl-11 h-14 text-sm bg-white/4 border-white/10 focus:border-primary/50 focus:bg-white/6 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-foreground/25"
+                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
                     />
                   </div>
                   <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200">
@@ -351,7 +349,7 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="pl-11 h-14 text-sm bg-white/4 border-white/10 focus:border-primary/50 focus:bg-white/6 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-foreground/25"
+                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
                     />
                   </div>
                   {failedAttempts >= 3 && (
