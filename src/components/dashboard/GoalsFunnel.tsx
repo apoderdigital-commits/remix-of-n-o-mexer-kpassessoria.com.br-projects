@@ -164,7 +164,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           <Target className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Funil de Metas</h2>
+          <h2 className="text-xl font-semibold text-foreground">Funil de Metas Comerciais</h2>
           <p className="text-sm text-muted-foreground">Acompanhe quanto cada etapa bateu vs. a meta esperada</p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label="CPFs Aprovados (CRM)"
+          label="Leads Qualificados (CRM)"
           icon={CheckCircle2}
           value={ghlCpfApproved}
           baseValue={ghlSimulacoes}
@@ -207,7 +207,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
                 <Eye className="h-3.5 w-3.5" /> CRM × Planilha
               </Button>
               <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => onScrollTo("cpf")}>
-                <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de CPF Aprovado
+                <ArrowRight className="h-3.5 w-3.5" /> Ver criativos de Lead Qualificado
               </Button>
             </div>
           }
@@ -286,7 +286,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
       <Dialog open={showCpfCompare} onOpenChange={setShowCpfCompare}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>CPFs Aprovados | CRM × Planilha</DialogTitle>
+            <DialogTitle>Leads Qualificados | CRM × Planilha</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
