@@ -23,7 +23,7 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-foreground">Tendência mensal</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Comparativo dos últimos {data.length} meses — leads, CPFs aprovados e vendas.
+              Comparativo dos últimos {data.length} meses — leads, Leads qualificados e vendas.
             </p>
           </div>
         </div>
