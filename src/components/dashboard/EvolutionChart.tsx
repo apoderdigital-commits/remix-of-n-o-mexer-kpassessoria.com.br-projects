@@ -54,8 +54,8 @@ const SERIES: SeriesDef[] = [
   },
   {
     key: "cpf",
-    name: "CPF Aprovado",
-    description: "Leads que tiveram CPF aprovado para crédito",
+    name: "Lead Qualificado",
+    description: "Leads qualificados no período",
     color: "hsl(142 71% 45%)",
     icon: CheckCircle2,
     goal: { baseKey: "simulacoes", target: 15, label: "Aprov/Sim" },
@@ -411,7 +411,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
                     {" · "}
                     <span className="font-bold text-foreground">{monthEstimate.simulacoes.toLocaleString("pt-BR")}</span> simulações
                     {" · "}
-                    <span className="font-bold text-foreground">{monthEstimate.cpf.toLocaleString("pt-BR")}</span> CPFs aprovados
+                    <span className="font-bold text-foreground">{monthEstimate.cpf.toLocaleString("pt-BR")}</span> Leads qualificados
                   </p>
                   <p className="text-[10px] text-muted-foreground/80 mt-1 italic">
                     Estimativa baseada na média diária dos últimos 7 dias ({Math.round(dailyAvg.leads)} leads/dia).
