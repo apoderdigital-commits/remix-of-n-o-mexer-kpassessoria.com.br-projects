@@ -149,7 +149,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, g
 
 export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
   const [showCpfCompare, setShowCpfCompare] = useState(false);
-  const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("planilha");
+  const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("ghl");
   const [showSalesCompare, setShowSalesCompare] = useState(false);
 
   const planilhaSales = planilhaSalesFinancing ?? salesFinancing;
