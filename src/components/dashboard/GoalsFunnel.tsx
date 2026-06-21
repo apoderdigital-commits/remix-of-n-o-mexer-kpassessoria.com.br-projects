@@ -27,13 +27,14 @@ interface StepProps {
   baseValue?: number;
   metaPct?: number;
   metaLabel?: string;
+  description?: string;
   gradient: string;
   textColor: string;
   highlight?: boolean;
   extra?: React.ReactNode;
 }
 
-function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, gradient, textColor, highlight, extra }: StepProps) {
+function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, description, gradient, textColor, highlight, extra }: StepProps) {
   const metaQty = baseValue !== undefined && metaPct !== undefined ? Math.ceil(baseValue * (metaPct / 100)) : null;
   const achievedPct = baseValue && baseValue > 0 ? (value / baseValue) * 100 : 0;
   const hitGoal = metaQty !== null ? value >= metaQty : true;
@@ -53,6 +54,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, g
         <div className="flex-1 min-w-0">
           <p className={`text-xs uppercase tracking-wide ${textColor}`}>{label}</p>
           {metaLabel && <p className="text-xs text-muted-foreground">{metaLabel}</p>}
+          {description && <p className="text-[11px] text-muted-foreground/60 italic mt-0.5">{description}</p>}
         </div>
       </div>
 
@@ -187,6 +189,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           baseValue={totalLeads}
           metaPct={META_SIMULACOES}
           metaLabel={`Mín. ${META_SIMULACOES}% dos leads precisam ser qualificados`}
+          description="Leads avaliados, com financiamento ou pagamento à vista/cartão."
           gradient="from-blue-600 to-blue-700"
           textColor="text-blue-300"
         />
