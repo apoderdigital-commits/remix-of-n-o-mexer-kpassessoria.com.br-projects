@@ -11,13 +11,14 @@ import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 const EMAIL_DOMAIN = "@kp.local";
 
 type LoginType = "collaborator" | "client" | null;
-type Step = "type" | "username" | "password";
+type Step = "type" | "credentials";
 
 export default function Login() {
   const [loginType, setLoginType] = useState<LoginType>(null);
   const [step, setStep] = useState<Step>("type");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -25,6 +26,21 @@ export default function Login() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("kp-login-remember");
+    if (saved) {
+      try {
+        const { loginType: savedType, username: savedUsername } = JSON.parse(saved);
+        if (savedType && savedUsername) {
+          setLoginType(savedType);
+          setUsername(savedUsername);
+          setRememberMe(true);
+          setStep("credentials");
+        }
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -49,47 +65,40 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (step === "password") setTimeout(() => passwordRef.current?.focus(), 350);
-    if (step === "username") setTimeout(() => usernameRef.current?.focus(), 350);
+    if (step === "credentials") setTimeout(() => {
+      if (username) passwordRef.current?.focus();
+      else usernameRef.current?.focus();
+    }, 350);
   }, [step]);
-
-  const goTo = (nextStep: Step) => {
-    setAnimating(true);
-    setTimeout(() => {
-      setStep(nextStep);
-      setAnimating(false);
-    }, 200);
-  };
 
   const selectType = (type: LoginType) => {
     setLoginType(type);
     setScreenTransition(true);
     setTimeout(() => {
-      goTo("username");
+      setAnimating(true);
+      setTimeout(() => {
+        setStep("credentials");
+        setAnimating(false);
+      }, 200);
       setScreenTransition(false);
     }, 500);
   };
 
-  const goToPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim()) return;
-    goTo("password");
-  };
-
   const goBack = () => {
-    if (step === "password") {
-      setPassword("");
-      goTo("username");
-    } else if (step === "username") {
-      setUsername("");
-      setPassword("");
-      setLoginType(null);
-      goTo("type");
-    }
+    setUsername("");
+    setPassword("");
+    setLoginType(null);
+    setRememberMe(false);
+    setScreenTransition(true);
+    setTimeout(() => {
+      setStep("type");
+      setScreenTransition(false);
+    }, 300);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password) return;
     setLoading(true);
     const email = username.trim().toLowerCase() + EMAIL_DOMAIN;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -104,16 +113,24 @@ export default function Login() {
       );
     } else {
       setFailedAttempts(0);
+      if (rememberMe) {
+        localStorage.setItem("kp-login-remember", JSON.stringify({
+          loginType,
+          username: username.trim().toLowerCase(),
+        }));
+      } else {
+        localStorage.removeItem("kp-login-remember");
+      }
     }
     setLoading(false);
   };
 
-  const typeLabel = loginType === "collaborator" ? "colaborador" : "cliente";
-  const isCredentialStep = step === "username" || step === "password";
+  const typeLabel = loginType === "collaborator" ? "Colaborador" : "Cliente";
+  const isCredentialStep = step === "credentials";
 
   return (
     <div className="min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#080810]">
-      {/* Preloaded video — always in DOM, hidden on screen 1 */}
+      {/* Preloaded video — always in DOM */}
       <video
         ref={videoRef}
         autoPlay
@@ -130,10 +147,9 @@ export default function Login() {
       <div
         className={`absolute inset-0 flex flex-col transition-all duration-500 ${
           isCredentialStep ? "opacity-0 pointer-events-none scale-105" : "opacity-100 scale-100"
-        } ${screenTransition ? "opacity-0 scale-105" : ""}`}
+        } ${screenTransition && !isCredentialStep ? "opacity-0 scale-105" : ""}`}
         style={{ zIndex: isCredentialStep ? 0 : 10 }}
       >
-        {/* Partner image with layered gradients */}
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
             src={loginBgPartners.url}
@@ -190,7 +206,6 @@ export default function Login() {
 
               <div className="hidden lg:block w-px h-12 bg-white/8" />
 
-              {/* Motivational phrase — desktop */}
               <div className="hidden lg:flex items-center gap-2 shrink-0">
                 <div className="text-xs font-bold uppercase tracking-wider leading-tight">
                   <span className="text-foreground/70">Resultado não é opção.</span>
@@ -202,7 +217,6 @@ export default function Login() {
 
               <div className="hidden lg:block w-px h-12 bg-white/8" />
 
-              {/* Type selection */}
               <div className="flex-1">
                 <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
                   <p className="text-sm font-semibold text-foreground/80 mb-3">Como você deseja acessar?</p>
@@ -240,9 +254,8 @@ export default function Login() {
             </div>
 
             <div className="flex items-center gap-3 mt-4 lg:mt-3">
-              <div className="h-1 w-8 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)] transition-all duration-300" />
-              <div className="h-1 w-8 rounded-full bg-white/15 transition-all duration-300" />
-              <div className="h-1 w-8 rounded-full bg-white/15 transition-all duration-300" />
+              <div className="h-1 w-8 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
+              <div className="h-1 w-8 rounded-full bg-white/15" />
               <span className="text-xs text-muted-foreground/40 ml-auto tracking-wide">Acesso restrito</span>
             </div>
           </div>
@@ -256,14 +269,14 @@ export default function Login() {
         }`}
         style={{ zIndex: isCredentialStep ? 10 : 0 }}
       >
-        {/* Mobile video overlay */}
+        {/* Mobile overlay */}
         <div className="fixed inset-0 bg-[#080810]/20 backdrop-blur-[2px] lg:hidden" style={{ zIndex: 1 }} />
 
-        {/* Left side — video (desktop only) */}
-        <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-start justify-center">
+        {/* Left — video (desktop) */}
+        <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
           <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/10 via-transparent to-background" style={{ zIndex: 1 }} />
 
-          <div className="relative z-10 text-center px-8 pt-10">
+          <div className="relative z-10 text-center px-8">
             <div className="relative inline-block mb-5">
               <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl scale-110" />
               <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
@@ -271,16 +284,14 @@ export default function Login() {
             </div>
             <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
             <p className="text-sm text-foreground/50 mt-1.5 font-medium">Aceleradora de vendas para lojas automotivas</p>
-
-            <div className="flex items-center justify-center gap-3 mt-8">
-              <div className="h-1 w-8 rounded-full bg-primary/30" />
-              <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
-              <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+              <span className="text-xs text-foreground/60 font-medium">Acessando como</span>
+              <span className="text-xs text-primary font-bold">{typeLabel}</span>
             </div>
           </div>
         </div>
 
-        {/* Right side — form */}
+        {/* Right — form */}
         <div className="flex-1 flex items-center justify-center relative z-10 lg:bg-background">
           <div className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
           <div className="absolute bottom-1/4 left-1/4 w-48 h-48 rounded-full bg-primary/3 blur-3xl pointer-events-none" />
@@ -296,94 +307,103 @@ export default function Login() {
             </div>
 
             <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-              <h2 className="text-2xl font-bold text-foreground mb-1">
-                Entrar como {typeLabel}
-              </h2>
-              <button type="button" onClick={goBack} className="text-primary hover:text-primary/80 hover:underline inline-flex items-center gap-1 text-sm mb-8 transition-colors">
-                <ArrowLeft className="h-3 w-3" /> Voltar
-              </button>
+              <div className="mb-7">
+                <h2 className="text-2xl font-bold text-foreground">Bem-vindo de volta!</h2>
+                <p className="text-sm text-foreground/50 mt-1">
+                  Entrando como{" "}
+                  <span className="text-primary font-semibold">{typeLabel}</span>
+                </p>
+              </div>
 
-              {step === "username" && (
-                <form onSubmit={goToPassword} className="space-y-4">
-                  <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input
-                      ref={usernameRef}
-                      type="text"
-                      name="username"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="seu.usuario"
-                      required
-                      autoFocus
-                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full h-14 text-sm font-semibold gap-2 rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200">
-                    Continuar <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </form>
-              )}
-
-              {step === "password" && (
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <input
+              <form onSubmit={handleLogin} className="space-y-3">
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
+                    ref={usernameRef}
                     type="text"
                     name="username"
                     autoComplete="username"
                     value={username}
-                    readOnly
-                    hidden
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Usuário"
+                    required
+                    className="pl-11 h-13 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
                   />
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input
-                      ref={passwordRef}
-                      type="password"
-                      name="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="pl-11 h-14 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
-                    />
-                  </div>
-                  {failedAttempts >= 3 && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/8">
-                      <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                      <div className="text-xs leading-relaxed text-foreground">
-                        <p className="font-semibold text-destructive mb-1">Muitas tentativas incorretas</p>
-                        <p className="text-foreground/70">
-                          Você errou a senha {failedAttempts} vezes. Por favor, entre em contato com o time pelo grupo do WhatsApp para recuperar seu acesso.
-                        </p>
-                      </div>
+                </div>
+
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
+                    ref={passwordRef}
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Senha"
+                    required
+                    className="pl-11 h-13 text-sm bg-secondary/50 border-border/60 text-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1 pb-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer group/check">
+                    <div
+                      onClick={() => setRememberMe((v) => !v)}
+                      className={`w-4 h-4 rounded border flex items-center justify-center transition-all cursor-pointer ${
+                        rememberMe
+                          ? "bg-primary border-primary"
+                          : "border-border/60 bg-secondary/50 hover:border-primary/50"
+                      }`}
+                    >
+                      {rememberMe && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
                     </div>
-                  )}
-                  <Button
-                    type="submit"
-                    className="w-full h-14 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200 disabled:shadow-none"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        Entrando...
-                      </span>
-                    ) : "Entrar"}
-                  </Button>
-                </form>
-              )}
+                    <span
+                      onClick={() => setRememberMe((v) => !v)}
+                      className="text-xs text-foreground/60 group-hover/check:text-foreground/80 transition-colors select-none cursor-pointer"
+                    >
+                      Lembrar neste dispositivo
+                    </span>
+                  </label>
+                </div>
 
-              <p className="text-xs text-muted-foreground/35 text-center mt-6 tracking-wide">Acesso restrito a usuários autorizados</p>
+                {failedAttempts >= 3 && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/8">
+                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-xs leading-relaxed">
+                      <p className="font-semibold text-destructive mb-1">Muitas tentativas incorretas</p>
+                      <p className="text-foreground/70">
+                        Você errou {failedAttempts} vezes. Entre em contato com o time pelo WhatsApp para recuperar o acesso.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-              {/* Mobile step indicators */}
-              <div className="lg:hidden flex items-center justify-center gap-3 mt-4">
-                <div className="h-1 w-8 rounded-full bg-primary/30" />
-                <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "username" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
-                <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === "password" ? "bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "bg-white/15"}`} />
-              </div>
+                <Button
+                  type="submit"
+                  className="w-full h-13 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:shadow-[0_4px_32px_rgba(139,92,246,0.5)] transition-all duration-200 disabled:shadow-none"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Entrando...
+                    </span>
+                  ) : "Entrar"}
+                </Button>
+              </form>
+
+              <button
+                type="button"
+                onClick={goBack}
+                className="w-full flex items-center justify-center gap-1.5 mt-5 text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+              >
+                <ArrowLeft className="h-3 w-3" /> Trocar tipo de acesso
+              </button>
             </div>
           </div>
         </div>
