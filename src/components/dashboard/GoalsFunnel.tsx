@@ -181,12 +181,12 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
         <FunnelStep
-          label="Simulações (CRM)"
+          label="Qualificações Realizadas (CRM)"
           icon={Calculator}
           value={ghlSimulacoes}
           baseValue={totalLeads}
           metaPct={META_SIMULACOES}
-          metaLabel={`Mín. ${META_SIMULACOES}% dos leads precisam simular`}
+          metaLabel={`Mín. ${META_SIMULACOES}% dos leads precisam ser qualificados`}
           gradient="from-blue-600 to-blue-700"
           textColor="text-blue-300"
         />
@@ -198,7 +198,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           value={ghlCpfApproved}
           baseValue={ghlSimulacoes}
           metaPct={META_CPF}
-          metaLabel={`Mín. ${META_CPF}% das simulações precisam aprovar`}
+          metaLabel={`Mín. ${META_CPF}% das qualificações precisam aprovar`}
           gradient="from-emerald-600 to-green-700"
           textColor="text-emerald-300"
           extra={
