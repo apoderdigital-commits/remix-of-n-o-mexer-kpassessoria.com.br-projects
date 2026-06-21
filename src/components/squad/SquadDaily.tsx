@@ -94,10 +94,10 @@ export function SquadDaily({
   clients: Client[];
   resumeSession?: { id: string; started_at: string } | null;
 }) {
-  // Ordem: do menor para o maior nível de priorização (AA = mais crítico).
-  // priority_score: AA=0 ... CC=8. "menor priorização" = score maior.
+  // Ordem: do maior para o menor nível de priorização (AA = mais crítico, começa por ele).
+  // priority_score: AA=0 ... CC=8. "maior priorização" = score menor.
   const ordered = useMemo(
-    () => [...clients].sort((a, b) => b.priority_score - a.priority_score || a.name.localeCompare(b.name)),
+    () => [...clients].sort((a, b) => a.priority_score - b.priority_score || a.name.localeCompare(b.name)),
     [clients],
   );
 
@@ -348,7 +348,7 @@ export function SquadDaily({
               <div>
                 <h2 className="text-lg font-bold leading-tight">Daily em andamento</h2>
                 <p className="text-xs text-muted-foreground">
-                  Cliente {idx + 1} de {ordered.length} · do menor para o maior nível de priorização
+                  Cliente {idx + 1} de {ordered.length} · do maior para o menor nível de priorização
                 </p>
               </div>
             </div>
