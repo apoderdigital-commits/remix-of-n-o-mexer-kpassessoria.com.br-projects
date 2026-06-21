@@ -94,6 +94,7 @@ export default function Clients() {
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
+  const [squadFilter, setSquadFilter] = useState<string>("all");
   const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
@@ -432,6 +433,12 @@ export default function Clients() {
       });
     }
 
+    if (squadFilter === "none") {
+      list = list.filter((c: any) => !c.squad_id);
+    } else if (squadFilter !== "all") {
+      list = list.filter((c: any) => c.squad_id === squadFilter);
+    }
+
     const order: Record<HealthLevel | "none", number> = { red: 0, yellow: 1, green: 2, none: 3 };
     list.sort((a: any, b: any) => {
       const la = (healthMap?.[a.id]?.level ?? "none") as HealthLevel | "none";
@@ -441,7 +448,7 @@ export default function Clients() {
     });
 
     return list;
-  }, [clients, search, healthFilter, healthMap]);
+  }, [clients, search, healthFilter, squadFilter, healthMap]);
 
   return (
     <div className="min-h-screen p-6 space-y-6">
@@ -725,6 +732,18 @@ export default function Clients() {
                   </button>
                 ))}
               </div>
+              <Select value={squadFilter} onValueChange={setSquadFilter}>
+                <SelectTrigger className="h-8 w-full sm:w-[170px] text-xs">
+                  <SelectValue placeholder="Todos os squads" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os squads</SelectItem>
+                  {squads?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                  <SelectItem value="none">⚠ Sem squad</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -782,6 +801,19 @@ export default function Clients() {
                           <div className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">
                             {c.meta_account_id}
                           </div>
+                        )}
+                        {c.squad_id ? (
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                            Squad: {squads?.find((s) => s.id === c.squad_id)?.name ?? "—"}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => openEdit(c)}
+                            className="mt-1 inline-flex items-center gap-1 rounded-md border border-red-500/60 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-300 animate-pulse hover:bg-red-500/30 hover:text-red-200 transition-colors"
+                            title="Este cliente não tem squad definido — clique para editar"
+                          >
+                            <AlertTriangle className="h-3 w-3" /> Sem squad — editar
+                          </button>
                         )}
                       </TableCell>
                       <TableCell className="align-top">
