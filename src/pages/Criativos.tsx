@@ -601,7 +601,7 @@ export default function Index() {
               icon="🤝"
             />
             <SellerRanking
-              title="Vendas Financiamento por Vendedor"
+              title="Vendas Totais por Vendedor"
               data={sellerFinancingRanking}
               color="hsl(35, 80%, 55%)"
               icon="💳"
