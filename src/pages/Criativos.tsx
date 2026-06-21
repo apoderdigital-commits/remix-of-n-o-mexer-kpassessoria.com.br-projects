@@ -537,7 +537,7 @@ export default function Index() {
           <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div ref={rankingRefs.cpf} className="rounded-xl">
               <CreativeRanking
-                title="🏆 Criativos por CPF Aprovado"
+                title="🏆 Criativos por Lead Qualificado"
                 data={cpfRanking}
                 color="hsl(263, 50%, 68%)"
                 category="cpf"
