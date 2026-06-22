@@ -1807,6 +1807,77 @@ export default function Squad() {
         )}
       </main>
 
+      {/* Painel de detalhes do cliente */}
+      <Dialog open={!!detailClient} onOpenChange={(o) => { if (!o) setDetailClient(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          {detailClient && (() => {
+            const c = detailClient;
+            const h = healthOf(c);
+            const hist = engagement
+              .filter((e) => (e.client_name || "").trim().toLowerCase() === (c.name || "").trim().toLowerCase())
+              .sort((a, b) => (b.reference_month || "").localeCompare(a.reference_month || ""));
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${h === "red" ? "bg-red-500" : h === "yellow" ? "bg-amber-400" : "bg-emerald-500"}`} />
+                    {c.name}
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground">{c.niche || "—"}</p>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {parseServices(c.services).map((s) => (
+                      <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>{s}</Badge>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Info label="Priorização" value={c.prioritization || "—"} />
+                    <Info label="Curva / Sprint" value={`${c.curve_abc || "—"} / ${c.sprint || "—"}`} />
+                    <Info label="Investido TP" value={parseMoney(c.invested_tp) != null ? formatBRL(parseMoney(c.invested_tp)) : "—"} />
+                    <Info label="Contrato" value={c.contract_value != null ? formatBRL(c.contract_value) : "—"} />
+                    <Info label="Meta de venda" value={c.sales_goal != null ? formatBRL(c.sales_goal) : "—"} />
+                    <Info label="BM verificada" value={c.bm_verified ? "Sim" : "Não"} />
+                    <Info label="Entrada" value={formatMonth(c.entry_date)} />
+                    <Info label="Vencimento" value={c.due_date ? new Date(c.due_date + "T12:00:00Z").toLocaleDateString("pt-BR") : "—"} />
+                  </div>
+                  {c.observations && (
+                    <div className="rounded-lg bg-muted/20 p-3 text-sm">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Observações</p>
+                      {c.observations}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Histórico de engajamento</p>
+                    {hist.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sem lançamentos de engajamento.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {hist.slice(0, 6).map((e) => (
+                          <div key={e.id} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-xs">
+                            <span className="capitalize font-medium">{formatMonth(e.reference_month)}</span>
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                              <span>Eng: <b className="text-foreground">{e.engagement_score ?? "—"}</b></span>
+                              <span>NPS: <b className="text-foreground">{e.nps_individual ?? "—"}</b></span>
+                              <span>Vendas: <b className="text-foreground">{e.vendas ?? "—"}</b></span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="outline" className="gap-1.5" onClick={() => { const cc = c; setDetailClient(null); openEdit(cc); }}>
+                      <Pencil className="h-4 w-4" /> Editar cliente
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* Client dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
