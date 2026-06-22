@@ -1140,6 +1140,22 @@ export default function Squad() {
                 <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
               </div>
 
+              {/* Resumo financeiro do squad */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-300", sub: "/ mês" },
+                  { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-300", sub: "/ mês" },
+                  { label: "Meta de Vendas", value: financeSummary.meta, cls: "text-amber-300", sub: "/ mês" },
+                  { label: "Faturamento", value: financeSummary.faturamento, cls: "text-fuchsia-300", sub: engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "" },
+                ].map((f) => (
+                  <div key={f.label} className="rounded-2xl border border-border/30 bg-gradient-to-br from-card/60 to-card/30 backdrop-blur-sm p-4">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{f.label}</p>
+                    <p className={`text-xl font-bold mt-1 ${f.cls}`}>{formatBRL(f.value)}</p>
+                    {f.sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 capitalize">{f.sub}</p>}
+                  </div>
+                ))}
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Prioridade:</span>
@@ -1162,7 +1178,18 @@ export default function Squad() {
                     );
                   })}
                 </div>
-                <Button onClick={openNew} className="gap-1.5 shrink-0"><Plus className="h-4 w-4" /> Novo cliente</Button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      placeholder="Buscar cliente..."
+                      className="pl-9 w-full sm:w-56 bg-card/40 border-border/40"
+                    />
+                  </div>
+                  <Button onClick={openNew} className="gap-1.5 shrink-0"><Plus className="h-4 w-4" /> Novo cliente</Button>
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
@@ -1170,14 +1197,22 @@ export default function Squad() {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-border/30">
                       <TableHead className="w-12">#</TableHead>
-                      <TableHead>Cliente</TableHead>
+                      <TableHead>
+                        <button onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground transition-colors">Cliente{sortArrow("name")}</button>
+                      </TableHead>
                       <TableHead>Serviços</TableHead>
                       <TableHead className="text-center">ABC</TableHead>
                       <TableHead className="text-center">Sprint</TableHead>
-                      <TableHead className="text-center">Prioriz.</TableHead>
+                      <TableHead className="text-center">
+                        <button onClick={() => toggleSort("prioritization")} className="inline-flex items-center hover:text-foreground transition-colors">Prioriz.{sortArrow("prioritization")}</button>
+                      </TableHead>
                       <TableHead className="text-center">BM</TableHead>
-                      <TableHead>Investido TP</TableHead>
-                      <TableHead>Meta Venda</TableHead>
+                      <TableHead>
+                        <button onClick={() => toggleSort("invested")} className="inline-flex items-center hover:text-foreground transition-colors">Investido TP{sortArrow("invested")}</button>
+                      </TableHead>
+                      <TableHead>
+                        <button onClick={() => toggleSort("meta")} className="inline-flex items-center hover:text-foreground transition-colors">Meta Venda{sortArrow("meta")}</button>
+                      </TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
