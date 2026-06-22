@@ -870,6 +870,49 @@ export default function Squad() {
     return { investido, contratos, meta, faturamento };
   }, [clients, engagement, highlightMonth]);
 
+  // Evolução mensal do squad (engajamento, NPS médio e faturamento)
+  const squadMonthly = useMemo(() => {
+    const byMonth = new Map<string, { eng: number[]; nps: number[]; fat: number }>();
+    engagement.forEach((e) => {
+      const k = (e.reference_month || "").slice(0, 7);
+      if (!k) return;
+      if (!byMonth.has(k)) byMonth.set(k, { eng: [], nps: [], fat: 0 });
+      const m = byMonth.get(k)!;
+      if (e.engagement_score != null) m.eng.push(e.engagement_score);
+      if (e.nps_individual != null) m.nps.push(e.nps_individual);
+      m.fat += Number(e.faturamento) || 0;
+    });
+    const avg = (arr: number[]) => (arr.length ? arr.reduce((s, n) => s + n, 0) / arr.length : 0);
+    return Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, m]) => ({
+        mes: formatMonth(`${k}-01`),
+        engajamento: Number(avg(m.eng).toFixed(1)),
+        notaNps: Number(avg(m.nps).toFixed(1)),
+        faturamento: Math.round(m.fat),
+      }));
+  }, [engagement]);
+
+  // Tendência: mês selecionado vs mês anterior (engMonths está do mais recente p/ o mais antigo)
+  const engTrend = useMemo(() => {
+    const idx = engMonths.indexOf(highlightMonth);
+    const prevMonth = idx >= 0 && idx < engMonths.length - 1 ? engMonths[idx + 1] : null;
+    if (!prevMonth) return null;
+    const calc = (month: string) => {
+      const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === month);
+      const nps = rows.filter((e) => e.nps_individual != null).length;
+      const scores = rows.map((e) => e.engagement_score).filter((v): v is number => v != null);
+      const avg = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
+      return { nps, avg };
+    };
+    const cur = calc(highlightMonth);
+    const prev = calc(prevMonth);
+    return {
+      npsDelta: cur.nps - prev.nps,
+      avgDelta: Number((cur.avg - prev.avg).toFixed(1)),
+    };
+  }, [engagement, engMonths, highlightMonth]);
+
   const serviceCounts = useMemo(() => {
     const counts = { TP: 0, CRM: 0, COM: 0 };
     for (const c of clients) {
@@ -1202,8 +1245,8 @@ export default function Squad() {
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
                 <StatCard label="BM Verificada" value={stats.bm} icon={CheckCircle2} color="from-green-500 to-emerald-600" />
                 <StatCard label="Renovação 60d" value={stats.renew} icon={Activity} color="from-primary to-fuchsia-600" />
-                <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
-                <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
+                <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.npsDelta ?? null} />
+                <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.avgDelta ?? null} />
               </div>
 
               {/* Resumo financeiro do squad */}
@@ -2449,13 +2492,18 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color, sub }: { label: string; value: number | string; icon: any; color: string; sub?: string }) {
+function StatCard({ label, value, icon: Icon, color, sub, delta }: { label: string; value: number | string; icon: any; color: string; sub?: string; delta?: number | null }) {
   return (
     <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 shadow-lg">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-muted-foreground font-medium">{label}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
+          {delta != null && delta !== 0 && (
+            <p className={`text-[10px] font-semibold mt-0.5 ${delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {delta > 0 ? "↑" : "↓"} {delta > 0 ? "+" : ""}{delta} vs mês anterior
+            </p>
+          )}
           {sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 capitalize">{sub}</p>}
         </div>
         <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg`}>
