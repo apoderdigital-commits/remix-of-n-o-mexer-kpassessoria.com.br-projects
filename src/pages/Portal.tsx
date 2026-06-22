@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
+import { PortalVideo } from "@/components/PortalVideo";
 import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import kpLogo from "@/assets/kp-logo.png";
+import portalBg from "@/assets/portal-bg.mp4.asset.json";
 
 const allProjects = [
   {
