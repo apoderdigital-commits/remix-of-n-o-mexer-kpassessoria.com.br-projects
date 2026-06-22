@@ -841,15 +841,6 @@ export default function Squad() {
   };
   const sortArrow = (key: typeof sortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
-  // Resumo financeiro do squad
-  const financeSummary = useMemo(() => {
-    const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
-    const contratos = clients.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
-    const meta = clients.reduce((s, c) => s + (Number(c.sales_goal) || 0), 0);
-    const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === highlightMonth);
-    const faturamento = rows.reduce((s, e) => s + (Number(e.faturamento) || 0), 0);
-    return { investido, contratos, meta, faturamento };
-  }, [clients, engagement, highlightMonth]);
 
   // NPS ativos + média de engajamento — mês selecionável pelo usuário
   const engMonths = useMemo(() => {
@@ -869,6 +860,15 @@ export default function Squad() {
     const avgEng = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
     return { latest: highlightMonth, npsCount, avgEng };
   }, [engagement, highlightMonth]);
+  // Resumo financeiro do squad
+  const financeSummary = useMemo(() => {
+    const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
+    const contratos = clients.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
+    const meta = clients.reduce((s, c) => s + (Number(c.sales_goal) || 0), 0);
+    const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === highlightMonth);
+    const faturamento = rows.reduce((s, e) => s + (Number(e.faturamento) || 0), 0);
+    return { investido, contratos, meta, faturamento };
+  }, [clients, engagement, highlightMonth]);
 
   const serviceCounts = useMemo(() => {
     const counts = { TP: 0, CRM: 0, COM: 0 };
