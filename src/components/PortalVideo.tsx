@@ -10,7 +10,7 @@ interface PortalVideoProps {
   showControls?: boolean;
 }
 
-const LOW_VOLUME = 0.12;
+const LOW_VOLUME = 0.8;
 
 export function PortalVideo({
   src,
