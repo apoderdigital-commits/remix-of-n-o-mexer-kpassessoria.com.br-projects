@@ -428,6 +428,9 @@ export default function Squad() {
   const [dailyOpen, setDailyOpen] = useState(false);
   const [consolidatedOpen, setConsolidatedOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [clientSearch, setClientSearch] = useState("");
+  const [sortKey, setSortKey] = useState<"none" | "name" | "prioritization" | "invested" | "meta">("none");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [reportOpen, setReportOpen] = useState(false);
   const [notesReportOpen, setNotesReportOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
@@ -812,11 +815,41 @@ export default function Squad() {
     renew: clients.filter((c) => c.renewal_60d).length,
   }), [clients]);
 
-  // Filtro de prioridade (AA..CC) na aba de Clientes
-  const visibleClients = useMemo(
-    () => (priorityFilter === "all" ? clients : clients.filter((c) => c.prioritization === priorityFilter)),
-    [clients, priorityFilter]
-  );
+  // Filtro de prioridade + busca + ordenação na aba de Clientes
+  const visibleClients = useMemo(() => {
+    let list = priorityFilter === "all" ? clients : clients.filter((c) => c.prioritization === priorityFilter);
+    const q = clientSearch.trim().toLowerCase();
+    if (q) list = list.filter((c) => (c.name || "").toLowerCase().includes(q) || (c.niche || "").toLowerCase().includes(q));
+    if (sortKey !== "none") {
+      const dir = sortDir === "asc" ? 1 : -1;
+      list = [...list].sort((a, b) => {
+        if (sortKey === "name") {
+          return (a.name || "").localeCompare(b.name || "") * dir;
+        }
+        if (sortKey === "prioritization") return (a.priority_score - b.priority_score) * dir;
+        if (sortKey === "invested") return ((parseMoney(a.invested_tp) || 0) - (parseMoney(b.invested_tp) || 0)) * dir;
+        if (sortKey === "meta") return ((Number(a.sales_goal) || 0) - (Number(b.sales_goal) || 0)) * dir;
+        return 0;
+      });
+    }
+    return list;
+  }, [clients, priorityFilter, clientSearch, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+  const sortArrow = (key: typeof sortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
+
+  // Resumo financeiro do squad
+  const financeSummary = useMemo(() => {
+    const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
+    const contratos = clients.reduce((s, c) => s + (Number(c.contract_value) || 0), 0);
+    const meta = clients.reduce((s, c) => s + (Number(c.sales_goal) || 0), 0);
+    const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === highlightMonth);
+    const faturamento = rows.reduce((s, e) => s + (Number(e.faturamento) || 0), 0);
+    return { investido, contratos, meta, faturamento };
+  }, [clients, engagement, highlightMonth]);
 
   // NPS ativos + média de engajamento — mês selecionável pelo usuário
   const engMonths = useMemo(() => {
