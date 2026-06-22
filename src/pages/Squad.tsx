@@ -802,16 +802,24 @@ export default function Squad() {
     [clients, priorityFilter]
   );
 
-  // NPS ativos (clientes com nota preenchida) + média de engajamento — mês mais recente
+  // NPS ativos + média de engajamento — mês selecionável pelo usuário
+  const engMonths = useMemo(() => {
+    const set = new Set(engagement.map((e) => (e.reference_month || "").slice(0, 7)).filter(Boolean));
+    return Array.from(set).sort((a, b) => b.localeCompare(a)); // mais recente primeiro
+  }, [engagement]);
+  const [highlightMonth, setHighlightMonth] = useState<string>("");
+  useEffect(() => {
+    if (engMonths.length && !engMonths.includes(highlightMonth)) {
+      setHighlightMonth(engMonths[0]);
+    }
+  }, [engMonths, highlightMonth]);
   const engHighlights = useMemo(() => {
-    const months = [...new Set(engagement.map((e) => e.reference_month).filter(Boolean))].sort();
-    const latest = months[months.length - 1] || null;
-    const rows = engagement.filter((e) => e.reference_month === latest);
+    const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === highlightMonth);
     const npsCount = rows.filter((e) => e.nps_individual != null).length;
     const scores = rows.map((e) => e.engagement_score).filter((v): v is number => v != null);
     const avgEng = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
-    return { latest, npsCount, avgEng };
-  }, [engagement]);
+    return { latest: highlightMonth, npsCount, avgEng };
+  }, [engagement, highlightMonth]);
 
   const serviceCounts = useMemo(() => {
     const counts = { TP: 0, CRM: 0, COM: 0 };
@@ -1056,6 +1064,23 @@ export default function Squad() {
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center justify-end gap-2">
+                <Smile className="h-3.5 w-3.5 text-sky-400" />
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">NPS / Engajamento do mês:</span>
+                <Select value={highlightMonth} onValueChange={setHighlightMonth}>
+                  <SelectTrigger className="w-[180px] h-8 bg-card/40 border-border/40 text-xs">
+                    <SelectValue placeholder="Selecione o mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {engMonths.length === 0 ? (
+                      <SelectItem value="none" disabled>Sem dados de engajamento</SelectItem>
+                    ) : engMonths.map((m) => (
+                      <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
