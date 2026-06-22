@@ -68,6 +68,7 @@ export default function Portal() {
         <div className="absolute inset-0 bg-background/50 pointer-events-none" />
 
         <div className="relative z-10 text-center px-12 max-w-md">
+          <div className="mb-4">
             <img src={kpLogo} alt="KP Assessoria" className="h-[76px] w-[76px] rounded-2xl mx-auto shadow-2xl" />
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-2 tracking-tight">KP Assessoria</h2>
