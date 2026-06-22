@@ -21,6 +21,7 @@ import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
 import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
+import { CostBanner } from "@/components/dashboard/CostBanner";
 
 import {
   useMetaCampaigns,
@@ -313,6 +314,12 @@ export default function ClientView() {
             vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
             vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
           } : null}
+        />
+
+        <CostBanner
+          totalSpent={totalSpent}
+          vendasFinanciamento={ghlData?.vendas_financiamento ?? (salesFinancing + salesLegacy)}
+          cpfAprovado={ghlData?.cpf_aprovado ?? planilhaCpfApproved}
         />
 
         <div ref={creativesRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
