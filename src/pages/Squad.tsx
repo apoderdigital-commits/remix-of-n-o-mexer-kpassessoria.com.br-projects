@@ -1155,6 +1155,31 @@ export default function Squad() {
                 </div>
               )}
 
+              {upcomingDue.length > 0 && (
+                <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <CalendarDays className="h-5 w-5 text-amber-300 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-amber-200">
+                        {upcomingDue.length} contrato{upcomingDue.length > 1 ? "s" : ""} vencendo em até 30 dias
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {upcomingDue.map(({ client, days }) => (
+                          <button
+                            key={client.id}
+                            onClick={() => openEdit(client)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200 hover:bg-amber-500/20 transition-colors"
+                          >
+                            {client.name}
+                            <span className="text-amber-300/70">· {days === 0 ? "hoje" : `${days}d`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-2">
                 <Smile className="h-3.5 w-3.5 text-sky-400" />
                 <span className="text-[11px] uppercase tracking-wide text-muted-foreground">NPS / Engajamento do mês:</span>
@@ -1262,19 +1287,29 @@ export default function Squad() {
                       <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                         {clients.length === 0 ? "Nenhum cliente neste squad." : "Nenhum cliente nessa prioridade."}
                       </TableCell></TableRow>
-                    ) : visibleClients.map((c, i) => (
+                    ) : visibleClients.map((c, i) => {
+                      const h = healthOf(c);
+                      return (
                       <TableRow key={c.id} className="border-border/20 hover:bg-muted/20 transition-colors">
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-fuchsia-500/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                              {(c.name || "?").trim().charAt(0).toUpperCase()}
+                          <button onClick={() => setDetailClient(c)} className="flex items-center gap-2.5 text-left group/cli">
+                            <div className="relative shrink-0">
+                              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-fuchsia-500/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
+                                {(c.name || "?").trim().charAt(0).toUpperCase()}
+                              </div>
+                              <span
+                                title={h === "red" ? "Atenção" : h === "yellow" ? "Observar" : "Saudável"}
+                                className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${
+                                  h === "red" ? "bg-red-500" : h === "yellow" ? "bg-amber-400" : "bg-emerald-500"
+                                }`}
+                              />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold leading-tight truncate">{c.name}</p>
+                              <p className="font-semibold leading-tight truncate group-hover/cli:text-primary transition-colors">{c.name}</p>
                               {c.niche && <p className="text-[11px] text-muted-foreground truncate">{c.niche}</p>}
                             </div>
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -1320,7 +1355,8 @@ export default function Squad() {
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
