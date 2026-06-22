@@ -948,6 +948,47 @@ export default function Squad() {
       .filter((x) => x.missing.length > 0);
   }, [clients]);
 
+  // Engajamento mais recente por cliente (nome) → saúde + painel de detalhes
+  const engByClient = useMemo(() => {
+    const map = new Map<string, Engagement>();
+    [...engagement]
+      .sort((a, b) => (a.reference_month || "").localeCompare(b.reference_month || ""))
+      .forEach((e) => {
+        const k = (e.client_name || "").trim().toLowerCase();
+        if (k) map.set(k, e); // o mais recente prevalece
+      });
+    return map;
+  }, [engagement]);
+
+  // Saúde do cliente: combina sinais de risco (verde/amarelo/vermelho)
+  const healthOf = (c: SquadClient): "green" | "yellow" | "red" => {
+    let issues = 0;
+    if (!c.bm_verified) issues++;
+    if (c.due_date) {
+      const days = (new Date(c.due_date + "T12:00:00Z").getTime() - Date.now()) / 86400000;
+      if (days >= 0 && days <= 30 && !c.renewal_60d) issues++;
+    }
+    const eng = engByClient.get((c.name || "").trim().toLowerCase());
+    if (eng?.engagement_score != null && eng.engagement_score < 3) issues++;
+    if (eng?.nps_individual != null && eng.nps_individual <= 6) issues++;
+    return issues >= 2 ? "red" : issues === 1 ? "yellow" : "green";
+  };
+
+  // Contratos vencendo em até 30 dias (sem renovação marcada)
+  const upcomingDue = useMemo(() => {
+    return clients
+      .map((c) => {
+        if (!c.due_date) return null;
+        const days = Math.round((new Date(c.due_date + "T12:00:00Z").getTime() - Date.now()) / 86400000);
+        if (days < 0 || days > 30) return null;
+        return { client: c, days };
+      })
+      .filter((x): x is { client: SquadClient; days: number } => x != null)
+      .sort((a, b) => a.days - b.days);
+  }, [clients]);
+
+  const [detailClient, setDetailClient] = useState<SquadClient | null>(null);
+
   const [showIncomplete, setShowIncomplete] = useState(false);
 
 
@@ -2288,6 +2329,15 @@ export default function Squad() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium">{value}</p>
     </div>
   );
 }
