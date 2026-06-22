@@ -57,6 +57,7 @@ type SquadClient = {
   bm_verified: boolean | null;
   invested_tp: string | null;
   contract_value: number | null;
+  sales_goal: number | null;
   observations: string | null;
 };
 type Metric = {
@@ -97,7 +98,7 @@ type Agenda = {
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
-  invested_tp: "", contract_value: null, observations: "", renewal_60d: false, bm_verified: false,
+  invested_tp: "", contract_value: null, sales_goal: null, observations: "", renewal_60d: false, bm_verified: false,
 };
 
 // Calcula totais, porcentagens e faturamento por canal a partir das vendas de cada canal
@@ -493,10 +494,25 @@ export default function Squad() {
       contract_value: editing.contract_value ?? null,
       observations: editing.observations || null,
     };
-    const res = editing.id
-      ? await supabase.from("squad_clients").update(payload).eq("id", editing.id)
-      : await supabase.from("squad_clients").insert(payload);
-    if (res.error) return toast.error(res.error.message);
+    let clientId = editing.id;
+    if (editing.id) {
+      const res = await supabase.from("squad_clients").update(payload).eq("id", editing.id);
+      if (res.error) return toast.error(res.error.message);
+    } else {
+      const res = await supabase.from("squad_clients").insert(payload).select("id").single();
+      if (res.error) return toast.error(res.error.message);
+      clientId = (res.data as any)?.id;
+    }
+    // Meta de venda — coluna opcional; se a migração ainda não rodou, avisa sem quebrar o save
+    if (clientId) {
+      const metaRes = await (supabase as any)
+        .from("squad_clients")
+        .update({ sales_goal: editing.sales_goal ?? null })
+        .eq("id", clientId);
+      if (metaRes.error && /sales_goal/.test(metaRes.error.message || "")) {
+        toast("Cliente salvo. A Meta de Venda precisa da migração (peça ao Lovable).");
+      }
+    }
     toast.success("Salvo — priorização recalculada");
     setOpen(false);
     void loadAll(squadId);
@@ -1726,6 +1742,25 @@ export default function Squad() {
                 </div>
                 {editing.contract_value != null && (
                   <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
+                )}
+              </div>
+              <div>
+                <Label>Meta de Venda (mensal)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.sales_goal ?? ""}
+                    onChange={(e) => setEditing({ ...editing, sales_goal: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                {editing.sales_goal != null && (
+                  <p className="text-[11px] text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês</p>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-6">
