@@ -467,7 +467,7 @@ export default function Squad() {
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false }),
     ]);
-    setClients((c.data as SquadClient[]) || []);
+    setClients((c.data as unknown as SquadClient[]) || []);
     setMetrics((m.data as Metric[]) || []);
     setChurns((ch.data as Churn[]) || []);
     setNps((n.data as Nps[]) || []);
