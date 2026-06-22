@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
+import { PortalVideo } from "@/components/PortalVideo";
 import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import kpLogo from "@/assets/kp-logo.png";
+import portalBg from "@/assets/portal-bg.mp4.asset.json";
 
 const allProjects = [
   {
@@ -52,17 +54,18 @@ export default function Portal() {
       {/* Video background — mobile */}
       <AutoPlayVideo
         className="fixed inset-0 w-full h-full object-cover lg:hidden"
-        src="/videos/portal-bg.mp4"
+        src={portalBg.url}
       />
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
 
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
-        <AutoPlayVideo
+        <PortalVideo
           className="absolute inset-0 w-full h-full object-cover"
-          src="/videos/portal-bg.mp4"
+          src={portalBg.url}
+          showControls
         />
-        <div className="absolute inset-0 bg-background/50" />
+        <div className="absolute inset-0 bg-background/50 pointer-events-none" />
 
         <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-4">
