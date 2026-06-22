@@ -1265,6 +1265,48 @@ export default function Squad() {
                 ))}
               </div>
 
+              {squadMonthly.length > 1 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4">
+                    <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-sky-400" /> Engajamento & NPS médio (0–10)
+                    </p>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={squadMonthly}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                          <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Line type="monotone" dataKey="engajamento" name="Engajamento" stroke="#fbbf24" strokeWidth={2} dot={{ r: 3 }} />
+                          <Line type="monotone" dataKey="notaNps" name="NPS médio" stroke="#38bdf8" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4">
+                    <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-fuchsia-400" /> Faturamento por mês
+                    </p>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={squadMonthly}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                            formatter={(v: any) => [formatBRL(Number(v)), "Faturamento"]}
+                          />
+                          <Bar dataKey="faturamento" name="Faturamento" fill="#d946ef" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Prioridade:</span>
