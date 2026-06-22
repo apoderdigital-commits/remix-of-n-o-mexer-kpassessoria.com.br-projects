@@ -4,7 +4,7 @@ import { Volume2, VolumeX } from "lucide-react";
 interface PortalVideoProps {
   src: string;
   className?: string;
-  /** Volume baixo padrão (0 a 1) */
+  /** Volume baixo padrão (0 a 1) usado quando o usuário ativa o som */
   defaultVolume?: number;
   /** Mostra o controle de volume/mute no canto inferior direito */
   showControls?: boolean;
@@ -22,45 +22,16 @@ export function PortalVideo({
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(defaultVolume);
 
-  // Configura volume e tenta tocar com som; se o navegador bloquear, cai para mudo
+  // O navegador SÓ permite autoplay se o vídeo estiver mudo.
+  // Então iniciamos sempre mudo (autoplay limpo, sem travar) e já deixamos
+  // o volume baixo pré-configurado para quando o usuário ativar o som no botão.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.setAttribute("webkit-playsinline", "");
+    el.muted = true;
     el.volume = volume;
-
-    const tryUnmuted = async () => {
-      el.muted = false;
-      try {
-        await el.play();
-        setMuted(false);
-      } catch {
-        // Autoplay com som bloqueado — toca mudo e espera interação
-        el.muted = true;
-        setMuted(true);
-        el.play().catch(() => {});
-      }
-    };
-
-    tryUnmuted();
-
-    // Na primeira interação do usuário, ativa o som em volume baixo
-    const onInteraction = () => {
-      if (el.muted) {
-        el.muted = false;
-        el.volume = volume;
-        setMuted(false);
-      }
-      window.removeEventListener("pointerdown", onInteraction);
-      window.removeEventListener("keydown", onInteraction);
-    };
-    window.addEventListener("pointerdown", onInteraction);
-    window.addEventListener("keydown", onInteraction);
-
-    return () => {
-      window.removeEventListener("pointerdown", onInteraction);
-      window.removeEventListener("keydown", onInteraction);
-    };
+    el.play().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,6 +65,7 @@ export function PortalVideo({
         ref={ref}
         autoPlay
         loop
+        muted
         playsInline
         preload="auto"
         className={className}
