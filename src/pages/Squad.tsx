@@ -1138,13 +1138,13 @@ export default function Squad() {
                     <TableRow className="hover:bg-transparent border-border/30">
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Cliente</TableHead>
-                      <TableHead>Nicho</TableHead>
                       <TableHead>Serviços</TableHead>
                       <TableHead className="text-center">ABC</TableHead>
                       <TableHead className="text-center">Sprint</TableHead>
                       <TableHead className="text-center">Prioriz.</TableHead>
                       <TableHead className="text-center">BM</TableHead>
                       <TableHead>Investido TP</TableHead>
+                      <TableHead>Meta Venda</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1154,10 +1154,19 @@ export default function Squad() {
                         {clients.length === 0 ? "Nenhum cliente neste squad." : "Nenhum cliente nessa prioridade."}
                       </TableCell></TableRow>
                     ) : visibleClients.map((c, i) => (
-                      <TableRow key={c.id} className="border-border/20">
+                      <TableRow key={c.id} className="border-border/20 hover:bg-muted/20 transition-colors">
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
-                        <TableCell className="font-semibold">{c.name}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{c.niche}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-fuchsia-500/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                              {(c.name || "?").trim().charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold leading-tight truncate">{c.name}</p>
+                              {c.niche && <p className="text-[11px] text-muted-foreground truncate">{c.niche}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {parseServices(c.services).length === 0 ? (
@@ -1191,6 +1200,11 @@ export default function Squad() {
                           {parseMoney(c.invested_tp) == null
                             ? <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
                             : <span className="text-emerald-300">{formatBRL(parseMoney(c.invested_tp))}</span>}
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold">
+                          {c.sales_goal != null
+                            ? <span className="text-amber-300">{formatBRL(c.sales_goal)}</span>
+                            : <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/40">definir</Badge>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
