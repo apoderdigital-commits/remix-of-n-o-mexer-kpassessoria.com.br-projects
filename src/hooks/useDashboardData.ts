@@ -98,9 +98,17 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
     queryFn: async () => {
       if (!clientId) return null;
 
-      const { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline", {
+      // Tenta a v2 (com auto-detecção de pipeline). Se ainda não deployou, usa a antiga.
+      let { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline-v2", {
         body: { client_id: clientId, since, until },
       });
+      if (error) {
+        const fb = await supabase.functions.invoke("fetch-ghl-pipeline", {
+          body: { client_id: clientId, since, until },
+        });
+        data = fb.data;
+        error = fb.error;
+      }
       if (error) {
         let msg = "";
         try {
@@ -184,9 +192,14 @@ export function usePreviousPeriodData(
           .gte("lead_date", prev.since)
           .lte("lead_date", prev.until),
         supabase.functions
-          .invoke("fetch-ghl-pipeline", {
+          .invoke("fetch-ghl-pipeline-v2", {
             body: { client_id: clientId, since: prev.since, until: prev.until },
           })
+          .then((r: any) => (r.error
+            ? supabase.functions.invoke("fetch-ghl-pipeline", {
+                body: { client_id: clientId, since: prev.since, until: prev.until },
+              })
+            : r))
           .catch(() => ({ data: null, error: null } as any)),
       ]);
       const campaigns = campRes.data || [];
