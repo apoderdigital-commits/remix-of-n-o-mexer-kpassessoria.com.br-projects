@@ -78,16 +78,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const pipeline = pipelines[0];
-    const stages = pipeline.stages || [];
-
     // ---- Manual mapping (preferred) ----
     const mapping = (client.ghl_stage_mapping ?? {}) as {
+      pipeline_id?: string;
       cpf_aprovado?: string[];
       cpf_nao_aprovado?: string[];
       vendas_financiamento?: string[];
       vendas_consorcio?: string[];
     };
+
+    // Usa a pipeline escolhida pelo cliente; se não houver (clientes antigos), usa a primeira (comportamento anterior).
+    const pipeline =
+      (mapping.pipeline_id && pipelines.find((p: any) => p.id === mapping.pipeline_id)) || pipelines[0];
+    const stages = pipeline.stages || [];
 
     const hasMapping =
       (mapping.cpf_aprovado?.length ?? 0) > 0 ||
