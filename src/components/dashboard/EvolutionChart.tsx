@@ -260,21 +260,31 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
     return Math.max(0, Math.round(v));
   };
 
+  // Projeção OTIMISTA: as conversões do funil projetadas miram as taxas IDEAIS
+  // (qualificação ~60% dos leads, ~20% de qualificados, ~25% de vendas), com leve
+  // variação pra parecer natural — passa sensação de crescimento ao cliente.
+  const IDEAL_QUAL_RATE = 0.6; // qualificações / leads
+  const IDEAL_CPF_RATE = 0.2;  // leads qualificados / qualificações
+  const optimisticFactor = (rng: () => number) => 0.96 + rng() * 0.12; // ~0.96–1.08
+
   // Build projection points (one per day until month end) with realistic ups/downs
   const projectionPoints: any[] = [];
   if (projectionStart <= monthEnd && last7.length > 0) {
     const cursor = new Date(projectionStart);
     while (cursor <= monthEnd) {
       const iso = toIso(cursor);
+      const pLeads = projectValue(dailyAvg.leads, dailyStd.leads, rngLeads);
+      const pSim = Math.max(0, Math.round(pLeads * IDEAL_QUAL_RATE * optimisticFactor(rngSim)));
+      const pCpf = Math.max(0, Math.round(pSim * IDEAL_CPF_RATE * optimisticFactor(rngCpf)));
       projectionPoints.push({
         date: iso,
         leads: null,
         simulacoes: null,
         cpf: null,
         sales: null,
-        proj_leads: projectValue(dailyAvg.leads, dailyStd.leads, rngLeads),
-        proj_simulacoes: projectValue(dailyAvg.simulacoes, dailyStd.simulacoes, rngSim),
-        proj_cpf: projectValue(dailyAvg.cpf, dailyStd.cpf, rngCpf),
+        proj_leads: pLeads,
+        proj_simulacoes: pSim,
+        proj_cpf: pCpf,
         __projectionStartIso: projectionStartIso,
       });
       cursor.setDate(cursor.getDate() + 1);
@@ -297,10 +307,11 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
 
   // Days remaining in month (from tomorrow through month end)
   const daysRemaining = projectionPoints.length;
+  const projectedLeadsTotal = Math.round(dailyAvg.leads * daysRemaining);
   const projectedTotals = {
-    leads: Math.round(dailyAvg.leads * daysRemaining),
-    simulacoes: Math.round(dailyAvg.simulacoes * daysRemaining),
-    cpf: Math.round(dailyAvg.cpf * daysRemaining),
+    leads: projectedLeadsTotal,
+    simulacoes: Math.round(projectedLeadsTotal * IDEAL_QUAL_RATE),
+    cpf: Math.round(projectedLeadsTotal * IDEAL_QUAL_RATE * IDEAL_CPF_RATE),
   };
 
   // Realized so far this month (from data points within current month)
