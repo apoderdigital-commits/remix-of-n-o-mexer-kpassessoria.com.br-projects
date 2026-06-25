@@ -70,7 +70,7 @@ const SERIES: SeriesDef[] = [
   },
 ];
 
-const PROJECTION_KEYS: SeriesKey[] = ["leads", "simulacoes", "cpf"];
+const PROJECTION_KEYS: SeriesKey[] = ["leads", "simulacoes", "cpf", "sales"];
 
 function formatDateLabel(v: string) {
   const d = new Date(v + "T00:00:00");
@@ -242,6 +242,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   const rngLeads = mulberry32(seedFromString(lastRealDate + "_leads"));
   const rngSim = mulberry32(seedFromString(lastRealDate + "_sim"));
   const rngCpf = mulberry32(seedFromString(lastRealDate + "_cpf"));
+  const rngSales = mulberry32(seedFromString(lastRealDate + "_sales"));
   const gaussian = (rng: () => number) => {
     const u = Math.max(rng(), 1e-9);
     const v = Math.max(rng(), 1e-9);
@@ -263,8 +264,9 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
   // Projeção OTIMISTA: as conversões do funil projetadas miram as taxas IDEAIS
   // (qualificação ~60% dos leads, ~20% de qualificados, ~25% de vendas), com leve
   // variação pra parecer natural — passa sensação de crescimento ao cliente.
-  const IDEAL_QUAL_RATE = 0.6; // qualificações / leads
-  const IDEAL_CPF_RATE = 0.2;  // leads qualificados / qualificações
+  const IDEAL_QUAL_RATE = 0.6;  // qualificações / leads
+  const IDEAL_CPF_RATE = 0.2;   // leads qualificados / qualificações
+  const IDEAL_SALES_RATE = 0.25; // vendas / leads qualificados
   const optimisticFactor = (rng: () => number) => 0.96 + rng() * 0.12; // ~0.96–1.08
 
   // Build projection points (one per day until month end) with realistic ups/downs
@@ -276,6 +278,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
       const pLeads = projectValue(dailyAvg.leads, dailyStd.leads, rngLeads);
       const pSim = Math.max(0, Math.round(pLeads * IDEAL_QUAL_RATE * optimisticFactor(rngSim)));
       const pCpf = Math.max(0, Math.round(pSim * IDEAL_CPF_RATE * optimisticFactor(rngCpf)));
+      const pSales = Math.max(0, Math.round(pCpf * IDEAL_SALES_RATE * optimisticFactor(rngSales)));
       projectionPoints.push({
         date: iso,
         leads: null,
@@ -285,6 +288,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
         proj_leads: pLeads,
         proj_simulacoes: pSim,
         proj_cpf: pCpf,
+        proj_sales: pSales,
         __projectionStartIso: projectionStartIso,
       });
       cursor.setDate(cursor.getDate() + 1);
@@ -299,6 +303,7 @@ export function EvolutionChart({ data, simulacoesTotal }: EvolutionChartProps) {
       proj_leads: isLastReal ? d.leads : null,
       proj_simulacoes: isLastReal ? (d as any).simulacoes : null,
       proj_cpf: isLastReal ? d.cpf : null,
+      proj_sales: isLastReal ? (d as any).sales : null,
       __projectionStartIso: projectionStartIso,
     };
   });
