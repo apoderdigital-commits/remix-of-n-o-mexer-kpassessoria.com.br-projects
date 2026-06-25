@@ -87,9 +87,24 @@ Deno.serve(async (req) => {
       vendas_consorcio?: string[];
     };
 
-    // Usa a pipeline escolhida pelo cliente; se não houver (clientes antigos), usa a primeira (comportamento anterior).
-    const pipeline =
-      (mapping.pipeline_id && pipelines.find((p: any) => p.id === mapping.pipeline_id)) || pipelines[0];
+    // Seleção da pipeline:
+    // 1) a escolhida explicitamente (pipeline_id)
+    // 2) senão, DETECTA automaticamente a pipeline que contém as etapas mapeadas
+    //    (conserta sozinho clientes com múltiplas pipelines, sem re-editar)
+    // 3) senão, a primeira (comportamento antigo)
+    const mappedStageIds = new Set<string>([
+      ...(mapping.cpf_aprovado ?? []),
+      ...(mapping.cpf_nao_aprovado ?? []),
+      ...(mapping.vendas_financiamento ?? []),
+      ...(mapping.vendas_consorcio ?? []),
+    ]);
+    let pipeline: any =
+      (mapping.pipeline_id && pipelines.find((p: any) => p.id === mapping.pipeline_id)) || null;
+    if (!pipeline && mappedStageIds.size > 0) {
+      pipeline =
+        pipelines.find((p: any) => (p.stages || []).some((s: any) => mappedStageIds.has(s.id))) || null;
+    }
+    if (!pipeline) pipeline = pipelines[0];
     const stages = pipeline.stages || [];
 
     const hasMapping =
