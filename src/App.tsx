@@ -17,6 +17,7 @@ import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ClientView from "./pages/ClientView.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
+import { VersionGate } from "./components/VersionGate";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <VersionGate />
         <AppRoutes />
         <SupportWhatsAppButton />
       </BrowserRouter>
