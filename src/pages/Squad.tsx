@@ -894,6 +894,25 @@ export default function Squad() {
     };
   }, [npsMonth, clients, engagement]);
 
+  // Cohort das Métricas dos Projetos (base D+30) no mês selecionado (highlightMonth)
+  const metricsCohort = useMemo(() => {
+    const M = highlightMonth;
+    if (!M) return null;
+    const ymf = (d: string | null | undefined) => (d || "").slice(0, 7);
+    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
+    const clientsWithEntry = clients.filter((c) => !!c.entry_date).length;
+    const eligible = clients.filter((c) => c.entry_date && ymf(c.entry_date) < M);
+    const rowByName = new Map<string, Engagement>();
+    engagement.filter((e) => ymf(e.reference_month) === M).forEach((e) => rowByName.set(norm(e.client_name), e));
+    const eligRows = eligible.map((c) => rowByName.get(norm(c.name))).filter(Boolean) as Engagement[];
+    const engScores = eligRows.map((r) => r.engagement_score).filter((v): v is number => v != null);
+    const avgEng = engScores.length ? engScores.reduce((s, v) => s + v, 0) / engScores.length : 0;
+    const vendido = eligRows.reduce((s, r) => s + (Number(r.faturamento) || 0), 0);
+    const withSecondary = eligRows.filter((r) => (Number(r.vendas_loja) || 0) > 0).length;
+    const secondaryPct = eligible.length ? (withSecondary / eligible.length) * 100 : 0;
+    return { M, eligibleCount: eligible.length, evaluated: engScores.length, avgEng, vendido, secondaryPct, withSecondary, missingEntry: clientsWithEntry === 0 };
+  }, [highlightMonth, clients, engagement]);
+
   // Evolução mensal do squad (engajamento, NPS médio e faturamento)
   const squadMonthly = useMemo(() => {
     const byMonth = new Map<string, { eng: number[]; nps: number[]; fat: number }>();
@@ -1550,6 +1569,50 @@ export default function Squad() {
 
             {/* MÉTRICAS */}
             <TabsContent value="metrics" className="space-y-4">
+              {/* Fechamento operacional (base D+30) */}
+              {metricsCohort && (metricsCohort.missingEntry ? (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  ⚠️ Para o fechamento (engajamento, vendas — base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-end gap-2">
+                    <Activity className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Mês do fechamento:</span>
+                    <Select value={highlightMonth} onValueChange={setHighlightMonth}>
+                      <SelectTrigger className="w-[180px] h-8 bg-card/40 border-border/40 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {engMonths.length === 0 ? <SelectItem value="none" disabled>Sem dados</SelectItem> : engMonths.map((m) => (
+                          <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Engajamento médio (CRM)</p>
+                      <p className="text-2xl font-bold mt-1 text-sky-300">{metricsCohort.avgEng ? metricsCohort.avgEng.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.evaluated} de {metricsCohort.eligibleCount} elegíveis avaliados (D+30)</p>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${metricsCohort.vendido >= 10000 ? "border-emerald-500/40 bg-emerald-500/10" : metricsCohort.vendido >= 5000 ? "border-amber-500/40 bg-amber-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Vendido no mês</p>
+                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.vendido >= 10000 ? "text-emerald-300" : metricsCohort.vendido >= 5000 ? "text-amber-300" : "text-red-300"}`}>{formatBRL(metricsCohort.vendido)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ R$ 10k · mín R$ 5k</p>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${metricsCohort.secondaryPct >= 20 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Produto secundário</p>
+                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.secondaryPct >= 20 ? "text-emerald-300" : "text-amber-300"}`}>{metricsCohort.secondaryPct.toFixed(0)}%</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.withSecondary} clientes · meta ≥ 20%</p>
+                    </div>
+                    <div className="rounded-2xl border border-dashed border-border/40 bg-card/20 p-4">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CPL / CPMQL médios</p>
+                      <p className="text-sm font-semibold mt-1 text-muted-foreground">Vem da dash de Criativos</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">CPL ≤ R$ 8 · CPMQL ≤ R$ 45 — precisa linkar Meta/GHL ao squad</p>
+                    </div>
+                  </div>
+                </>
+              ))}
+
               <MetricsOverview metrics={metrics} />
               <div className="flex justify-end">
                 <Button onClick={() => { setEditingMetric({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenMetric(true); }} className="gap-1.5">
