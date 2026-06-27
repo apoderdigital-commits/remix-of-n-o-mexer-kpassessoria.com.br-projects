@@ -419,6 +419,7 @@ export default function Squad() {
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
   const [npsMonth, setNpsMonth] = useState<string>("all");
+  const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | null>(null);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
@@ -869,6 +870,29 @@ export default function Squad() {
     const faturamento = rows.reduce((s, e) => s + (Number(e.faturamento) || 0), 0);
     return { investido, contratos, meta, faturamento };
   }, [clients, engagement, highlightMonth]);
+
+  // Cohort do NPS (base D+30): no mês selecionado, quem é elegível, quem respondeu, % resposta e nota média.
+  const npsCohort = useMemo(() => {
+    if (npsMonth === "all") return null;
+    const M = npsMonth;
+    const ymf = (d: string | null | undefined) => (d || "").slice(0, 7);
+    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
+    const clientsWithEntry = clients.filter((c) => !!c.entry_date).length;
+    // Elegíveis = ativos que entraram antes do mês analisado (≥30 dias)
+    const eligible = clients.filter((c) => c.entry_date && ymf(c.entry_date) < M);
+    const monthRows = engagement.filter((e) => ymf(e.reference_month) === M && e.nps_individual != null);
+    const npsByName = new Map<string, number>();
+    monthRows.forEach((e) => npsByName.set(norm(e.client_name), e.nps_individual as number));
+    const responded = eligible.filter((c) => npsByName.has(norm(c.name)));
+    const missed = eligible.filter((c) => !npsByName.has(norm(c.name)));
+    const notes = responded.map((c) => npsByName.get(norm(c.name))!).filter((n) => n != null);
+    const avgNps = notes.length ? notes.reduce((s, n) => s + n, 0) / notes.length : 0;
+    const responseRate = eligible.length ? (responded.length / eligible.length) * 100 : 0;
+    return {
+      M, eligible, responded, missed, avgNps, responseRate, npsByName,
+      missingEntry: clientsWithEntry === 0,
+    };
+  }, [npsMonth, clients, engagement]);
 
   // Evolução mensal do squad (engajamento, NPS médio e faturamento)
   const squadMonthly = useMemo(() => {
@@ -1652,6 +1676,39 @@ export default function Squad() {
                       </div>
                     </div>
 
+                    {npsCohort && (
+                      npsCohort.missingEntry ? (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                          ⚠️ Para o fechamento de NPS (base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos elegíveis</p>
+                            <p className="text-2xl font-bold mt-1">{npsCohort.eligible.length}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">deviam responder (D+30)</p>
+                          </div>
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Responderam</p>
+                            <p className="text-2xl font-bold mt-1 text-sky-300">{npsCohort.responded.length}</p>
+                            <button onClick={() => setNpsListDialog("responded")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista</button>
+                          </div>
+                          <div className={`rounded-2xl border p-4 ${npsCohort.responseRate >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% de resposta</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.responseRate >= 80 ? "text-emerald-300" : "text-red-300"}`}>{npsCohort.responseRate.toFixed(0)}%</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              meta ≥ 80% · <button onClick={() => setNpsListDialog("missed")} className="text-primary hover:underline">{npsCohort.missed.length} faltaram</button>
+                            </p>
+                          </div>
+                          <div className={`rounded-2xl border p-4 ${npsCohort.avgNps >= 9 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.avgNps >= 9 ? "text-emerald-300" : "text-amber-300"}`}>{npsCohort.avgNps ? npsCohort.avgNps.toFixed(1) : "—"}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 9,0</p>
+                          </div>
+                        </div>
+                      )
+                    )}
+
                     <NpsChart dist={dist} />
 
                     {/* Dashboard por cliente — agrupado por mês (accordion) */}
@@ -1892,6 +1949,39 @@ export default function Squad() {
           </Tabs>
         )}
       </main>
+
+      {/* Lista de NPS: respondeu / faltou */}
+      <Dialog open={!!npsListDialog} onOpenChange={(o) => { if (!o) setNpsListDialog(null); }}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {npsListDialog === "responded" ? "Clientes que responderam" : "Clientes que faltaram"}
+              {npsCohort ? ` · ${formatMonth(`${npsCohort.M}-01`)}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 py-1">
+            {npsCohort && (npsListDialog === "responded" ? npsCohort.responded : npsCohort.missed).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente nesta lista.</p>
+            ) : (
+              npsCohort && (npsListDialog === "responded" ? npsCohort.responded : npsCohort.missed).map((c) => {
+                const nota = npsCohort.npsByName.get((c.name || "").trim().toLowerCase());
+                return (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-sm">
+                    <span className="font-medium">{c.name}</span>
+                    {npsListDialog === "responded" ? (
+                      <Badge variant="outline" className={`font-bold ${nota != null && nota >= 9 ? "border-emerald-500/40 text-emerald-300" : nota != null && nota < 7 ? "border-red-500/40 text-red-300" : "border-amber-500/40 text-amber-300"}`}>
+                        Nota {nota ?? "—"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-red-500/40 text-red-300">não respondeu</Badge>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Painel de detalhes do cliente */}
       <Dialog open={!!detailClient} onOpenChange={(o) => { if (!o) setDetailClient(null); }}>
