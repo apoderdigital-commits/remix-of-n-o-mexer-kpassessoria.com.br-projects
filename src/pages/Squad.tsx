@@ -85,6 +85,7 @@ type Engagement = {
   curve_abc: string | null; sprint: string | null;
   engagement_score: number | null; nps_individual: number | null; observation: string | null;
   meta_status: string | null;
+  meta_vendas: number | null; meta_vendas_trafego: number | null;
   vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
   vendas_por_canais: string | null; vendas_perc_canais: string | null;
   faturamento: number | null; faturamento_por_canais: string | null; faturamento_perc_canais: string | null;
@@ -682,8 +683,19 @@ export default function Squad() {
     };
     const res = editingEng.id
       ? await (supabase as any).from("squad_engagement").update(payload).eq("id", editingEng.id)
-      : await (supabase as any).from("squad_engagement").insert(payload);
+      : await (supabase as any).from("squad_engagement").insert(payload).select("id").single();
     if (res.error) return toast.error(res.error.message);
+    // Metas de venda (colunas opcionais) — save resiliente: se a migração não rodou, avisa sem quebrar
+    const engSavedId = editingEng.id || (res.data as any)?.id;
+    if (engSavedId && (editingEng.meta_vendas != null || editingEng.meta_vendas_trafego != null)) {
+      const metaRes = await (supabase as any).from("squad_engagement").update({
+        meta_vendas: editingEng.meta_vendas ?? null,
+        meta_vendas_trafego: editingEng.meta_vendas_trafego ?? null,
+      }).eq("id", engSavedId);
+      if (metaRes.error && /meta_vendas/.test(metaRes.error.message || "")) {
+        toast("Salvo. As metas de venda precisam da migração (peça ao Lovable).");
+      }
+    }
 
     // Sync ABC/Sprint back to squad_clients (single source of truth per client)
     const matchClient = clients.find((c) => c.name.trim().toLowerCase() === payload.client_name.toLowerCase());
@@ -1921,6 +1933,7 @@ export default function Squad() {
                                 <TableHead className="text-center">Engaj. (1-5)</TableHead>
                                 <TableHead className="text-center">NPS</TableHead>
                                 <TableHead className="text-center">Vendas</TableHead>
+                                <TableHead className="text-center">Meta × Vendeu</TableHead>
                                 <TableHead className="text-center">Faturamento</TableHead>
                                 <TableHead>Observação</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
@@ -1963,8 +1976,22 @@ export default function Squad() {
                                             <div className="leading-tight">
                                               <span className="font-bold">{ch.vendasTotal}</span>
                                               <span className="block text-[10px] text-muted-foreground">T {Number(e.vendas_trafego) || 0} · L {Number(e.vendas_loja) || 0}</span>
+                                              {e.vendas_perc_canais && <span className="block text-[9px] text-muted-foreground/70">{e.vendas_perc_canais}</span>}
                                             </div>
                                           ) : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          {(e as any).meta_vendas != null ? (
+                                            <div className="leading-tight">
+                                              <span className={`font-bold ${ch.vendasTotal >= (e as any).meta_vendas ? "text-emerald-300" : "text-amber-300"}`}>
+                                                {ch.vendasTotal} / {(e as any).meta_vendas}
+                                              </span>
+                                              <span className="block text-[10px] text-muted-foreground">vendeu / meta</span>
+                                              {(e as any).meta_vendas_trafego != null && (
+                                                <span className="block text-[9px] text-muted-foreground/70">tráf: {Number(e.vendas_trafego) || 0}/{(e as any).meta_vendas_trafego}</span>
+                                              )}
+                                            </div>
+                                          ) : <span className="text-muted-foreground text-[10px]">definir meta</span>}
                                         </TableCell>
                                         <TableCell className="text-center">
                                           {e.faturamento != null && Number(e.faturamento) > 0 ? (
@@ -1973,6 +2000,7 @@ export default function Squad() {
                                               {ch.vendasTotal > 0 && (
                                                 <span className="block text-[10px] text-muted-foreground">T {fmtBRL(ch.fatTrafego)} · L {fmtBRL(ch.fatLoja)}</span>
                                               )}
+                                              {e.faturamento_perc_canais && <span className="block text-[9px] text-muted-foreground/70">{e.faturamento_perc_canais}</span>}
                                             </div>
                                           ) : <span className="text-muted-foreground">-</span>}
                                         </TableCell>
@@ -2480,6 +2508,14 @@ export default function Squad() {
                         <SelectItem value="Fora da meta">Fora da meta</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta de Vendas (total)</Label>
+                    <Input type="number" min="0" placeholder="ex: 12" value={editingEng.meta_vendas ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_vendas: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Meta Vendas Tráfego</Label>
+                    <Input type="number" min="0" placeholder="ex: 5" value={editingEng.meta_vendas_trafego ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Vendas Tráfego</Label>
