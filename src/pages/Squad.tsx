@@ -1939,6 +1939,7 @@ export default function Squad() {
             <TabsContent value="agenda" className="space-y-4">
               <AgendaPanel
                 agenda={agenda}
+                clients={clients}
                 activeClientsCount={clients.length}
                 onNew={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }}
                 onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
@@ -2665,9 +2666,10 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
+  agenda, clients, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
 }: {
   agenda: Agenda[];
+  clients: SquadClient[];
   activeClientsCount: number;
   onNew: () => void;
   onEdit: (a: Agenda) => void;
@@ -2683,6 +2685,7 @@ function AgendaPanel({
   }, [agenda]);
 
   const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
+  const [agendaMissing, setAgendaMissing] = useState(false);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2709,13 +2712,23 @@ function AgendaPanel({
       return d < today;
     }).length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    // Clientes distintos com reunião marcada no mês x total de clientes ativos
-    const meetingClients = new Set(
-      filtered.map((a) => (a.client_name || "").trim().toLowerCase()).filter(Boolean)
-    ).size;
-    const coverage = activeClientsCount > 0 ? Math.round((meetingClients / activeClientsCount) * 100) : 0;
-    return { total, done, justified, scheduled, overdueUnjustified, pct, meetingClients, coverage };
-  }, [filtered, activeClientsCount]);
+    // ── Entrega de mensais sobre a BASE ELEGÍVEL (D+30) ──
+    const ymf = (d: string | null | undefined) => (d || "").slice(0, 7);
+    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
+    const clientsWithEntry = clients.filter((c) => !!c.entry_date).length;
+    const eligible = clients.filter((c) => c.entry_date && ymf(c.entry_date) < month);
+    const deliveredNames = new Set(
+      filtered.filter((a) => a.done).map((a) => norm(a.client_name)).filter(Boolean)
+    );
+    const deliveredEligible = eligible.filter((c) => deliveredNames.has(norm(c.name)));
+    const missedEligible = eligible.filter((c) => !deliveredNames.has(norm(c.name)));
+    const deliveryRate = eligible.length > 0 ? Math.round((deliveredEligible.length / eligible.length) * 100) : 0;
+    return {
+      total, done, justified, scheduled, overdueUnjustified, pct,
+      eligible, deliveredEligible, missedEligible, deliveryRate,
+      missingEntry: clientsWithEntry === 0,
+    };
+  }, [filtered, clients, month]);
 
   return (
     <div className="space-y-4">
@@ -2736,15 +2749,56 @@ function AgendaPanel({
         <Button onClick={onNew} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"><Plus className="h-4 w-4" /> Novo Alinhamento Mensal</Button>
       </div>
 
-      <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <CalendarDays className="h-4 w-4 text-primary shrink-0" />
-        <span className="text-sm">
-          Clientes nas reuniões mensais:{" "}
-          <strong className="text-foreground">{stats.meetingClients}</strong>
-          <span className="text-muted-foreground"> de {activeClientsCount}</span>
-        </span>
-        <Badge className="bg-primary/15 text-primary border-primary/30">{stats.coverage}% de cobertura</Badge>
-      </div>
+      {stats.missingEntry ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          ⚠️ Para a meta de mensais entregues (clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
+        </div>
+      ) : (
+        <div className={`rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3 ${
+          stats.deliveryRate >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"
+        }`}>
+          <div className="flex items-center gap-3">
+            <CalendarDays className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Mensais entregues (D+30)</p>
+              <p className={`text-2xl font-black mt-0.5 ${stats.deliveryRate >= 80 ? "text-emerald-300" : "text-red-300"}`}>
+                {stats.deliveryRate}%
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {stats.deliveredEligible.length} de {stats.eligible.length} clientes elegíveis ·{" "}
+                <button onClick={() => setAgendaMissing(true)} className="text-primary hover:underline">{stats.missedEligible.length} faltaram</button>
+              </p>
+            </div>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
+            stats.deliveryRate >= 80
+              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+              : "border-red-500/40 bg-red-500/15 text-red-300"
+          }`}>
+            {stats.deliveryRate >= 80 ? "✓ Dentro da meta" : "⚠ Abaixo da meta"} · alvo ≥ 80%
+          </span>
+        </div>
+      )}
+
+      <Dialog open={agendaMissing} onOpenChange={setAgendaMissing}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Clientes sem mensal entregue · {new Date(month + "-01T12:00:00Z").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 py-1">
+            {stats.missedEligible.length === 0 ? (
+              <p className="text-sm text-emerald-300 text-center py-4">Todos os elegíveis tiveram a mensal entregue! 🎉</p>
+            ) : (
+              stats.missedEligible.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm">
+                  <span className="font-medium">{c.name}</span>
+                  <Badge variant="outline" className="border-red-500/40 text-red-300">sem mensal</Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <SummaryStat label="Marcadas" value={stats.total} tone="primary" />
