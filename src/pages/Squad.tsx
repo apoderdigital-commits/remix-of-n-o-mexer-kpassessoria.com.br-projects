@@ -1589,6 +1589,7 @@ export default function Squad() {
             <TabsContent value="churn" className="space-y-4">
               <ChurnPanel
                 churns={churns}
+                clients={clients}
                 activeClientsCount={clients.length}
                 onNew={() => { setEditingChurn({ churn_month: `${new Date().toISOString().slice(0, 7)}-01` }); setPendingClientDelete(null); setOpenChurn(true); }}
                 onEdit={(c) => { setEditingChurn(c); setPendingClientDelete(null); setOpenChurn(true); }}
@@ -3050,9 +3051,10 @@ function NpsChart({ dist }: { dist: {
 }
 
 function ChurnPanel({
-  churns, activeClientsCount, onNew, onEdit, onRemove,
+  churns, clients, activeClientsCount, onNew, onEdit, onRemove,
 }: {
   churns: Churn[];
+  clients: SquadClient[];
   activeClientsCount: number;
   onNew: () => void;
   onEdit: (c: Churn) => void;
@@ -3077,6 +3079,33 @@ function ChurnPanel({
     });
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredChurns]);
+
+  // Taxa de churn do mês com BASE ELEGÍVEL (D+30): só conta clientes ativos há ≥30 dias
+  // (entraram ANTES do mês analisado). Novos do mês não entram na conta.
+  const ym = (d: string | null | undefined) => (d || "").slice(0, 7);
+  const monthStats = useMemo(() => {
+    if (monthFilter === "all") return null;
+    const M = monthFilter;
+    // Quantos clientes têm data de entrada preenchida (pra avisar se faltar)
+    const clientsWithEntry = clients.filter((c) => !!c.entry_date).length;
+    // Base elegível = ativos que entraram antes de M + churns que saíram em M ou depois e entraram antes de M
+    const activeEnteredBefore = clients.filter((c) => c.entry_date && ym(c.entry_date) < M).length;
+    const churnedLaterEnteredBefore = churns.filter(
+      (ch) => ym(ch.entry_month) && ym(ch.entry_month) < M && ym(ch.churn_month) >= M
+    ).length;
+    const eligibleBase = activeEnteredBefore + churnedLaterEnteredBefore;
+    // Saídas do mês que eram elegíveis (entraram antes de M)
+    const eligibleChurns = churns.filter(
+      (ch) => ym(ch.churn_month) === M && ym(ch.entry_month) && ym(ch.entry_month) < M
+    ).length;
+    const totalChurnsMonth = churns.filter((ch) => ym(ch.churn_month) === M).length;
+    const rate = eligibleBase > 0 ? (eligibleChurns / eligibleBase) * 100 : 0;
+    return {
+      M, eligibleBase, eligibleChurns, totalChurnsMonth, rate,
+      withinTarget: rate <= 5,
+      missingEntryData: clientsWithEntry === 0,
+    };
+  }, [monthFilter, clients, churns]);
 
   // Group churns by churn_month (YYYY-MM)
   const grouped = useMemo(() => {
@@ -3183,6 +3212,47 @@ function ChurnPanel({
             <Plus className="h-4 w-4" /> Novo churn
           </Button>
         </div>
+
+        {monthStats && (
+          monthStats.missingEntryData ? (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+              ⚠️ Para calcular a taxa de churn do mês (base de clientes ativos há +30 dias), preencha a
+              <strong> Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
+            </div>
+          ) : (
+            <div className={`rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3 ${
+              monthStats.withinTarget
+                ? "border-emerald-500/40 bg-emerald-500/10"
+                : "border-red-500/40 bg-red-500/10"
+            }`}>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Taxa de churn · {formatMonth(`${monthStats.M}-01`)}
+                </p>
+                <p className={`text-3xl font-black mt-0.5 ${monthStats.withinTarget ? "text-emerald-300" : "text-red-300"}`}>
+                  {monthStats.rate.toFixed(1)}%
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {monthStats.eligibleChurns} de {monthStats.eligibleBase} clientes elegíveis (ativos há +30 dias, sem os novos do mês)
+                </p>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
+                  monthStats.withinTarget
+                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                    : "border-red-500/40 bg-red-500/15 text-red-300"
+                }`}>
+                  {monthStats.withinTarget ? "✓ Dentro da meta" : "⚠ Acima da meta"} · alvo ≤ 5%
+                </span>
+                {!monthStats.withinTarget && (
+                  <p className="text-[11px] text-red-300/80 mt-1.5">
+                    {(monthStats.rate - 5).toFixed(1)}% acima do limite
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        )}
 
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Motivos das saídas</p>
