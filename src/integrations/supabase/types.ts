@@ -848,6 +848,7 @@ export type Database = {
           prioritization: string | null
           priority_score: number
           renewal_60d: boolean | null
+          sales_goal: number | null
           services: string | null
           sprint: string | null
           squad_id: string
@@ -868,6 +869,7 @@ export type Database = {
           prioritization?: string | null
           priority_score?: number
           renewal_60d?: boolean | null
+          sales_goal?: number | null
           services?: string | null
           sprint?: string | null
           squad_id: string
@@ -888,6 +890,7 @@ export type Database = {
           prioritization?: string | null
           priority_score?: number
           renewal_60d?: boolean | null
+          sales_goal?: number | null
           services?: string | null
           sprint?: string | null
           squad_id?: string
@@ -1145,7 +1148,11 @@ export type Database = {
           faturamento_perc_canais: string | null
           faturamento_por_canais: string | null
           id: string
+          meta_faturamento: number | null
           meta_status: string | null
+          meta_vendas: number | null
+          meta_vendas_loja: number | null
+          meta_vendas_trafego: number | null
           nps_individual: number | null
           observation: string | null
           reference_month: string
@@ -1169,7 +1176,11 @@ export type Database = {
           faturamento_perc_canais?: string | null
           faturamento_por_canais?: string | null
           id?: string
+          meta_faturamento?: number | null
           meta_status?: string | null
+          meta_vendas?: number | null
+          meta_vendas_loja?: number | null
+          meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
           reference_month: string
@@ -1193,7 +1204,11 @@ export type Database = {
           faturamento_perc_canais?: string | null
           faturamento_por_canais?: string | null
           id?: string
+          meta_faturamento?: number | null
           meta_status?: string | null
+          meta_vendas?: number | null
+          meta_vendas_loja?: number | null
+          meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
           reference_month?: string
