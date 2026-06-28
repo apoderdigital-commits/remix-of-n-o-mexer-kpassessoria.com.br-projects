@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
 import { SquadNotesReport } from "@/components/squad/SquadNotesReport";
+import { MonthlyMeetingDialog } from "@/components/squad/MonthlyMeetingDialog";
 import { SquadConsolidated } from "@/components/squad/SquadConsolidated";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
@@ -2042,6 +2043,7 @@ export default function Squad() {
               <AgendaPanel
                 agenda={agenda}
                 clients={clients}
+                squadId={squadId}
                 activeClientsCount={clients.length}
                 onNew={() => { setEditingAg({ reference_month: `${new Date().toISOString().slice(0, 7)}-01`, done: false }); setOpenAg(true); }}
                 onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
@@ -2784,10 +2786,11 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, clients, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
+  agenda, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
 }: {
   agenda: Agenda[];
   clients: SquadClient[];
+  squadId: string;
   activeClientsCount: number;
   onNew: () => void;
   onEdit: (a: Agenda) => void;
@@ -2804,6 +2807,7 @@ function AgendaPanel({
 
   const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
   const [agendaMissing, setAgendaMissing] = useState(false);
+  const [meetingOpen, setMeetingOpen] = useState(false);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2864,6 +2868,16 @@ function AgendaPanel({
           </SelectContent>
         </Select>
         <div className="flex-1" />
+        <Button onClick={() => setMeetingOpen(true)} className="gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 shadow-lg shadow-emerald-500/20">
+          <Play className="h-4 w-4" /> Iniciar Mensal
+        </Button>
+        <MonthlyMeetingDialog
+          open={meetingOpen}
+          onClose={() => setMeetingOpen(false)}
+          squadId={squadId}
+          referenceMonth={month}
+          clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+        />
         <Button onClick={onNew} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"><Plus className="h-4 w-4" /> Novo Alinhamento Mensal</Button>
       </div>
 
