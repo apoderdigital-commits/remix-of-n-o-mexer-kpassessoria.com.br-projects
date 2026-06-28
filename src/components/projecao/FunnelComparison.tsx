@@ -310,8 +310,9 @@ export function FunnelComparison() {
   useEffect(() => {
     if (!user) return;
     const fetchClients = async () => {
-      const { data } = await supabase.from('clients').select('id, name, ticket_medio').order('name');
-      setClients((data as any[]) || []);
+      // Mesmos clientes da Dash do Squad
+      const { data } = await supabase.from('squad_clients').select('id, name, contract_value').order('name');
+      setClients(((data as any[]) || []).map((c) => ({ id: c.id, name: c.name, ticket_medio: c.contract_value ?? null })));
     };
     fetchClients();
   }, [user]);
