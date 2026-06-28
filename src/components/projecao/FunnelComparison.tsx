@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { buildProjecaoSvg, downloadProjecaoPng } from '@/lib/projecaoExport';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import {
   GitCompare, TrendingUp, TrendingDown, ArrowRight, Target as TargetIcon,
-  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText
-} from 'lucide-react';
+  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download } from 'lucide-react';
 
 interface FunnelData {
   investimento: string; cpl: string; leads: string; preAtendimento: string; qualificados: string; vendas: string; ticketMedio: string;
@@ -368,6 +369,20 @@ export function FunnelComparison() {
   const updateDesejado = (field: keyof FunnelData, value: string) => setDesejado(prev => ({ ...prev, [field]: value }));
   const updateProjetado = (field: keyof ProjetadoData, value: string) => setProjetado(prev => ({ ...prev, [field]: value }));
 
+  const handleExport = async () => {
+    if (!selectedClientId) { toast.error('Selecione um cliente'); return; }
+    const clientName = clients.find((c) => c.id === selectedClientId)?.name || 'Cliente';
+    const monthLabel = MONTHS.find((m) => String(m.value) === selectedMonth)?.label || selectedMonth;
+    const periodo = `${monthLabel} / ${selectedYear}`;
+    const svg = buildProjecaoSvg(
+      clientName, periodo,
+      calcFunnel(atual), calcDesejadoFunnel(desejado), calcProjetadoFunnel(projetado)
+    );
+    const safe = clientName.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    await downloadProjecaoPng(`projecao-${safe}-${selectedMonth}-${selectedYear}.png`, svg);
+    toast.success('Projeção exportada! Agora você pode subir o arquivo na Reunião Mensal do cliente.');
+  };
+
   const handleSave = async () => {
     if (!user || !selectedClientId || !selectedMonth || !selectedYear) {
       toast.error('Selecione um cliente, mês e ano');
@@ -463,6 +478,10 @@ export function FunnelComparison() {
                 </SelectContent>
               </Select>
             </div>
+            <Button onClick={handleExport} disabled={!selectedClientId} variant="outline"
+              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20">
+              <Download className="h-4 w-4 mr-2" /> Exportar PNG
+            </Button>
             <Button onClick={handleSave} disabled={saving || !selectedClientId}
               className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-lg">
               <Save className="h-4 w-4 mr-2" />{saving ? 'Salvando...' : 'Salvar'}
