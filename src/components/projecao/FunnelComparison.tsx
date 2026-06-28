@@ -8,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { buildProjecaoSvg, downloadProjecaoPng } from '@/lib/projecaoExport';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import {
   GitCompare, TrendingUp, TrendingDown, ArrowRight, Target as TargetIcon,
