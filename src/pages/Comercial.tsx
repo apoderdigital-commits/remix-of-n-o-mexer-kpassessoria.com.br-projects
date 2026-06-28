@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import {
   LeadCategoryFilter, TrafegoFunnel, ProspeccaoFunnel, RecuperacaoFunnel, SdrFunisTable,
   type FunisData, type SdrFunil, type LeadCat, type TrafegoLists, type TrafegoStageKey,
-  type RecuperacaoLists, type RecuperacaoStageKey,
+  type RecuperacaoLists, type RecuperacaoStageKey, type CatCounts, type TrafegoListItem,
 } from "@/components/comercial/FunisView";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -341,6 +341,52 @@ export default function Comercial() {
     ];
   })() : [];
 
+  // ── Dedupe por nome: duplicação só é permitida na aba GERAL (calendário bruto).
+  // Em Tráfego/Recuperação cada contato conta uma vez (senão Agendamentos > MQLs, impossível).
+  const normName = (s: string) => (s || "").trim().toLowerCase();
+  const dedupeTrafego = (lists: TrafegoLists | null) => {
+    if (!lists) return null;
+    const keys: TrafegoStageKey[] = ["leads", "mqls", "agendamentos", "comparecimentos"];
+    const outLists = {} as TrafegoLists;
+    const outCounts = {} as FunisData["trafego"];
+    for (const st of keys) {
+      const seen = new Set<string>();
+      const uniq: TrafegoListItem[] = [];
+      for (const it of (lists[st] || [])) {
+        const k = normName(it.nome);
+        if (!k || seen.has(k)) continue;
+        seen.add(k); uniq.push(it);
+      }
+      outLists[st] = uniq;
+      const cc: CatCounts = { A: 0, B: 0, C: 0, Outro: 0, Geral: uniq.length };
+      for (const it of uniq) cc[it.category] = (cc[it.category] || 0) + 1;
+      outCounts[st] = cc;
+    }
+    return { lists: outLists, counts: outCounts };
+  };
+  const dedupeRecuperacao = (lists: RecuperacaoLists | null) => {
+    if (!lists) return null;
+    const keys: RecuperacaoStageKey[] = ["agendamentos", "comparecimentos"];
+    const outLists = {} as RecuperacaoLists;
+    const outCounts = {} as FunisData["recuperacao"];
+    for (const st of keys) {
+      const seen = new Set<string>();
+      const uniq: TrafegoListItem[] = [];
+      for (const it of (lists[st] || [])) {
+        const k = normName(it.nome);
+        if (!k || seen.has(k)) continue;
+        seen.add(k); uniq.push(it);
+      }
+      outLists[st] = uniq;
+      const cc: CatCounts = { A: 0, B: 0, C: 0, Outro: 0, Geral: uniq.length };
+      for (const it of uniq) cc[it.category] = (cc[it.category] || 0) + 1;
+      outCounts[st] = cc;
+    }
+    return { lists: outLists, counts: outCounts };
+  };
+  const trafegoDedup = dedupeTrafego(trafegoLists);
+  const recuperacaoDedup = dedupeRecuperacao(recuperacaoLists);
+
   // Drill-down do Funil de Tráfego: abre lista de nomes filtrada pela categoria atual
   const stageLabels: Record<TrafegoStageKey, string> = {
     leads: "Leads gerados",
@@ -350,7 +396,7 @@ export default function Comercial() {
   };
   const openTrafegoStage = (key: TrafegoStageKey) => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
-    const items = trafegoLists[key] || [];
+    const items = trafegoDedup?.lists[key] || [];
     const filtered = leadFilter === "Geral" ? items : items.filter((it) => it.category === leadFilter);
     const nomes = filtered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
     const sufixo = leadFilter === "Geral" ? "" : ` · Lead ${leadFilter === "Outro" ? "sem tag" : leadFilter}`;
@@ -358,7 +404,7 @@ export default function Comercial() {
   };
   const openTrafegoCat = (cat: "A" | "B" | "C") => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
-    const items = (trafegoLists.mqls || []).filter((it) => it.category === cat);
+    const items = (trafegoDedup?.lists.mqls || []).filter((it) => it.category === cat);
     const nomes = items.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
     setTrafegoDrill({ title: `MQLs · Lead ${cat}`, nomes });
   };
@@ -369,7 +415,7 @@ export default function Comercial() {
   };
   const openRecuperacaoStage = (key: RecuperacaoStageKey) => {
     if (!recuperacaoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
-    const items = recuperacaoLists[key] || [];
+    const items = recuperacaoDedup?.lists[key] || [];
     const filtered = leadFilter === "Geral" ? items : items.filter((it) => it.category === leadFilter);
     const nomes = filtered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
     const sufixo = leadFilter === "Geral" ? "" : ` · Lead ${leadFilter === "Outro" ? "sem tag" : leadFilter}`;
@@ -602,7 +648,7 @@ export default function Comercial() {
               {funis ? (
                 <>
                   <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
-                  <TrafegoFunnel funis={funis} filter={leadFilter} onStageClick={openTrafegoStage} onCatClick={openTrafegoCat} />
+                  <TrafegoFunnel funis={trafegoDedup ? { ...funis, trafego: trafegoDedup.counts } : funis} filter={leadFilter} onStageClick={openTrafegoStage} onCatClick={openTrafegoCat} />
                 </>
               ) : loading ? (
                 <Skeleton className="h-96 w-full rounded-2xl" />
@@ -630,7 +676,7 @@ export default function Comercial() {
               {funis ? (
                 <>
                   <LeadCategoryFilter value={leadFilter} onChange={setLeadFilter} />
-                  <RecuperacaoFunnel funis={funis} filter={leadFilter} onStageClick={openRecuperacaoStage} />
+                  <RecuperacaoFunnel funis={recuperacaoDedup ? { ...funis, recuperacao: recuperacaoDedup.counts } : funis} filter={leadFilter} onStageClick={openRecuperacaoStage} />
                 </>
               ) : loading ? (
                 <Skeleton className="h-96 w-full rounded-2xl" />
