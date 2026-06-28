@@ -2818,6 +2818,21 @@ function AgendaPanel({
     [agenda, month]
   );
 
+  // Só clientes que JÁ TÊM mensal marcada na agenda deste mês (para o "Iniciar Mensal")
+  const meetingOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string }[] = [];
+    filtered.forEach((a) => {
+      const nm = (a.client_name || "").trim();
+      if (!nm) return;
+      const key = nm.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ id: a.id, name: nm });
+    });
+    return out.sort((x, y) => x.name.localeCompare(y.name));
+  }, [filtered]);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -2876,7 +2891,7 @@ function AgendaPanel({
           onClose={() => setMeetingOpen(false)}
           squadId={squadId}
           referenceMonth={month}
-          clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+          clients={meetingOptions}
         />
         <Button onClick={onNew} className="gap-1.5 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30"><Plus className="h-4 w-4" /> Novo Alinhamento Mensal</Button>
       </div>
