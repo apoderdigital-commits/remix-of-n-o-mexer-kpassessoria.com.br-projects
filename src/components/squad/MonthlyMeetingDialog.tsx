@@ -16,7 +16,7 @@ interface Props {
   onClose: () => void;
   squadId: string;
   referenceMonth: string; // YYYY-MM
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string }[]; // só as mensais marcadas no mês
 }
 
 export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, clients }: Props) {
@@ -99,14 +99,20 @@ export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, c
 
         {!sessionId ? (
           <div className="space-y-3 py-2">
-            <Label className="text-xs text-muted-foreground">Cliente</Label>
-            <Select value={clientName} onValueChange={setClientName}>
-              <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button onClick={start} className="w-full gap-2">
+            <Label className="text-xs text-muted-foreground">Cliente (mensal marcada neste mês)</Label>
+            {clients.length === 0 ? (
+              <p className="text-xs text-amber-300 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+                Nenhuma mensal marcada neste mês. Crie um <strong>Novo Alinhamento Mensal</strong> antes de iniciar.
+              </p>
+            ) : (
+              <Select value={clientName} onValueChange={setClientName}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Button onClick={start} disabled={clients.length === 0} className="w-full gap-2">
               <Play className="h-4 w-4" /> Iniciar Mensal (meta 1h)
             </Button>
           </div>
