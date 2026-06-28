@@ -1312,6 +1312,56 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_monthly_sessions: {
+        Row: {
+          client_name: string
+          created_at: string | null
+          created_by: string | null
+          early_end_reason: string | null
+          ended_at: string | null
+          id: string
+          projection_file_name: string | null
+          projection_file_url: string | null
+          reference_month: string
+          squad_id: string | null
+          started_at: string | null
+        }
+        Insert: {
+          client_name: string
+          created_at?: string | null
+          created_by?: string | null
+          early_end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          projection_file_name?: string | null
+          projection_file_url?: string | null
+          reference_month: string
+          squad_id?: string | null
+          started_at?: string | null
+        }
+        Update: {
+          client_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          early_end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          projection_file_name?: string | null
+          projection_file_url?: string | null
+          reference_month?: string
+          squad_id?: string | null
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_monthly_sessions_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       squad_nps: {
         Row: {
           avg_engagement: number | null
