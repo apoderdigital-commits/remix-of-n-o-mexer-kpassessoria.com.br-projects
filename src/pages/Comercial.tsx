@@ -520,7 +520,7 @@ export default function Comercial() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</Label>
-                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
+                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10 [&::-webkit-calendar-picker-indicator]:invert" />
               </div>
               <div className="flex gap-1.5">
                 {presets.map((p) => (
