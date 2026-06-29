@@ -3405,6 +3405,17 @@ function ChurnPanel({
     };
   }, [monthFilter, clients, churns]);
 
+  // Quebra dos churns por elegibilidade (mesma regra do NPS: entrou ANTES do mês da saída = ativo +30 dias)
+  const churnElig = useMemo(() => {
+    let eleg = 0, naoEleg = 0, semData = 0;
+    for (const c of filteredChurns) {
+      const em = ym(c.entry_month), cm = ym(c.churn_month);
+      if (!em || !cm) { semData++; naoEleg++; continue; }
+      if (em < cm) eleg++; else naoEleg++;
+    }
+    return { eleg, naoEleg, semData, total: filteredChurns.length };
+  }, [filteredChurns]);
+
   // Group churns by churn_month (YYYY-MM)
   const grouped = useMemo(() => {
     const map = new Map<string, Churn[]>();
@@ -3485,6 +3496,25 @@ function ChurnPanel({
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Churns por elegibilidade — mesma regra do NPS (D+30) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns elegíveis (D+30)</p>
+          <p className="text-3xl font-bold mt-1 text-red-300">{churnElig.eleg}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">saíram após +30 dias (entraram antes do mês da saída)</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns não-elegíveis</p>
+          <p className="text-3xl font-bold mt-1 text-sky-300">{churnElig.naoEleg}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">novos do mês ou sem +30 dias{churnElig.semData > 0 ? ` · ${churnElig.semData} sem data de entrada` : ""}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total de saídas</p>
+          <p className="text-3xl font-bold mt-1">{churnElig.total}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{churnElig.eleg} elegíveis + {churnElig.naoEleg} não-elegíveis</p>
+        </div>
       </div>
 
       {/* Filtro por mês + motivos das saídas */}
