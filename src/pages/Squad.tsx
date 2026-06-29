@@ -84,7 +84,7 @@ type Engagement = {
   id: string; squad_id: string; reference_month: string;
   client_name: string; contact: string | null;
   curve_abc: string | null; sprint: string | null;
-  engagement_score: number | null; nps_individual: number | null; observation: string | null;
+  engagement_score: number | null; nps_individual: number | null; crm_usage: number | null; observation: string | null;
   meta_status: string | null;
   meta_vendas: number | null; meta_vendas_trafego: number | null; meta_vendas_loja: number | null; meta_faturamento: number | null;
   vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
@@ -422,6 +422,7 @@ export default function Squad() {
   const [engMonth, setEngMonth] = useState<string>("all");
   const [npsMonth, setNpsMonth] = useState<string>("all");
   const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | null>(null);
+  const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
@@ -704,6 +705,14 @@ export default function Squad() {
       }
     }
 
+    // Uso do CRM (coluna opcional) — save resiliente
+    if (engSavedId && editingEng.crm_usage != null) {
+      const crmRes = await (supabase as any).from("squad_engagement").update({ crm_usage: editingEng.crm_usage }).eq("id", engSavedId);
+      if (crmRes.error && /crm_usage/.test(crmRes.error.message || "")) {
+        toast("Salvo. O Uso do CRM precisa da migração (peça ao Lovable).");
+      }
+    }
+
     // Sync ABC/Sprint back to squad_clients (single source of truth per client)
     const matchClient = clients.find((c) => c.name.trim().toLowerCase() === payload.client_name.toLowerCase());
     if (matchClient && (curve || sprint)) {
@@ -932,7 +941,26 @@ export default function Squad() {
     const vendido = eligRows.reduce((s, r) => s + (Number(r.faturamento) || 0), 0);
     const withSecondary = eligRows.filter((r) => (Number(r.vendas_loja) || 0) > 0).length;
     const secondaryPct = eligible.length ? (withSecondary / eligible.length) * 100 : 0;
-    return { M, eligibleCount: eligible.length, evaluated: engScores.length, avgEng, vendido, secondaryPct, withSecondary, missingEntry: clientsWithEntry === 0 };
+    // Uso do CRM (nota 1-5 por cliente). "Usando" = nota >= 4. Base = elegíveis D+30.
+    const CRM_OK = 4;
+    const crmEntries = eligible.map((c) => {
+      const r = rowByName.get(norm(c.name));
+      const v = r && (r as any).crm_usage != null ? Number((r as any).crm_usage) : null;
+      return { name: c.name, score: v };
+    });
+    const crmRatedArr = crmEntries.filter((e) => e.score != null);
+    const crmUsingArr = crmEntries.filter((e) => e.score != null && (e.score as number) >= CRM_OK);
+    const crmNotUsingArr = crmEntries.filter((e) => e.score == null || (e.score as number) < CRM_OK);
+    const crmAvg = crmRatedArr.length ? crmRatedArr.reduce((s, e) => s + (e.score as number), 0) / crmRatedArr.length : 0;
+    const crmDist = [1, 2, 3, 4, 5].map((n) => crmRatedArr.filter((e) => Math.round(e.score as number) === n).length);
+    const crmUsingPct = eligible.length ? (crmUsingArr.length / eligible.length) * 100 : 0;
+    return {
+      M, eligibleCount: eligible.length, evaluated: engScores.length, avgEng, vendido, secondaryPct, withSecondary,
+      crmRated: crmRatedArr.length, crmUsing: crmUsingArr.length, crmNotUsing: crmNotUsingArr.length,
+      crmAvg, crmDist, crmUsingPct,
+      crmUsingList: crmUsingArr.map((e) => e.name), crmNotUsingList: crmNotUsingArr.map((e) => e.name),
+      missingEntry: clientsWithEntry === 0,
+    };
   }, [highlightMonth, clients, engagement]);
 
   // Evolução mensal do squad (engajamento, NPS médio e faturamento)
@@ -1612,7 +1640,7 @@ export default function Squad() {
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Engajamento médio (CRM)</p>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Engajamento médio</p>
                       <p className="text-2xl font-bold mt-1 text-sky-300">{metricsCohort.avgEng ? metricsCohort.avgEng.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.evaluated} de {metricsCohort.eligibleCount} elegíveis avaliados (D+30)</p>
                     </div>
@@ -1630,6 +1658,50 @@ export default function Squad() {
                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CPL / CPMQL médios</p>
                       <p className="text-sm font-semibold mt-1 text-muted-foreground">Vem da dash de Criativos</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">CPL ≤ R$ 8 · CPMQL ≤ R$ 45 — precisa linkar Meta/GHL ao squad</p>
+                    </div>
+                  </div>
+                  {/* Uso do CRM — registro 1-5 por cliente */}
+                  <div className="rounded-2xl border border-border/30 bg-card/40 p-4 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">Uso do CRM</p>
+                      <span className="text-[10px] text-muted-foreground">nota 1–5 por cliente · "usando" = nota ≥ 4 · base elegíveis D+30</span>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className={`rounded-xl border p-3 ${metricsCohort.crmUsingPct >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% usando CRM</p>
+                        <p className={`text-2xl font-bold mt-1 ${metricsCohort.crmUsingPct >= 80 ? "text-emerald-300" : "text-amber-300"}`}>{metricsCohort.crmUsingPct.toFixed(0)}%</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 80%</p>
+                      </div>
+                      <button onClick={() => setCrmListDialog("using")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estão usando</p>
+                        <p className="text-2xl font-bold mt-1 text-emerald-300">{metricsCohort.crmUsing}</p>
+                        <p className="text-[10px] text-primary mt-0.5">ver lista</p>
+                      </button>
+                      <button onClick={() => setCrmListDialog("not")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Não usando / sem nota</p>
+                        <p className="text-2xl font-bold mt-1 text-red-300">{metricsCohort.crmNotUsing}</p>
+                        <p className="text-[10px] text-primary mt-0.5">ver lista</p>
+                      </button>
+                      <div className="rounded-xl border border-border/30 bg-card/40 p-3">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
+                        <p className="text-2xl font-bold mt-1 text-sky-300">{metricsCohort.crmRated ? metricsCohort.crmAvg.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.crmRated} de {metricsCohort.eligibleCount} avaliados</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {metricsCohort.crmDist.map((cnt, i) => {
+                        const nota = i + 1;
+                        const max = Math.max(1, ...metricsCohort.crmDist);
+                        return (
+                          <div key={nota} className="rounded-lg border border-border/20 bg-background/30 p-2 text-center">
+                            <div className="h-16 flex items-end justify-center">
+                              <div className={`w-7 rounded-t ${nota >= 4 ? "bg-emerald-400/70" : nota === 3 ? "bg-amber-400/70" : "bg-red-400/70"}`} style={{ height: `${(cnt / max) * 100}%` }} />
+                            </div>
+                            <p className="text-sm font-bold mt-1">{cnt}</p>
+                            <p className="text-[10px] text-muted-foreground">nota {nota}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </>
@@ -2096,6 +2168,32 @@ export default function Squad() {
         </DialogContent>
       </Dialog>
 
+      {/* Lista de Uso do CRM: usando / não usando */}
+      <Dialog open={!!crmListDialog} onOpenChange={(o) => { if (!o) setCrmListDialog(null); }}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {crmListDialog === "using" ? "Clientes usando o CRM (nota ≥ 4)" : "Clientes não usando / sem nota"}
+              {metricsCohort ? ` · ${formatMonth(`${metricsCohort.M}-01`)}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 py-1">
+            {(() => {
+              const names = !metricsCohort ? [] : (crmListDialog === "using" ? metricsCohort.crmUsingList : metricsCohort.crmNotUsingList);
+              if (names.length === 0) return <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente nesta lista.</p>;
+              return names.map((nome, i) => (
+                <div key={`${nome}-${i}`} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-sm">
+                  <span className="font-medium">{nome}</span>
+                  <Badge variant="outline" className={crmListDialog === "using" ? "border-emerald-500/40 text-emerald-300" : "border-red-500/40 text-red-300"}>
+                    {crmListDialog === "using" ? "usando" : "não confirmado"}
+                  </Badge>
+                </div>
+              ));
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Painel de detalhes do cliente */}
       <Dialog open={!!detailClient} onOpenChange={(o) => { if (!o) setDetailClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -2510,6 +2608,10 @@ export default function Squad() {
                   <div className="space-y-1.5">
                     <Label>NPS individual (0-10)</Label>
                     <Input type="number" min="0" max="10" placeholder="0" value={editingEng.nps_individual ?? ""} onChange={(e) => setEditingEng({ ...editingEng, nps_individual: e.target.value === "" ? null : Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Uso do CRM (1-5)</Label>
+                    <Input type="number" min="1" max="5" placeholder="0" value={editingEng.crm_usage ?? ""} onChange={(e) => setEditingEng({ ...editingEng, crm_usage: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                 </div>
               </section>
