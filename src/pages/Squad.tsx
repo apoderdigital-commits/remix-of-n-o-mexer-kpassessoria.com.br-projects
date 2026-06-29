@@ -907,8 +907,11 @@ export default function Squad() {
     const notes = responded.map((c) => npsByName.get(norm(c.name))!).filter((n) => n != null);
     const avgNps = notes.length ? notes.reduce((s, n) => s + n, 0) / notes.length : 0;
     const responseRate = eligible.length ? (responded.length / eligible.length) * 100 : 0;
+    // Ativos totais do mês = entraram até o mês analisado (elegíveis + novos do mês)
+    const totalActive = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= M);
     return {
       M, eligible, responded, missed, avgNps, responseRate, npsByName,
+      totalAtivos: totalActive.length, novosNoMes: totalActive.length - eligible.length,
       missingEntry: clientsWithEntry === 0,
     };
   }, [npsMonth, clients, engagement]);
@@ -1764,7 +1767,12 @@ export default function Squad() {
                           ⚠️ Para o fechamento de NPS (base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos totais</p>
+                            <p className="text-2xl font-bold mt-1 text-violet-300">{npsCohort.totalAtivos}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">no mês · +{npsCohort.novosNoMes} novos</p>
+                          </div>
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos elegíveis</p>
                             <p className="text-2xl font-bold mt-1">{npsCohort.eligible.length}</p>
