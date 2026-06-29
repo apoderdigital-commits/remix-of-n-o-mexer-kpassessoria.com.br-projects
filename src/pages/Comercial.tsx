@@ -111,7 +111,8 @@ export default function Comercial() {
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
   const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
-  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] } } | null>(null);
+  const [mqlView, setMqlView] = useState<"todos" | "agendados" | "naoAgendados">("todos");
   const [recuperacaoLists, setRecuperacaoLists] = useState<RecuperacaoLists | null>(null);
   const [recuperacaoDrill, setRecuperacaoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
   const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
@@ -358,8 +359,11 @@ export default function Comercial() {
         seen.add(k); uniq.push(it);
       }
       outLists[st] = uniq;
-      const cc: CatCounts = { A: 0, B: 0, C: 0, Outro: 0, Geral: uniq.length };
+      const cc: CatCounts = { A: 0, B: 0, C: 0, Outro: 0, Geral: 0 };
       for (const it of uniq) cc[it.category] = (cc[it.category] || 0) + 1;
+      // "Todos" de Agendamentos/Comparecimentos exclui Lead C (no funil, agendamento = MQL = A/B).
+      const excludeC = st === "agendamentos" || st === "comparecimentos";
+      cc.Geral = excludeC ? cc.A + cc.B + cc.Outro : uniq.length;
       outCounts[st] = cc;
     }
     return { lists: outLists, counts: outCounts };
@@ -397,16 +401,32 @@ export default function Comercial() {
   const openTrafegoStage = (key: TrafegoStageKey) => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
     const items = trafegoDedup?.lists[key] || [];
-    const filtered = leadFilter === "Geral" ? items : items.filter((it) => it.category === leadFilter);
+    const excludeC = key === "agendamentos" || key === "comparecimentos";
+    const filtered = leadFilter === "Geral"
+      ? (excludeC ? items.filter((it) => it.category !== "C") : items)
+      : items.filter((it) => it.category === leadFilter);
     const nomes = filtered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
     const sufixo = leadFilter === "Geral" ? "" : ` · Lead ${leadFilter === "Outro" ? "sem tag" : leadFilter}`;
-    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes });
+    // MQLs: separa quem foi agendado de quem nao foi (cruza com a lista de agendamentos)
+    let mqlSplit: { agendados: string[]; naoAgendados: string[] } | undefined;
+    if (key === "mqls") {
+      const agSet = new Set((trafegoDedup?.lists.agendamentos || []).map((it) => normName(it.nome)));
+      const agendados: string[] = [], naoAgendados: string[] = [];
+      for (const nm of nomes) (agSet.has(normName(nm)) ? agendados : naoAgendados).push(nm);
+      mqlSplit = { agendados, naoAgendados };
+    }
+    setMqlView("todos");
+    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes, mqlSplit });
   };
   const openTrafegoCat = (cat: "A" | "B" | "C") => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
     const items = (trafegoDedup?.lists.mqls || []).filter((it) => it.category === cat);
     const nomes = items.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    setTrafegoDrill({ title: `MQLs · Lead ${cat}`, nomes });
+    const agSet = new Set((trafegoDedup?.lists.agendamentos || []).map((it) => normName(it.nome)));
+    const agendados: string[] = [], naoAgendados: string[] = [];
+    for (const nm of nomes) (agSet.has(normName(nm)) ? agendados : naoAgendados).push(nm);
+    setMqlView("todos");
+    setTrafegoDrill({ title: `MQLs · Lead ${cat}`, nomes, mqlSplit: { agendados, naoAgendados } });
   };
 
   const recuperacaoStageLabels: Record<RecuperacaoStageKey, string> = {
@@ -1708,17 +1728,44 @@ export default function Comercial() {
               {trafegoDrill?.title} <span className="text-muted-foreground font-normal">({trafegoDrill?.nomes.length || 0})</span>
             </DialogTitle>
           </DialogHeader>
-          {trafegoDrill && trafegoDrill.nomes.length > 0 ? (
-            <div className="max-h-[60vh] overflow-y-auto space-y-1 pr-1">
-              {trafegoDrill.nomes.map((nome, i) => (
-                <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5">
-                  {nome}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
-          )}
+          {trafegoDrill && (() => {
+            const split = trafegoDrill.mqlSplit;
+            const agSet = split ? new Set(split.agendados.map((n) => n.toLowerCase())) : null;
+            const list = split
+              ? (mqlView === "agendados" ? split.agendados : mqlView === "naoAgendados" ? split.naoAgendados : trafegoDrill.nomes)
+              : trafegoDrill.nomes;
+            return (
+              <>
+                {split && (
+                  <div className="flex gap-1.5 mb-1">
+                    {([["todos", "Todos", trafegoDrill.nomes.length], ["agendados", "Agendados", split.agendados.length], ["naoAgendados", "Não agendados", split.naoAgendados.length]] as const).map(([k, label, n]) => (
+                      <button key={k} onClick={() => setMqlView(k)}
+                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${mqlView === k ? "bg-primary/20 border-primary/40 text-primary" : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
+                        {label} <span className="font-bold">{n}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {list.length > 0 ? (
+                  <div className="max-h-[55vh] overflow-y-auto space-y-1 pr-1">
+                    {list.map((nome, i) => {
+                      const ag = agSet ? agSet.has(nome.toLowerCase()) : null;
+                      return (
+                        <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
+                          <span>{nome}</span>
+                          {split && mqlView === "todos" && (ag
+                            ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">Agendado</span>
+                            : <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 shrink-0">Não agendado</span>)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
+                )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
