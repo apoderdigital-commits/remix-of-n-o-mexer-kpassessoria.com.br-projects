@@ -3256,8 +3256,7 @@ function NpsChart({ dist }: { dist: {
   }));
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryStat label="Notas coletadas" value={dist.total} tone="primary" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <SummaryStat label="Média das notas" value={dist.total ? dist.avg.toFixed(1) : "—"} tone="sky" />
         <SummaryStat label="% acima de 8" value={`${dist.pctAbove8}%`} tone="emerald" />
         <SummaryStat label="% nota 10" value={`${dist.pctTen}%`} tone="amber" />
