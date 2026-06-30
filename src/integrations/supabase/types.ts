@@ -842,6 +842,8 @@ export type Database = {
           entry_date: string | null
           id: string
           invested_tp: string | null
+          meta_vendas_loja: number | null
+          meta_vendas_trafego: number | null
           name: string
           niche: string | null
           observations: string | null
@@ -863,6 +865,8 @@ export type Database = {
           entry_date?: string | null
           id?: string
           invested_tp?: string | null
+          meta_vendas_loja?: number | null
+          meta_vendas_trafego?: number | null
           name: string
           niche?: string | null
           observations?: string | null
@@ -884,6 +888,8 @@ export type Database = {
           entry_date?: string | null
           id?: string
           invested_tp?: string | null
+          meta_vendas_loja?: number | null
+          meta_vendas_trafego?: number | null
           name?: string
           niche?: string | null
           observations?: string | null
