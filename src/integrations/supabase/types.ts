@@ -211,6 +211,7 @@ export type Database = {
           tipo: string
           user_id: string
           vendas: number
+          vendas_loja: number | null
         }
         Insert: {
           client_id: string
@@ -227,6 +228,7 @@ export type Database = {
           tipo: string
           user_id: string
           vendas?: number
+          vendas_loja?: number | null
         }
         Update: {
           client_id?: string
@@ -243,6 +245,7 @@ export type Database = {
           tipo?: string
           user_id?: string
           vendas?: number
+          vendas_loja?: number | null
         }
         Relationships: [
           {
