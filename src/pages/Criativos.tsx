@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown } from "lucide-react";
+import { Settings, RefreshCw, FileSpreadsheet, LogOut, ArrowLeft, MessageCircle, ArrowRight, Activity, ChevronDown, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import kpLogo from "@/assets/kp-logo.png";
@@ -30,6 +30,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { buildReportMessageClient } from "@/lib/buildReportMessage";
+
+const REPORT_WEBHOOK_URL = "https://kpadm-n8n.a6hrr3.easypanel.host/webhook/relatorioautositekp";
 
 export default function Index() {
   const { isAdmin, clientId: authClientId, signOut, accessibleClientIds } = useAuth();
@@ -39,6 +43,7 @@ export default function Index() {
   const [syncing, setSyncing] = useState(false);
   const [syncingSheet, setSyncingSheet] = useState(false);
   const [syncingGhl, setSyncingGhl] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
 
   const rankingRefs = {
     cpf: useRef<HTMLDivElement>(null),
@@ -164,6 +169,52 @@ export default function Index() {
       toast.error("Erro ao sincronizar CRM");
     }
     setSyncingGhl(false);
+  };
+
+  // Envia o relatório do PERÍODO ANALISADO (range da dashboard) para o grupo do WhatsApp do cliente
+  const sendDashboardReport = async () => {
+    if (!activeClient) { toast.error("Selecione um cliente"); return; }
+    setSendingReport(true);
+    try {
+      const { data: cfg } = await supabase
+        .from("client_report_configs")
+        .select("whatsapp_jid, metric_source")
+        .eq("client_id", activeClient)
+        .maybeSingle();
+      if (!(cfg as any)?.whatsapp_jid?.trim()) {
+        toast.error("Configure o JID do grupo em Clientes → Relatório antes de enviar.");
+        setSendingReport(false);
+        return;
+      }
+      const metricSource = (((cfg as any).metric_source) || "ghl") as "ghl" | "planilha";
+      const built = await buildReportMessageClient({ clientId: activeClient, metricSource, period: { since, until } });
+      if (!built?.message) {
+        toast.error("Não foi possível montar o relatório.");
+        setSendingReport(false);
+        return;
+      }
+      const cliName = (clients || []).find((c: any) => c.id === activeClient)?.name || "";
+      const res = await fetch(REPORT_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: activeClient,
+          client_name: cliName,
+          whatsapp_jid: (cfg as any).whatsapp_jid,
+          report_type: "custom",
+          metric_source: metricSource,
+          message: built.message,
+          metrics: built.metrics,
+          period: built.period,
+        }),
+      });
+      if (res.ok) toast.success("Relatório do período enviado ao grupo!");
+      else toast.error(`Erro no webhook: ${res.status}`);
+    } catch {
+      toast.error("Não foi possível alcançar o webhook (n8n).");
+    } finally {
+      setSendingReport(false);
+    }
   };
 
   // Compute stats
@@ -392,6 +443,16 @@ export default function Index() {
           >
             <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
             Sincronizar Tudo
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={sendDashboardReport}
+            disabled={!activeClient || sendingReport}
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+          >
+            <Send className={`h-4 w-4 ${sendingReport ? "animate-pulse" : ""}`} />
+            {sendingReport ? "Enviando..." : "Relatório"}
           </Button>
           
           {isAdmin && (
