@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Users as UsersIcon, RotateCcw, AlertTriangle, LayoutDashboard, Search } from "lucide-react";
 import { ActionVerificationDialog, type SensitiveAction } from "@/components/ActionVerificationDialog";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 const DASHBOARDS = [
   { key: "criativos", label: "Dashboard de Criativos" },
   { key: "projecao", label: "Funil de Projeção de Vendas" },
+  { key: "comercial", label: "Dashboard Comercial" },
 ];
 
 const SQUAD_FUNCTIONS = [
@@ -91,6 +92,7 @@ export default function UsersPage() {
 
   // Create user dialog
   const [open, setOpen] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [form, setForm] = useState({
     username: "",
@@ -481,29 +483,20 @@ export default function UsersPage() {
             <p className="text-muted-foreground text-center py-8">Carregando...</p>
           ) : !users?.length ? (
             <p className="text-muted-foreground text-center py-8">Nenhum usuário cadastrado</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border/30">
-                  <TableHead className="text-muted-foreground">Usuário</TableHead>
-                  <TableHead className="text-muted-foreground">Nome</TableHead>
-                  <TableHead className="text-muted-foreground">Tipo</TableHead>
-                  <TableHead className="text-muted-foreground">Dashboards</TableHead>
-                  <TableHead className="text-muted-foreground">Clientes</TableHead>
-                  <TableHead className="text-right text-muted-foreground">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => {
-                  const isAdmin = u.role === "admin";
-                  const dashCount = isAdmin ? DASHBOARDS.length : u.dashboards.length;
-                  const clientCount = isAdmin ? (clients?.length || 0) : u.clients.length;
-                  const clientNames = isAdmin
-                    ? "Todos"
-                    : u.clients.length > 0
-                      ? u.clients.map((c) => c.name).join(", ")
-                      : "Nenhum";
-                  return (
+          ) : (() => {
+            const q = userSearch.trim().toLowerCase();
+            const norm = (s: string) => (s || "").toLowerCase();
+            const filteredUsers = (users || []).filter((u) => !q || norm(u.email || "").includes(q) || norm(u.full_name || "").includes(q));
+            const renderRow = (u: any) => {
+              const isAdmin = u.role === "admin";
+              const dashCount = isAdmin ? DASHBOARDS.length : u.dashboards.length;
+              const clientCount = isAdmin ? (clients?.length || 0) : u.clients.length;
+              const clientNames = isAdmin
+                ? "Todos"
+                : u.clients.length > 0
+                  ? u.clients.map((c: any) => c.name).join(", ")
+                  : "Nenhum";
+              return (
                     <TableRow key={u.user_id} className="border-border/20">
                       <TableCell className="font-medium align-top">
                         {u.email?.replace(EMAIL_DOMAIN, "") || "—"}
@@ -557,11 +550,43 @@ export default function UsersPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+              );
+            };
+            const groups = [
+              { key: "colab", label: "Colaboradores", list: filteredUsers.filter((u) => u.role !== "client") },
+              { key: "cliente", label: "Clientes", list: filteredUsers.filter((u) => u.role === "client") },
+            ];
+            return (
+              <div className="space-y-6">
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar por usuário ou nome..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 bg-secondary/30 border-border/30" />
+                </div>
+                {filteredUsers.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Nenhum usuário encontrado</p>
+                ) : groups.map((g) => g.list.length === 0 ? null : (
+                  <div key={g.key} className="space-y-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground/80">
+                      {g.label}<span className="text-[11px] rounded-full bg-secondary/40 text-muted-foreground px-2 py-0.5">{g.list.length}</span>
+                    </h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border/30">
+                          <TableHead className="text-muted-foreground">Usuário</TableHead>
+                          <TableHead className="text-muted-foreground">Nome</TableHead>
+                          <TableHead className="text-muted-foreground">Tipo</TableHead>
+                          <TableHead className="text-muted-foreground">Dashboards</TableHead>
+                          <TableHead className="text-muted-foreground">Clientes</TableHead>
+                          <TableHead className="text-right text-muted-foreground">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{g.list.map(renderRow)}</TableBody>
+                    </Table>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
