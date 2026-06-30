@@ -47,7 +47,7 @@ export default function Portal() {
     : allProjects.filter((p) => dashboards.includes(p.key));
 
   const showSquadCard = isAdmin || squadCount > 0;
-  const showComercialCard = isAdmin || squadCount > 0;
+  const showComercialCard = isAdmin || squadCount > 0 || dashboards.includes("comercial");
 
   return (
     <div className="min-h-[100dvh] flex relative overflow-hidden">
