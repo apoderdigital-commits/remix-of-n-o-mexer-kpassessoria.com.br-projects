@@ -84,8 +84,8 @@ interface SdrGoal { agendados: number; realizados: number; vendas: number }
 type SdrGoals = Record<string, SdrGoal>;
 
 export default function Comercial() {
-  const { isAdmin, squadCount, loading: authLoading } = useAuth();
-  const allowed = isAdmin || squadCount > 0;
+  const { isAdmin, squadCount, dashboards, loading: authLoading } = useAuth();
+  const allowed = isAdmin || squadCount > 0 || dashboards.includes("comercial");
 
   const [since, setSince] = useState(startOfMonth());
   const [until, setUntil] = useState(todayIso());
@@ -516,11 +516,11 @@ export default function Comercial() {
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">De</Label>
-                <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px] bg-background/40 border-white/10 [&::-webkit-calendar-picker-indicator]:invert" />
+                <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</Label>
-                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10 [&::-webkit-calendar-picker-indicator]:invert" />
+                <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="w-[160px] bg-background/40 border-white/10" />
               </div>
               <div className="flex gap-1.5">
                 {presets.map((p) => (
