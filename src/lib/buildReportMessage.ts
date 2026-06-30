@@ -62,6 +62,7 @@ export async function buildReportMessageClient(opts: {
   clientId: string;
   metricSource: "ghl" | "planilha";
   reportType?: "daily" | "weekly" | "monthly";
+  period?: { since: string; until: string };
 }): Promise<BuiltReport> {
   const { clientId, metricSource } = opts;
   const reportType = opts.reportType ?? "weekly";
@@ -88,6 +89,10 @@ export async function buildReportMessageClient(opts: {
     const since = new Date(today);
     since.setDate(today.getDate() - 7);
     period = { since: iso(since), until: iso(today) };
+  }
+  // Override: período específico (ex.: range analisado na dashboard)
+  if (opts.period?.since && opts.period?.until) {
+    period = { since: opts.period.since, until: opts.period.until };
   }
 
   // ── Meta (investimento + leads) ──
