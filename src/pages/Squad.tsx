@@ -59,6 +59,8 @@ type SquadClient = {
   invested_tp: string | null;
   contract_value: number | null;
   sales_goal: number | null;
+  meta_vendas_trafego: number | null;
+  meta_vendas_loja: number | null;
   observations: string | null;
 };
 type Metric = {
@@ -100,7 +102,7 @@ type Agenda = {
 
 const emptyClient: Partial<SquadClient> = {
   name: "", niche: "", services: "", curve_abc: "", sprint: "",
-  invested_tp: "", contract_value: null, sales_goal: null, observations: "", renewal_60d: false, bm_verified: false,
+  invested_tp: "", contract_value: null, sales_goal: null, meta_vendas_trafego: null, meta_vendas_loja: null, observations: "", renewal_60d: false, bm_verified: false,
 };
 
 // Calcula totais, porcentagens e faturamento por canal a partir das vendas de cada canal
@@ -423,6 +425,7 @@ export default function Squad() {
   const [npsMonth, setNpsMonth] = useState<string>("all");
   const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | null>(null);
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
@@ -453,7 +456,7 @@ export default function Squad() {
   }
 
   async function loadAll(sid: string) {
-    const [c, m, ch, n, e, a, et] = await Promise.all([
+    const [c, m, ch, n, e, a, et, s] = await Promise.all([
       supabase.from("squad_clients").select("*").eq("squad_id", sid)
         .order("priority_score").order("name"),
       supabase.from("squad_monthly_metrics").select("*").eq("squad_id", sid)
@@ -470,6 +473,7 @@ export default function Squad() {
       (supabase as any).from("squad_engagement").select("*").eq("squad_id", sid)
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false }),
+      (supabase as any).from("squad_monthly_sessions").select("*").eq("squad_id", sid),
     ]);
     setClients((c.data as unknown as SquadClient[]) || []);
     setMetrics((m.data as Metric[]) || []);
@@ -478,6 +482,7 @@ export default function Squad() {
     setEngagement((e.data as Engagement[]) || []);
     setEngTrash((et?.data as Engagement[]) || []);
     setAgenda((a.data as Agenda[]) || []);
+    setSessions((s?.data as any[]) || []);
   }
 
   // ---------- CLIENTS ----------
@@ -518,6 +523,13 @@ export default function Squad() {
         .eq("id", clientId);
       if (metaRes.error && /sales_goal/.test(metaRes.error.message || "")) {
         toast("Cliente salvo. A Meta de Venda precisa da migração (peça ao Lovable).");
+      }
+      const mvRes = await (supabase as any)
+        .from("squad_clients")
+        .update({ meta_vendas_trafego: editing.meta_vendas_trafego ?? null, meta_vendas_loja: editing.meta_vendas_loja ?? null })
+        .eq("id", clientId);
+      if (mvRes.error && /meta_vendas/.test(mvRes.error.message || "")) {
+        toast("Cliente salvo. As metas de venda (tráfego/loja) precisam da migração (peça ao Lovable).");
       }
     }
     toast.success("Salvo — priorização recalculada");
@@ -2068,17 +2080,23 @@ export default function Squad() {
                                           ) : <span className="text-muted-foreground">-</span>}
                                         </TableCell>
                                         <TableCell className="text-center">
-                                          {(e as any).meta_vendas != null ? (
-                                            <div className="leading-tight">
-                                              <span className={`font-bold ${ch.vendasTotal >= (e as any).meta_vendas ? "text-emerald-300" : "text-amber-300"}`}>
-                                                {ch.vendasTotal} / {(e as any).meta_vendas}
-                                              </span>
-                                              <span className="block text-[10px] text-muted-foreground">vendeu / meta</span>
-                                              <span className="block text-[9px] text-muted-foreground/70">
-                                                tráf {Number(e.vendas_trafego) || 0}/{(e as any).meta_vendas_trafego ?? "—"} · loja {Number(e.vendas_loja) || 0}/{(e as any).meta_vendas_loja ?? "—"}
-                                              </span>
-                                            </div>
-                                          ) : <span className="text-muted-foreground text-[10px]">definir meta</span>}
+                                          {(() => {
+                                            const cli = clients.find((cc) => (cc.name || "").trim().toLowerCase() === (e.client_name || "").trim().toLowerCase());
+                                            const mTraf = (e as any).meta_vendas_trafego ?? (cli as any)?.meta_vendas_trafego ?? null;
+                                            const mLoja = (e as any).meta_vendas_loja ?? (cli as any)?.meta_vendas_loja ?? null;
+                                            const mTotal = (e as any).meta_vendas ?? ((mTraf != null || mLoja != null) ? (Number(mTraf) || 0) + (Number(mLoja) || 0) : null);
+                                            return mTotal != null ? (
+                                              <div className="leading-tight">
+                                                <span className={`font-bold ${ch.vendasTotal >= mTotal ? "text-emerald-300" : "text-amber-300"}`}>
+                                                  {ch.vendasTotal} / {mTotal}
+                                                </span>
+                                                <span className="block text-[10px] text-muted-foreground">vendeu / meta</span>
+                                                <span className="block text-[9px] text-muted-foreground/70">
+                                                  tráf {Number(e.vendas_trafego) || 0}/{mTraf ?? "—"} · loja {Number(e.vendas_loja) || 0}/{mLoja ?? "—"}
+                                                </span>
+                                              </div>
+                                            ) : <span className="text-muted-foreground text-[10px]">definir meta</span>;
+                                          })()}
                                         </TableCell>
                                         <TableCell className="text-center">
                                           {e.faturamento != null && Number(e.faturamento) > 0 ? (
@@ -2122,6 +2140,7 @@ export default function Squad() {
             <TabsContent value="agenda" className="space-y-4">
               <AgendaPanel
                 agenda={agenda}
+                sessions={sessions}
                 clients={clients}
                 squadId={squadId}
                 activeClientsCount={clients.length}
@@ -2379,6 +2398,14 @@ export default function Squad() {
                 {editing.sales_goal != null && (
                   <p className="text-[11px] text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês</p>
                 )}
+              </div>
+              <div>
+                <Label>Meta vendas Tráfego (qtd)</Label>
+                <Input type="number" min="0" placeholder="ex: 5" value={editing.meta_vendas_trafego ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
+              </div>
+              <div>
+                <Label>Meta vendas Loja (qtd)</Label>
+                <Input type="number" min="0" placeholder="ex: 7" value={editing.meta_vendas_loja ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
               </div>
               <div className="flex items-center gap-2 mt-6">
                 <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
@@ -2896,9 +2923,10 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
+  agenda, sessions, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
 }: {
   agenda: Agenda[];
+  sessions: any[];
   clients: SquadClient[];
   squadId: string;
   activeClientsCount: number;
@@ -2976,6 +3004,18 @@ function AgendaPanel({
       missingEntry: clientsWithEntry === 0,
     };
   }, [filtered, clients, month]);
+
+  // Clientes com o funil de projeção ANEXADO na reunião mensal deste mês
+  const funilAnexado = useMemo(() => {
+    const names = new Set<string>();
+    for (const s of (sessions || [])) {
+      if ((s.reference_month || "").slice(0, 7) !== month) continue;
+      if (!s.projection_file_url) continue;
+      const nm = (s.client_name || "").trim().toLowerCase();
+      if (nm) names.add(nm);
+    }
+    return names.size;
+  }, [sessions, month]);
 
   return (
     <div className="space-y-4">
@@ -3057,12 +3097,13 @@ function AgendaPanel({
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <SummaryStat label="Marcadas" value={stats.total} tone="primary" />
         <SummaryStat label="Realizadas" value={stats.done} tone="emerald" />
         <SummaryStat label="A fazer" value={stats.scheduled} tone="sky" />
         <SummaryStat label="Justificadas" value={stats.justified} tone="amber" />
         <SummaryStat label="% Calls" value={`${stats.pct}%`} tone="primary" />
+        <SummaryStat label="Funil anexado" value={funilAnexado} tone="emerald" />
       </div>
 
       {stats.overdueUnjustified > 0 && (
