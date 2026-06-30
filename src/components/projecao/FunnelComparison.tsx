@@ -14,7 +14,7 @@ import {
   DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download } from 'lucide-react';
 
 interface FunnelData {
-  investimento: string; cpl: string; leads: string; preAtendimento: string; qualificados: string; vendas: string; ticketMedio: string;
+  investimento: string; cpl: string; leads: string; preAtendimento: string; qualificados: string; vendas: string; vendasLoja: string; ticketMedio: string;
 }
 
 interface ProjetadoData extends FunnelData {
@@ -30,7 +30,7 @@ const MONTHS = [
   { value: 10, label: 'Outubro' }, { value: 11, label: 'Novembro' }, { value: 12, label: 'Dezembro' },
 ];
 
-const defaultFunnel = (): FunnelData => ({ investimento: '', cpl: '', leads: '', preAtendimento: '', qualificados: '', vendas: '', ticketMedio: '' });
+const defaultFunnel = (): FunnelData => ({ investimento: '', cpl: '', leads: '', preAtendimento: '', qualificados: '', vendas: '', vendasLoja: '', ticketMedio: '' });
 const defaultProjetado = (): ProjetadoData => ({ ...defaultFunnel(), taxaPre: '', taxaQual: '', taxaVendas: '' });
 const parseNum = (v: string) => parseFloat(v.replace(',', '.')) || 0;
 
@@ -198,6 +198,7 @@ function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (fiel
           <FunnelInput label="Vendas" value={data.vendas} onChange={(v) => onChange('vendas', v)} icon={Award} />
           <RateDisplay value={`${calc.taxaVendas.toFixed(1)}%`} color="text-orange-400" />
         </div>
+        <FunnelInput label="Vendas Loja" value={data.vendasLoja} onChange={(v) => onChange('vendasLoja', v)} icon={Award} />
         <FunnelInput label="Ticket Médio" value={data.ticketMedio} onChange={(v) => onChange('ticketMedio', v)} prefix="R$" icon={DollarSign} />
         <FunnelMetrics calc={calc} />
       </CardContent>
@@ -234,6 +235,7 @@ function FunnelCardDesejado({ data, onChange }: { data: FunnelData; onChange: (f
           <FunnelReadonlyField label="Vendas" value={String(calc.vendas)} icon={Award} />
           <RateDisplay value="20.0%" color="text-orange-400" />
         </div>
+        <FunnelInput label="Vendas Loja" value={data.vendasLoja} onChange={(v) => onChange('vendasLoja', v)} icon={Award} />
         <FunnelInput label="Ticket Médio" value={data.ticketMedio} onChange={(v) => onChange('ticketMedio', v)} prefix="R$" icon={DollarSign} />
         <FunnelMetrics calc={calc} />
       </CardContent>
@@ -288,6 +290,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
             </div>
           </div>
         </div>
+        <FunnelInput label="Vendas Loja" value={data.vendasLoja} onChange={(v) => onChange('vendasLoja', v)} icon={Award} />
         <FunnelInput label="Ticket Médio" value={data.ticketMedio} onChange={(v) => onChange('ticketMedio', v)} prefix="R$" icon={DollarSign} />
         <FunnelMetrics calc={calc} />
       </CardContent>
@@ -342,7 +345,7 @@ export function FunnelComparison() {
           const fd: FunnelData = {
             investimento: String(row.investimento), cpl: String(row.cpl), leads: String(row.leads),
             preAtendimento: String(row.pre_atendimento), qualificados: String(row.qualificados),
-            vendas: String(row.vendas), ticketMedio: String(row.ticket_medio),
+            vendas: String(row.vendas), vendasLoja: (row as any).vendas_loja != null ? String((row as any).vendas_loja) : '', ticketMedio: String(row.ticket_medio),
           };
           if (row.tipo === 'atual') setAtual(fd);
           else if (row.tipo === 'desejado') setDesejado(fd);
@@ -400,7 +403,8 @@ export function FunnelComparison() {
       { tipo: 'projetado', data: projetado, calc: calcProj },
     ];
 
-    for (const { tipo, calc } of funnels) {
+    let vendasLojaMissing = false;
+    for (const { tipo, data: fdata, calc } of funnels) {
       const row = {
         user_id: user.id,
         client_id: selectedClientId,
@@ -423,7 +427,14 @@ export function FunnelComparison() {
         setSaving(false);
         return;
       }
+      // Vendas Loja (coluna opcional, livre — não entra no cálculo) — save resiliente
+      const vl = (fdata.vendasLoja ?? '').trim() === '' ? null : parseNum(fdata.vendasLoja);
+      const { error: vlErr } = await supabase.from('comparisons')
+        .update({ vendas_loja: vl })
+        .match({ client_id: selectedClientId, tipo, reference_month: month, reference_year: year });
+      if (vlErr && /vendas_loja/.test(vlErr.message || '')) vendasLojaMissing = true;
     }
+    if (vendasLojaMissing) toast('Salvo. O campo "Vendas Loja" precisa da migração (peça ao Lovable).');
     const { error: notesError } = await supabase.from('comparison_notes').upsert({
       user_id: user.id,
       client_id: selectedClientId,
