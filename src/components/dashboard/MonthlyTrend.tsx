@@ -1,17 +1,58 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend, Cell } from "recharts";
 import { TrendingUp } from "lucide-react";
 
 interface MonthlyTrendProps {
   data: { key: string; label: string; leads: number; cpf: number; sales: number; spent: number }[];
 }
 
+// Taxas IDEAIS do funil (mesma filosofia da Evolução Temporal)
+const IDEAL_QUAL_OVER_LEADS = 0.12; // leads qualificados / leads (0.6 * 0.2)
+const IDEAL_SALES_RATE = 0.25;      // vendas / leads qualificados
+const BLEND = 0.6;                  // quanto caminha da taxa real rumo à ideal (otimista, mas não 100%)
+const OPT = 1.03;                   // leve empurrão otimista nos leads
+
 export function MonthlyTrend({ data }: MonthlyTrendProps) {
   if (!data || data.length === 0) return null;
 
-  // Marca o mês corrente para destaque
-  const currentKey = new Date().toISOString().slice(0, 7);
-  const chartData = data.map((d) => ({ ...d, isCurrent: d.key === currentKey }));
+  const now = new Date();
+  const currentKey = now.toISOString().slice(0, 7);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysElapsed = now.getDate();
+
+  // Meses já fechados (base do trend e das taxas reais)
+  const completed = data.filter((d) => d.key !== currentKey);
+  const recent = completed.slice(-3);
+  const avgLeads = recent.length ? recent.reduce((s, d) => s + (d.leads || 0), 0) / recent.length : 0;
+  const recLeads = recent.reduce((s, d) => s + (d.leads || 0), 0);
+  const recQual = recent.reduce((s, d) => s + (d.cpf || 0), 0);
+  const recSales = recent.reduce((s, d) => s + (d.sales || 0), 0);
+  const actualQualRate = recLeads > 0 ? recQual / recLeads : 0;
+  const actualSalesRate = recQual > 0 ? recSales / recQual : 0;
+  // Otimista sem exagero: caminha 60% da taxa real até a ideal (e nunca abaixo da real)
+  const projQualRate = Math.max(actualQualRate, actualQualRate + (IDEAL_QUAL_OVER_LEADS - actualQualRate) * BLEND);
+  const projSalesRate = Math.max(actualSalesRate, actualSalesRate + (IDEAL_SALES_RATE - actualSalesRate) * BLEND);
+
+  const canProject = completed.length > 0 && data.some((d) => d.key === currentKey);
+
+  const chartData = data.map((d) => {
+    if (!canProject || d.key !== currentKey) return { ...d, projected: false };
+    // Leads projetados: run-rate do mês (se já rodou alguns dias) ou média recente
+    const runRate = daysElapsed >= 3 && (d.leads || 0) > 0 ? (d.leads || 0) / (daysElapsed / daysInMonth) : 0;
+    const projLeads = Math.round(Math.max(runRate, avgLeads) * OPT);
+    const projQual = Math.max(d.cpf || 0, Math.round(projLeads * projQualRate));
+    const projSales = Math.max(d.sales || 0, Math.round(projQual * projSalesRate));
+    return {
+      ...d,
+      label: `${d.label} (proj.)`,
+      leads: projLeads,
+      cpf: projQual,
+      sales: projSales,
+      projected: true,
+    };
+  });
+
+  const hasProjection = chartData.some((d) => (d as any).projected);
 
   return (
     <Card className="glass-card border-border/50">
@@ -24,6 +65,9 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
             <h3 className="text-lg font-semibold text-foreground">Tendência mensal</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
               Comparativo dos últimos {data.length} meses — leads, Leads qualificados e vendas.
+              {hasProjection && (
+                <span className="text-cyan-300/80"> O mês atual é uma projeção otimista (barras mais claras).</span>
+              )}
             </p>
           </div>
         </div>
@@ -54,9 +98,21 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => <span className="text-muted-foreground">{v}</span>}
               />
-              <Bar dataKey="leads" name="Leads" fill="hsl(199 89% 48%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cpf" name="Lead Qual." fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sales" name="Vendas" fill="hsl(263 70% 58%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="leads" name="Leads" radius={[4, 4, 0, 0]}>
+                {chartData.map((d, i) => (
+                  <Cell key={`l-${i}`} fill="hsl(199 89% 48%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
+                ))}
+              </Bar>
+              <Bar dataKey="cpf" name="Lead Qual." radius={[4, 4, 0, 0]}>
+                {chartData.map((d, i) => (
+                  <Cell key={`c-${i}`} fill="hsl(142 71% 45%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
+                ))}
+              </Bar>
+              <Bar dataKey="sales" name="Vendas" radius={[4, 4, 0, 0]}>
+                {chartData.map((d, i) => (
+                  <Cell key={`s-${i}`} fill="hsl(263 70% 58%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
