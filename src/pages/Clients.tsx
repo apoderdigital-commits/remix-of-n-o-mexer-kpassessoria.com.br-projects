@@ -286,15 +286,14 @@ export default function Clients() {
       meta_token_id: form.metaTokenId || null,
        meta_access_token: nextMetaAccessToken,
       google_sheet_id: form.googleSheetId.trim() || null,
+      sheet_cpf_keywords: form.cpfKeywords.trim() || null,
+      sheet_sale_keywords: form.saleKeywords.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
       ghl_stage_mapping: form.stageMapping,
       squad_id: form.squadId || null,
     };
-    // Colunas opcionais: só envia quando preenchidas (evita quebrar o save se a migração ainda não rodou)
-    if (form.cpfKeywords.trim()) (clientPayload as any).sheet_cpf_keywords = form.cpfKeywords.trim();
-    if (form.saleKeywords.trim()) (clientPayload as any).sheet_sale_keywords = form.saleKeywords.trim();
 
     if (editingId) {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
