@@ -95,6 +95,7 @@ export type Database = {
           phone: string | null
           share_token: string | null
           sheet_cpf_keywords: string | null
+          sheet_sale_keywords: string | null
           squad_id: string | null
           ticket_medio: number | null
           updated_at: string
@@ -115,6 +116,7 @@ export type Database = {
           phone?: string | null
           share_token?: string | null
           sheet_cpf_keywords?: string | null
+          sheet_sale_keywords?: string | null
           squad_id?: string | null
           ticket_medio?: number | null
           updated_at?: string
@@ -135,6 +137,7 @@ export type Database = {
           phone?: string | null
           share_token?: string | null
           sheet_cpf_keywords?: string | null
+          sheet_sale_keywords?: string | null
           squad_id?: string | null
           ticket_medio?: number | null
           updated_at?: string
