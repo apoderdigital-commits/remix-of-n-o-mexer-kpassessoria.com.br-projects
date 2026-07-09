@@ -46,6 +46,7 @@ interface ClientForm {
   metaAccountId: string;
   metaTokenId: string;
   googleSheetId: string;
+  cpfKeywords: string;
   ticketMedio: string;
   ghlApiKey: string;
   ghlLocationId: string;
@@ -58,6 +59,7 @@ const emptyForm: ClientForm = {
   metaAccountId: "",
   metaTokenId: "",
   googleSheetId: "",
+  cpfKeywords: "",
   ticketMedio: "",
   ghlApiKey: "",
   ghlLocationId: "",
@@ -252,6 +254,7 @@ export default function Clients() {
       metaAccountId: c.meta_account_id || "",
       metaTokenId: resolvedTokenId,
       googleSheetId: c.google_sheet_id || "",
+      cpfKeywords: (c as any).sheet_cpf_keywords || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
       ghlLocationId: c.ghl_location_id || "",
@@ -280,6 +283,7 @@ export default function Clients() {
       meta_token_id: form.metaTokenId || null,
        meta_access_token: nextMetaAccessToken,
       google_sheet_id: form.googleSheetId.trim() || null,
+      sheet_cpf_keywords: form.cpfKeywords.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
@@ -666,6 +670,13 @@ export default function Clients() {
               <Input value={form.googleSheetId} onChange={set("googleSheetId")} placeholder="Ex: 1OHtGzE2C3QzkM-kNVJ6xOhB9blAmFdMFJXha_bRUN4w" />
               <p className="text-xs text-muted-foreground">
                 O ID está na URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Palavras-chave "CPF Aprovado" (planilha)</Label>
+              <Input value={form.cpfKeywords} onChange={set("cpfKeywords")} placeholder="Ex: Aprovou, Qualificado" />
+              <p className="text-xs text-muted-foreground">
+                Se a coluna <strong>TIPO DE EVENTO</strong> usar outro termo (ex.: "Aprovou") em vez de "CPF Aprovado", liste aqui separado por vírgula. Conta <strong>além</strong> do padrão.
               </p>
             </div>
             <div className="space-y-2">
