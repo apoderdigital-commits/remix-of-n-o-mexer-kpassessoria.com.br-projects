@@ -423,7 +423,7 @@ export default function Squad() {
   const [openEng, setOpenEng] = useState(false);
   const [engMonth, setEngMonth] = useState<string>("all");
   const [npsMonth, setNpsMonth] = useState<string>("all");
-  const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | null>(null);
+  const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | "eligible" | null>(null);
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [npsSearch, setNpsSearch] = useState("");
@@ -1860,7 +1860,7 @@ export default function Squad() {
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos elegíveis</p>
                             <p className="text-2xl font-bold mt-1">{npsCohort.eligible.length}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">deviam responder (D+30)</p>
+                            <button onClick={() => setNpsListDialog("eligible")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista (D+30)</button>
                           </div>
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Responderam</p>
@@ -2159,30 +2159,30 @@ export default function Squad() {
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {npsListDialog === "responded" ? "Clientes que responderam" : "Clientes que faltaram"}
+              {npsListDialog === "responded" ? "Clientes que responderam" : npsListDialog === "eligible" ? "Clientes elegíveis (D+30)" : "Clientes que faltaram"}
               {npsCohort ? ` · ${formatMonth(`${npsCohort.M}-01`)}` : ""}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-1.5 py-1">
-            {npsCohort && (npsListDialog === "responded" ? npsCohort.responded : npsCohort.missed).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente nesta lista.</p>
-            ) : (
-              npsCohort && (npsListDialog === "responded" ? npsCohort.responded : npsCohort.missed).map((c) => {
-                const nota = npsCohort.npsByName.get((c.name || "").trim().toLowerCase());
+            {(() => {
+              const list = !npsCohort ? [] : npsListDialog === "responded" ? npsCohort.responded : npsListDialog === "eligible" ? npsCohort.eligible : npsCohort.missed;
+              if (list.length === 0) return <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente nesta lista.</p>;
+              return list.map((c) => {
+                const nota = npsCohort!.npsByName.get((c.name || "").trim().toLowerCase());
                 return (
                   <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-sm">
                     <span className="font-medium">{c.name}</span>
-                    {npsListDialog === "responded" ? (
-                      <Badge variant="outline" className={`font-bold ${nota != null && nota >= 9 ? "border-emerald-500/40 text-emerald-300" : nota != null && nota < 7 ? "border-red-500/40 text-red-300" : "border-amber-500/40 text-amber-300"}`}>
-                        Nota {nota ?? "—"}
+                    {nota != null ? (
+                      <Badge variant="outline" className={`font-bold ${nota >= 9 ? "border-emerald-500/40 text-emerald-300" : nota < 7 ? "border-red-500/40 text-red-300" : "border-amber-500/40 text-amber-300"}`}>
+                        Nota {nota}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="border-red-500/40 text-red-300">não respondeu</Badge>
                     )}
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
         </DialogContent>
       </Dialog>
