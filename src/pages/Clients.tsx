@@ -47,6 +47,7 @@ interface ClientForm {
   metaTokenId: string;
   googleSheetId: string;
   cpfKeywords: string;
+  saleKeywords: string;
   ticketMedio: string;
   ghlApiKey: string;
   ghlLocationId: string;
@@ -60,6 +61,7 @@ const emptyForm: ClientForm = {
   metaTokenId: "",
   googleSheetId: "",
   cpfKeywords: "",
+  saleKeywords: "",
   ticketMedio: "",
   ghlApiKey: "",
   ghlLocationId: "",
@@ -255,6 +257,7 @@ export default function Clients() {
       metaTokenId: resolvedTokenId,
       googleSheetId: c.google_sheet_id || "",
       cpfKeywords: (c as any).sheet_cpf_keywords || "",
+      saleKeywords: (c as any).sheet_sale_keywords || "",
       ticketMedio: c.ticket_medio ? String(c.ticket_medio) : "",
       ghlApiKey: c.ghl_api_key || "",
       ghlLocationId: c.ghl_location_id || "",
@@ -283,13 +286,15 @@ export default function Clients() {
       meta_token_id: form.metaTokenId || null,
        meta_access_token: nextMetaAccessToken,
       google_sheet_id: form.googleSheetId.trim() || null,
-      sheet_cpf_keywords: form.cpfKeywords.trim() || null,
       ticket_medio: form.ticketMedio.trim() ? parseFloat(form.ticketMedio) : null,
       ghl_api_key: form.ghlApiKey.trim() || null,
       ghl_location_id: form.ghlLocationId.trim() || null,
       ghl_stage_mapping: form.stageMapping,
       squad_id: form.squadId || null,
     };
+    // Colunas opcionais: só envia quando preenchidas (evita quebrar o save se a migração ainda não rodou)
+    if (form.cpfKeywords.trim()) (clientPayload as any).sheet_cpf_keywords = form.cpfKeywords.trim();
+    if (form.saleKeywords.trim()) (clientPayload as any).sheet_sale_keywords = form.saleKeywords.trim();
 
     if (editingId) {
       const tokenChanged = (form.metaTokenId || "") !== (editingOriginalTokenId || "");
@@ -674,9 +679,16 @@ export default function Clients() {
             </div>
             <div className="space-y-2">
               <Label>Palavras-chave "CPF Aprovado" (planilha)</Label>
-              <Input value={form.cpfKeywords} onChange={set("cpfKeywords")} placeholder="Ex: Aprovou, Qualificado" />
+              <Input value={form.cpfKeywords} onChange={set("cpfKeywords")} placeholder="Ex: Aprovou, Qualificado, Lead Qualificado" />
               <p className="text-xs text-muted-foreground">
                 Se a coluna <strong>TIPO DE EVENTO</strong> usar outro termo (ex.: "Aprovou") em vez de "CPF Aprovado", liste aqui separado por vírgula. Conta <strong>além</strong> do padrão.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Palavras-chave "Venda" (planilha)</Label>
+              <Input value={form.saleKeywords} onChange={set("saleKeywords")} placeholder="Ex: Vendido, Fechou" />
+              <p className="text-xs text-muted-foreground">
+                Termos que contam como <strong>venda</strong> além do padrão (venda/vendas/consórcio/financiamento). Ex.: "Vendido". Separe por vírgula.
               </p>
             </div>
             <div className="space-y-2">
