@@ -11,9 +11,9 @@ const supabase = createClient(
 );
 
 // Map spreadsheet event types to our lead_status enum
-function mapStatus(tipo: string): "cpf_approved" | "sale" | "sale_consortium" | "sale_financing" | null {
+function mapStatus(tipo: string, extraCpf: string[] = []): "cpf_approved" | "sale" | "sale_consortium" | "sale_financing" | null {
   const lower = tipo.toLowerCase();
-  if (lower.includes("cpf aprovado")) return "cpf_approved";
+  if (lower.includes("cpf aprovado") || extraCpf.some((k) => k && lower.includes(k))) return "cpf_approved";
   if (lower.includes("consórcio") || lower.includes("consorcio")) return "sale_consortium";
   if (lower.includes("financiamento") || lower.includes("cartão") || lower.includes("cartao") || lower.includes("à vista") || lower.includes("a vista")) return "sale_financing";
   if (lower.includes("venda") || lower.includes("vendas")) return "sale";
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // Get client's google_sheet_id
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("google_sheet_id")
+      .select("google_sheet_id, sheet_cpf_keywords")
       .eq("id", client_id)
       .single();
 
@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
     }
 
     const sheetId = client.google_sheet_id;
+    // Palavras-chave extras que contam como "CPF Aprovado" (config por cliente)
+    const extraCpf = String((client as any).sheet_cpf_keywords || "")
+      .split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
 
     // Fetch sheet as CSV
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
@@ -127,7 +130,7 @@ Deno.serve(async (req) => {
       const url = cols[colUrl] || "";
       const dataStr = cols[colData] || "";
 
-      const status = mapStatus(tipo);
+      const status = mapStatus(tipo, extraCpf);
       if (!status || !url) continue;
 
       // Dedup key: person name + event type (one person = one event per type)
