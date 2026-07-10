@@ -74,8 +74,8 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
     <span
       className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
         ok
-          ? "border-green-500/30 bg-green-500/10 text-green-300"
-          : "border-red-500/30 bg-red-500/10 text-red-300"
+          ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+          : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
       }`}
       title={ok ? `${label} configurado` : `${label} faltando`}
     >
