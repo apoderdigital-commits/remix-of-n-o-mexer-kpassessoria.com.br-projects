@@ -3017,6 +3017,24 @@ function AgendaPanel({
     return names.size;
   }, [sessions, month]);
 
+  // Documento (PNG do funil) anexado por cliente na reunião mensal deste mês
+  const docByClient = useMemo(() => {
+    const m = new Map<string, { path: string; name: string }>();
+    for (const s of (sessions || [])) {
+      if ((s.reference_month || "").slice(0, 7) !== month) continue;
+      if (!s.projection_file_url) continue;
+      const nm = (s.client_name || "").trim().toLowerCase();
+      if (nm) m.set(nm, { path: s.projection_file_url, name: s.projection_file_name || "documento" });
+    }
+    return m;
+  }, [sessions, month]);
+
+  const openMensalDoc = async (path: string) => {
+    const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o documento da mensal."); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -3163,13 +3181,23 @@ function AgendaPanel({
                     ) : <span className="text-muted-foreground text-xs">-</span>}
                   </TableCell>
                   <TableCell className="text-xs">
-                    {a.done ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
-                    ) : a.not_done_reason ? (
-                      <span className="text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
-                    ) : (
-                      <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
-                    )}
+                    <div className="flex flex-col items-start gap-1">
+                      {a.done ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
+                      ) : a.not_done_reason ? (
+                        <span className="text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
+                      ) : (
+                        <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
+                      )}
+                      {docByClient.has((a.client_name || "").trim().toLowerCase()) && (
+                        <button
+                          onClick={() => openMensalDoc(docByClient.get((a.client_name || "").trim().toLowerCase())!.path)}
+                          className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          <FileText className="h-3 w-3" /> Ver documento da mensal
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button size="icon" variant="ghost" onClick={() => onEdit(a)}><Pencil className="h-4 w-4" /></Button>
