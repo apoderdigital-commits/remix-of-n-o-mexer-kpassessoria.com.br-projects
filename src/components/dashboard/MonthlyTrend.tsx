@@ -14,6 +14,15 @@ const BLEND = 0.6;                  // quanto caminha da taxa real rumo à ideal
 const OPT = 1.03;                   // leve empurrão otimista nos leads
 
 export function MonthlyTrend({ data }: MonthlyTrendProps) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+  const gridStroke = isLight ? "hsl(214 25% 85%)" : "hsl(222 30% 18%)";
+  const axisTick = isLight ? "hsl(215 22% 35%)" : "hsl(215 20% 60%)";
+  const axisLine = isLight ? "hsl(214 25% 82%)" : "hsl(222 30% 20%)";
+  const tooltipBg = isLight ? "hsl(0 0% 100%)" : "hsl(222 40% 10%)";
+  const tooltipBorder = isLight ? "hsl(214 25% 85%)" : "hsl(222 30% 20%)";
+  const tooltipColor = isLight ? "hsl(222 47% 11%)" : "hsl(210 40% 98%)";
+
   if (!data || data.length === 0) return null;
 
   const now = new Date();
