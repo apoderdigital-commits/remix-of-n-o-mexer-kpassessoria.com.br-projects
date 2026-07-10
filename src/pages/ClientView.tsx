@@ -22,6 +22,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
 import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
 import { CostBanner } from "@/components/dashboard/CostBanner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import {
   useMetaCampaigns,
@@ -218,6 +219,8 @@ export default function ClientView() {
         <div className="absolute bottom-0 right-0 w-1/2 h-full bg-gradient-to-l from-[hsl(210,70%,55%/0.08)] to-transparent" />
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+
+        <ThemeToggle className="absolute top-4 right-4 z-20" />
 
         <div className="relative flex flex-col sm:flex-row items-center gap-6">
           <div className="relative shrink-0">
