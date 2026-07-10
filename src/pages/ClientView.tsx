@@ -26,6 +26,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 import {
   useMetaCampaigns,
+  useClientCampaignFilter,
   useQualifiedLeads,
   useSyncMeta,
   useSyncGoogleSheet,
@@ -85,7 +86,10 @@ export default function ClientView() {
   }, [locationId]);
 
   // ── hooks de dados (mesmos do Criativos) ─────────────────────────────────
-  const { data: campaigns } = useMetaCampaigns(clientId, since, until);
+  const { data: rawCampaigns } = useMetaCampaigns(clientId, since, until);
+  const { data: excludedCampaigns } = useClientCampaignFilter(clientId);
+  const excludedSet = useMemo(() => new Set(excludedCampaigns || []), [excludedCampaigns]);
+  const campaigns = useMemo(() => (rawCampaigns || []).filter((c) => !excludedSet.has(c.campaign_name)), [rawCampaigns, excludedSet]);
   const { data: leads } = useQualifiedLeads(clientId, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(clientId, since, until);
   const { data: previousPeriod } = usePreviousPeriodData(clientId, since, until);
