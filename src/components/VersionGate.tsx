@@ -49,17 +49,28 @@ export function VersionGate() {
       if (!deployed) return;
       if (norm(deployed) !== norm(current.current)) {
         pending.current = true;
+        // Aba oculta (cliente não está olhando) → atualiza já, sem incomodar.
+        if (document.visibilityState === "hidden") { window.location.reload(); return; }
         toast("Nova versão disponível", {
-          description: "Atualize para ver as últimas mudanças.",
-          duration: Infinity,
-          action: { label: "Atualizar", onClick: () => window.location.reload() },
+          description: "Atualizando automaticamente…",
+          duration: 8000,
+          action: { label: "Atualizar agora", onClick: () => window.location.reload() },
         });
+        // Auto-recarrega em 8s, a menos que a pessoa esteja digitando num campo.
+        window.setTimeout(() => {
+          const el = document.activeElement as HTMLElement | null;
+          const typing = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+          if (!typing) window.location.reload();
+        }, 8000);
       }
     };
 
     const interval = window.setInterval(check, 2 * 60 * 1000); // a cada 2 min
     const onVisible = () => {
-      if (document.visibilityState === "visible") check();
+      if (document.visibilityState === "visible") {
+        if (pending.current) { window.location.reload(); return; }
+        check();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", check);
