@@ -1,26 +1,24 @@
-import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 
-export function ThemeToggle() {
+/** Botãozinho de alternância de tema claro/escuro (usa next-themes). */
+export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => setMounted(true), []);
 
-  const isLight = mounted && theme === "light";
+  const isDark = (theme ?? "dark") === "dark";
 
   return (
-    <Button
-      size="icon"
-      variant="ghost"
-      onClick={() => setTheme(isLight ? "dark" : "light")}
-      aria-label={isLight ? "Ativar tema escuro" : "Ativar tema claro"}
-      className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground"
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      title={isDark ? "Tema claro" : "Tema escuro"}
+      aria-label="Alternar tema claro/escuro"
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/40 bg-background/60 backdrop-blur text-foreground/80 hover:text-foreground hover:bg-background/80 transition-colors ${className}`}
     >
-      {isLight ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-      <span className="hidden sm:inline text-sm">{isLight ? "Escuro" : "Claro"}</span>
-    </Button>
+      {mounted && isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
   );
 }
