@@ -1188,6 +1188,7 @@ export type Database = {
           client_name: string
           contact: string | null
           created_at: string
+          crm_usage: number | null
           curve_abc: string | null
           deleted_at: string | null
           engagement_score: number | null
@@ -1216,6 +1217,7 @@ export type Database = {
           client_name: string
           contact?: string | null
           created_at?: string
+          crm_usage?: number | null
           curve_abc?: string | null
           deleted_at?: string | null
           engagement_score?: number | null
@@ -1244,6 +1246,7 @@ export type Database = {
           client_name?: string
           contact?: string | null
           created_at?: string
+          crm_usage?: number | null
           curve_abc?: string | null
           deleted_at?: string | null
           engagement_score?: number | null
