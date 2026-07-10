@@ -93,7 +93,7 @@ export function ReverseFunnel() {
         ))}
       </div>
 
-      <Card className="border-green-500/30 bg-gradient-to-r from-green-900/30 to-emerald-900/30 shadow-xl shadow-green-500/5">
+      <Card className="border-green-500/30 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 shadow-xl shadow-green-500/5">
         <CardContent className="py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -101,11 +101,11 @@ export function ReverseFunnel() {
                 <Banknote className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-green-400">Faturamento Projetado</p>
+                <p className="text-sm text-green-700 dark:text-green-400">Faturamento Projetado</p>
                 <p className="text-xs text-muted-foreground">{formatNumber(vendasNum)} vendas × {formatCurrency(ticketMedioNum)}</p>
               </div>
             </div>
-            <span className="text-3xl font-bold text-green-400">{formatCurrency(faturamento)}</span>
+            <span className="text-3xl font-bold text-green-700 dark:text-green-400">{formatCurrency(faturamento)}</span>
           </div>
         </CardContent>
       </Card>
