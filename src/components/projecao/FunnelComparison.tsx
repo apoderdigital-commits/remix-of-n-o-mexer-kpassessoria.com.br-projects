@@ -109,7 +109,7 @@ function FunnelReadonlyField({ label, value, icon: Icon }: { label: string; valu
         <Label className="text-xs text-muted-foreground">{label}</Label>
       </div>
       <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 opacity-70">
-        <span className="text-sm font-bold text-white">{value || '0'}</span>
+        <span className="text-sm font-bold text-foreground">{value || '0'}</span>
       </div>
     </div>
   );
@@ -135,15 +135,15 @@ function FunnelMetrics({ calc }: { calc: CalcResult }) {
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Custo/Venda</span>
-        <span className="font-bold text-white">R$ {calc.custoPorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <span className="font-bold text-foreground">R$ {calc.custoPorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Custo/Qualificado</span>
-        <span className="font-bold text-white">R$ {calc.custoPorQual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <span className="font-bold text-foreground">R$ {calc.custoPorQual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Custo/Pré-Atend.</span>
-        <span className="font-bold text-white">R$ {calc.custoPorPre.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <span className="font-bold text-foreground">R$ {calc.custoPorPre.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (fiel
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-neutral-600 to-neutral-500 shadow-lg"><ArrowRight className="h-4 w-4 text-white" /></div>
-          <span className="text-white">Funil Atual</span>
+          <span className="text-foreground">Funil Atual</span>
         </CardTitle>
         <p className="text-[11px] text-muted-foreground mt-1">O que realmente aconteceu no mês analisado</p>
       </CardHeader>
@@ -213,7 +213,7 @@ function FunnelCardDesejado({ data, onChange }: { data: FunnelData; onChange: (f
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><TargetIcon className="h-4 w-4 text-white" /></div>
-          <span className="text-white">Funil Desejado</span>
+          <span className="text-foreground">Funil Desejado</span>
         </CardTitle>
         <p className="text-[11px] text-muted-foreground mt-1">A meta que desejávamos atingir nesse mês</p>
       </CardHeader>
@@ -250,7 +250,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><Rocket className="h-4 w-4 text-white" /></div>
-          <span className="text-white">Funil Projetado</span>
+          <span className="text-foreground">Funil Projetado</span>
         </CardTitle>
         <p className="text-[11px] text-muted-foreground mt-1">O que projetamos para o mês seguinte</p>
       </CardHeader>
@@ -464,7 +464,7 @@ export function FunnelComparison() {
             <div className="flex-1 min-w-[200px] space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-2"><Building2 className="h-3.5 w-3.5" /> Cliente</Label>
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="bg-background border-border text-white"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent className="bg-background border-border">
                   {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
@@ -473,7 +473,7 @@ export function FunnelComparison() {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> Mês</Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[140px] bg-background border-border text-white"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[140px] bg-background border-border text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-background border-border">
                   {MONTHS.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}
                 </SelectContent>
@@ -482,7 +482,7 @@ export function FunnelComparison() {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Ano</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-[100px] bg-background border-border text-white"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[100px] bg-background border-border text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-background border-border">
                   {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
                 </SelectContent>
@@ -508,7 +508,7 @@ export function FunnelComparison() {
 
       <Card className="border-amber-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
-          <CardTitle className="flex items-center gap-3 text-lg text-white">
+          <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
             Atual vs Desejado — O quanto batemos da meta?
           </CardTitle>
@@ -535,7 +535,7 @@ export function FunnelComparison() {
                 ].map(row => (
                   <tr key={row.label} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="py-3 text-muted-foreground font-medium">{row.label}</td>
-                    <td className="py-3 text-center font-bold text-white">
+                    <td className="py-3 text-center font-bold text-foreground">
                       {row.currency ? `R$ ${row.atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : row.atual.toLocaleString('pt-BR')}
                     </td>
                     <td className="py-3 text-center font-bold text-amber-400">
@@ -558,7 +558,7 @@ export function FunnelComparison() {
                 <div key={item.label} className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
                   <p className="text-[10px] text-muted-foreground mb-1">{item.label}</p>
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm font-bold text-white">{item.atual.toFixed(1)}%</span>
+                    <span className="text-sm font-bold text-foreground">{item.atual.toFixed(1)}%</span>
                     <span className="text-muted-foreground/50">→</span>
                     <span className="text-sm font-bold text-amber-400">{item.desejado.toFixed(1)}%</span>
                   </div>
@@ -571,7 +571,7 @@ export function FunnelComparison() {
 
       <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
-          <CardTitle className="flex items-center gap-3 text-lg text-white">
+          <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
             Comparativo Geral — 3 Funis
           </CardTitle>
@@ -600,7 +600,7 @@ export function FunnelComparison() {
                 ].map(row => (
                   <tr key={row.label} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="py-3 text-muted-foreground font-medium">{row.label}</td>
-                    <td className="py-3 text-center font-bold text-white">
+                    <td className="py-3 text-center font-bold text-foreground">
                       {row.currency ? `R$ ${row.a.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : row.a.toLocaleString('pt-BR')}
                     </td>
                     <td className="py-3 text-center font-bold text-amber-400">
@@ -619,7 +619,7 @@ export function FunnelComparison() {
 
       <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
-          <CardTitle className="flex items-center gap-3 text-lg text-white">
+          <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-500 shadow-lg"><FileText className="h-4 w-4 text-white" /></div>
             Plano de Ação
           </CardTitle>
