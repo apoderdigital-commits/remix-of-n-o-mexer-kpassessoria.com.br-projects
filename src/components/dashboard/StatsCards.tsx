@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingDown, CreditCard, Handshake, XCircle, BarChart3, Image, ImagePlus, ArrowLeftRight, ArrowUp, ArrowDown, Minus, Filter } from "lucide-react";
 
 interface DayCompare {
   today: number;
@@ -29,6 +29,7 @@ interface StatsCardsProps {
   } | null;
   ghlLoading?: boolean;
   onScrollTo?: (target: "cpf" | "consortium" | "financing") => void;
+  onFilterCampaigns?: () => void;
   comparisons?: {
     spent?: DayCompare;
     leads?: DayCompare;
@@ -167,7 +168,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   );
 }
 
-export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, comparisons, previousPeriod }: StatsCardsProps) {
+export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinancing, uniqueCreativesCpf, uniqueCreativesSales, planilhaCpfApproved, ghlData, ghlLoading, onScrollTo, onFilterCampaigns, comparisons, previousPeriod }: StatsCardsProps) {
   const [simSource, setSimSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfAprovSource, setCpfAprovSource] = useState<"ghl" | "planilha">("ghl");
   const [cpfNaoSource, setCpfNaoSource] = useState<"ghl" | "planilha">("ghl");
@@ -393,6 +394,15 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
                   {card.title}
                 </span>
+                {onFilterCampaigns && card.title === "Investimento" && (
+                  <button
+                    onClick={onFilterCampaigns}
+                    title="Filtrar campanhas do investimento"
+                    className="ml-auto text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Filter className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
               <p className={`${(card as any).largeValue ? "text-2xl" : "text-lg"} font-bold tracking-tight text-foreground leading-none`}>{card.value}</p>
               {(card as any).compare && (
