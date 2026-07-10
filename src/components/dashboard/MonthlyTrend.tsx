@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend, Cell } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { useTheme } from "next-themes";
 
 interface MonthlyTrendProps {
   data: { key: string; label: string; leads: number; cpf: number; sales: number; spent: number }[];
