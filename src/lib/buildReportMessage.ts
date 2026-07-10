@@ -95,32 +95,38 @@ export async function buildReportMessageClient(opts: {
     period = { since: opts.period.since, until: opts.period.until };
   }
 
-  // ── Meta (investimento + leads) ──
-  // A própria fetch-meta-data sincroniza E retorna os totais — usamos o retorno direto.
-  let totalSpent = 0;
-  let totalLeads = 0;
+  // ── Meta (investimento + leads) — RESPEITANDO o filtro de campanhas do cliente ──
+  // 1) Sincroniza a Meta (atualiza a tabela meta_campaigns no período).
   try {
-    const { data: metaSync } = await supabase.functions.invoke("fetch-meta-data", {
+    await supabase.functions.invoke("fetch-meta-data", {
       body: { client_id: clientId, since: period.since, until: period.until },
     });
-    if (metaSync?.success) {
-      totalSpent = Number(metaSync.total_spent) || 0;
-      totalLeads = Number(metaSync.total_leads) || 0;
-    }
   } catch (_) {
-    // cai no fallback abaixo
+    // segue com o que já estiver salvo na tabela
   }
-
-  // Fallback: lê a tabela se o sync não trouxe os totais
-  if (totalSpent === 0 && totalLeads === 0) {
-    const { data: campaigns } = await supabase
-      .from("meta_campaigns")
-      .select("amount_spent, leads_total")
-      .eq("client_id", clientId)
-      .gte("date", period.since)
-      .lte("date", period.until);
-    totalSpent = (campaigns || []).reduce((s: number, c: any) => s + (Number(c.amount_spent) || 0), 0);
-    totalLeads = (campaigns || []).reduce((s: number, c: any) => s + (c.leads_total || 0), 0);
+  // 2) Lê o filtro de campanhas (campanhas EXCLUÍDAS) configurado para o cliente.
+  let excludedCampaigns: string[] = [];
+  try {
+    const { data: filt } = await (supabase.from as any)("client_campaign_filters")
+      .select("excluded_campaigns").eq("client_id", clientId).maybeSingle();
+    excludedCampaigns = ((filt?.excluded_campaigns as string[]) || []);
+  } catch (_) {
+    // sem filtro → conta todas
+  }
+  const exclSet = new Set(excludedCampaigns.map((s) => (s || "").trim()));
+  // 3) Soma por campanha, ignorando as excluídas (mesma lógica da dashboard).
+  const { data: campaigns } = await supabase
+    .from("meta_campaigns")
+    .select("campaign_name, amount_spent, leads_total")
+    .eq("client_id", clientId)
+    .gte("date", period.since)
+    .lte("date", period.until);
+  let totalSpent = 0;
+  let totalLeads = 0;
+  for (const c of (campaigns || [])) {
+    if (exclSet.has(((c as any).campaign_name || "").trim())) continue;
+    totalSpent += Number((c as any).amount_spent) || 0;
+    totalLeads += Number((c as any).leads_total) || 0;
   }
 
   const cpl = totalLeads > 0 ? totalSpent / totalLeads : 0;
