@@ -51,10 +51,10 @@ export default function Projecao() {
             </div>
           </div>
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-3 tracking-tight leading-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground dark:text-white mb-3 tracking-tight leading-tight">
             Funil de Projeção de Vendas
           </h1>
-          <p className="text-base md:text-lg text-white/50 max-w-xl mx-auto mb-12 font-light">
+          <p className="text-base md:text-lg text-muted-foreground dark:text-white/50 max-w-xl mx-auto mb-12 font-light">
             Simule, compare e otimize suas estratégias de conversão
           </p>
 
