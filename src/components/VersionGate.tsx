@@ -49,19 +49,23 @@ export function VersionGate() {
       if (!deployed) return;
       if (norm(deployed) !== norm(current.current)) {
         pending.current = true;
-        // Aba oculta (cliente não está olhando) → atualiza já, sem incomodar.
+        // Aba oculta → atualiza já, sem incomodar (vale p/ todos).
         if (document.visibilityState === "hidden") { window.location.reload(); return; }
+        const isClientView = window.location.pathname.startsWith("/view");
         toast("Nova versão disponível", {
-          description: "Atualizando automaticamente…",
-          duration: 8000,
+          description: isClientView ? "Atualizando automaticamente…" : "Atualize para ver as últimas mudanças.",
+          duration: isClientView ? 8000 : Infinity,
           action: { label: "Atualizar agora", onClick: () => window.location.reload() },
         });
-        // Auto-recarrega em 8s, a menos que a pessoa esteja digitando num campo.
-        window.setTimeout(() => {
-          const el = document.activeElement as HTMLElement | null;
-          const typing = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
-          if (!typing) window.location.reload();
-        }, 8000);
+        // Só a tela do cliente (/view) força o reload em 8s (a menos que esteja digitando).
+        // Admin: recarrega ao trocar de tela ou ao voltar o foco — nunca no meio de uma edição.
+        if (isClientView) {
+          window.setTimeout(() => {
+            const el = document.activeElement as HTMLElement | null;
+            const typing = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+            if (!typing) window.location.reload();
+          }, 8000);
+        }
       }
     };
 
