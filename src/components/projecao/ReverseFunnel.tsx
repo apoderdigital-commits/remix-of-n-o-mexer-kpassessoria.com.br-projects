@@ -27,11 +27,11 @@ export function ReverseFunnel() {
   const faturamento = vendasNum * ticketMedioNum;
 
   const funnelSteps = [
-    { label: 'Investimento', value: formatCurrency(investimento), icon: DollarSign, gradient: 'from-slate-600 to-slate-700', textColor: 'text-slate-300' },
-    { label: 'Leads', value: formatNumber(leads), icon: Users, gradient: 'from-blue-600 to-blue-700', textColor: 'text-blue-300' },
-    { label: 'Qualificações Realizadas', value: formatNumber(simulacoes), subtitle: `${TAXA_SIMULACOES}% dos leads`, icon: TrendingUp, gradient: 'from-violet-600 to-violet-700', textColor: 'text-violet-300' },
-    { label: 'Qualificados', value: formatNumber(qualificados), subtitle: `${TAXA_QUALIFICADOS}% das qualificações`, icon: Target, gradient: 'from-purple-600 to-purple-700', textColor: 'text-purple-300' },
-    { label: 'Vendas', value: formatNumber(vendasNum), subtitle: `${TAXA_VENDAS}% dos qualificados`, icon: Target, gradient: 'from-fuchsia-600 to-pink-600', textColor: 'text-fuchsia-300', highlight: true },
+    { label: 'Investimento', value: formatCurrency(investimento), icon: DollarSign, gradient: 'from-slate-600 to-slate-700', textColor: 'text-slate-700 dark:text-slate-300' },
+    { label: 'Leads', value: formatNumber(leads), icon: Users, gradient: 'from-blue-600 to-blue-700', textColor: 'text-blue-700 dark:text-blue-300' },
+    { label: 'Qualificações Realizadas', value: formatNumber(simulacoes), subtitle: `${TAXA_SIMULACOES}% dos leads`, icon: TrendingUp, gradient: 'from-violet-600 to-violet-700', textColor: 'text-violet-700 dark:text-violet-300' },
+    { label: 'Qualificados', value: formatNumber(qualificados), subtitle: `${TAXA_QUALIFICADOS}% das qualificações`, icon: Target, gradient: 'from-purple-600 to-purple-700', textColor: 'text-purple-700 dark:text-purple-300' },
+    { label: 'Vendas', value: formatNumber(vendasNum), subtitle: `${TAXA_VENDAS}% dos qualificados`, icon: Target, gradient: 'from-fuchsia-600 to-pink-600', textColor: 'text-fuchsia-700 dark:text-fuchsia-300', highlight: true },
   ];
 
   return (
