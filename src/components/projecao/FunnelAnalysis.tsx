@@ -220,11 +220,11 @@ export function FunnelAnalysis() {
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
                 {clients.map(client => (
-                  <SelectItem key={client.id} value={client.id} className="text-white hover:bg-purple-600/20">
+                  <SelectItem key={client.id} value={client.id} className="hover:bg-purple-600/20">
                     {client.name}
                   </SelectItem>
                 ))}
-                <SelectItem value="custom" className="text-white hover:bg-purple-600/20">+ Digitar novo nome</SelectItem>
+                <SelectItem value="custom" className="hover:bg-purple-600/20">+ Digitar novo nome</SelectItem>
               </SelectContent>
             </Select>
 
@@ -398,7 +398,7 @@ export function FunnelAnalysis() {
 
           {/* Visual Funnel Shape */}
           <Card className="border-border/50 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-2xl overflow-hidden">
-            <CardHeader className="border-b border-border dark:border-white/10">
+            <CardHeader className="border-b border-border dark:border-border">
               <CardTitle className="text-xl flex items-center gap-2 text-foreground">
                 <Sparkles className="h-5 w-5 text-purple-400 animate-pulse" />
                 Visualização do Funil
@@ -555,7 +555,7 @@ export function FunnelAnalysis() {
           {/* History */}
           {selectedClient && selectedClient !== 'custom' && (
             <Card className="border-purple-500/20 bg-card/50 shadow-xl">
-              <CardHeader className="border-b border-border dark:border-white/10">
+              <CardHeader className="border-b border-border dark:border-border">
                 <CardTitle className="flex items-center gap-3 text-xl text-foreground">
                   <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 shadow-lg">
                     <History className="h-5 w-5 text-white" />
@@ -650,12 +650,12 @@ export function FunnelAnalysis() {
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                   <div className="p-6 rounded-2xl bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 border border-primary/30 text-center">
-                                    <p className="text-lg font-medium text-white mb-2">💰 Faturamento Projetado</p>
+                                    <p className="text-lg font-medium text-foreground mb-2">💰 Faturamento Projetado</p>
                                     <p className="text-4xl font-bold text-foreground">R$ {costs.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                     <p className="text-sm text-muted-foreground mt-2">{sim.vendas} vendas × R$ {ticketMedioNum.toLocaleString('pt-BR')} ticket médio</p>
                                   </div>
                                   <div className="p-6 rounded-2xl bg-gradient-to-r from-rose-500/20 via-orange-500/20 to-rose-500/20 border border-rose-500/30 text-center">
-                                    <p className="text-lg font-medium text-white mb-2">💵 Custo por Venda</p>
+                                    <p className="text-lg font-medium text-foreground mb-2">💵 Custo por Venda</p>
                                     <p className="text-4xl font-bold text-foreground">R$ {costs.custoPorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     <p className="text-sm text-muted-foreground mt-2">R$ {Number(sim.investimento).toLocaleString('pt-BR')} ÷ {sim.vendas} vendas</p>
                                   </div>

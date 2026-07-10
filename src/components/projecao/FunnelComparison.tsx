@@ -92,10 +92,10 @@ function FunnelInput({ label, value, onChange, prefix, icon: Icon }: { label: st
         {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
         <Label className="text-xs text-muted-foreground">{label}</Label>
       </div>
-      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+      <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
         {prefix && <span className="text-xs text-muted-foreground">{prefix}</span>}
         <Input type="text" value={value} onChange={(e) => onChange(e.target.value)}
-          className="border-0 bg-transparent p-0 h-auto text-sm font-bold text-white focus-visible:ring-0 focus-visible:ring-offset-0" />
+          className="border-0 bg-transparent p-0 h-auto text-sm font-bold text-foreground focus-visible:ring-0 focus-visible:ring-offset-0" />
       </div>
     </div>
   );
@@ -108,7 +108,7 @@ function FunnelReadonlyField({ label, value, icon: Icon }: { label: string; valu
         {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
         <Label className="text-xs text-muted-foreground">{label}</Label>
       </div>
-      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 opacity-70">
+      <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2 opacity-70">
         <span className="text-sm font-bold text-foreground">{value || '0'}</span>
       </div>
     </div>
@@ -118,7 +118,7 @@ function FunnelReadonlyField({ label, value, icon: Icon }: { label: string; valu
 function RateDisplay({ value, color }: { value: string; color: string }) {
   return (
     <div className="flex items-end">
-      <div className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+      <div className="w-full p-2 rounded-lg bg-muted/50 border border-border text-center">
         <p className="text-[10px] text-muted-foreground">Taxa</p>
         <p className={`text-sm font-bold ${color}`}>{value}</p>
       </div>
@@ -128,7 +128,7 @@ function RateDisplay({ value, color }: { value: string; color: string }) {
 
 function FunnelMetrics({ calc }: { calc: CalcResult }) {
   return (
-    <div className="pt-3 border-t border-white/10 space-y-2">
+    <div className="pt-3 border-t border-border space-y-2">
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Faturamento</span>
         <span className="font-bold text-emerald-400">R$ {calc.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
@@ -173,7 +173,7 @@ function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (fiel
   const calc = calcFunnel(data);
   return (
     <Card className="border-neutral-700/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
-      <CardHeader className="pb-3 border-b border-border dark:border-white/10">
+      <CardHeader className="pb-3 border-b border-border dark:border-border">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-neutral-600 to-neutral-500 shadow-lg"><ArrowRight className="h-4 w-4 text-white" /></div>
           <span className="text-foreground">Funil Atual</span>
@@ -210,7 +210,7 @@ function FunnelCardDesejado({ data, onChange }: { data: FunnelData; onChange: (f
   const calc = calcDesejadoFunnel(data);
   return (
     <Card className="border-amber-500/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
-      <CardHeader className="pb-3 border-b border-border dark:border-white/10">
+      <CardHeader className="pb-3 border-b border-border dark:border-border">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><TargetIcon className="h-4 w-4 text-white" /></div>
           <span className="text-foreground">Funil Desejado</span>
@@ -247,7 +247,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
   const calc = calcProjetadoFunnel(data);
   return (
     <Card className="border-purple-500/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
-      <CardHeader className="pb-3 border-b border-border dark:border-white/10">
+      <CardHeader className="pb-3 border-b border-border dark:border-border">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><Rocket className="h-4 w-4 text-white" /></div>
           <span className="text-foreground">Funil Projetado</span>
@@ -263,7 +263,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
         <div className="grid grid-cols-2 gap-3">
           <FunnelReadonlyField label="Pré-Atendimento" value={String(calc.preAtendimento)} icon={Calculator} />
           <div className="flex items-end">
-            <div className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+            <div className="w-full p-2 rounded-lg bg-muted/50 border border-border text-center">
               <p className="text-[10px] text-muted-foreground">Taxa %</p>
               <Input type="text" value={data.taxaPre} onChange={(e) => onChange('taxaPre', e.target.value)}
                 className="border-0 bg-transparent p-0 h-auto text-sm font-bold text-fuchsia-400 text-center focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="0" />
@@ -273,7 +273,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
         <div className="grid grid-cols-2 gap-3">
           <FunnelReadonlyField label="Qualificados" value={String(calc.qualificados)} icon={TargetIcon} />
           <div className="flex items-end">
-            <div className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+            <div className="w-full p-2 rounded-lg bg-muted/50 border border-border text-center">
               <p className="text-[10px] text-muted-foreground">Taxa %</p>
               <Input type="text" value={data.taxaQual} onChange={(e) => onChange('taxaQual', e.target.value)}
                 className="border-0 bg-transparent p-0 h-auto text-sm font-bold text-pink-400 text-center focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="0" />
@@ -283,7 +283,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
         <div className="grid grid-cols-2 gap-3">
           <FunnelReadonlyField label="Vendas" value={String(calc.vendas)} icon={Award} />
           <div className="flex items-end">
-            <div className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+            <div className="w-full p-2 rounded-lg bg-muted/50 border border-border text-center">
               <p className="text-[10px] text-muted-foreground">Taxa %</p>
               <Input type="text" value={data.taxaVendas} onChange={(e) => onChange('taxaVendas', e.target.value)}
                 className="border-0 bg-transparent p-0 h-auto text-sm font-bold text-orange-400 text-center focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="0" />
@@ -507,7 +507,7 @@ export function FunnelComparison() {
       </div>
 
       <Card className="border-amber-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
-        <CardHeader className="border-b border-border dark:border-white/10 pb-4">
+        <CardHeader className="border-b border-border dark:border-border pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
             Atual vs Desejado — O quanto batemos da meta?
@@ -517,7 +517,7 @@ export function FunnelComparison() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border dark:border-white/10">
+                <tr className="border-b border-border dark:border-border">
                   <th className="text-left py-3 text-muted-foreground font-medium">Etapa</th>
                   <th className="text-center py-3 text-muted-foreground font-medium">Atual</th>
                   <th className="text-center py-3 text-amber-400/70 font-medium">Desejado</th>
@@ -533,7 +533,7 @@ export function FunnelComparison() {
                   { label: 'Vendas', atual: calcAtual.vendas, desejado: calcDes.vendas },
                   { label: 'Faturamento', atual: calcAtual.faturamento, desejado: calcDes.faturamento, currency: true },
                 ].map(row => (
-                  <tr key={row.label} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr key={row.label} className="border-b border-white/5 hover:bg-muted/50 transition-colors">
                     <td className="py-3 text-muted-foreground font-medium">{row.label}</td>
                     <td className="py-3 text-center font-bold text-foreground">
                       {row.currency ? `R$ ${row.atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : row.atual.toLocaleString('pt-BR')}
@@ -547,7 +547,7 @@ export function FunnelComparison() {
               </tbody>
             </table>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="mt-4 pt-4 border-t border-border">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">Taxas de Conversão</p>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -555,7 +555,7 @@ export function FunnelComparison() {
                 { label: 'Qualificados', atual: calcAtual.taxaQual, desejado: calcDes.taxaQual },
                 { label: 'Vendas', atual: calcAtual.taxaVendas, desejado: calcDes.taxaVendas },
               ].map(item => (
-                <div key={item.label} className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                <div key={item.label} className="p-3 rounded-xl bg-muted/50 border border-border text-center">
                   <p className="text-[10px] text-muted-foreground mb-1">{item.label}</p>
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-sm font-bold text-foreground">{item.atual.toFixed(1)}%</span>
@@ -570,7 +570,7 @@ export function FunnelComparison() {
       </Card>
 
       <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
-        <CardHeader className="border-b border-border dark:border-white/10 pb-4">
+        <CardHeader className="border-b border-border dark:border-border pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
             Comparativo Geral — 3 Funis
@@ -580,7 +580,7 @@ export function FunnelComparison() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border dark:border-white/10">
+                <tr className="border-b border-border dark:border-border">
                   <th className="text-left py-3 text-muted-foreground font-medium">Etapa</th>
                   <th className="text-center py-3 text-muted-foreground font-medium">Atual</th>
                   <th className="text-center py-3 text-amber-400/70 font-medium">Desejado</th>
@@ -598,7 +598,7 @@ export function FunnelComparison() {
                   { label: 'Faturamento', a: calcAtual.faturamento, d: calcDes.faturamento, p: calcProj.faturamento, currency: true },
                   { label: 'Custo/Venda', a: calcAtual.custoPorVenda, d: calcDes.custoPorVenda, p: calcProj.custoPorVenda, currency: true },
                 ].map(row => (
-                  <tr key={row.label} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr key={row.label} className="border-b border-white/5 hover:bg-muted/50 transition-colors">
                     <td className="py-3 text-muted-foreground font-medium">{row.label}</td>
                     <td className="py-3 text-center font-bold text-foreground">
                       {row.currency ? `R$ ${row.a.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : row.a.toLocaleString('pt-BR')}
@@ -618,7 +618,7 @@ export function FunnelComparison() {
       </Card>
 
       <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
-        <CardHeader className="border-b border-border dark:border-white/10 pb-4">
+        <CardHeader className="border-b border-border dark:border-border pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-foreground">
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-500 shadow-lg"><FileText className="h-4 w-4 text-white" /></div>
             Plano de Ação
@@ -628,7 +628,7 @@ export function FunnelComparison() {
         <CardContent className="pt-4">
           <Textarea value={actionNotes} onChange={(e) => setActionNotes(e.target.value)}
             placeholder="Ex: Aumentar investimento em 20%, otimizar landing page, melhorar qualificação de leads..."
-            className="min-h-[150px] bg-white/5 border-white/10 text-white placeholder:text-muted-foreground/50 resize-y" />
+            className="min-h-[150px] bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 resize-y" />
           <p className="text-[10px] text-muted-foreground/50 mt-2">* As notas serão salvas junto com os comparativos ao clicar em "Salvar"</p>
         </CardContent>
       </Card>

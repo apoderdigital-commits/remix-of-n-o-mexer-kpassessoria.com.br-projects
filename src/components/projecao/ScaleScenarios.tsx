@@ -120,7 +120,7 @@ export function ScaleScenarios() {
                 </div>
                 <div className={`flex justify-between items-center py-3 px-4 rounded-xl bg-gradient-to-r ${scenario.gradient}`}>
                   <span className="text-muted-foreground text-sm font-medium">Vendas</span>
-                  <span className="font-bold text-white text-xl">{data.vendas.toLocaleString('pt-BR')}</span>
+                  <span className="font-bold text-foreground text-xl">{data.vendas.toLocaleString('pt-BR')}</span>
                 </div>
                 {ticketMedioNum > 0 && (
                   <div className="flex justify-between items-center py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600">
@@ -128,7 +128,7 @@ export function ScaleScenarios() {
                       <Banknote className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground text-sm font-medium">Faturamento</span>
                     </div>
-                    <span className="font-bold text-white text-lg">R$ {data.faturamento.toLocaleString('pt-BR')}</span>
+                    <span className="font-bold text-foreground text-lg">R$ {data.faturamento.toLocaleString('pt-BR')}</span>
                   </div>
                 )}
                 {!isBase && (
