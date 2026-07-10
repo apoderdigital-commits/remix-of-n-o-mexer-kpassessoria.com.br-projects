@@ -129,3 +129,11 @@
   animation: alert-blink 1.4s ease-in-out infinite;
 }
 
+@keyframes alert-blink-light {
+  0%, 100% { background-color: hsl(0 74% 52% / 0.35); box-shadow: 0 0 0 0 hsl(0 74% 45% / 0); }
+  50% { background-color: hsl(0 74% 48% / 0.6); box-shadow: 0 0 0 3px hsl(0 74% 45% / 0.5); }
+}
+.light .alert-blink {
+  animation: alert-blink-light 1.4s ease-in-out infinite;
+}
+
