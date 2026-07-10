@@ -66,11 +66,11 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
             <div className={`p-4 rounded-xl border ${
               hitGoal ? "bg-green-500/10 border-green-500/30" : "bg-blue-500/10 border-blue-500/30"
             }`}>
-              <p className={`text-[11px] uppercase tracking-wider font-semibold ${hitGoal ? "text-green-400" : "text-blue-400"}`}>
+              <p className={`text-[11px] uppercase tracking-wider font-semibold ${hitGoal ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>
                 Realizado
               </p>
               <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(value)}</p>
-              <p className={`text-base font-semibold mt-1 ${hitGoal ? "text-green-300" : "text-blue-300"}`}>
+              <p className={`text-base font-semibold mt-1 ${hitGoal ? "text-green-700 dark:text-green-300" : "text-blue-700 dark:text-blue-300"}`}>
                 {achievedPct.toFixed(1)}%
               </p>
               {baseValue !== undefined && (
@@ -122,7 +122,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>Progresso da meta</span>
-              <span className={`font-semibold ${hitGoal ? "text-green-300" : "text-amber-300"}`}>
+              <span className={`font-semibold ${hitGoal ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}>
                 {progressPct.toFixed(0)}%
               </span>
             </div>
@@ -177,7 +177,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           icon={Users}
           value={totalLeads}
           gradient="from-violet-600 to-purple-700"
-          textColor="text-violet-300"
+          textColor="text-violet-700 dark:text-violet-300"
           metaLabel="Base do funil — 100% dos leads captados"
         />
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
@@ -191,7 +191,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           metaLabel={`Mín. ${META_SIMULACOES}% dos leads precisam ser qualificados`}
           description="Leads avaliados, com financiamento ou pagamento à vista/cartão."
           gradient="from-blue-600 to-blue-700"
-          textColor="text-blue-300"
+          textColor="text-blue-700 dark:text-blue-300"
         />
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
@@ -203,7 +203,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           metaPct={META_CPF}
           metaLabel={`Mín. ${META_CPF}% das qualificações precisam aprovar`}
           gradient="from-emerald-600 to-green-700"
-          textColor="text-emerald-300"
+          textColor="text-emerald-700 dark:text-emerald-300"
           extra={
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" className="gap-2 h-8" onClick={() => setShowCpfCompare(true)}>
@@ -225,7 +225,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           metaPct={META_VENDAS}
           metaLabel={`Mín. ${META_VENDAS}% dos Leads Qualificados precisam virar venda`}
           gradient="from-fuchsia-600 to-pink-600"
-          textColor="text-fuchsia-300"
+          textColor="text-fuchsia-700 dark:text-fuchsia-300"
           highlight
           extra={
             <div className="flex flex-wrap gap-2">
@@ -278,7 +278,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Diferença</p>
                 <p className="text-xs text-primary-foreground">CRM | Planilha</p>
               </div>
-              <p className={`text-2xl font-bold ${ghlSales - planilhaSales >= 0 ? "text-foreground" : "text-amber-300"}`}>
+              <p className={`text-2xl font-bold ${ghlSales - planilhaSales >= 0 ? "text-foreground" : "text-amber-700 dark:text-amber-300"}`}>
                 {ghlSales - planilhaSales >= 0 ? "+" : ""}{formatNumber(ghlSales - planilhaSales)}
               </p>
             </div>
@@ -311,7 +311,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Diferença</p>
                 <p className="text-xs text-primary-foreground">CRM | Planilha</p>
               </div>
-              <p className={`text-2xl font-bold ${ghlCpfApproved - planilhaCpfApproved >= 0 ? "text-foreground" : "text-amber-300"}`}>
+              <p className={`text-2xl font-bold ${ghlCpfApproved - planilhaCpfApproved >= 0 ? "text-foreground" : "text-amber-700 dark:text-amber-300"}`}>
                 {ghlCpfApproved - planilhaCpfApproved >= 0 ? "+" : ""}{formatNumber(ghlCpfApproved - planilhaCpfApproved)}
               </p>
             </div>
