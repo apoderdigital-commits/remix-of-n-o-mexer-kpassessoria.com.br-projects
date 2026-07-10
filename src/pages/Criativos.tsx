@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
+import { CampaignFilterDialog } from "@/components/dashboard/CampaignFilterDialog";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
@@ -20,6 +21,7 @@ import {
   useClients,
   useAccessibleClients,
   useMetaCampaigns,
+  useClientCampaignFilter,
   useQualifiedLeads,
   useSyncMeta,
   useSyncGoogleSheet,
@@ -97,7 +99,11 @@ export default function Index() {
   const { data: accessibleClients } = useAccessibleClients();
   // Filter clients by access
   const clients = isAdmin ? allClients : (accessibleClients || []);
-  const { data: campaigns } = useMetaCampaigns(activeClient, since, until);
+  const { data: rawCampaigns } = useMetaCampaigns(activeClient, since, until);
+  const { data: excludedCampaigns } = useClientCampaignFilter(activeClient);
+  const excludedSet = useMemo(() => new Set(excludedCampaigns || []), [excludedCampaigns]);
+  const campaigns = useMemo(() => (rawCampaigns || []).filter((c) => !excludedSet.has(c.campaign_name)), [rawCampaigns, excludedSet]);
+  const [campaignFilterOpen, setCampaignFilterOpen] = useState(false);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
   const { data: previousPeriod } = usePreviousPeriodData(activeClient, since, until);
@@ -567,6 +573,7 @@ export default function Index() {
           />
 
           <StatsCards
+            onFilterCampaigns={() => setCampaignFilterOpen(true)}
             totalLeads={totalLeads}
             totalSpent={totalSpent}
             salesConsortium={salesConsortium}
@@ -587,6 +594,15 @@ export default function Index() {
               vendasFinanciamento: previousPeriod.ghlVendasFinanciamento || previousPeriod.salesFinancing,
               vendasConsorcio: previousPeriod.ghlVendasConsorcio || previousPeriod.salesConsortium,
             } : null}
+          />
+
+          <CampaignFilterDialog
+            open={campaignFilterOpen}
+            onClose={() => setCampaignFilterOpen(false)}
+            clientId={activeClient}
+            campaigns={rawCampaigns || []}
+            excluded={excludedCampaigns || []}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["campaign_filter", activeClient] })}
           />
 
           <CostBanner
