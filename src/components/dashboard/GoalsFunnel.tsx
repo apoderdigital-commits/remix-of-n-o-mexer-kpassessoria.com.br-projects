@@ -294,17 +294,17 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               <div>
-                <p className="text-xs uppercase tracking-wide text-emerald-400">CRM</p>
+                <p className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-400">CRM</p>
                 <p className="text-xs text-muted-foreground">Pipeline automático</p>
               </div>
-              <p className="text-2xl font-bold text-emerald-300">{formatNumber(ghlCpfApproved)}</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatNumber(ghlCpfApproved)}</p>
             </div>
             <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
               <div>
-                <p className="text-xs uppercase tracking-wide text-blue-400">Planilha</p>
+                <p className="text-xs uppercase tracking-wide text-blue-700 dark:text-blue-400">Planilha</p>
                 <p className="text-xs text-muted-foreground">Registro por API</p>
               </div>
-              <p className="text-2xl font-bold text-blue-300">{formatNumber(planilhaCpfApproved)}</p>
+              <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatNumber(planilhaCpfApproved)}</p>
             </div>
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/30">
               <div>
