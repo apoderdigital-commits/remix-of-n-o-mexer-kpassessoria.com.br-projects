@@ -172,7 +172,7 @@ function GapIndicator({ atual, desejado }: { atual: number; desejado: number }) 
 function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (field: keyof FunnelData, value: string) => void }) {
   const calc = calcFunnel(data);
   return (
-    <Card className="border-neutral-700/30 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl overflow-hidden">
+    <Card className="border-neutral-700/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-neutral-600 to-neutral-500 shadow-lg"><ArrowRight className="h-4 w-4 text-white" /></div>
@@ -209,7 +209,7 @@ function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (fiel
 function FunnelCardDesejado({ data, onChange }: { data: FunnelData; onChange: (field: keyof FunnelData, value: string) => void }) {
   const calc = calcDesejadoFunnel(data);
   return (
-    <Card className="border-amber-500/30 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl overflow-hidden">
+    <Card className="border-amber-500/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><TargetIcon className="h-4 w-4 text-white" /></div>
@@ -246,7 +246,7 @@ function FunnelCardDesejado({ data, onChange }: { data: FunnelData; onChange: (f
 function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange: (field: keyof ProjetadoData, value: string) => void }) {
   const calc = calcProjetadoFunnel(data);
   return (
-    <Card className="border-purple-500/30 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl overflow-hidden">
+    <Card className="border-purple-500/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
       <CardHeader className="pb-3 border-b border-border dark:border-white/10">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><Rocket className="h-4 w-4 text-white" /></div>
@@ -458,7 +458,7 @@ export function FunnelComparison() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-purple-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl">
+      <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex-1 min-w-[200px] space-y-1">
@@ -506,7 +506,7 @@ export function FunnelComparison() {
         <FunnelCardProjetado data={projetado} onChange={updateProjetado} />
       </div>
 
-      <Card className="border-amber-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl">
+      <Card className="border-amber-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-white">
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
@@ -569,7 +569,7 @@ export function FunnelComparison() {
         </CardContent>
       </Card>
 
-      <Card className="border-purple-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl">
+      <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-white">
             <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-500 shadow-lg"><GitCompare className="h-4 w-4 text-white" /></div>
@@ -617,7 +617,7 @@ export function FunnelComparison() {
         </CardContent>
       </Card>
 
-      <Card className="border-purple-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-xl">
+      <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardHeader className="border-b border-border dark:border-white/10 pb-4">
           <CardTitle className="flex items-center gap-3 text-lg text-white">
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-500 shadow-lg"><FileText className="h-4 w-4 text-white" /></div>

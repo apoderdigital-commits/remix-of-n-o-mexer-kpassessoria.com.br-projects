@@ -119,14 +119,14 @@ export function ScaleScenarios() {
                   </div>
                 </div>
                 <div className={`flex justify-between items-center py-3 px-4 rounded-xl bg-gradient-to-r ${scenario.gradient}`}>
-                  <span className="text-white/80 text-sm font-medium">Vendas</span>
+                  <span className="text-muted-foreground text-sm font-medium">Vendas</span>
                   <span className="font-bold text-white text-xl">{data.vendas.toLocaleString('pt-BR')}</span>
                 </div>
                 {ticketMedioNum > 0 && (
                   <div className="flex justify-between items-center py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600">
                     <div className="flex items-center gap-2">
-                      <Banknote className="h-4 w-4 text-white/80" />
-                      <span className="text-white/80 text-sm font-medium">Faturamento</span>
+                      <Banknote className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground text-sm font-medium">Faturamento</span>
                     </div>
                     <span className="font-bold text-white text-lg">R$ {data.faturamento.toLocaleString('pt-BR')}</span>
                   </div>

@@ -397,7 +397,7 @@ export function FunnelAnalysis() {
           </Card>
 
           {/* Visual Funnel Shape */}
-          <Card className="border-border/50 bg-gradient-to-br from-black via-neutral-900 to-black shadow-2xl overflow-hidden">
+          <Card className="border-border/50 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-2xl overflow-hidden">
             <CardHeader className="border-b border-border dark:border-white/10">
               <CardTitle className="text-xl flex items-center gap-2 text-white">
                 <Sparkles className="h-5 w-5 text-purple-400 animate-pulse" />
@@ -624,7 +624,7 @@ export function FunnelAnalysis() {
                           </Card>
 
                           {selectedSimulation?.id === sim.id && (
-                            <Card className="mt-2 border-purple-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+                            <Card className="mt-2 border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
                               <CardContent className="p-6">
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                                   {[
