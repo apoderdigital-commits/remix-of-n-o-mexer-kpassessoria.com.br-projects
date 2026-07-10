@@ -211,20 +211,20 @@ export function FunnelAnalysis() {
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <Card className="border-purple-500/20 bg-neutral-900/50 shadow-xl">
+      <Card className="border-purple-500/20 bg-card/50 shadow-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <Select value={selectedClient} onValueChange={setSelectedClient}>
               <SelectTrigger className="w-[200px] bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500/50 text-white">
                 <SelectValue placeholder="Selecione o cliente" />
               </SelectTrigger>
-              <SelectContent className="bg-neutral-900 border-purple-500/30">
+              <SelectContent className="bg-popover border-border">
                 {clients.map(client => (
-                  <SelectItem key={client.id} value={client.id} className="text-white hover:bg-purple-600/20">
+                  <SelectItem key={client.id} value={client.id} className="hover:bg-purple-600/20">
                     {client.name}
                   </SelectItem>
                 ))}
-                <SelectItem value="custom" className="text-white hover:bg-purple-600/20">+ Digitar novo nome</SelectItem>
+                <SelectItem value="custom" className="hover:bg-purple-600/20">+ Digitar novo nome</SelectItem>
               </SelectContent>
             </Select>
 
@@ -233,7 +233,7 @@ export function FunnelAnalysis() {
                 placeholder="Nome do cliente"
                 value={customClientName}
                 onChange={(e) => setCustomClientName(e.target.value)}
-                className="w-[180px] bg-neutral-900 border-neutral-700"
+                className="w-[180px] bg-background border-border"
               />
             )}
 
@@ -241,10 +241,10 @@ export function FunnelAnalysis() {
               <>
                 <div className="h-8 w-px bg-white/20 mx-2" />
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-[130px] bg-neutral-900 border-neutral-700">
+                  <SelectTrigger className="w-[130px] bg-background border-border">
                     <SelectValue placeholder="Mês" />
                   </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-700">
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="all">Todos</SelectItem>
                     {MONTHS.filter(m => availableMonths.includes(m.value)).map(month => (
                       <SelectItem key={month.value} value={String(month.value)}>
@@ -254,10 +254,10 @@ export function FunnelAnalysis() {
                   </SelectContent>
                 </Select>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-[100px] bg-neutral-900 border-neutral-700">
+                  <SelectTrigger className="w-[100px] bg-background border-border">
                     <SelectValue placeholder="Ano" />
                   </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-700">
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="all">Todos</SelectItem>
                     {availableYears.map(year => (
                       <SelectItem key={year} value={String(year)}>
@@ -273,12 +273,12 @@ export function FunnelAnalysis() {
       </Card>
 
       {!selectedClient ? (
-        <Card className="border-purple-500/20 bg-neutral-900/50 shadow-xl">
+        <Card className="border-purple-500/20 bg-card/50 shadow-xl">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="p-4 rounded-full bg-purple-500/10 mb-4">
               <TrendingUp className="h-10 w-10 text-purple-400" />
             </div>
-            <p className="text-lg text-white/70">Selecione um cliente para começar</p>
+            <p className="text-lg text-muted-foreground">Selecione um cliente para começar</p>
           </CardContent>
         </Card>
       ) : (
@@ -397,9 +397,9 @@ export function FunnelAnalysis() {
           </Card>
 
           {/* Visual Funnel Shape */}
-          <Card className="border-border/50 bg-gradient-to-br from-black via-neutral-900 to-black shadow-2xl overflow-hidden">
-            <CardHeader className="border-b border-white/10">
-              <CardTitle className="text-xl flex items-center gap-2 text-white">
+          <Card className="border-border/50 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-2xl overflow-hidden">
+            <CardHeader className="border-b border-border dark:border-border">
+              <CardTitle className="text-xl flex items-center gap-2 text-foreground">
                 <Sparkles className="h-5 w-5 text-purple-400 animate-pulse" />
                 Visualização do Funil
               </CardTitle>
@@ -554,9 +554,9 @@ export function FunnelAnalysis() {
 
           {/* History */}
           {selectedClient && selectedClient !== 'custom' && (
-            <Card className="border-purple-500/20 bg-neutral-900/50 shadow-xl">
-              <CardHeader className="border-b border-white/10">
-                <CardTitle className="flex items-center gap-3 text-xl text-white">
+            <Card className="border-purple-500/20 bg-card/50 shadow-xl">
+              <CardHeader className="border-b border-border dark:border-border">
+                <CardTitle className="flex items-center gap-3 text-xl text-foreground">
                   <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 shadow-lg">
                     <History className="h-5 w-5 text-white" />
                   </div>
@@ -566,15 +566,15 @@ export function FunnelAnalysis() {
               <CardContent className="p-4">
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-pulse text-white/60">Carregando histórico...</div>
+                    <div className="animate-pulse text-muted-foreground">Carregando histórico...</div>
                   </div>
                 ) : filteredSimulations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="p-4 rounded-full bg-purple-500/10 mb-4">
                       <History className="h-8 w-8 text-purple-400" />
                     </div>
-                    <p className="text-white/70">Nenhuma análise salva</p>
-                    <p className="text-sm text-white/50 mt-1">Salve uma análise para ver o histórico</p>
+                    <p className="text-muted-foreground">Nenhuma análise salva</p>
+                    <p className="text-sm text-muted-foreground mt-1">Salve uma análise para ver o histórico</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -585,20 +585,20 @@ export function FunnelAnalysis() {
                       return (
                         <div key={sim.id}>
                           <Card 
-                            className={`border-purple-500/20 bg-neutral-900/50 overflow-hidden cursor-pointer transition-all hover:bg-neutral-900/70 ${
-                              selectedSimulation?.id === sim.id ? 'ring-2 ring-purple-500 bg-neutral-900/70' : ''
+                            className={`border-purple-500/20 bg-card/50 overflow-hidden cursor-pointer transition-all hover:bg-card/70 ${
+                              selectedSimulation?.id === sim.id ? 'ring-2 ring-purple-500 bg-card/70' : ''
                             }`}
                             onClick={() => setSelectedSimulation(selectedSimulation?.id === sim.id ? null : sim)}
                           >
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center text-lg font-bold text-white">
+                                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center text-lg font-bold text-foreground">
                                     {sim.client_name.charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <h3 className="font-semibold text-white">{sim.client_name}</h3>
-                                    <div className="flex items-center gap-2 text-sm text-white/50">
+                                    <h3 className="font-semibold text-foreground">{sim.client_name}</h3>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <Calendar className="h-3 w-3" />
                                       {monthName} {sim.reference_year}
                                     </div>
@@ -606,25 +606,25 @@ export function FunnelAnalysis() {
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <div className="text-right">
-                                    <p className="text-xs text-white/50">Vendas</p>
+                                    <p className="text-xs text-muted-foreground">Vendas</p>
                                     <p className="font-bold text-emerald-400">{sim.vendas}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-xs text-white/50">Faturamento</p>
+                                    <p className="text-xs text-muted-foreground">Faturamento</p>
                                     <p className="font-bold text-primary">R$ {costs.faturamento.toLocaleString('pt-BR')}</p>
                                   </div>
                                   <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(sim.id); }}
                                     className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                  <ChevronDown className={`h-5 w-5 text-white/50 transition-transform ${selectedSimulation?.id === sim.id ? 'rotate-180' : ''}`} />
+                                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${selectedSimulation?.id === sim.id ? 'rotate-180' : ''}`} />
                                 </div>
                               </div>
                             </CardContent>
                           </Card>
 
                           {selectedSimulation?.id === sim.id && (
-                            <Card className="mt-2 border-purple-500/20 bg-gradient-to-br from-black via-neutral-900 to-black shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+                            <Card className="mt-2 border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
                               <CardContent className="p-6">
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                                   {[
@@ -639,25 +639,25 @@ export function FunnelAnalysis() {
                                         <div className={`p-3 rounded-xl bg-gradient-to-br ${step.gradient} shadow-lg mb-3`}>
                                           <step.icon className="h-6 w-6 text-white" />
                                         </div>
-                                        <p className="text-xs text-white/60 mb-1">{step.label}</p>
-                                        <p className="text-lg font-bold text-white">{step.value}</p>
-                                        {step.subtext && <p className="text-sm text-white/50 mt-1">({step.subtext})</p>}
+                                        <p className="text-xs text-muted-foreground mb-1">{step.label}</p>
+                                        <p className="text-lg font-bold text-foreground">{step.value}</p>
+                                        {step.subtext && <p className="text-sm text-muted-foreground mt-1">({step.subtext})</p>}
                                         {step.costPerUnit && <p className="text-xs text-primary mt-1 font-medium">{step.costPerUnit}/un</p>}
                                       </div>
-                                      {index < 4 && <div className="hidden md:block absolute top-1/2 -right-3 text-white/30 text-xl">→</div>}
+                                      {index < 4 && <div className="hidden md:block absolute top-1/2 -right-3 text-muted-foreground/50 text-xl">→</div>}
                                     </div>
                                   ))}
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                   <div className="p-6 rounded-2xl bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 border border-primary/30 text-center">
-                                    <p className="text-lg font-medium text-white mb-2">💰 Faturamento Projetado</p>
-                                    <p className="text-4xl font-bold text-white">R$ {costs.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                    <p className="text-sm text-white/60 mt-2">{sim.vendas} vendas × R$ {ticketMedioNum.toLocaleString('pt-BR')} ticket médio</p>
+                                    <p className="text-lg font-medium text-foreground mb-2">💰 Faturamento Projetado</p>
+                                    <p className="text-4xl font-bold text-foreground">R$ {costs.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-sm text-muted-foreground mt-2">{sim.vendas} vendas × R$ {ticketMedioNum.toLocaleString('pt-BR')} ticket médio</p>
                                   </div>
                                   <div className="p-6 rounded-2xl bg-gradient-to-r from-rose-500/20 via-orange-500/20 to-rose-500/20 border border-rose-500/30 text-center">
-                                    <p className="text-lg font-medium text-white mb-2">💵 Custo por Venda</p>
-                                    <p className="text-4xl font-bold text-white">R$ {costs.custoPorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    <p className="text-sm text-white/60 mt-2">R$ {Number(sim.investimento).toLocaleString('pt-BR')} ÷ {sim.vendas} vendas</p>
+                                    <p className="text-lg font-medium text-foreground mb-2">💵 Custo por Venda</p>
+                                    <p className="text-4xl font-bold text-foreground">R$ {costs.custoPorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-sm text-muted-foreground mt-2">R$ {Number(sim.investimento).toLocaleString('pt-BR')} ÷ {sim.vendas} vendas</p>
                                   </div>
                                 </div>
                               </CardContent>

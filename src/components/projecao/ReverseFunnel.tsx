@@ -27,11 +27,11 @@ export function ReverseFunnel() {
   const faturamento = vendasNum * ticketMedioNum;
 
   const funnelSteps = [
-    { label: 'Investimento', value: formatCurrency(investimento), icon: DollarSign, gradient: 'from-slate-600 to-slate-700', textColor: 'text-slate-300' },
-    { label: 'Leads', value: formatNumber(leads), icon: Users, gradient: 'from-blue-600 to-blue-700', textColor: 'text-blue-300' },
-    { label: 'Qualificações Realizadas', value: formatNumber(simulacoes), subtitle: `${TAXA_SIMULACOES}% dos leads`, icon: TrendingUp, gradient: 'from-violet-600 to-violet-700', textColor: 'text-violet-300' },
-    { label: 'Qualificados', value: formatNumber(qualificados), subtitle: `${TAXA_QUALIFICADOS}% das qualificações`, icon: Target, gradient: 'from-purple-600 to-purple-700', textColor: 'text-purple-300' },
-    { label: 'Vendas', value: formatNumber(vendasNum), subtitle: `${TAXA_VENDAS}% dos qualificados`, icon: Target, gradient: 'from-fuchsia-600 to-pink-600', textColor: 'text-fuchsia-300', highlight: true },
+    { label: 'Investimento', value: formatCurrency(investimento), icon: DollarSign, gradient: 'from-slate-600 to-slate-700', textColor: 'text-slate-700 dark:text-slate-300' },
+    { label: 'Leads', value: formatNumber(leads), icon: Users, gradient: 'from-blue-600 to-blue-700', textColor: 'text-blue-700 dark:text-blue-300' },
+    { label: 'Qualificações Realizadas', value: formatNumber(simulacoes), subtitle: `${TAXA_SIMULACOES}% dos leads`, icon: TrendingUp, gradient: 'from-violet-600 to-violet-700', textColor: 'text-violet-700 dark:text-violet-300' },
+    { label: 'Qualificados', value: formatNumber(qualificados), subtitle: `${TAXA_QUALIFICADOS}% das qualificações`, icon: Target, gradient: 'from-purple-600 to-purple-700', textColor: 'text-purple-700 dark:text-purple-300' },
+    { label: 'Vendas', value: formatNumber(vendasNum), subtitle: `${TAXA_VENDAS}% dos qualificados`, icon: Target, gradient: 'from-fuchsia-600 to-pink-600', textColor: 'text-fuchsia-700 dark:text-fuchsia-300', highlight: true },
   ];
 
   return (
@@ -73,7 +73,7 @@ export function ReverseFunnel() {
         {funnelSteps.map((step, index) => (
           <div key={step.label}>
             <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-              step.highlight ? 'bg-gradient-to-r from-fuchsia-900/40 to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10' : 'bg-card/60 border-border/30'
+              step.highlight ? 'bg-gradient-to-r from-fuchsia-100 to-pink-100 dark:from-fuchsia-900/40 dark:to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10' : 'bg-card/60 border-border/30'
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl bg-gradient-to-br ${step.gradient} shadow-md`}>
@@ -84,7 +84,7 @@ export function ReverseFunnel() {
                   {step.subtitle && <p className="text-xs text-muted-foreground">{step.subtitle}</p>}
                 </div>
               </div>
-              <span className={`text-xl font-bold ${step.highlight ? 'text-fuchsia-300' : 'text-foreground'}`}>{step.value}</span>
+              <span className={`text-xl font-bold ${step.highlight ? 'text-fuchsia-700 dark:text-fuchsia-300' : 'text-foreground'}`}>{step.value}</span>
             </div>
             {index < funnelSteps.length - 1 && (
               <div className="flex justify-center py-1"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
@@ -93,7 +93,7 @@ export function ReverseFunnel() {
         ))}
       </div>
 
-      <Card className="border-green-500/30 bg-gradient-to-r from-green-900/30 to-emerald-900/30 shadow-xl shadow-green-500/5">
+      <Card className="border-green-500/30 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 shadow-xl shadow-green-500/5">
         <CardContent className="py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -101,11 +101,11 @@ export function ReverseFunnel() {
                 <Banknote className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-green-400">Faturamento Projetado</p>
+                <p className="text-sm text-green-700 dark:text-green-400">Faturamento Projetado</p>
                 <p className="text-xs text-muted-foreground">{formatNumber(vendasNum)} vendas × {formatCurrency(ticketMedioNum)}</p>
               </div>
             </div>
-            <span className="text-3xl font-bold text-green-400">{formatCurrency(faturamento)}</span>
+            <span className="text-3xl font-bold text-green-700 dark:text-green-400">{formatCurrency(faturamento)}</span>
           </div>
         </CardContent>
       </Card>
