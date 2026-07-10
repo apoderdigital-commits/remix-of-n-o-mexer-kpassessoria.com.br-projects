@@ -131,10 +131,10 @@ export function ExecutiveSummary({
     : null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 via-card/60 to-background/60 backdrop-blur-sm p-4 sm:p-5">
+    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-muted/90 via-card/80 to-background/80 backdrop-blur-sm p-4 sm:p-5 dark:from-card/80 dark:via-card/60 dark:to-background/60">
       {/* glow */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -left-24 h-56 w-56 rounded-full bg-primary/25 blur-3xl dark:bg-primary/15" />
+      <div className="pointer-events-none absolute -bottom-32 -right-24 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl dark:bg-fuchsia-500/10" />
 
       <div className="relative">
         {/* Header */}
