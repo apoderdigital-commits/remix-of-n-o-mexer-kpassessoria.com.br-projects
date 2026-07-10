@@ -166,7 +166,7 @@ function FullRankingContent({
                   width={86}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(210 40% 92%)", fontSize: 12, fontWeight: 600 }}
+                  tick={{ fill: "hsl(var(--foreground))", fontSize: 13, fontWeight: 700 }}
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
