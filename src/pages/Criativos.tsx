@@ -514,7 +514,7 @@ export default function Index() {
       {/* WhatsApp info banner */}
       <div className="flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-3 text-sm text-muted-foreground">
         <ArrowRight className="h-5 w-5 shrink-0 text-amber-400" />
-        <p className="text-primary-foreground">
+        <p className="text-foreground">
           Ao clicar no <MessageCircle className="inline h-4 w-4 text-green-500 mx-0.5 -mt-0.5" /> ao lado do criativo, o link será enviado diretamente para o seu WhatsApp.
         </p>
       </div>
