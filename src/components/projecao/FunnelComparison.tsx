@@ -489,7 +489,7 @@ export function FunnelComparison() {
               </Select>
             </div>
             <Button onClick={handleExport} disabled={!selectedClientId} variant="outline"
-              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20">
+              className="border-emerald-500/40 bg-emerald-500/10 text-black font-bold hover:bg-emerald-500/20">
               <Download className="h-4 w-4 mr-2" /> Exportar PNG
             </Button>
             <Button onClick={handleSave} disabled={saving || !selectedClientId}
