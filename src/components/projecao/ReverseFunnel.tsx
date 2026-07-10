@@ -73,7 +73,7 @@ export function ReverseFunnel() {
         {funnelSteps.map((step, index) => (
           <div key={step.label}>
             <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-              step.highlight ? 'bg-gradient-to-r from-fuchsia-900/40 to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10' : 'bg-card/60 border-border/30'
+              step.highlight ? 'bg-gradient-to-r from-fuchsia-100 to-pink-100 dark:from-fuchsia-900/40 dark:to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10' : 'bg-card/60 border-border/30'
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl bg-gradient-to-br ${step.gradient} shadow-md`}>
@@ -84,7 +84,7 @@ export function ReverseFunnel() {
                   {step.subtitle && <p className="text-xs text-muted-foreground">{step.subtitle}</p>}
                 </div>
               </div>
-              <span className={`text-xl font-bold ${step.highlight ? 'text-fuchsia-300' : 'text-foreground'}`}>{step.value}</span>
+              <span className={`text-xl font-bold ${step.highlight ? 'text-fuchsia-700 dark:text-fuchsia-300' : 'text-foreground'}`}>{step.value}</span>
             </div>
             {index < funnelSteps.length - 1 && (
               <div className="flex justify-center py-1"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
