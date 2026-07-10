@@ -91,29 +91,29 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
             {/* Faltou ou Bateu */}
             {hitGoal ? (
               <div className="p-4 rounded-xl border bg-green-500/15 border-green-500/40">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-green-400 flex items-center gap-1">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
                   <CheckCheck className="h-3 w-3" /> Bateu a meta
                 </p>
-                <p className="text-3xl font-bold text-green-300 mt-1 leading-none">
+                <p className="text-3xl font-bold text-green-700 dark:text-green-300 mt-1 leading-none">
                   +{formatNumber(value - metaQty)}
                 </p>
-                <p className="text-base font-semibold text-green-300 mt-1">
+                <p className="text-base font-semibold text-green-700 dark:text-green-300 mt-1">
                   +{(achievedPct - metaPct!).toFixed(1)}%
                 </p>
-                <p className="text-[11px] text-green-400/80 mt-1">acima do mínimo</p>
+                <p className="text-[11px] text-green-700/80 dark:text-green-400/80 mt-1">acima do mínimo</p>
               </div>
             ) : (
               <div className="p-4 rounded-xl border bg-amber-500/10 border-amber-500/40">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-400 flex items-center gap-1">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> Faltou
                 </p>
-                <p className="text-3xl font-bold text-amber-300 mt-1 leading-none">
+                <p className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1 leading-none">
                   {formatNumber(missing)}
                 </p>
-                <p className="text-base font-semibold text-amber-300 mt-1">
+                <p className="text-base font-semibold text-amber-700 dark:text-amber-300 mt-1">
                   {missingPct.toFixed(1)}%
                 </p>
-                <p className="text-[11px] text-amber-400/80 mt-1">para bater a meta</p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-1">para bater a meta</p>
               </div>
             )}
           </div>
