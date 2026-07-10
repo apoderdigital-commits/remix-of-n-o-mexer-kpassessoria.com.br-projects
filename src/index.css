@@ -49,6 +49,45 @@
     --chart-4: 38 92% 50%;
     --chart-5: 0 84% 60%;
   }
+
+  .light {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 263 70% 58%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 30% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 30% 94%;
+    --muted-foreground: 215 16% 40%;
+
+    --accent: 263 70% 58%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 25% 88%;
+    --input: 214 25% 88%;
+    --ring: 263 70% 58%;
+
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 263 70% 58%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 30% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 25% 88%;
+    --sidebar-ring: 263 70% 58%;
+  }
 }
 
 @layer base {
@@ -65,6 +104,11 @@
   background: hsl(263 70% 58% / 0.06);
   backdrop-filter: blur(12px);
   border: 1px solid hsl(263 70% 58% / 0.15);
+}
+
+.light .glass-card {
+  background: hsl(0 0% 100% / 0.7);
+  border: 1px solid hsl(263 70% 58% / 0.12);
 }
 
 @keyframes ranking-highlight {
