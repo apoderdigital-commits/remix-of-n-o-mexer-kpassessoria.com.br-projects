@@ -60,22 +60,22 @@ export default function Projecao() {
 
           <div className="w-full mx-auto px-2">
             <Tabs defaultValue="calculator" className="space-y-8">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-black/80 backdrop-blur-xl border border-purple-500/30 p-2 rounded-2xl h-auto gap-2 shadow-2xl">
-                <TabsTrigger value="calculator" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-white hover:bg-white/10">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-card/80 dark:bg-black/80 backdrop-blur-xl border border-border dark:border-purple-500/30 p-2 rounded-2xl h-auto gap-2 shadow-2xl">
+                <TabsTrigger value="calculator" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-muted-foreground dark:text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-foreground dark:hover:text-white hover:bg-foreground/5 dark:hover:bg-white/10">
                   <Calculator className="h-4 w-4" />
                   <span className="hidden sm:inline font-medium">Análise & Histórico</span>
                   <span className="sm:hidden font-medium">Análise</span>
                 </TabsTrigger>
-                <TabsTrigger value="comparison" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-white hover:bg-white/10">
+                <TabsTrigger value="comparison" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-muted-foreground dark:text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-foreground dark:hover:text-white hover:bg-foreground/5 dark:hover:bg-white/10">
                   <GitCompare className="h-4 w-4" />
                   <span className="hidden sm:inline font-medium">Comparativo</span>
                   <span className="sm:hidden font-medium">Comp.</span>
                 </TabsTrigger>
-                <TabsTrigger value="scale" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-white hover:bg-white/10">
+                <TabsTrigger value="scale" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-muted-foreground dark:text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-foreground dark:hover:text-white hover:bg-foreground/5 dark:hover:bg-white/10">
                   <Rocket className="h-4 w-4" />
                   <span className="font-medium">Cenários</span>
                 </TabsTrigger>
-                <TabsTrigger value="reverse" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-white hover:bg-white/10">
+                <TabsTrigger value="reverse" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-fuchsia-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 text-muted-foreground dark:text-white/70 rounded-xl py-3 px-4 transition-all duration-300 hover:text-foreground dark:hover:text-white hover:bg-foreground/5 dark:hover:bg-white/10">
                   <Target className="h-4 w-4" />
                   <span className="hidden sm:inline font-medium">Funil Reverso</span>
                   <span className="sm:hidden font-medium">Reverso</span>
@@ -83,7 +83,7 @@ export default function Projecao() {
               </TabsList>
 
               <div className="flex gap-6">
-                <div className="flex-1 bg-black/60 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-2xl p-6 md:p-8">
+                <div className="flex-1 bg-card/80 dark:bg-black/60 backdrop-blur-xl rounded-3xl border border-border dark:border-purple-500/20 shadow-2xl p-6 md:p-8">
                   <TabsContent value="calculator" className="mt-0"><FunnelAnalysis /></TabsContent>
                   <TabsContent value="comparison" className="mt-0"><FunnelComparison /></TabsContent>
                   <TabsContent value="scale" className="mt-0"><ScaleScenarios /></TabsContent>
