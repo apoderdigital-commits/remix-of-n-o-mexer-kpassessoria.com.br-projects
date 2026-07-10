@@ -83,7 +83,7 @@ export default function Projecao() {
               </TabsList>
 
               <div className="flex gap-6">
-                <div className="flex-1 bg-card/80 dark:bg-black/60 backdrop-blur-xl rounded-3xl border border-border dark:border-purple-500/20 shadow-2xl p-6 md:p-8">
+                <div className="dark flex-1 bg-black/60 text-foreground backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-2xl p-6 md:p-8">
                   <TabsContent value="calculator" className="mt-0"><FunnelAnalysis /></TabsContent>
                   <TabsContent value="comparison" className="mt-0"><FunnelComparison /></TabsContent>
                   <TabsContent value="scale" className="mt-0"><ScaleScenarios /></TabsContent>
