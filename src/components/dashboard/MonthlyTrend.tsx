@@ -86,21 +86,21 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "hsl(215 20% 60%)", fontSize: 11 }}
+                tick={{ fill: axisTick, fontSize: 11 }}
                 tickLine={false}
-                axisLine={{ stroke: "hsl(222 30% 20%)" }}
+                axisLine={{ stroke: axisLine }}
               />
-              <YAxis tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: axisTick, fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
                 cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
                 contentStyle={{
-                  background: "hsl(222 40% 10%)",
-                  border: "1px solid hsl(222 30% 20%)",
+                  background: tooltipBg,
+                  border: `1px solid ${tooltipBorder}`,
                   borderRadius: 8,
-                  color: "hsl(210 40% 98%)",
+                  color: tooltipColor,
                   fontSize: 12,
                 }}
               />
@@ -108,17 +108,17 @@ export function MonthlyTrend({ data }: MonthlyTrendProps) {
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => <span className="text-muted-foreground">{v}</span>}
               />
-              <Bar dataKey="leads" name="Leads" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="leads" name="Leads" radius={[4, 4, 0, 0]} fill="hsl(199 89% 48%)">
                 {chartData.map((d, i) => (
                   <Cell key={`l-${i}`} fill="hsl(199 89% 48%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
                 ))}
               </Bar>
-              <Bar dataKey="cpf" name="Lead Qual." radius={[4, 4, 0, 0]}>
+              <Bar dataKey="cpf" name="Lead Qual." radius={[4, 4, 0, 0]} fill="hsl(142 71% 45%)">
                 {chartData.map((d, i) => (
                   <Cell key={`c-${i}`} fill="hsl(142 71% 45%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
                 ))}
               </Bar>
-              <Bar dataKey="sales" name="Vendas" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="sales" name="Vendas" radius={[4, 4, 0, 0]} fill="hsl(263 70% 58%)">
                 {chartData.map((d, i) => (
                   <Cell key={`s-${i}`} fill="hsl(263 70% 58%)" fillOpacity={(d as any).projected ? 0.4 : 1} />
                 ))}
