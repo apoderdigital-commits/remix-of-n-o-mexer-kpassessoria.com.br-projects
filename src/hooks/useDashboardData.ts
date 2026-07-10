@@ -31,6 +31,21 @@ export function useClients() {
   });
 }
 
+export function useClientCampaignFilter(clientId: string | null) {
+  return useQuery({
+    queryKey: ["campaign_filter", clientId],
+    queryFn: async () => {
+      if (!clientId) return [] as string[];
+      const { data } = await (supabase.from as any)("client_campaign_filters")
+        .select("excluded_campaigns")
+        .eq("client_id", clientId)
+        .maybeSingle();
+      return ((data?.excluded_campaigns as string[]) || []);
+    },
+    enabled: !!clientId,
+  });
+}
+
 export function useAccessibleClients() {
   return useQuery({
     queryKey: ["accessible_clients"],
