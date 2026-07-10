@@ -122,35 +122,43 @@ Deno.serve(async (req) => {
         ? { since: body.since, until: body.until }
         : computePeriod(report_type);
 
-    // ── Meta (investimento + leads) ──
-    // Sincroniza e usa os totais retornados pela própria fetch-meta-data.
-    let totalSpent = 0;
-    let totalLeads = 0;
+    // ── Meta (investimento + leads) — RESPEITANDO o filtro de campanhas do cliente ──
+    // 1) Sincroniza a Meta (atualiza meta_campaigns no período).
     try {
-      const metaRes = await fetch(`${SUPABASE_URL}/functions/v1/fetch-meta-data`, {
+      await fetch(`${SUPABASE_URL}/functions/v1/fetch-meta-data`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
         body: JSON.stringify({ client_id, since: period.since, until: period.until }),
       });
-      if (metaRes.ok) {
-        const m = await metaRes.json();
-        if (m?.success) {
-          totalSpent = Number(m.total_spent) || 0;
-          totalLeads = Number(m.total_leads) || 0;
-        }
-      }
     } catch (_) {
-      // fallback abaixo
+      // segue com o que já estiver salvo na tabela
     }
-    if (totalSpent === 0 && totalLeads === 0) {
-      const { data: campaigns } = await supabase
-        .from("meta_campaigns")
-        .select("amount_spent, leads_total")
+    // 2) Filtro de campanhas (excluídas) configurado para o cliente.
+    let excludedCampaigns: string[] = [];
+    try {
+      const { data: filt } = await supabase
+        .from("client_campaign_filters")
+        .select("excluded_campaigns")
         .eq("client_id", client_id)
-        .gte("date", period.since)
-        .lte("date", period.until);
-      totalSpent = (campaigns || []).reduce((s: number, c: any) => s + (Number(c.amount_spent) || 0), 0);
-      totalLeads = (campaigns || []).reduce((s: number, c: any) => s + (c.leads_total || 0), 0);
+        .maybeSingle();
+      excludedCampaigns = ((filt?.excluded_campaigns as string[]) || []);
+    } catch (_) {
+      // sem filtro → conta todas
+    }
+    const exclSet = new Set(excludedCampaigns.map((s: string) => (s || "").trim()));
+    // 3) Soma por campanha, ignorando as excluídas (mesma lógica da dashboard).
+    let totalSpent = 0;
+    let totalLeads = 0;
+    const { data: campaigns } = await supabase
+      .from("meta_campaigns")
+      .select("campaign_name, amount_spent, leads_total")
+      .eq("client_id", client_id)
+      .gte("date", period.since)
+      .lte("date", period.until);
+    for (const c of (campaigns || [])) {
+      if (exclSet.has(((c as any).campaign_name || "").trim())) continue;
+      totalSpent += Number((c as any).amount_spent) || 0;
+      totalLeads += Number((c as any).leads_total) || 0;
     }
     const cpl = totalLeads > 0 ? totalSpent / totalLeads : 0;
 
