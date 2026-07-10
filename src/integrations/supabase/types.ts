@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_campaign_filters: {
+        Row: {
+          client_id: string
+          created_at: string
+          excluded_campaigns: string[]
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          excluded_campaigns?: string[]
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          excluded_campaigns?: string[]
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_campaign_filters_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_report_configs: {
         Row: {
           client_id: string
