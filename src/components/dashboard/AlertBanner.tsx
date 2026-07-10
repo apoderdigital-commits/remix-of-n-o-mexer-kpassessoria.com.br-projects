@@ -108,8 +108,8 @@ export function AlertBanner({
               aria-label="Dispensar"
               className={`flex h-4 w-4 items-center justify-center rounded transition-colors ${
                 isCritical
-                  ? "text-red-300/60 hover:bg-red-500/15 hover:text-red-200"
-                  : "text-amber-300/60 hover:bg-amber-500/15 hover:text-amber-200"
+                  ? "text-red-700/60 dark:text-red-300/60 hover:bg-red-500/15 hover:text-red-800 dark:hover:text-red-200"
+                  : "text-amber-700/60 dark:text-amber-300/60 hover:bg-amber-500/15 hover:text-amber-800 dark:hover:text-amber-200"
               }`}
             >
               <X className="h-3 w-3" />
