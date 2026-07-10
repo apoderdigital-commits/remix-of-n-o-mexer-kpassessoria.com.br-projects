@@ -17,16 +17,16 @@ export default function Projecao() {
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${wallpaperKp})` }} />
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px]" />
+      <div className="fixed inset-0 bg-background/85 dark:bg-black/70 backdrop-blur-[2px]" />
 
       <header className="sticky top-0 z-50 bg-transparent">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/">
-            <Button variant="outline" size="sm" className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 hover:text-white">
+            <Button variant="outline" size="sm" className="bg-foreground/5 dark:bg-white/10 backdrop-blur-md border-border dark:border-white/20 text-foreground dark:text-white hover:bg-foreground/10 dark:hover:bg-white/20 hover:text-foreground dark:hover:text-white">
               <ArrowLeft className="h-4 w-4 mr-2" /> Portal
             </Button>
           </Link>
-          <span className="text-sm text-white/80 hidden sm:block px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
+          <span className="text-sm text-muted-foreground dark:text-white/80 hidden sm:block px-4 py-2 rounded-full bg-foreground/5 dark:bg-white/10 backdrop-blur-md border border-border dark:border-white/20">
             {user?.email}
           </span>
         </div>
