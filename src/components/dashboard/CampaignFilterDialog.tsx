@@ -61,11 +61,25 @@ export function CampaignFilterDialog({ open, onClose, clientId, campaigns, exclu
     setSaving(true);
     // Excluídas = campanhas do período que ficaram DESMARCADAS
     const excludedNow = list.map((c) => c.name).filter((n) => !checked.has(n));
-    const { error } = await (supabase.from as any)("client_campaign_filters")
-      .upsert({ client_id: clientId, excluded_campaigns: excludedNow, updated_at: new Date().toISOString() }, { onConflict: "client_id" });
+    // Upsert manual (não depende de constraint ON CONFLICT / cache do PostgREST)
+    const { data: existing, error: selErr } = await (supabase.from as any)("client_campaign_filters")
+      .select("client_id").eq("client_id", clientId).maybeSingle();
+    let error: any = selErr;
+    if (!error) {
+      if (existing) {
+        const res = await (supabase.from as any)("client_campaign_filters")
+          .update({ excluded_campaigns: excludedNow, updated_at: new Date().toISOString() })
+          .eq("client_id", clientId);
+        error = res.error;
+      } else {
+        const res = await (supabase.from as any)("client_campaign_filters")
+          .insert({ client_id: clientId, excluded_campaigns: excludedNow });
+        error = res.error;
+      }
+    }
     setSaving(false);
     if (error) {
-      if (/client_campaign_filters/.test(error.message || "")) {
+      if (/client_campaign_filters|does not exist|schema cache/i.test(error.message || "")) {
         toast.error("Precisa rodar a migração do filtro de campanhas (peça ao Lovable).");
       } else {
         toast.error("Erro ao salvar filtro: " + error.message);
