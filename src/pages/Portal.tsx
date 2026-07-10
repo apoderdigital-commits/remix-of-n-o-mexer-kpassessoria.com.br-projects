@@ -111,6 +111,7 @@ export default function Portal() {
                 </Link>
               </>
             )}
+            <ThemeToggle />
             <Button size="icon" variant="ghost" onClick={signOut} className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline text-sm">Sair</span>
