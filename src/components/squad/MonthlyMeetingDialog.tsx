@@ -17,9 +17,10 @@ interface Props {
   squadId: string;
   referenceMonth: string; // YYYY-MM
   clients: { id: string; name: string }[]; // só as mensais marcadas no mês
+  onSaved?: () => void; // recarrega o painel após anexar/encerrar
 }
 
-export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, clients }: Props) {
+export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, clients, onSaved }: Props) {
   const [clientName, setClientName] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -64,6 +65,7 @@ export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, c
     setUploaded(true);
     setUploading(false);
     toast.success("Projeção anexada à reunião!");
+    onSaved?.();
   };
 
   const end = async () => {
@@ -81,6 +83,7 @@ export function MonthlyMeetingDialog({ open, onClose, squadId, referenceMonth, c
     setEnding(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Reunião mensal encerrada e guardada!");
+    onSaved?.();
     reset();
     onClose();
   };
