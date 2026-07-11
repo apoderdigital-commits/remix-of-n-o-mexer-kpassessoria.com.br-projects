@@ -2947,6 +2947,7 @@ function AgendaPanel({
 
   const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
   const [agendaMissing, setAgendaMissing] = useState(false);
+  const [docViewer, setDocViewer] = useState<{ url: string; name: string } | null>(null);
   const [meetingOpen, setMeetingOpen] = useState(false);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
@@ -3031,10 +3032,10 @@ function AgendaPanel({
     return m;
   }, [sessions, month]);
 
-  const openMensalDoc = async (path: string) => {
+  const openMensalDoc = async (path: string, name: string) => {
     const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o documento da mensal."); return; }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    setDocViewer({ url: data.signedUrl, name });
   };
 
   return (
@@ -3118,6 +3119,22 @@ function AgendaPanel({
         </DialogContent>
       </Dialog>
 
+      {/* Visualizador do documento da mensal — popup dentro da dash */}
+      <Dialog open={!!docViewer} onOpenChange={(o) => { if (!o) setDocViewer(null); }}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Documento da mensal</DialogTitle>
+          </DialogHeader>
+          {docViewer && (
+            /\.pdf(\?|$)/i.test(docViewer.name) ? (
+              <iframe src={docViewer.url} title="Documento da mensal" className="w-full h-[75vh] rounded-lg border border-border/30 bg-white" />
+            ) : (
+              <img src={docViewer.url} alt="Documento da mensal" className="w-full h-auto rounded-lg border border-border/30" />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <SummaryStat label="Marcadas" value={stats.total} tone="primary" />
         <SummaryStat label="Realizadas" value={stats.done} tone="emerald" />
@@ -3192,14 +3209,17 @@ function AgendaPanel({
                       ) : (
                         <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
                       )}
-                      {docByClient.has((a.client_name || "").trim().toLowerCase()) && (
-                        <button
-                          onClick={() => openMensalDoc(docByClient.get((a.client_name || "").trim().toLowerCase())!.path)}
-                          className="flex items-center gap-1 text-[11px] text-primary hover:underline"
-                        >
-                          <FileText className="h-3 w-3" /> Ver documento da mensal
-                        </button>
-                      )}
+                      {docByClient.has((a.client_name || "").trim().toLowerCase()) && (() => {
+                        const doc = docByClient.get((a.client_name || "").trim().toLowerCase())!;
+                        return (
+                          <button
+                            onClick={() => openMensalDoc(doc.path, doc.name)}
+                            className="mt-1.5 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 transition-colors shadow-sm"
+                          >
+                            <FileText className="h-4 w-4" /> Ver documento da mensal
+                          </button>
+                        );
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
