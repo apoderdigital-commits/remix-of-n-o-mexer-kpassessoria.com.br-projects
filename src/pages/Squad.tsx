@@ -2148,6 +2148,7 @@ export default function Squad() {
                 onEdit={(a) => { setEditingAg(a); setOpenAg(true); }}
                 onRemove={removeAg}
                 onToggleDone={toggleAgDone}
+                onReload={() => loadAll(squadId)}
               />
             </TabsContent>
           </Tabs>
@@ -2923,7 +2924,7 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, sessions, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone,
+  agenda, sessions, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone, onReload,
 }: {
   agenda: Agenda[];
   sessions: any[];
@@ -2934,6 +2935,7 @@ function AgendaPanel({
   onEdit: (a: Agenda) => void;
   onRemove: (id: string) => void;
   onToggleDone: (a: Agenda) => void;
+  onReload: () => void;
 }) {
   const months = useMemo(() => {
     const set = new Set<string>();
@@ -3057,6 +3059,7 @@ function AgendaPanel({
         <MonthlyMeetingDialog
           open={meetingOpen}
           onClose={() => setMeetingOpen(false)}
+          onSaved={onReload}
           squadId={squadId}
           referenceMonth={month}
           clients={meetingOptions}
