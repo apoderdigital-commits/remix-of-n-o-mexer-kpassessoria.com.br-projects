@@ -69,7 +69,7 @@ export function NewThemeAnnouncement() {
 
       <div className="flex items-center gap-2 mb-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <Sparkles className="h-4 w-4" />
+          <Palette className="h-4 w-4" />
         </div>
         <span className="text-xs font-bold uppercase tracking-wider text-primary">Novidade</span>
       </div>
