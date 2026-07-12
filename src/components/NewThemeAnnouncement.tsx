@@ -8,7 +8,7 @@ const MIGRATION_KEY = "kp-theme-light-default-v2";
 
 /**
  * Ao logar, força o tema claro como padrão (uma única vez por usuário/dispositivo)
- * e mostra um popup no canto inferior direito avisando da novidade. O usuário pode
+ * e mostra um popup no canto inferior esquerdo avisando da novidade. O usuário pode
  * manter o tema claro ou optar pelo escuro — a escolha vira o padrão dele.
  */
 export function NewThemeAnnouncement() {
