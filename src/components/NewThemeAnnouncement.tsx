@@ -22,8 +22,14 @@ export function NewThemeAnnouncement() {
 
   useEffect(() => {
     if (loading || !user) return;
+
     // Só aparece na homepage de escolha de dashboards.
-    if (pathname !== "/") return;
+    if (pathname !== "/") {
+      // Se o usuário navegou para fora da homepage, fecha o popup imediatamente.
+      setOpen(false);
+      setLeaving(false);
+      return;
+    }
 
     const done = localStorage.getItem(MIGRATION_KEY);
     if (done) return;
