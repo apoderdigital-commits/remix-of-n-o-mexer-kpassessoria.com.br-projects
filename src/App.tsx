@@ -86,6 +86,7 @@ const App = () => (
           <VersionGate />
           <AppRoutes />
           <SupportWhatsAppButton />
+          <NewThemeAnnouncement />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
