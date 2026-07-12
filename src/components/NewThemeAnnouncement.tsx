@@ -7,9 +7,11 @@ import { Sparkles, Sun, Moon, X } from "lucide-react";
 const MIGRATION_KEY = "kp-theme-light-default-v2";
 
 /**
- * Ao logar, força o tema claro como padrão (uma única vez por usuário/dispositivo)
- * e mostra um popup no canto inferior esquerdo avisando da novidade. O usuário pode
- * manter o tema claro ou optar pelo escuro — a escolha vira o padrão dele.
+ * Ao logar e acessar a homepage de escolha de dashboards, força o tema claro como
+ * padrão (uma única vez por usuário/dispositivo) e mostra um popup no canto inferior
+ * esquerdo avisando da novidade. O usuário pode manter o tema claro ou optar pelo
+ * escuro — a escolha vira o padrão dele. Só aparece na homepage; some ao entrar em
+ * qualquer dashboard.
  */
 export function NewThemeAnnouncement() {
   const { setTheme } = useTheme();
@@ -20,7 +22,8 @@ export function NewThemeAnnouncement() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (pathname === "/login" || pathname === "/view") return;
+    // Só aparece na homepage de escolha de dashboards.
+    if (pathname !== "/") return;
 
     const done = localStorage.getItem(MIGRATION_KEY);
     if (done) return;
