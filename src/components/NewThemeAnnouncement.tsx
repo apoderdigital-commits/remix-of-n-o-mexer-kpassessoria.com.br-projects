@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Sparkles, Sun, Moon, X } from "lucide-react";
+import { Palette, Sun, Moon, X } from "lucide-react";
 
 const MIGRATION_KEY = "kp-theme-light-default-v2";
 
