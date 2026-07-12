@@ -76,7 +76,7 @@ const AppRoutes = () => (
 );
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="kp-theme">
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="kp-theme">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
