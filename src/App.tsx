@@ -18,6 +18,7 @@ import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ClientView from "./pages/ClientView.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
+import { NewThemeAnnouncement } from "./components/NewThemeAnnouncement";
 import { VersionGate } from "./components/VersionGate";
 
 const queryClient = new QueryClient();
@@ -76,7 +77,7 @@ const AppRoutes = () => (
 );
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="kp-theme">
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="kp-theme">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
@@ -85,6 +86,7 @@ const App = () => (
           <VersionGate />
           <AppRoutes />
           <SupportWhatsAppButton />
+          <NewThemeAnnouncement />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
