@@ -20,7 +20,8 @@ export function NewThemeAnnouncement() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (pathname === "/login" || pathname === "/view") return;
+    // Só aparece na homepage de escolha de dashboards.
+    if (pathname !== "/") return;
 
     const done = localStorage.getItem(MIGRATION_KEY);
     if (done) return;
