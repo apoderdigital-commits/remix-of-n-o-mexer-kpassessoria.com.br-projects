@@ -8,7 +8,7 @@ const MIGRATION_KEY = "kp-theme-light-default-v2";
 
 /**
  * Ao logar, força o tema claro como padrão (uma única vez por usuário/dispositivo)
- * e mostra um popup no canto inferior direito avisando da novidade. O usuário pode
+ * e mostra um popup no canto inferior esquerdo avisando da novidade. O usuário pode
  * manter o tema claro ou optar pelo escuro — a escolha vira o padrão dele.
  */
 export function NewThemeAnnouncement() {
@@ -49,7 +49,7 @@ export function NewThemeAnnouncement() {
 
   return (
     <div
-      className={`fixed bottom-24 right-5 z-[60] w-[320px] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl shadow-2xl shadow-primary/10 p-4 transition-all duration-300 ${
+      className={`fixed bottom-24 left-5 z-[60] w-[320px] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl shadow-2xl shadow-primary/10 p-4 transition-all duration-300 ${
         leaving ? "opacity-0 translate-y-3" : "opacity-100 translate-y-0"
       }`}
       role="dialog"
