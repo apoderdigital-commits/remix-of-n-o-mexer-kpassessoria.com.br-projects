@@ -146,7 +146,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
                 <MessageCircle className="h-5 w-5 text-primary" /> Confirme seu WhatsApp
               </DialogTitle>
               <DialogDescription>
-                Este é o número cadastrado para <strong>{username}</strong>. Ele é seu?
+                Esse número para o usuário <strong>{username}</strong> (<strong>{fullName}</strong>) é seu?
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-2">
