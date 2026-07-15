@@ -386,9 +386,10 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setResetOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold text-primary transition-all"
+                    className="w-full flex flex-col items-center justify-center gap-1 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold text-primary transition-all text-center"
                   >
-                    <span>💬</span> Recuperar senha pelo WhatsApp
+                    <span>💬</span>
+                    <span>Recuperar senha</span>
                   </button>
                 )}
 
