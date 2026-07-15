@@ -19,6 +19,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState(initialUsername);
   const [maskedPhone, setMaskedPhone] = useState("");
+  const [fullName, setFullName] = useState("");
   const [verificationId, setVerificationId] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
