@@ -4,43 +4,51 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Palette, Sun, Moon, X } from "lucide-react";
 
-const MIGRATION_KEY = "kp-theme-light-default-v2";
+const MIGRATION_KEY_BASE = "kp-theme-light-default-v2";
 
 /**
- * Ao logar e acessar a homepage de escolha de dashboards, força o tema claro como
- * padrão (uma única vez por usuário/dispositivo) e mostra um popup no canto inferior
- * esquerdo avisando da novidade. O usuário pode manter o tema claro ou optar pelo
- * escuro — a escolha vira o padrão dele. Só aparece na homepage; some ao entrar em
- * qualquer dashboard.
+ * Ao logar e acessar a homepage de escolha de dashboards, mostra uma única vez
+ * um popup avisando sobre o novo tema padrão claro. O usuário pode manter o
+ * claro ou optar pelo escuro — a escolha vira o padrão dele e o popup nunca
+ * mais aparece (marcador é por usuário).
  */
 export function NewThemeAnnouncement() {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { user, loading } = useAuth();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
-  useEffect(() => {
-    if (loading || !user) return;
+  const storageKey = user ? `${MIGRATION_KEY_BASE}:${user.id}` : null;
 
-    // Só aparece na homepage de escolha de dashboards.
+  useEffect(() => {
+    if (loading || !user || !storageKey) return;
+
     if (pathname !== "/") {
-      // Se o usuário navegou para fora da homepage, fecha o popup imediatamente.
       setOpen(false);
       setLeaving(false);
       return;
     }
 
-    const done = localStorage.getItem(MIGRATION_KEY);
-    if (done) return;
+    // Migração de chave antiga (global) para chave por usuário.
+    const legacy = localStorage.getItem(MIGRATION_KEY_BASE);
+    if (legacy && !localStorage.getItem(storageKey)) {
+      localStorage.setItem(storageKey, "1");
+    }
 
-    // Novo padrão para todos: tema claro.
-    setTheme("light");
+    if (localStorage.getItem(storageKey)) return;
+
+    // Não força mais o tema — respeita a escolha atual do usuário.
     const t = setTimeout(() => setOpen(true), 600);
     return () => clearTimeout(t);
-  }, [loading, user, pathname, setTheme]);
+  }, [loading, user, pathname, storageKey]);
+
+  const markSeen = () => {
+    if (storageKey) localStorage.setItem(storageKey, "1");
+  };
 
   const close = () => {
+    markSeen();
     setLeaving(true);
     setTimeout(() => {
       setOpen(false);
@@ -48,9 +56,8 @@ export function NewThemeAnnouncement() {
     }, 250);
   };
 
-  const choose = (theme: "light" | "dark") => {
-    setTheme(theme);
-    localStorage.setItem(MIGRATION_KEY, "1");
+  const choose = (next: "light" | "dark") => {
+    setTheme(next);
     close();
   };
 
@@ -87,18 +94,18 @@ export function NewThemeAnnouncement() {
         Deixamos o tema claro como padrão. Caso queira o tema escuro, escolha abaixo.
       </p>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => choose("light")}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold py-2 hover:bg-primary/90 transition-colors"
+          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold h-9 px-2 hover:bg-primary/90 transition-colors"
         >
           <Sun className="h-3.5 w-3.5" /> Manter claro
         </button>
         <button
           type="button"
           onClick={() => choose("dark")}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/50 text-foreground text-xs font-semibold py-2 hover:bg-secondary transition-colors"
+          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/50 text-foreground text-xs font-semibold h-9 px-2 hover:bg-secondary transition-colors"
         >
           <Moon className="h-3.5 w-3.5" /> Tema escuro
         </button>
