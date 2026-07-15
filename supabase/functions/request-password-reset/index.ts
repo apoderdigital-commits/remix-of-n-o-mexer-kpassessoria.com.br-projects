@@ -68,10 +68,11 @@ Deno.serve(async (req) => {
     }
 
     const masked_phone = maskPhone(phoneDigits);
+    const full_name = profile.full_name || username;
 
     if (!send) {
       // Step 1 — just reveal masked phone for confirmation
-      return new Response(JSON.stringify({ masked_phone }), {
+      return new Response(JSON.stringify({ masked_phone, full_name }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -145,6 +146,7 @@ Deno.serve(async (req) => {
       verification_id: inserted.id,
       expires_at: inserted.expires_at,
       masked_phone,
+      full_name,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("[request-password-reset] error:", err);

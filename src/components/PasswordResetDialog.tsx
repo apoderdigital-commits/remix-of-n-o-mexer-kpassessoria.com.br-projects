@@ -19,6 +19,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState(initialUsername);
   const [maskedPhone, setMaskedPhone] = useState("");
+  const [fullName, setFullName] = useState("");
   const [verificationId, setVerificationId] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -30,6 +31,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
     setStep("username");
     setUsername(initialUsername);
     setMaskedPhone("");
+    setFullName("");
     setVerificationId("");
     setCode("");
     setNewPassword("");
@@ -57,6 +59,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
       return;
     }
     setMaskedPhone((data as any).masked_phone);
+    setFullName((data as any).full_name || "");
     setStep("confirm-phone");
   };
 
@@ -143,7 +146,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
                 <MessageCircle className="h-5 w-5 text-primary" /> Confirme seu WhatsApp
               </DialogTitle>
               <DialogDescription>
-                Este é o número cadastrado para <strong>{username}</strong>. Ele é seu?
+                Esse número para o usuário <strong>{username}</strong> (<strong>{fullName}</strong>) é seu?
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-2">
