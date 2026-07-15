@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, MessageCircle, ShieldCheck, KeyRound, ArrowLeft } from "lucide-react";
+import { Loader2, MessageCircle, ShieldCheck, KeyRound, ArrowLeft, Clock } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -24,6 +24,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const reset = () => {
     setStep("username");
@@ -151,24 +152,55 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
                 <p className="text-2xl font-bold tracking-wider text-foreground">{maskedPhone}</p>
               </div>
               <div className="flex gap-2">
-                <a
-                  href="https://wa.me/message/CX2FK5HG77WOD1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent px-4 py-2 text-sm font-medium transition"
+                <Button
+                  variant="outline"
+                  onClick={() => setSupportOpen(true)}
+                  className="flex-1"
                 >
-                  <MessageCircle className="h-4 w-4" /> Falar com o suporte
-                </a>
+                  Não é meu
+                </Button>
                 <Button onClick={sendCode} disabled={loading} className="flex-1">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sim, enviar código"}
                 </Button>
               </div>
-              <p className="text-[11px] text-center text-muted-foreground">
-                Não é seu número? Fale com o suporte para recuperar seu login. Tempo de resposta: até 1 hora.
-              </p>
             </div>
           </>
         )}
+
+        <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <MessageCircle className="h-5 w-5 text-primary" /> Recuperar login
+              </DialogTitle>
+              <DialogDescription>
+                Deseja falar com o suporte para recuperar seu login?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Tempo de resposta</p>
+                <p className="flex items-center justify-center gap-2 text-sm font-semibold text-foreground">
+                  <Clock className="h-4 w-4 text-primary" /> Até 1 hora
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setSupportOpen(false)} className="flex-1">
+                  Voltar
+                </Button>
+                <a
+                  href="https://wa.me/message/CX2FK5HG77WOD1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition"
+                  onClick={() => setSupportOpen(false)}
+                >
+                  <MessageCircle className="h-4 w-4" /> Sim, falar com suporte
+                </a>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {step === "code" && (
           <>
