@@ -49,6 +49,67 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
+    // UPDATE existing user (profile/access/role and optional auth password)
+    if ((body.action === "update" || body.action === "update_user") && body.user_id) {
+      const { user_id, password, full_name, role, dashboard_keys, client_ids, phone, squad_function } = body;
+
+      if (password && String(password).length < 6) {
+        return new Response(JSON.stringify({ error: "A senha precisa ter no mínimo 6 caracteres" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const authUpdate: Record<string, unknown> = {};
+      if (password) authUpdate.password = String(password);
+      if (full_name !== undefined) authUpdate.user_metadata = { full_name: full_name || "" };
+
+      if (Object.keys(authUpdate).length > 0) {
+        const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(user_id, authUpdate);
+        if (authUpdateError) {
+          return new Response(JSON.stringify({ error: authUpdateError.message }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      await adminClient.from("user_dashboard_access").delete().eq("user_id", user_id);
+      await adminClient.from("user_client_access").delete().eq("user_id", user_id);
+
+      if (dashboard_keys?.length) {
+        await adminClient.from("user_dashboard_access").insert(
+          dashboard_keys.map((dk: string) => ({ user_id, dashboard_key: dk }))
+        );
+      }
+
+      if (client_ids?.length) {
+        await adminClient.from("user_client_access").insert(
+          client_ids.map((cid: string) => ({ user_id, client_id: cid }))
+        );
+      }
+
+      await adminClient.from("user_roles").delete().eq("user_id", user_id);
+      if (role) await adminClient.from("user_roles").insert({ user_id, role });
+
+      const profileUpdate: Record<string, unknown> = {
+        full_name: full_name || null,
+        phone: String(phone || "").trim() || null,
+        squad_function: squad_function || null,
+      };
+      const { error: profileError } = await adminClient
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("user_id", user_id);
+      if (profileError) {
+        return new Response(JSON.stringify({ error: profileError.message }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, action: "update_user", user_id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // SOFT DELETE (move to trash for 7 days)
     if ((body.action === "delete" || body.action === "soft_delete") && body.user_id) {
       // Mark profile as deleted and ban auth user (prevents login)

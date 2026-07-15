@@ -43,7 +43,7 @@ interface UserRow {
 }
 
 export default function UsersPage() {
-  const { signOut } = useAuth();
+  const { signOut, user: currentUser } = useAuth();
   const { data: clients } = useClients();
   const queryClient = useQueryClient();
 
@@ -168,6 +168,10 @@ export default function UsersPage() {
   const handleSave = async () => {
     if (!form.username.trim()) { toast.error("Usuário é obrigatório"); return; }
     if (!editingUserId && !form.password) { toast.error("Senha é obrigatória"); return; }
+    if (editingUserId && form.password && form.password.length < 6) {
+      toast.error("A nova senha precisa ter no mínimo 6 caracteres");
+      return;
+    }
     if (!editingUserId && !form.phone.trim()) {
       toast.error("Telefone é obrigatório");
       return;
@@ -176,33 +180,23 @@ export default function UsersPage() {
     setSaving(true);
     try {
       if (editingUserId) {
-        await supabase.from("user_dashboard_access").delete().eq("user_id", editingUserId);
-        await supabase.from("user_client_access").delete().eq("user_id", editingUserId);
+        const { data, error } = await supabase.functions.invoke("create-internal-user", {
+          body: {
+            action: "update_user",
+            user_id: editingUserId,
+            password: form.password || undefined,
+            full_name: form.fullName,
+            role: form.role,
+            dashboard_keys: form.dashboards,
+            client_ids: form.clientIds,
+            phone: form.phone.trim(),
+            squad_function: form.squadFunction || null,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-        if (form.dashboards.length > 0) {
-          await supabase.from("user_dashboard_access").insert(
-            form.dashboards.map((dk) => ({ user_id: editingUserId, dashboard_key: dk }))
-          );
-        }
-
-        if (form.clientIds.length > 0) {
-          await supabase.from("user_client_access").insert(
-            form.clientIds.map((cid) => ({ user_id: editingUserId, client_id: cid }))
-          );
-        }
-
-        await supabase.from("user_roles").delete().eq("user_id", editingUserId);
-        await supabase.from("user_roles").insert({ user_id: editingUserId, role: form.role as any });
-
-        {
-          const profileUpdate: any = {};
-          if (form.fullName) profileUpdate.full_name = form.fullName;
-          profileUpdate.phone = form.phone.trim() || null;
-          profileUpdate.squad_function = form.squadFunction || null;
-          await supabase.from("profiles").update(profileUpdate).eq("user_id", editingUserId);
-        }
-
-        toast.success("Usuário atualizado!");
+        toast.success(form.password ? "Usuário e senha atualizados!" : "Usuário atualizado!");
         queryClient.invalidateQueries({ queryKey: ["admin_users"] });
         setOpen(false);
         resetForm();
@@ -538,12 +532,13 @@ export default function UsersPage() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {u.role !== "admin" && (
+                        {u.user_id !== currentUser?.id && (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => requestDelete(u)}
                             className="text-destructive hover:text-destructive"
+                            title="Excluir usuário"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

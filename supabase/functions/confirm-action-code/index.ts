@@ -46,6 +46,10 @@ async function execDeleteUser(admin: SupabaseClient, payload: any) {
   if (!user_id) throw new Error("user_id obrigatório");
   const { error } = await admin.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("user_id", user_id);
   if (error) throw new Error(error.message);
+  const { error: banError } = await admin.auth.admin.updateUserById(user_id, {
+    ban_duration: "876000h",
+  });
+  if (banError) throw new Error(banError.message);
   return { user_id };
 }
 
