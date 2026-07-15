@@ -371,7 +371,27 @@ export default function Login() {
                       Lembrar neste dispositivo
                     </span>
                   </label>
+                  {failedAttempts >= 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setResetOpen(true)}
+                      className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  )}
                 </div>
+
+                {failedAttempts >= 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setResetOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold text-primary transition-all"
+                  >
+                    <span>💬</span> Recuperar senha pelo WhatsApp
+                  </button>
+                )}
+
 
                 {failedAttempts >= 3 && (
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/8">
