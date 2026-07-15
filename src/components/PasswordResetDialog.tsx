@@ -151,13 +151,21 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
                 <p className="text-2xl font-bold tracking-wider text-foreground">{maskedPhone}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep("username")} className="flex-1">
-                  <ArrowLeft className="h-4 w-4 mr-1" /> Não é meu
-                </Button>
+                <a
+                  href="https://wa.me/message/CX2FK5HG77WOD1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent px-4 py-2 text-sm font-medium transition"
+                >
+                  <MessageCircle className="h-4 w-4" /> Falar com o suporte
+                </a>
                 <Button onClick={sendCode} disabled={loading} className="flex-1">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sim, enviar código"}
                 </Button>
               </div>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Não é seu número? Fale com o suporte para recuperar seu login. Tempo de resposta: até 1 hora.
+              </p>
             </div>
           </>
         )}
