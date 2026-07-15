@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } f
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
+import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
 
@@ -21,6 +22,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [resetOpen, setResetOpen] = useState(false);
   const [animating, setAnimating] = useState(false);
   const [screenTransition, setScreenTransition] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -369,7 +371,27 @@ export default function Login() {
                       Lembrar neste dispositivo
                     </span>
                   </label>
+                  {failedAttempts >= 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setResetOpen(true)}
+                      className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  )}
                 </div>
+
+                {failedAttempts >= 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setResetOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold text-primary transition-all"
+                  >
+                    <span>💬</span> Recuperar senha pelo WhatsApp
+                  </button>
+                )}
+
 
                 {failedAttempts >= 3 && (
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/8">
@@ -408,6 +430,12 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      <PasswordResetDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        initialUsername={username}
+      />
     </div>
   );
 }
