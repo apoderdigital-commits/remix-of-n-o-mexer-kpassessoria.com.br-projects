@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.dispatch-reports]
 verify_jwt = false
+
+[functions.request-password-reset]
+verify_jwt = false
+
+[functions.confirm-password-reset]
+verify_jwt = false
