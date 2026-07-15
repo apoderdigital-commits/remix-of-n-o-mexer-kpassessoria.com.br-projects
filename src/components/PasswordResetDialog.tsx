@@ -24,6 +24,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const reset = () => {
     setStep("username");
