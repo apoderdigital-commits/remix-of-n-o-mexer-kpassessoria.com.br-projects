@@ -430,6 +430,12 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      <PasswordResetDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        initialUsername={username}
+      />
     </div>
   );
 }
