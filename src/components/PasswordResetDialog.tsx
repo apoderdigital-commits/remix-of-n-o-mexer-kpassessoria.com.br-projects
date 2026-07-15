@@ -59,6 +59,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
       return;
     }
     setMaskedPhone((data as any).masked_phone);
+    setFullName((data as any).full_name || "");
     setStep("confirm-phone");
   };
 
