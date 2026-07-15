@@ -31,6 +31,7 @@ export default function PasswordResetDialog({ open, onOpenChange, initialUsernam
     setStep("username");
     setUsername(initialUsername);
     setMaskedPhone("");
+    setFullName("");
     setVerificationId("");
     setCode("");
     setNewPassword("");
