@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
       verification_id: inserted.id,
       expires_at: inserted.expires_at,
       masked_phone,
+      full_name,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("[request-password-reset] error:", err);
