@@ -952,8 +952,10 @@ export default function Squad() {
     const meta = clients.reduce((s, c) => s + (Number(c.sales_goal) || 0), 0);
     const rows = engagement.filter((e) => (e.reference_month || "").slice(0, 7) === highlightMonth);
     const faturamento = rows.reduce((s, e) => s + (Number(e.faturamento) || 0), 0);
-    return { investido, contratos, meta, faturamento };
+    const ticketMedio = clients.length ? contratos / clients.length : 0;
+    return { investido, contratos, meta, faturamento, ticketMedio };
   }, [clients, engagement, highlightMonth]);
+
 
   // Cohort do NPS (base D+30): no mês selecionado, quem é elegível, quem respondeu, % resposta e nota média.
   const npsCohort = useMemo(() => {
