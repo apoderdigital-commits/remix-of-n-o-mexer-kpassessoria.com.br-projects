@@ -940,8 +940,11 @@ export default function Squad() {
     const npsCount = rows.filter((e) => e.nps_individual != null).length;
     const scores = rows.map((e) => e.engagement_score).filter((v): v is number => v != null);
     const avgEng = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
-    return { latest: highlightMonth, npsCount, avgEng };
+    const npsScores = rows.map((e) => e.nps_individual).filter((v): v is number => v != null);
+    const avgNps = npsScores.length ? npsScores.reduce((s, v) => s + v, 0) / npsScores.length : 0;
+    return { latest: highlightMonth, npsCount, avgEng, avgNps };
   }, [engagement, highlightMonth]);
+
   // Resumo financeiro do squad
   const financeSummary = useMemo(() => {
     const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
