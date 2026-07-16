@@ -1523,8 +1523,8 @@ export default function Squad() {
                       return (
                       <TableRow key={c.id} className="border-border/20 hover:bg-muted/20 transition-colors">
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
-                        <TableCell>
-                          <button onClick={() => setDetailClient(c)} className="flex items-center gap-2.5 text-left group/cli">
+                        <TableCell className="max-w-[260px]">
+                          <button onClick={() => setDetailClient(c)} className="flex items-center gap-2.5 text-left group/cli w-full min-w-0">
                             <div className="relative shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-fuchsia-500/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
                                 {(c.name || "?").trim().charAt(0).toUpperCase()}
@@ -1536,8 +1536,8 @@ export default function Squad() {
                                 }`}
                               />
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold leading-tight truncate group-hover/cli:text-primary transition-colors">{c.name}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold leading-tight truncate group-hover/cli:text-primary transition-colors" title={c.name}>{c.name}</p>
                               {c.niche && <p className="text-[11px] text-muted-foreground truncate">{c.niche}</p>}
                             </div>
                           </button>
