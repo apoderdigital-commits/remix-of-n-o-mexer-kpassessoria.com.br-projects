@@ -1581,7 +1581,7 @@ export default function Squad() {
                             ? <span className="text-amber-700 dark:text-amber-300">{formatBRL(c.sales_goal)}</span>
                             : <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/40">definir</Badge>}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right whitespace-nowrap">
                           {(c as any).contract_file_url && (
                             <Button size="icon" variant="ghost" title="Ver contrato"
                               onClick={() => openContract((c as any).contract_file_url, (c as any).contract_file_name || "contrato")}>
