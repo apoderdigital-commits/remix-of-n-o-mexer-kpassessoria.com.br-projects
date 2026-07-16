@@ -166,20 +166,20 @@ function buildNpsStats(list: Engagement[]) {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  AA: "bg-red-500/20 text-red-300 border-red-500/40",
+  AA: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40",
   AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-  AC: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  AC: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40",
   BA: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   BB: "bg-lime-500/20 text-lime-300 border-lime-500/40",
-  BC: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  BC: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
   CA: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-  CB: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+  CB: "bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40",
   CC: "bg-blue-500/20 text-blue-300 border-blue-500/40",
 };
 
 const CURVE_COLORS: Record<string, string> = {
   A: "bg-primary/20 text-primary border-primary/40",
-  B: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
+  B: "bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/40",
   C: "bg-slate-500/20 text-slate-300 border-slate-500/40",
 };
 
@@ -191,8 +191,8 @@ const SERVICE_OPTIONS = [
 
 const SERVICE_COLORS: Record<string, string> = {
   TP: "bg-primary/20 text-primary border-primary/40",
-  CRM: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
-  COM: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  CRM: "bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/40",
+  COM: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
 };
 
 function parseServices(raw: string | null | undefined): string[] {
@@ -254,7 +254,7 @@ function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
   const [open, setOpen] = useState(false);
   const ch = computeChannels(e.vendas_trafego, e.vendas_loja, e.faturamento);
   const nps = e.nps_individual;
-  const npsTone = nps == null ? "text-muted-foreground" : nps > 8 ? "text-emerald-400" : nps < 7 ? "text-red-400" : "text-amber-400";
+  const npsTone = nps == null ? "text-muted-foreground" : nps > 8 ? "text-emerald-600 dark:text-emerald-400" : nps < 7 ? "text-red-400" : "text-amber-600 dark:text-amber-400";
   const engStars = e.engagement_score ?? null;
 
   return (
@@ -275,7 +275,7 @@ function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
           <span className={`text-sm font-bold w-7 text-right ${npsTone}`}>{nps != null ? nps : "—"}</span>
           <span className="inline-flex gap-0.5">
             {engStars != null ? Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className={`h-3 w-3 ${i < engStars ? "fill-amber-400 text-amber-400" : "text-muted-foreground/25"}`} />
+              <Star key={i} className={`h-3 w-3 ${i < engStars ? "fill-amber-400 text-amber-600 dark:text-amber-400" : "text-muted-foreground/25"}`} />
             )) : <span className="text-[10px] text-muted-foreground">—</span>}
           </span>
         </div>
@@ -296,8 +296,8 @@ function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
             </div>
             {/* Faturamento */}
             <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 space-y-1">
-              <p className="text-[10px] uppercase tracking-wide text-emerald-300/80 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Faturamento</p>
-              <p className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Faturamento</p>
+              <p className="font-bold text-emerald-700 dark:text-emerald-300">{fmtBRL(e.faturamento)}</p>
               <div className="text-muted-foreground space-y-0.5">
                 <div className="flex justify-between"><span className="flex items-center gap-1"><TrendingUp className="h-2.5 w-2.5 text-sky-400" />Tráfego</span><span>{fmtBRL(ch.fatTrafego)}</span></div>
                 <div className="flex justify-between"><span className="flex items-center gap-1"><Store className="h-2.5 w-2.5 text-fuchsia-400" />Loja</span><span>{fmtBRL(ch.fatLoja)}</span></div>
@@ -305,7 +305,7 @@ function NpsClientRow({ e, CURVE_COLORS, computeChannels, fmtBRL }: {
             </div>
           </div>
           {e.meta_status && (
-            <Badge variant="outline" className={e.meta_status.toLowerCase().includes("dentro") ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40" : "bg-red-500/10 text-red-300 border-red-500/40"}>
+            <Badge variant="outline" className={e.meta_status.toLowerCase().includes("dentro") ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" : "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40"}>
               <Target className="h-3 w-3 mr-1" />{e.meta_status}
             </Badge>
           )}
@@ -1275,12 +1275,12 @@ export default function Squad() {
               {incompleteClients.length > 0 && (
                 <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 shadow-lg shadow-red-500/10 alert-blink">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-red-300 mt-0.5 shrink-0" />
+                    <AlertTriangle className="h-5 w-5 text-red-700 dark:text-red-300 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-red-200">
+                      <p className="font-semibold text-red-800 dark:text-red-200">
                         {incompleteClients.length} cliente{incompleteClients.length > 1 ? "s" : ""} com informações faltando
                       </p>
-                      <p className="text-xs text-red-200/70 mt-0.5">
+                      <p className="text-xs text-red-800/70 dark:text-red-200/70 mt-0.5">
                         Campos essenciais: nome, valor TP, serviços, Curva ABC e Sprint.
                       </p>
                       {showIncomplete && (
@@ -1290,7 +1290,7 @@ export default function Squad() {
                               <button onClick={() => openEdit(client)} className="font-semibold text-foreground hover:text-primary truncate text-left">
                                 {client.name || "(sem nome)"}
                               </button>
-                              <span className="text-red-300/80 shrink-0">faltando: {missing.join(", ")}</span>
+                              <span className="text-red-700/80 dark:text-red-300/80 shrink-0">faltando: {missing.join(", ")}</span>
                             </li>
                           ))}
                         </ul>
@@ -1306,9 +1306,9 @@ export default function Squad() {
               {upcomingDue.length > 0 && (
                 <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
                   <div className="flex items-start gap-3">
-                    <CalendarDays className="h-5 w-5 text-amber-300 mt-0.5 shrink-0" />
+                    <CalendarDays className="h-5 w-5 text-amber-700 dark:text-amber-300 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-amber-200">
+                      <p className="font-semibold text-amber-800 dark:text-amber-200">
                         {upcomingDue.length} contrato{upcomingDue.length > 1 ? "s" : ""} vencendo em até 30 dias
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1316,10 +1316,10 @@ export default function Squad() {
                           <button
                             key={client.id}
                             onClick={() => openEdit(client)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200 hover:bg-amber-500/20 transition-colors"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-800 dark:text-amber-200 hover:bg-amber-500/20 transition-colors"
                           >
                             {client.name}
-                            <span className="text-amber-300/70">· {days === 0 ? "hoje" : `${days}d`}</span>
+                            <span className="text-amber-700/70 dark:text-amber-300/70">· {days === 0 ? "hoje" : `${days}d`}</span>
                           </button>
                         ))}
                       </div>
@@ -1357,10 +1357,10 @@ export default function Squad() {
               {/* Resumo financeiro do squad */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-300", sub: "/ mês" },
-                  { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-300", sub: "/ mês" },
-                  { label: "Meta de Vendas", value: financeSummary.meta, cls: "text-amber-300", sub: "/ mês" },
-                  { label: "Faturamento", value: financeSummary.faturamento, cls: "text-fuchsia-300", sub: engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "" },
+                  { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-700 dark:text-emerald-300", sub: "/ mês" },
+                  { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-700 dark:text-sky-300", sub: "/ mês" },
+                  { label: "Meta de Vendas", value: financeSummary.meta, cls: "text-amber-700 dark:text-amber-300", sub: "/ mês" },
+                  { label: "Faturamento", value: financeSummary.faturamento, cls: "text-fuchsia-700 dark:text-fuchsia-300", sub: engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "" },
                 ].map((f) => (
                   <div key={f.label} className="rounded-2xl border border-border/30 bg-gradient-to-br from-card/60 to-card/30 backdrop-blur-sm p-4">
                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{f.label}</p>
@@ -1504,7 +1504,7 @@ export default function Squad() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {parseServices(c.services).length === 0 ? (
-                              <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                              <Badge variant="outline" className="bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
                             ) : parseServices(c.services).map((s) => (
                               <Badge key={s} variant="outline" className={`${SERVICE_COLORS[s]} text-[10px] font-semibold`}>{s}</Badge>
                             ))}
@@ -1527,17 +1527,17 @@ export default function Squad() {
                         </TableCell>
                         <TableCell className="text-center">
                           {c.bm_verified
-                            ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30 gap-1"><CheckCircle2 className="h-3 w-3" /> Sim</Badge>
-                            : <Badge className="bg-red-500/20 text-red-300 border-red-500/30 gap-1"><XCircle className="h-3 w-3" /> Não</Badge>}
+                            ? <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30 gap-1"><CheckCircle2 className="h-3 w-3" /> Sim</Badge>
+                            : <Badge className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30 gap-1"><XCircle className="h-3 w-3" /> Não</Badge>}
                         </TableCell>
                         <TableCell className="text-xs font-semibold">
                           {parseMoney(c.invested_tp) == null
-                            ? <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
-                            : <span className="text-emerald-300">{formatBRL(parseMoney(c.invested_tp))}</span>}
+                            ? <Badge variant="outline" className="bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40 text-[10px]">faltando</Badge>
+                            : <span className="text-emerald-700 dark:text-emerald-300">{formatBRL(parseMoney(c.invested_tp))}</span>}
                         </TableCell>
                         <TableCell className="text-xs font-semibold">
                           {c.sales_goal != null
-                            ? <span className="text-amber-300">{formatBRL(c.sales_goal)}</span>
+                            ? <span className="text-amber-700 dark:text-amber-300">{formatBRL(c.sales_goal)}</span>
                             : <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/40">definir</Badge>}
                         </TableCell>
                         <TableCell className="text-right">
@@ -1570,12 +1570,12 @@ export default function Squad() {
                       <p className="text-2xl font-bold mt-1 text-primary">{serviceCounts.TP}</p>
                     </div>
                     <div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-fuchsia-300/80">CRM</p>
-                      <p className="text-2xl font-bold mt-1 text-fuchsia-300">{serviceCounts.CRM}</p>
+                      <p className="text-[11px] uppercase tracking-wide text-fuchsia-700/80 dark:text-fuchsia-300/80">CRM</p>
+                      <p className="text-2xl font-bold mt-1 text-fuchsia-700 dark:text-fuchsia-300">{serviceCounts.CRM}</p>
                     </div>
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-emerald-300/80">Acomp. Comercial (COM)</p>
-                      <p className="text-2xl font-bold mt-1 text-emerald-300">{serviceCounts.COM}</p>
+                      <p className="text-[11px] uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">Acomp. Comercial (COM)</p>
+                      <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">{serviceCounts.COM}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2">
@@ -1633,7 +1633,7 @@ export default function Squad() {
             <TabsContent value="metrics" className="space-y-4">
               {/* Fechamento operacional (base D+30) */}
               {metricsCohort && (metricsCohort.missingEntry ? (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
                   ⚠️ Para o fechamento (engajamento, vendas — base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
                 </div>
               ) : (
@@ -1653,17 +1653,17 @@ export default function Squad() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Engajamento médio</p>
-                      <p className="text-2xl font-bold mt-1 text-sky-300">{metricsCohort.avgEng ? metricsCohort.avgEng.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
+                      <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{metricsCohort.avgEng ? metricsCohort.avgEng.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.evaluated} de {metricsCohort.eligibleCount} elegíveis avaliados (D+30)</p>
                     </div>
                     <div className={`rounded-2xl border p-4 ${metricsCohort.vendido >= 10000 ? "border-emerald-500/40 bg-emerald-500/10" : metricsCohort.vendido >= 5000 ? "border-amber-500/40 bg-amber-500/10" : "border-red-500/40 bg-red-500/10"}`}>
                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Vendido no mês</p>
-                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.vendido >= 10000 ? "text-emerald-300" : metricsCohort.vendido >= 5000 ? "text-amber-300" : "text-red-300"}`}>{formatBRL(metricsCohort.vendido)}</p>
+                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.vendido >= 10000 ? "text-emerald-700 dark:text-emerald-300" : metricsCohort.vendido >= 5000 ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300"}`}>{formatBRL(metricsCohort.vendido)}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ R$ 10k · mín R$ 5k</p>
                     </div>
                     <div className={`rounded-2xl border p-4 ${metricsCohort.secondaryPct >= 20 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Produto secundário</p>
-                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.secondaryPct >= 20 ? "text-emerald-300" : "text-amber-300"}`}>{metricsCohort.secondaryPct.toFixed(0)}%</p>
+                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.secondaryPct >= 20 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{metricsCohort.secondaryPct.toFixed(0)}%</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.withSecondary} clientes · meta ≥ 20%</p>
                     </div>
                     <div className="rounded-2xl border border-dashed border-border/40 bg-card/20 p-4">
@@ -1681,22 +1681,22 @@ export default function Squad() {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className={`rounded-xl border p-3 ${metricsCohort.crmUsingPct >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% usando CRM</p>
-                        <p className={`text-2xl font-bold mt-1 ${metricsCohort.crmUsingPct >= 80 ? "text-emerald-300" : "text-amber-300"}`}>{metricsCohort.crmUsingPct.toFixed(0)}%</p>
+                        <p className={`text-2xl font-bold mt-1 ${metricsCohort.crmUsingPct >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{metricsCohort.crmUsingPct.toFixed(0)}%</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 80%</p>
                       </div>
                       <button onClick={() => setCrmListDialog("using")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estão usando</p>
-                        <p className="text-2xl font-bold mt-1 text-emerald-300">{metricsCohort.crmUsing}</p>
+                        <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">{metricsCohort.crmUsing}</p>
                         <p className="text-[10px] text-primary mt-0.5">ver lista</p>
                       </button>
                       <button onClick={() => setCrmListDialog("not")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Não usando / sem nota</p>
-                        <p className="text-2xl font-bold mt-1 text-red-300">{metricsCohort.crmNotUsing}</p>
+                        <p className="text-2xl font-bold mt-1 text-red-700 dark:text-red-300">{metricsCohort.crmNotUsing}</p>
                         <p className="text-[10px] text-primary mt-0.5">ver lista</p>
                       </button>
                       <div className="rounded-xl border border-border/30 bg-card/40 p-3">
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
-                        <p className="text-2xl font-bold mt-1 text-sky-300">{metricsCohort.crmRated ? metricsCohort.crmAvg.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
+                        <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{metricsCohort.crmRated ? metricsCohort.crmAvg.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.crmRated} de {metricsCohort.eligibleCount} avaliados</p>
                       </div>
                     </div>
@@ -1752,12 +1752,12 @@ export default function Squad() {
                         <TableCell className="text-center">{m.out_of_target ?? "-"}</TableCell>
                         <TableCell className="text-center">
                           {m.churn_count != null && m.churn_count > 0
-                            ? <Badge className="bg-red-500/20 text-red-300 border-red-500/30">{m.churn_count}</Badge>
+                            ? <Badge className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30">{m.churn_count}</Badge>
                             : (m.churn_count ?? "-")}
                         </TableCell>
                         <TableCell className="text-center">
                           {m.new_clients != null && m.new_clients > 0
-                            ? <Badge className="bg-green-500/20 text-green-300 border-green-500/30">+{m.new_clients}</Badge>
+                            ? <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">+{m.new_clients}</Badge>
                             : (m.new_clients ?? "-")}
                         </TableCell>
                         <TableCell className="text-center">{m.renewals ?? "-"}</TableCell>
@@ -1847,14 +1847,14 @@ export default function Squad() {
 
                     {npsCohort && (
                       npsCohort.missingEntry ? (
-                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
                           ⚠️ Para o fechamento de NPS (base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos totais</p>
-                            <p className="text-2xl font-bold mt-1 text-violet-300">{npsCohort.totalAtivos}</p>
+                            <p className="text-2xl font-bold mt-1 text-violet-700 dark:text-violet-300">{npsCohort.totalAtivos}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">no mês · +{npsCohort.novosNoMes} novos</p>
                           </div>
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
@@ -1864,19 +1864,19 @@ export default function Squad() {
                           </div>
                           <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Responderam</p>
-                            <p className="text-2xl font-bold mt-1 text-sky-300">{npsCohort.responded.length}</p>
+                            <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{npsCohort.responded.length}</p>
                             <button onClick={() => setNpsListDialog("responded")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista</button>
                           </div>
                           <div className={`rounded-2xl border p-4 ${npsCohort.responseRate >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% de resposta</p>
-                            <p className={`text-2xl font-bold mt-1 ${npsCohort.responseRate >= 80 ? "text-emerald-300" : "text-red-300"}`}>{npsCohort.responseRate.toFixed(0)}%</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.responseRate >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>{npsCohort.responseRate.toFixed(0)}%</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
                               meta ≥ 80% · <button onClick={() => setNpsListDialog("missed")} className="text-primary hover:underline">{npsCohort.missed.length} faltaram</button>
                             </p>
                           </div>
                           <div className={`rounded-2xl border p-4 ${npsCohort.avgNps >= 9 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
-                            <p className={`text-2xl font-bold mt-1 ${npsCohort.avgNps >= 9 ? "text-emerald-300" : "text-amber-300"}`}>{npsCohort.avgNps ? npsCohort.avgNps.toFixed(1) : "—"}</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.avgNps >= 9 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{npsCohort.avgNps ? npsCohort.avgNps.toFixed(1) : "—"}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 9,0</p>
                           </div>
                         </div>
@@ -1973,11 +1973,11 @@ export default function Squad() {
                         <div className="flex items-center gap-2">
                           <Trash2 className="h-4 w-4 text-red-400" />
                           <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
-                          <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/40">{list.length} registros</Badge>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40">{list.length} registros</Badge>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => restoreMonth(month)}>Restaurar mês</Button>
-                          <Button size="sm" variant="outline" className="text-red-400 hover:text-red-300" onClick={() => setPurgeMonth(`${month}-01`)}>
+                          <Button size="sm" variant="outline" className="text-red-400 hover:text-red-700 dark:text-red-300" onClick={() => setPurgeMonth(`${month}-01`)}>
                             Excluir definitivo (token)
                           </Button>
                         </div>
@@ -2016,8 +2016,8 @@ export default function Squad() {
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
-                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-red-400 hover:text-red-300" onClick={() => trashMonth(month)}>
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
+                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-red-400 hover:text-red-700 dark:text-red-300" onClick={() => trashMonth(month)}>
                               <Trash2 className="h-3.5 w-3.5" /> Excluir mês
                             </Button>
                           </div>
@@ -2052,7 +2052,7 @@ export default function Squad() {
                                     {e.engagement_score != null ? (
                                       <span className="inline-flex items-center gap-0.5">
                                         {Array.from({ length: 5 }).map((_, i) => (
-                                          <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                                          <Star key={i} className={`h-3.5 w-3.5 ${i < (e.engagement_score || 0) ? "fill-amber-400 text-amber-600 dark:text-amber-400" : "text-muted-foreground/30"}`} />
                                         ))}
                                       </span>
                                     ) : "-"}
@@ -2060,9 +2060,9 @@ export default function Squad() {
                                   <TableCell className="text-center font-bold">
                                     {e.nps_individual != null ? (
                                       <Badge variant="outline" className={
-                                        e.nps_individual > 8 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" :
-                                        e.nps_individual < 7 ? "bg-red-500/15 text-red-300 border-red-500/40" :
-                                        "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                                        e.nps_individual > 8 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" :
+                                        e.nps_individual < 7 ? "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40" :
+                                        "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40"
                                       }>{e.nps_individual}</Badge>
                                     ) : "-"}
                                   </TableCell>
@@ -2087,7 +2087,7 @@ export default function Squad() {
                                             const mTotal = (e as any).meta_vendas ?? ((mTraf != null || mLoja != null) ? (Number(mTraf) || 0) + (Number(mLoja) || 0) : null);
                                             return mTotal != null ? (
                                               <div className="leading-tight">
-                                                <span className={`font-bold ${ch.vendasTotal >= mTotal ? "text-emerald-300" : "text-amber-300"}`}>
+                                                <span className={`font-bold ${ch.vendasTotal >= mTotal ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
                                                   {ch.vendasTotal} / {mTotal}
                                                 </span>
                                                 <span className="block text-[10px] text-muted-foreground">vendeu / meta</span>
@@ -2101,13 +2101,13 @@ export default function Squad() {
                                         <TableCell className="text-center">
                                           {e.faturamento != null && Number(e.faturamento) > 0 ? (
                                             <div className="leading-tight">
-                                              <span className="font-bold text-emerald-300">{fmtBRL(e.faturamento)}</span>
+                                              <span className="font-bold text-emerald-700 dark:text-emerald-300">{fmtBRL(e.faturamento)}</span>
                                               {ch.vendasTotal > 0 && (
                                                 <span className="block text-[10px] text-muted-foreground">T {fmtBRL(ch.fatTrafego)} · L {fmtBRL(ch.fatLoja)}</span>
                                               )}
                                               {e.faturamento_perc_canais && <span className="block text-[9px] text-muted-foreground/70">{e.faturamento_perc_canais}</span>}
                                               {(e as any).meta_faturamento != null && (
-                                                <span className={`block text-[9px] ${Number(e.faturamento) >= (e as any).meta_faturamento ? "text-emerald-400/80" : "text-amber-400/80"}`}>
+                                                <span className={`block text-[9px] ${Number(e.faturamento) >= (e as any).meta_faturamento ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-amber-600/80 dark:text-amber-400/80"}`}>
                                                   meta {fmtBRL((e as any).meta_faturamento)}
                                                 </span>
                                               )}
@@ -2174,11 +2174,11 @@ export default function Squad() {
                   <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-sm">
                     <span className="font-medium">{c.name}</span>
                     {nota != null ? (
-                      <Badge variant="outline" className={`font-bold ${nota >= 9 ? "border-emerald-500/40 text-emerald-300" : nota < 7 ? "border-red-500/40 text-red-300" : "border-amber-500/40 text-amber-300"}`}>
+                      <Badge variant="outline" className={`font-bold ${nota >= 9 ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : nota < 7 ? "border-red-500/40 text-red-700 dark:text-red-300" : "border-amber-500/40 text-amber-700 dark:text-amber-300"}`}>
                         Nota {nota}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="border-red-500/40 text-red-300">não respondeu</Badge>
+                      <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">não respondeu</Badge>
                     )}
                   </div>
                 );
@@ -2204,7 +2204,7 @@ export default function Squad() {
               return names.map((nome, i) => (
                 <div key={`${nome}-${i}`} className="flex items-center justify-between rounded-lg border border-border/30 bg-card/40 px-3 py-2 text-sm">
                   <span className="font-medium">{nome}</span>
-                  <Badge variant="outline" className={crmListDialog === "using" ? "border-emerald-500/40 text-emerald-300" : "border-red-500/40 text-red-300"}>
+                  <Badge variant="outline" className={crmListDialog === "using" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-red-500/40 text-red-700 dark:text-red-300"}>
                     {crmListDialog === "using" ? "usando" : "não confirmado"}
                   </Badge>
                 </div>
@@ -2359,7 +2359,7 @@ export default function Squad() {
                   />
                 </div>
                 {parseMoney(editing.invested_tp) != null && (
-                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-semibold">{formatBRL(parseMoney(editing.invested_tp))}</p>
                 )}
               </div>
               <div>
@@ -2378,7 +2378,7 @@ export default function Squad() {
                   />
                 </div>
                 {editing.contract_value != null && (
-                  <p className="text-[11px] text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
                 )}
               </div>
               <div>
@@ -2397,7 +2397,7 @@ export default function Squad() {
                   />
                 </div>
                 {editing.sales_goal != null && (
-                  <p className="text-[11px] text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês</p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês</p>
                 )}
               </div>
               <div>
@@ -2467,7 +2467,7 @@ export default function Squad() {
           <DialogHeader>
             <DialogTitle>{editingChurn?.id ? "Editar churn" : "Novo churn"}</DialogTitle>
             {pendingClientDelete && (
-              <p className="text-xs text-amber-300 mt-1">
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                 O cliente será removido da lista após salvar o churn.
               </p>
             )}
@@ -2512,7 +2512,7 @@ export default function Squad() {
                     />
                   </div>
                   {editingChurn.contract_value != null && months != null && months > 0 && (
-                    <p className="text-[11px] text-emerald-300 mt-1 font-semibold">
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-semibold">
                       LTV: {formatBRL(editingChurn.contract_value * months)} ({months} {months === 1 ? "mês" : "meses"} × {formatBRL(editingChurn.contract_value)})
                     </p>
                   )}
@@ -2625,7 +2625,7 @@ export default function Squad() {
 
               {/* Engajamento & NPS */}
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                   <Gauge className="h-3.5 w-3.5" /> Engajamento & NPS
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -2646,7 +2646,7 @@ export default function Squad() {
 
               {/* Meta & Vendas */}
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                   <ShoppingCart className="h-3.5 w-3.5" /> Meta & Vendas
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -2892,7 +2892,7 @@ function StatCard({ label, value, icon: Icon, color, sub, delta }: { label: stri
           <p className="text-xs text-muted-foreground font-medium">{label}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
           {delta != null && delta !== 0 && (
-            <p className={`text-[10px] font-semibold mt-0.5 ${delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-[10px] font-semibold mt-0.5 ${delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-400"}`}>
               {delta > 0 ? "↑" : "↓"} {delta > 0 ? "+" : ""}{delta} vs mês anterior
             </p>
           )}
@@ -3069,7 +3069,7 @@ function AgendaPanel({
       </div>
 
       {stats.missingEntry ? (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
           ⚠️ Para a meta de mensais entregues (clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
         </div>
       ) : (
@@ -3080,7 +3080,7 @@ function AgendaPanel({
             <CalendarDays className="h-5 w-5 text-primary shrink-0" />
             <div>
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Mensais entregues (D+30)</p>
-              <p className={`text-2xl font-black mt-0.5 ${stats.deliveryRate >= 80 ? "text-emerald-300" : "text-red-300"}`}>
+              <p className={`text-2xl font-black mt-0.5 ${stats.deliveryRate >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
                 {stats.deliveryRate}%
               </p>
               <p className="text-[11px] text-muted-foreground">
@@ -3091,8 +3091,8 @@ function AgendaPanel({
           </div>
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
             stats.deliveryRate >= 80
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-              : "border-red-500/40 bg-red-500/15 text-red-300"
+              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              : "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300"
           }`}>
             {stats.deliveryRate >= 80 ? "✓ Dentro da meta" : "⚠ Abaixo da meta"} · alvo ≥ 80%
           </span>
@@ -3106,12 +3106,12 @@ function AgendaPanel({
           </DialogHeader>
           <div className="space-y-1.5 py-1">
             {stats.missedEligible.length === 0 ? (
-              <p className="text-sm text-emerald-300 text-center py-4">Todos os elegíveis tiveram a mensal entregue! 🎉</p>
+              <p className="text-sm text-emerald-700 dark:text-emerald-300 text-center py-4">Todos os elegíveis tiveram a mensal entregue! 🎉</p>
             ) : (
               stats.missedEligible.map((c) => (
                 <div key={c.id} className="flex items-center justify-between rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm">
                   <span className="font-medium">{c.name}</span>
-                  <Badge variant="outline" className="border-red-500/40 text-red-300">sem mensal</Badge>
+                  <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">sem mensal</Badge>
                 </div>
               ))
             )}
@@ -3146,7 +3146,7 @@ function AgendaPanel({
 
       {stats.overdueUnjustified > 0 && (
         <div className="alert-blink rounded-xl border border-red-500/40 px-4 py-3 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-red-300" />
+          <AlertCircle className="h-5 w-5 text-red-700 dark:text-red-300" />
           <p className="text-sm">
             <strong>{stats.overdueUnjustified}</strong> mensal{stats.overdueUnjustified > 1 ? "is" : ""} sem realizar e sem justificativa neste mês de referência.
           </p>
@@ -3178,7 +3178,7 @@ function AgendaPanel({
                   <TableCell className="text-center">
                     <button onClick={() => onToggleDone(a)} title="Marcar como realizada">
                       {a.done
-                        ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         : <XCircle className="h-4 w-4 text-muted-foreground/50" />}
                     </button>
                   </TableCell>
@@ -3203,11 +3203,11 @@ function AgendaPanel({
                   <TableCell className="text-xs">
                     <div className="flex flex-col items-start gap-1">
                       {a.done ? (
-                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Realizada</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Realizada</Badge>
                       ) : a.not_done_reason ? (
-                        <span className="text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
+                        <span className="text-amber-700 dark:text-amber-300" title={a.not_done_reason}>{a.not_done_reason}</span>
                       ) : (
-                        <Badge className="bg-red-500/30 text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
+                        <Badge className="bg-red-500/30 text-red-800 dark:text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
                       )}
                       {docByClient.has((a.client_name || "").trim().toLowerCase()) && (() => {
                         const doc = docByClient.get((a.client_name || "").trim().toLowerCase())!;
@@ -3266,8 +3266,8 @@ function ServiceFunnel({ data }: { data: FunnelRow[] }) {
   const H = data.length * (rowH + gap);
   const palette: Record<number, { stroke: string; from: string; to: string; tag: string }> = {
     1: { stroke: "263 70% 58%", from: "263 70% 62%", to: "263 80% 45%", tag: "text-primary" },
-    2: { stroke: "295 70% 60%", from: "295 75% 65%", to: "295 80% 48%", tag: "text-fuchsia-300" },
-    3: { stroke: "160 70% 45%", from: "160 65% 52%", to: "160 75% 38%", tag: "text-emerald-300" },
+    2: { stroke: "295 70% 60%", from: "295 75% 65%", to: "295 80% 48%", tag: "text-fuchsia-700 dark:text-fuchsia-300" },
+    3: { stroke: "160 70% 45%", from: "160 65% 52%", to: "160 75% 38%", tag: "text-emerald-700 dark:text-emerald-300" },
   };
   const widths = data.map((d) => Math.max(140, (d.count / max) * (W - 40) + 80));
 
@@ -3462,7 +3462,7 @@ function NpsChart({ dist }: { dist: {
             <Smile className="h-4 w-4 text-primary" /> % de NPS — distribuição das notas (Engajamento)
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Categorias: <strong className="text-emerald-300">Acima de 8</strong> · <strong className="text-emerald-400">Nota 10</strong> · <strong className="text-red-300">Abaixo de 7</strong>. Meta: nota acima de <strong>8</strong>.
+            Categorias: <strong className="text-emerald-700 dark:text-emerald-300">Acima de 8</strong> · <strong className="text-emerald-600 dark:text-emerald-400">Nota 10</strong> · <strong className="text-red-700 dark:text-red-300">Abaixo de 7</strong>. Meta: nota acima de <strong>8</strong>.
           </p>
         </CardHeader>
         <CardContent>
@@ -3487,16 +3487,16 @@ function NpsChart({ dist }: { dist: {
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <p className="text-[11px] uppercase text-emerald-300/80">Acima de 8</p>
-                  <p className="text-xl font-bold text-emerald-300">{dist.above8} <span className="text-xs font-normal text-emerald-300/60">({dist.pctAbove8}%)</span></p>
+                  <p className="text-[11px] uppercase text-emerald-700/80 dark:text-emerald-300/80">Acima de 8</p>
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{dist.above8} <span className="text-xs font-normal text-emerald-700/60 dark:text-emerald-300/60">({dist.pctAbove8}%)</span></p>
                 </div>
                 <div className="rounded-lg border border-emerald-600/40 bg-emerald-600/10 p-3">
-                  <p className="text-[11px] uppercase text-emerald-300/80">Nota 10</p>
-                  <p className="text-xl font-bold text-emerald-300">{dist.tens} <span className="text-xs font-normal text-emerald-300/60">({dist.pctTen}%)</span></p>
+                  <p className="text-[11px] uppercase text-emerald-700/80 dark:text-emerald-300/80">Nota 10</p>
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{dist.tens} <span className="text-xs font-normal text-emerald-700/60 dark:text-emerald-300/60">({dist.pctTen}%)</span></p>
                 </div>
                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-                  <p className="text-[11px] uppercase text-red-300/80">Abaixo de 7</p>
-                  <p className="text-xl font-bold text-red-300">{dist.below7} <span className="text-xs font-normal text-red-300/60">({dist.pctBelow7}%)</span></p>
+                  <p className="text-[11px] uppercase text-red-700/80 dark:text-red-300/80">Abaixo de 7</p>
+                  <p className="text-xl font-bold text-red-700 dark:text-red-300">{dist.below7} <span className="text-xs font-normal text-red-700/60 dark:text-red-300/60">({dist.pctBelow7}%)</span></p>
                 </div>
               </div>
               <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between flex-wrap gap-2">
@@ -3659,19 +3659,19 @@ function ChurnPanel({
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de churns</p>
-            <p className="text-3xl font-bold text-red-300 mt-1">{totalChurns}</p>
+            <p className="text-3xl font-bold text-red-700 dark:text-red-300 mt-1">{totalChurns}</p>
           </CardContent>
         </Card>
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Taxa acumulada</p>
-            <p className="text-3xl font-bold text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
+            <p className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
           </CardContent>
         </Card>
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Lifetime médio</p>
-            <p className="text-3xl font-bold text-emerald-300 mt-1">
+            <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">
               {avgLifetime != null ? `${avgLifetime.toFixed(1)} ${avgLifetime === 1 ? "mês" : "meses"}` : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
@@ -3682,7 +3682,7 @@ function ChurnPanel({
         <Card className="bg-card/40 border-border/30">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">LTV total</p>
-            <p className="text-2xl font-bold text-emerald-300 mt-1">
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">
               {validLtvs.length > 0 ? formatBRL(totalLtv) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
@@ -3696,12 +3696,12 @@ function ChurnPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns elegíveis (D+30)</p>
-          <p className="text-3xl font-bold mt-1 text-red-300">{churnElig.eleg}</p>
+          <p className="text-3xl font-bold mt-1 text-red-700 dark:text-red-300">{churnElig.eleg}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">saíram após +30 dias (entraram antes do mês da saída)</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns não-elegíveis</p>
-          <p className="text-3xl font-bold mt-1 text-sky-300">{churnElig.naoEleg}</p>
+          <p className="text-3xl font-bold mt-1 text-sky-700 dark:text-sky-300">{churnElig.naoEleg}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">novos do mês ou sem +30 dias{churnElig.semData > 0 ? ` · ${churnElig.semData} sem data de entrada` : ""}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
@@ -3737,7 +3737,7 @@ function ChurnPanel({
 
         {monthStats && (
           monthStats.missingEntryData ? (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
               ⚠️ Para calcular a taxa de churn do mês (base de clientes ativos há +30 dias), preencha a
               <strong> Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
             </div>
@@ -3751,7 +3751,7 @@ function ChurnPanel({
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Taxa de churn · {formatMonth(`${monthStats.M}-01`)}
                 </p>
-                <p className={`text-3xl font-black mt-0.5 ${monthStats.withinTarget ? "text-emerald-300" : "text-red-300"}`}>
+                <p className={`text-3xl font-black mt-0.5 ${monthStats.withinTarget ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
                   {monthStats.rate.toFixed(1)}%
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -3761,13 +3761,13 @@ function ChurnPanel({
               <div className="text-right">
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
                   monthStats.withinTarget
-                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                    : "border-red-500/40 bg-red-500/15 text-red-300"
+                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    : "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300"
                 }`}>
                   {monthStats.withinTarget ? "✓ Dentro da meta" : "⚠ Acima da meta"} · alvo ≤ 5%
                 </span>
                 {!monthStats.withinTarget && (
-                  <p className="text-[11px] text-red-300/80 mt-1.5">
+                  <p className="text-[11px] text-red-700/80 dark:text-red-300/80 mt-1.5">
                     {(monthStats.rate - 5).toFixed(1)}% acima do limite
                   </p>
                 )}
@@ -3787,8 +3787,8 @@ function ChurnPanel({
                   key={reason}
                   className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5"
                 >
-                  <span className="text-xs text-red-200">{reason}</span>
-                  <span className="text-xs font-bold text-red-300 bg-red-500/20 rounded px-1.5">{count}</span>
+                  <span className="text-xs text-red-800 dark:text-red-200">{reason}</span>
+                  <span className="text-xs font-bold text-red-700 dark:text-red-300 bg-red-500/20 rounded px-1.5">{count}</span>
                 </div>
               ))}
             </div>
@@ -3808,16 +3808,16 @@ function ChurnPanel({
         }).length;
         const baseForMonth = baselineActive + churnsFromThisMonthOnward;
         const rate = baseForMonth > 0 ? (items.length / baseForMonth) * 100 : 0;
-        const rateColor = rate >= 10 ? "text-red-300 bg-red-500/15 border-red-500/30"
-          : rate >= 5 ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
-          : "text-emerald-300 bg-emerald-500/15 border-emerald-500/30";
+        const rateColor = rate >= 10 ? "text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30"
+          : rate >= 5 ? "text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
+          : "text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30";
 
         return (
           <div key={monthKey} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm shadow-xl overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border/30 bg-muted/10">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold capitalize">{formatMonth(`${monthKey}-01`)}</span>
-                <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/30">
+                <Badge variant="outline" className="bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30">
                   {items.length} {items.length === 1 ? "churn" : "churns"}
                 </Badge>
               </div>
@@ -3850,7 +3850,7 @@ function ChurnPanel({
                         <TableCell className="text-muted-foreground text-xs">{formatMonth(c.entry_month)}</TableCell>
                         <TableCell><Badge variant="outline">{c.months_active || "-"}</Badge></TableCell>
                         <TableCell className="text-xs">{c.contract_value != null ? formatBRL(c.contract_value) : "-"}</TableCell>
-                        <TableCell className="text-xs font-semibold text-emerald-300">{ltv != null ? formatBRL(ltv) : "-"}</TableCell>
+                        <TableCell className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{ltv != null ? formatBRL(ltv) : "-"}</TableCell>
                         <TableCell className="text-xs">{c.reason || "-"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{c.observations || "-"}</TableCell>
                         <TableCell className="text-right">
