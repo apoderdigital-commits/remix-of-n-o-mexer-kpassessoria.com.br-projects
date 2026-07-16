@@ -909,6 +909,8 @@ export type Database = {
       squad_clients: {
         Row: {
           bm_verified: boolean | null
+          contract_file_name: string | null
+          contract_file_url: string | null
           contract_value: number | null
           created_at: string
           curve_abc: string | null
@@ -932,6 +934,8 @@ export type Database = {
         }
         Insert: {
           bm_verified?: boolean | null
+          contract_file_name?: string | null
+          contract_file_url?: string | null
           contract_value?: number | null
           created_at?: string
           curve_abc?: string | null
@@ -955,6 +959,8 @@ export type Database = {
         }
         Update: {
           bm_verified?: boolean | null
+          contract_file_name?: string | null
+          contract_file_url?: string | null
           contract_value?: number | null
           created_at?: string
           curve_abc?: string | null
