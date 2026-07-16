@@ -61,6 +61,8 @@ type SquadClient = {
   sales_goal: number | null;
   meta_vendas_trafego: number | null;
   meta_vendas_loja: number | null;
+  contract_file_url: string | null;
+  contract_file_name: string | null;
   observations: string | null;
 };
 type Metric = {
@@ -425,6 +427,8 @@ export default function Squad() {
   const [npsMonth, setNpsMonth] = useState<string>("all");
   const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | "eligible" | null>(null);
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
+  const [contractUploading, setContractUploading] = useState(false);
+  const [contractViewer, setContractViewer] = useState<{ url: string; name: string } | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
@@ -488,6 +492,43 @@ export default function Squad() {
   // ---------- CLIENTS ----------
   function openNew() { setEditing({ ...emptyClient, squad_id: squadId }); setOpen(true); }
   function openEdit(c: SquadClient) { setEditing({ ...c }); setOpen(true); }
+
+  // ── Contrato (PDF) do cliente — todos da dash veem; só admin anexa/remove ──
+  async function uploadContract(file: File) {
+    if (!editing?.id) { toast.error("Salve o cliente antes de anexar o contrato."); return; }
+    setContractUploading(true);
+    const path = `${squadId}/${editing.id}/${file.name}`;
+    const up = await supabase.storage.from("contratos").upload(path, file, { upsert: true });
+    if (up.error) { setContractUploading(false); toast.error("Erro no upload: " + up.error.message); return; }
+    const res = await (supabase as any).from("squad_clients")
+      .update({ contract_file_url: path, contract_file_name: file.name }).eq("id", editing.id);
+    setContractUploading(false);
+    if (res.error) {
+      if (/contract_file/.test(res.error.message || "")) toast.error("O contrato precisa da migração (peça ao Lovable).");
+      else toast.error(res.error.message);
+      return;
+    }
+    setEditing({ ...editing, contract_file_url: path, contract_file_name: file.name });
+    toast.success("Contrato anexado!");
+    void loadAll(squadId);
+  }
+
+  async function removeContract() {
+    if (!editing?.id || !editing.contract_file_url) return;
+    await supabase.storage.from("contratos").remove([editing.contract_file_url]);
+    const res = await (supabase as any).from("squad_clients")
+      .update({ contract_file_url: null, contract_file_name: null }).eq("id", editing.id);
+    if (res.error) { toast.error(res.error.message); return; }
+    setEditing({ ...editing, contract_file_url: null, contract_file_name: null });
+    toast.success("Contrato removido.");
+    void loadAll(squadId);
+  }
+
+  async function openContract(path: string, name: string) {
+    const { data, error } = await supabase.storage.from("contratos").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o contrato."); return; }
+    setContractViewer({ url: data.signedUrl, name });
+  }
 
   async function save() {
     if (!editing?.name?.trim()) return toast.error("Nome é obrigatório");
@@ -1541,6 +1582,12 @@ export default function Squad() {
                             : <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/40">definir</Badge>}
                         </TableCell>
                         <TableCell className="text-right">
+                          {(c as any).contract_file_url && (
+                            <Button size="icon" variant="ghost" title="Ver contrato"
+                              onClick={() => openContract((c as any).contract_file_url, (c as any).contract_file_name || "contrato")}>
+                              <FileText className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </TableCell>
@@ -2214,6 +2261,24 @@ export default function Squad() {
         </DialogContent>
       </Dialog>
 
+      {/* Visualizador do contrato — popup dentro da dash */}
+      <Dialog open={!!contractViewer} onOpenChange={(o) => { if (!o) setContractViewer(null); }}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" /> Contrato{contractViewer?.name ? ` · ${contractViewer.name}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {contractViewer && (
+            /\.pdf(\?|$)/i.test(contractViewer.name) ? (
+              <iframe src={contractViewer.url} title="Contrato" className="w-full h-[75vh] rounded-lg border border-border/30 bg-white" />
+            ) : (
+              <img src={contractViewer.url} alt="Contrato" className="w-full h-auto rounded-lg border border-border/30" />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Painel de detalhes do cliente */}
       <Dialog open={!!detailClient} onOpenChange={(o) => { if (!o) setDetailClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -2417,6 +2482,37 @@ export default function Squad() {
                 <Label htmlFor="ren">Renovação 60d</Label>
               </div>
               <div className="col-span-2"><Label>Observações</Label><Textarea rows={3} value={editing.observations || ""} onChange={(e) => setEditing({ ...editing, observations: e.target.value })} /></div>
+              <div className="col-span-2 rounded-lg border border-border/40 bg-muted/10 p-3 space-y-2">
+                <Label className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Contrato (PDF)</Label>
+                {!editing.id ? (
+                  <p className="text-xs text-muted-foreground">Salve o cliente primeiro para poder anexar o contrato.</p>
+                ) : (
+                  <>
+                    {editing.contract_file_url ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" size="sm" variant="outline" className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => openContract(editing.contract_file_url!, editing.contract_file_name || "contrato")}>
+                          <FileText className="h-4 w-4" /> Ver contrato
+                        </Button>
+                        <span className="text-xs text-muted-foreground truncate max-w-[220px]">{editing.contract_file_name}</span>
+                        {isAdmin && (
+                          <Button type="button" size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={removeContract}>
+                            <Trash2 className="h-4 w-4" /> Remover
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nenhum contrato anexado.</p>
+                    )}
+                    {isAdmin ? (
+                      <Input type="file" accept="application/pdf,.pdf" disabled={contractUploading}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadContract(f); e.currentTarget.value = ""; }} />
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">Somente administradores podem anexar ou remover o contrato.</p>
+                    )}
+                  </>
+                )}
+              </div>
               {editing.curve_abc && editing.sprint && (
                 <div className="col-span-2 text-xs text-muted-foreground bg-muted/20 rounded-lg p-2.5">
                   Priorização será definida automaticamente como{" "}
