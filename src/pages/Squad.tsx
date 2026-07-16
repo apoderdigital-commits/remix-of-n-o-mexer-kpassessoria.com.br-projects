@@ -1207,7 +1207,7 @@ export default function Squad() {
         )}
       </header>
 
-      <main className="px-4 sm:px-8 py-6 max-w-7xl mx-auto">
+      <main className="px-4 sm:px-8 py-6 max-w-[1600px] mx-auto">
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <Select value={squadId} onValueChange={setSquadId}>
             <SelectTrigger className="w-72 bg-card/40 backdrop-blur-sm">
@@ -1523,7 +1523,7 @@ export default function Squad() {
                       return (
                       <TableRow key={c.id} className="border-border/20 hover:bg-muted/20 transition-colors">
                         <TableCell className="text-muted-foreground text-xs font-mono">{i + 1}</TableCell>
-                        <TableCell className="max-w-[260px]">
+                        <TableCell className="min-w-[300px] max-w-[480px]">
                           <button onClick={() => setDetailClient(c)} className="flex items-center gap-2.5 text-left group/cli w-full min-w-0">
                             <div className="relative shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-fuchsia-500/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
