@@ -168,21 +168,21 @@ function buildNpsStats(list: Engagement[]) {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  AA: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40",
-  AB: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-  AC: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40",
-  BA: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
-  BB: "bg-lime-500/20 text-lime-300 border-lime-500/40",
-  BC: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
-  CA: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-  CB: "bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40",
-  CC: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+  AA: "bg-red-500/40 text-red-900 dark:text-red-100 border-red-500/60",
+  AB: "bg-orange-500/40 text-orange-900 dark:text-orange-100 border-orange-500/60",
+  AC: "bg-amber-500/40 text-amber-900 dark:text-amber-100 border-amber-500/60",
+  BA: "bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 border-yellow-500/60",
+  BB: "bg-lime-500/40 text-lime-900 dark:text-lime-100 border-lime-500/60",
+  BC: "bg-emerald-500/40 text-emerald-900 dark:text-emerald-100 border-emerald-500/60",
+  CA: "bg-teal-500/40 text-teal-900 dark:text-teal-100 border-teal-500/60",
+  CB: "bg-sky-500/40 text-sky-900 dark:text-sky-100 border-sky-500/60",
+  CC: "bg-blue-500/40 text-blue-900 dark:text-blue-100 border-blue-500/60",
 };
 
 const CURVE_COLORS: Record<string, string> = {
-  A: "bg-primary/20 text-primary border-primary/40",
-  B: "bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/40",
-  C: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+  A: "bg-primary/40 text-primary-foreground dark:text-primary border-primary/60",
+  B: "bg-fuchsia-500/40 text-fuchsia-900 dark:text-fuchsia-100 border-fuchsia-500/60",
+  C: "bg-slate-500/40 text-slate-900 dark:text-slate-100 border-slate-500/60",
 };
 
 const SERVICE_OPTIONS = [
@@ -192,9 +192,9 @@ const SERVICE_OPTIONS = [
 ] as const;
 
 const SERVICE_COLORS: Record<string, string> = {
-  TP: "bg-primary/20 text-primary border-primary/40",
-  CRM: "bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/40",
-  COM: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
+  TP: "bg-primary/40 text-primary-foreground dark:text-primary border-primary/60",
+  CRM: "bg-fuchsia-500/40 text-fuchsia-900 dark:text-fuchsia-100 border-fuchsia-500/60",
+  COM: "bg-emerald-500/40 text-emerald-900 dark:text-emerald-100 border-emerald-500/60",
 };
 
 function parseServices(raw: string | null | undefined): string[] {
