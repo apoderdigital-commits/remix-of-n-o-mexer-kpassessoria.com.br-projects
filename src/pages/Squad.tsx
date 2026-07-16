@@ -1391,20 +1391,22 @@ export default function Squad() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
                 <StatCard label="BM Verificada" value={stats.bm} icon={CheckCircle2} color="from-green-500 to-emerald-600" />
                 <StatCard label="Renovação 60d" value={stats.renew} icon={Activity} color="from-primary to-fuchsia-600" />
                 <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.npsDelta ?? null} />
                 <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.avgDelta ?? null} />
+                <StatCard label="NPS Médio" value={engHighlights.avgNps ? engHighlights.avgNps.toFixed(1) : "—"} icon={Smile} color="from-indigo-500 to-violet-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
               </div>
 
               {/* Resumo financeiro do squad */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 {[
                   { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-700 dark:text-emerald-300", sub: "/ mês" },
                   { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-700 dark:text-sky-300", sub: "/ mês" },
+                  { label: "Ticket Médio", value: financeSummary.ticketMedio, cls: "text-cyan-700 dark:text-cyan-300", sub: `${clients.length} clientes` },
                   { label: "Meta de Vendas", value: financeSummary.meta, cls: "text-amber-700 dark:text-amber-300", sub: "/ mês" },
                   { label: "Faturamento", value: financeSummary.faturamento, cls: "text-fuchsia-700 dark:text-fuchsia-300", sub: engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "" },
                 ].map((f) => (
@@ -1415,6 +1417,8 @@ export default function Squad() {
                   </div>
                 ))}
               </div>
+
+
 
               {squadMonthly.length > 1 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
