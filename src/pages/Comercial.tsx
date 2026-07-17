@@ -111,9 +111,10 @@ export default function Comercial() {
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
   const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
-  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] }; compSplit?: { compareceram: string[]; noshow: string[] } } | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] }; compSplit?: { compareceram: string[]; noshow: string[] }; agSplit?: { compareceram: string[]; noshow: string[]; aguardando: string[] } } | null>(null);
   const [mqlView, setMqlView] = useState<"todos" | "agendados" | "naoAgendados">("todos");
   const [compView, setCompView] = useState<"compareceram" | "noshow">("compareceram");
+  const [agView, setAgView] = useState<"todos" | "compareceram" | "noshow" | "aguardando">("todos");
   const [recuperacaoLists, setRecuperacaoLists] = useState<RecuperacaoLists | null>(null);
   const [recuperacaoDrill, setRecuperacaoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
   const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
@@ -437,9 +438,24 @@ export default function Comercial() {
       const noshowNomes = nsFiltered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
       compSplit = { compareceram: nomes, noshow: noshowNomes };
     }
+    // Agendamentos: classifica cada agendado — compareceu, no-show ou ainda aguardando.
+    let agSplit: { compareceram: string[]; noshow: string[]; aguardando: string[] } | undefined;
+    if (key === "agendamentos" && trafegoDedup?.lists.noshow) {
+      const compSet = new Set((trafegoDedup?.lists.comparecimentos || []).map((it) => normName(it.nome)));
+      const nsSet = new Set(trafegoDedup.lists.noshow.map((it) => normName(it.nome)));
+      const compareceram: string[] = [], noshowArr: string[] = [], aguardando: string[] = [];
+      for (const nm of nomes) {
+        const k = normName(nm);
+        if (compSet.has(k)) compareceram.push(nm);
+        else if (nsSet.has(k)) noshowArr.push(nm);
+        else aguardando.push(nm);
+      }
+      agSplit = { compareceram, noshow: noshowArr, aguardando };
+    }
     setMqlView("todos");
     setCompView("compareceram");
-    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes, mqlSplit, compSplit });
+    setAgView("todos");
+    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes, mqlSplit, compSplit, agSplit });
   };
   const openTrafegoCat = (cat: "A" | "B" | "C") => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
@@ -1752,6 +1768,51 @@ export default function Comercial() {
             </DialogTitle>
           </DialogHeader>
           {trafegoDrill && (() => {
+            // Agendamentos: compareceu x no-show x aguardando (status real do calendario GHL).
+            const ag = trafegoDrill.agSplit;
+            if (ag) {
+              const compSet = new Set(ag.compareceram.map((n) => n.toLowerCase()));
+              const nsSet = new Set(ag.noshow.map((n) => n.toLowerCase()));
+              const list = agView === "compareceram" ? ag.compareceram
+                : agView === "noshow" ? ag.noshow
+                : agView === "aguardando" ? ag.aguardando
+                : trafegoDrill.nomes;
+              const badge = (nome: string) => {
+                const k = nome.toLowerCase();
+                if (compSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">Compareceu</span>;
+                if (nsSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 shrink-0">No-show</span>;
+                return <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0">Aguardando</span>;
+              };
+              return (
+                <>
+                  <div className="flex gap-1.5 mb-1">
+                    {([["todos", "Todos", trafegoDrill.nomes.length], ["compareceram", "Compareceram", ag.compareceram.length], ["noshow", "No-show", ag.noshow.length], ["aguardando", "Aguardando", ag.aguardando.length]] as const).map(([k, label, n]) => (
+                      <button key={k} onClick={() => setAgView(k)}
+                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${agView === k
+                          ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-300"
+                            : k === "compareceram" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                            : k === "aguardando" ? "bg-sky-500/20 border-sky-500/40 text-sky-300"
+                            : "bg-primary/20 border-primary/40 text-primary")
+                          : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
+                        {label} <span className="font-bold">{n}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {list.length > 0 ? (
+                    <div className="max-h-[55vh] overflow-y-auto space-y-1 pr-1">
+                      {list.map((nome, i) => (
+                        <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
+                          <span>{nome}</span>
+                          {badge(nome)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
+                  )}
+                </>
+              );
+            }
             // Comparecimentos: duas abas — quem compareceu x quem foi no-show.
             const comp = trafegoDrill.compSplit;
             if (comp) {
