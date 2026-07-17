@@ -1789,9 +1789,9 @@ export default function Comercial() {
                 : trafegoDrill.nomes;
               const badge = (nome: string) => {
                 const k = nome.toLowerCase();
-                if (compSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0">Compareceu</span>;
-                if (nsSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/40 shrink-0">{ag.real ? "No-show" : "Não compareceu"}</span>;
-                return <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/40 shrink-0">Aguardando</span>;
+                if (compSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 shrink-0">Compareceu</span>;
+                if (nsSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-500/40 shrink-0">{ag.real ? "No-show" : "Não compareceu"}</span>;
+                return <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-500/40 shrink-0">Aguardando</span>;
               };
               return (
                 <>
@@ -1807,9 +1807,9 @@ export default function Comercial() {
                     })().map(([k, label, n]) => (
                       <button key={k} onClick={() => setAgView(k)}
                         className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${agView === k
-                          ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-700 dark:text-rose-300"
-                            : k === "compareceram" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
-                            : k === "aguardando" ? "bg-sky-500/20 border-sky-500/40 text-sky-700 dark:text-sky-300"
+                          ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-800 dark:text-rose-300"
+                            : k === "compareceram" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-800 dark:text-emerald-300"
+                            : k === "aguardando" ? "bg-sky-500/20 border-sky-500/40 text-sky-800 dark:text-sky-300"
                             : "bg-primary/20 border-primary/40 text-primary")
                           : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
                         {label} <span className="font-bold">{n}</span>
@@ -1824,7 +1824,7 @@ export default function Comercial() {
                           <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
                             <span>{nome}</span>
                             <span className="flex items-center gap-2 shrink-0">
-                              {w && <span className="text-[10px] text-muted-foreground tabular-nums">{`${w.slice(8, 10)}/${w.slice(5, 7)}`}</span>}
+                              {w && <span className="text-[11px] font-semibold text-foreground/70 tabular-nums">{`${w.slice(8, 10)}/${w.slice(5, 7)}`}</span>}
                               {badge(nome)}
                             </span>
                           </div>
@@ -1846,7 +1846,7 @@ export default function Comercial() {
                   <div className="flex gap-1.5 mb-1">
                     {([["compareceram", "Compareceram", comp.compareceram.length], ["noshow", "No-show", comp.noshow.length]] as const).map(([k, label, n]) => (
                       <button key={k} onClick={() => setCompView(k)}
-                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${compView === k ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-700 dark:text-rose-300" : "bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300") : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
+                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${compView === k ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-800 dark:text-rose-300" : "bg-emerald-500/20 border-emerald-500/40 text-emerald-800 dark:text-emerald-300") : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
                         {label} <span className="font-bold">{n}</span>
                       </button>
                     ))}
@@ -1856,7 +1856,7 @@ export default function Comercial() {
                       {list.map((nome, i) => (
                         <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
                           <span>{nome}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 border ${compView === "noshow" ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40"}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 border ${compView === "noshow" ? "bg-rose-500/20 text-rose-800 dark:text-rose-300 border-rose-500/40" : "bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-500/40"}`}>
                             {compView === "noshow" ? "No-show" : "Compareceu"}
                           </span>
                         </div>
@@ -1893,8 +1893,8 @@ export default function Comercial() {
                         <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
                           <span>{nome}</span>
                           {split && mqlView === "todos" && (ag
-                            ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0">Agendado</span>
-                            : <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/40 shrink-0">Não agendado</span>)}
+                            ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 shrink-0">Agendado</span>
+                            : <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-500/40 shrink-0">Não agendado</span>)}
                         </div>
                       );
                     })}
