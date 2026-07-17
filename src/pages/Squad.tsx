@@ -3099,6 +3099,8 @@ function FechamentoPanel({
 
   const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
   const [savingRow, setSavingRow] = useState<string | null>(null);
+  const [uploadingRow, setUploadingRow] = useState<string | null>(null);
+  const [docViewer, setDocViewer] = useState<{ url: string; name: string } | null>(null);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3214,6 +3216,22 @@ function FechamentoPanel({
     onReload();
   }
 
+  // Anexo do funil de projeção (imagem exportada) — guardado no bucket "projecoes"
+  async function uploadFunil(c: SquadClient, file: File) {
+    setUploadingRow(c.name);
+    const path = `fechamento/${squadId}/${month}/${c.id}-${file.name}`;
+    const up = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
+    if (up.error) { setUploadingRow(null); toast.error("Erro no upload: " + up.error.message); return; }
+    await saveManual(c.name, { plano_estrategico_link: path });
+    setUploadingRow(null);
+  }
+
+  async function openFunil(path: string) {
+    const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o anexo."); return; }
+    setDocViewer({ url: data.signedUrl, name: path.split("/").pop() || "funil" });
+  }
+
   async function startFechamento() {
     setNotes("");
     setPresenting(true);
@@ -3266,7 +3284,7 @@ function FechamentoPanel({
     const r = rowByName.get(norm(c.name));
     const isCom = parseServices(c.services).includes("COM");
     return !r || r.nps_individual == null || (r as any).crm_usage == null
-      || (r as any).plano_estrategico !== true
+      || (r as any).plano_estrategico == null
       || (isCom && (r as any).conversao_comercial == null);
   }).length;
 
@@ -3352,10 +3370,10 @@ function FechamentoPanel({
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/30">
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="text-center">NPS (0-10)</TableHead>
+                  <TableHead className="text-center">NPS <span className="font-normal text-muted-foreground">(auto)</span></TableHead>
                   <TableHead className="text-center">Uso CRM (1-5)</TableHead>
-                  <TableHead className="text-center">Plano estratégico</TableHead>
-                  <TableHead>Link do plano</TableHead>
+                  <TableHead className="text-center">Está no planejamento estratégico?</TableHead>
+                  <TableHead>Anexo do funil</TableHead>
                   <TableHead className="text-center">Conversão % (COM)</TableHead>
                 </TableRow>
               </TableHeader>
@@ -3371,10 +3389,11 @@ function FechamentoPanel({
                     <TableRow key={c.id} className="border-border/20">
                       <TableCell className="font-semibold">{c.name}</TableCell>
                       <TableCell className="text-center">
-                        <Input key={`nps-${c.id}-${r?.nps_individual ?? "x"}`} type="number" min="0" max="10" step="1" disabled={busy}
-                          defaultValue={r?.nps_individual ?? ""} placeholder="—"
-                          className={`h-8 w-20 text-xs text-center mx-auto ${r?.nps_individual == null ? "border-red-500/40" : ""}`}
-                          onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (r?.nps_individual ?? null)) void saveManual(c.name, { nps_individual: v }); }} />
+                        {r?.nps_individual != null ? (
+                          <Badge variant="outline" className="font-bold border-emerald-500/40 text-emerald-700 dark:text-emerald-300">{r.nps_individual}</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300" title="Preencha na aba Engajamento deste mês">falta no Engajamento</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <Input key={`crm-${c.id}-${(r as any)?.crm_usage ?? "x"}`} type="number" min="1" max="5" step="1" disabled={busy}
@@ -3383,18 +3402,35 @@ function FechamentoPanel({
                           onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== ((r as any)?.crm_usage ?? null)) void saveManual(c.name, { crm_usage: v }); }} />
                       </TableCell>
                       <TableCell className="text-center">
-                        <input type="checkbox" disabled={busy} checked={!!(r as any)?.plano_estrategico}
-                          onChange={(e) => void saveManual(c.name, { plano_estrategico: e.target.checked })} />
+                        <Select
+                          value={(r as any)?.plano_estrategico === true ? "sim" : (r as any)?.plano_estrategico === false ? "nao" : ""}
+                          onValueChange={(v) => void saveManual(c.name, { plano_estrategico: v === "sim" ? true : false })}
+                        >
+                          <SelectTrigger className={`h-8 w-24 mx-auto text-xs ${(r as any)?.plano_estrategico == null ? "border-red-500/40" : ""}`}>
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sim">Sim</SelectItem>
+                            <SelectItem value="nao">Não</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <Input key={`lnk-${c.id}-${link}`} defaultValue={link} placeholder="https://..." className="h-8 text-xs" disabled={busy}
-                            onBlur={(e) => { const v = e.target.value.trim(); if (v !== link) void saveManual(c.name, { plano_estrategico_link: v || null }); }} />
-                          {link && (
-                            <a href={link} target="_blank" rel="noopener noreferrer" title="Abrir plano"
-                              className="shrink-0 text-primary hover:opacity-80"><FileText className="h-4 w-4" /></a>
-                          )}
-                        </div>
+                        {link ? (
+                          <div className="flex items-center gap-1.5">
+                            <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                              onClick={() => void openFunil(link)}>
+                              <FileText className="h-3.5 w-3.5" /> Ver funil
+                            </Button>
+                            <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Remover anexo"
+                              onClick={() => void saveManual(c.name, { plano_estrategico_link: null })}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Input type="file" accept="image/*" disabled={uploadingRow === c.name || busy} className="h-8 text-xs"
+                            onChange={(e) => { const fl = e.target.files?.[0]; if (fl) void uploadFunil(c, fl); e.currentTarget.value = ""; }} />
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {isCom ? (
@@ -3412,6 +3448,16 @@ function FechamentoPanel({
           </div>
         </CardContent>
       </Card>
+
+      {/* Visualizador do anexo do funil */}
+      <Dialog open={!!docViewer} onOpenChange={(o) => { if (!o) setDocViewer(null); }}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Funil de projeção anexado</DialogTitle>
+          </DialogHeader>
+          {docViewer && <img src={docViewer.url} alt="Funil de projeção" className="w-full h-auto rounded-lg border border-border/30" />}
+        </DialogContent>
+      </Dialog>
 
       {/* Apresentação do fechamento — timer + métricas + anotações */}
       <Dialog open={presenting} onOpenChange={(o) => { if (!o && !savingSession) closeFechamento(); }}>
