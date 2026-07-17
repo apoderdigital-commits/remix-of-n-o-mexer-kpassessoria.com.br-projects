@@ -642,7 +642,7 @@ export default function Squad() {
       confirmLabel: "Remover", destructive: true,
       onConfirm: async () => {
         const { error } = await supabase.from("squad_monthly_metrics").delete().eq("id", id);
-        if (error) return toast.error(error.message);
+        if (error) { toast.error(error.message); return; }
         void loadAll(squadId);
       },
     });
