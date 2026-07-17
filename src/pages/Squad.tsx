@@ -3219,7 +3219,15 @@ function FechamentoPanel({
   // Anexo do funil de projeção (imagem exportada) — guardado no bucket "projecoes"
   async function uploadFunil(c: SquadClient, file: File) {
     setUploadingRow(c.name);
-    const path = `fechamento/${squadId}/${month}/${c.id}-${file.name}`;
+    const dot = file.name.lastIndexOf(".");
+    const ext = dot >= 0 ? file.name.slice(dot).toLowerCase().replace(/[^a-z0-9.]/g, "") : "";
+    const base = (dot >= 0 ? file.name.slice(0, dot) : file.name)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "arquivo";
+    const safeName = `${base}${ext}`;
+    const path = `fechamento/${squadId}/${month}/${c.id}-${Date.now()}-${safeName}`;
     const up = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
     if (up.error) { setUploadingRow(null); toast.error("Erro no upload: " + up.error.message); return; }
     await saveManual(c.name, { plano_estrategico_link: path });
