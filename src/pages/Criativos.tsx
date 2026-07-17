@@ -8,6 +8,7 @@ import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CampaignFilterDialog } from "@/components/dashboard/CampaignFilterDialog";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
+import { CreativeQualificationChart } from "@/components/dashboard/CreativeQualificationChart";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
 import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
