@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, Lock, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
@@ -1244,29 +1244,13 @@ export default function Squad() {
 
       <main className="px-4 sm:px-8 py-6 max-w-[1600px] mx-auto">
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          {squadId && squads.length === 1 && (
+          {/* Sem troca de squad aqui: a escolha e feita na tela de selecao. Pra ir
+              pra outro squad, o usuario volta e entra de novo na Dash do Squad. */}
+          {squadId && (
             <div className="flex items-center gap-2 h-10 px-4 rounded-md border border-border/30 bg-card/40 backdrop-blur-sm">
               <span className="w-2 h-2 rounded-full" style={{ background: currentSquad?.color || "#8B5CF6" }} />
               <span className="text-sm font-medium">{currentSquad?.name}</span>
-              <Lock className="h-3 w-3 text-muted-foreground ml-1" />
             </div>
-          )}
-          {squadId && squads.length > 1 && (
-          <Select value={squadId} onValueChange={setSquadId}>
-            <SelectTrigger className="w-72 bg-card/40 backdrop-blur-sm">
-              <SelectValue placeholder="Selecione um squad" />
-            </SelectTrigger>
-            <SelectContent>
-              {squads.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: s.color || "#8B5CF6" }} />
-                    {s.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           )}
           <div className="flex-1" />
           {squadId && (
