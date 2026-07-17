@@ -3299,7 +3299,7 @@ function FechamentoPanel({
     {
       label: "NPS respondidos × ativos", value: `${f.npsRespond.length}/${f.eligCount}`, ok: null, hint: "sobre a base elegível",
       detail: { title: "NPS do mês", groups: [
-        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const }))),
+        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as "ok" | "bad" | "warn" }))),
         G("Faltam responder", f.npsFaltam.map((n) => ({ name: n, badge: "sem nota", tone: "bad" as const })), "Todos responderam 🎉"),
       ] },
     },
