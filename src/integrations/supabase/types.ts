@@ -1243,7 +1243,7 @@ export type Database = {
           meta_vendas_trafego: number | null
           nps_individual: number | null
           observation: string | null
-          plano_estrategico: boolean
+          plano_estrategico: boolean | null
           plano_estrategico_link: string | null
           reference_month: string
           sprint: string | null
@@ -1275,7 +1275,7 @@ export type Database = {
           meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
-          plano_estrategico?: boolean
+          plano_estrategico?: boolean | null
           plano_estrategico_link?: string | null
           reference_month: string
           sprint?: string | null
@@ -1307,7 +1307,7 @@ export type Database = {
           meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
-          plano_estrategico?: boolean
+          plano_estrategico?: boolean | null
           plano_estrategico_link?: string | null
           reference_month?: string
           sprint?: string | null
@@ -1318,6 +1318,39 @@ export type Database = {
           vendas_perc_canais?: string | null
           vendas_por_canais?: string | null
           vendas_trafego?: number | null
+        }
+        Relationships: []
+      }
+      squad_fechamento_sessions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          reference_month: string
+          squad_id: string
+          started_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          reference_month: string
+          squad_id: string
+          started_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          reference_month?: string
+          squad_id?: string
+          started_at?: string | null
         }
         Relationships: []
       }
