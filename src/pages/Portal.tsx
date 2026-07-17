@@ -62,7 +62,7 @@ export default function Portal() {
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
         <PortalVideo
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
           src={portalBg.url}
           showControls
         />
