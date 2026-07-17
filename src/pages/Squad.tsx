@@ -89,6 +89,7 @@ type Engagement = {
   client_name: string; contact: string | null;
   curve_abc: string | null; sprint: string | null;
   engagement_score: number | null; nps_individual: number | null; crm_usage: number | null; observation: string | null;
+  plano_estrategico: boolean | null; plano_estrategico_link: string | null; conversao_comercial: number | null;
   meta_status: string | null;
   meta_vendas: number | null; meta_vendas_trafego: number | null; meta_vendas_loja: number | null; meta_faturamento: number | null;
   vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
@@ -1345,6 +1346,7 @@ export default function Squad() {
               <TabsTrigger value="nps" className="gap-1.5"><Smile className="h-3.5 w-3.5" /> % de NPS</TabsTrigger>
               <TabsTrigger value="engagement" className="gap-1.5"><Star className="h-3.5 w-3.5" /> Engajamento</TabsTrigger>
               <TabsTrigger value="agenda" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agenda das Mensais</TabsTrigger>
+              <TabsTrigger value="fechamento" className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" /> Fechamento Operacional</TabsTrigger>
             </TabsList>
 
             {/* CLIENTES */}
@@ -2245,6 +2247,19 @@ export default function Squad() {
                 onReload={() => loadAll(squadId)}
               />
             </TabsContent>
+
+            {/* FECHAMENTO OPERACIONAL */}
+            <TabsContent value="fechamento" className="space-y-4">
+              <FechamentoPanel
+                clients={clients}
+                engagement={engagement}
+                churns={churns}
+                agenda={agenda}
+                squadId={squadId}
+                squadName={currentSquad?.name || "Squad"}
+                onReload={() => loadAll(squadId)}
+              />
+            </TabsContent>
           </Tabs>
         )}
       </main>
@@ -3052,6 +3067,289 @@ function Info({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="font-medium">{value}</p>
+    </div>
+  );
+}
+
+// ── FECHAMENTO OPERACIONAL ───────────────────────────────────────────────────
+// Reaproveita a MESMA lógica das outras abas (base D+30, churn, uso do CRM,
+// mensais, vendido, produto secundário, meta x vendeu). Só o plano estratégico
+// e a conversão comercial são preenchidos à mão.
+function FechamentoPanel({
+  clients, engagement, churns, agenda, squadId, squadName, onReload,
+}: {
+  clients: SquadClient[];
+  engagement: Engagement[];
+  churns: Churn[];
+  agenda: Agenda[];
+  squadId: string;
+  squadName: string;
+  onReload: () => void;
+}) {
+  const ymf = (d: string | null | undefined) => (d || "").slice(0, 7);
+  const norm = (x: string | null | undefined) => (x || "").trim().toLowerCase();
+
+  const months = useMemo(() => {
+    const set = new Set<string>();
+    engagement.forEach((e) => e.reference_month && set.add(ymf(e.reference_month)));
+    agenda.forEach((a) => a.reference_month && set.add(ymf(a.reference_month)));
+    set.add(new Date().toISOString().slice(0, 7));
+    return Array.from(set).sort().reverse();
+  }, [engagement, agenda]);
+
+  const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
+  const [presenting, setPresenting] = useState(false);
+  const [savingRow, setSavingRow] = useState<string | null>(null);
+  useEffect(() => {
+    if (!months.includes(month) && months[0]) setMonth(months[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [months.join(",")]);
+
+  const rowByName = useMemo(() => {
+    const m = new Map<string, Engagement>();
+    engagement.filter((e) => ymf(e.reference_month) === month).forEach((e) => m.set(norm(e.client_name), e));
+    return m;
+  }, [engagement, month]);
+
+  const eligible = useMemo(() => clients.filter((c) => c.entry_date && ymf(c.entry_date) < month), [clients, month]);
+  const missingEntry = clients.filter((c) => !!c.entry_date).length === 0;
+
+  const metaOf = (c: SquadClient, r?: Engagement) => {
+    const t = (r as any)?.meta_vendas_trafego ?? (c as any)?.meta_vendas_trafego ?? null;
+    const l = (r as any)?.meta_vendas_loja ?? (c as any)?.meta_vendas_loja ?? null;
+    const tot = (r as any)?.meta_vendas ?? ((t != null || l != null) ? (Number(t) || 0) + (Number(l) || 0) : null);
+    return tot != null ? Number(tot) : null;
+  };
+
+  const f = useMemo(() => {
+    const M = month;
+    const elig = eligible;
+    const rows = elig.map((c) => rowByName.get(norm(c.name))).filter(Boolean) as Engagement[];
+    const totalAtivos = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= M).length;
+
+    const npsClients = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && r.nps_individual != null; });
+    const notas = npsClients.map((c) => Number(rowByName.get(norm(c.name))!.nps_individual));
+    const notaMedia = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
+    const pctResposta = elig.length ? (npsClients.length / elig.length) * 100 : 0;
+
+    // churn — mesma regra da aba Churn (base D+30)
+    const activeBefore = clients.filter((c) => c.entry_date && ymf(c.entry_date) < M).length;
+    const churnedLater = churns.filter((ch) => ymf(ch.entry_month) && ymf(ch.entry_month) < M && ymf(ch.churn_month) >= M).length;
+    const churnBase = activeBefore + churnedLater;
+    const churnsMes = churns.filter((ch) => ymf(ch.churn_month) === M && ymf(ch.entry_month) && ymf(ch.entry_month) < M).length;
+    const churnRate = churnBase ? (churnsMes / churnBase) * 100 : 0;
+
+    const crmOk = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && (r as any).crm_usage != null && Number((r as any).crm_usage) >= 4; }).length;
+    const pctCrm = elig.length ? (crmOk / elig.length) * 100 : 0;
+
+    const doneNames = new Set(agenda.filter((a) => ymf(a.reference_month) === M && a.done).map((a) => norm(a.client_name)));
+    const mensaisOk = elig.filter((c) => doneNames.has(norm(c.name))).length;
+    const pctMensais = elig.length ? (mensaisOk / elig.length) * 100 : 0;
+
+    const vendido = rows.reduce((sum, r) => sum + (Number(r.faturamento) || 0), 0);
+    const comSec = rows.filter((r) => (Number(r.vendas_loja) || 0) > 0).length;
+    const pctSec = elig.length ? (comSec / elig.length) * 100 : 0;
+
+    const comMetaArr = elig.map((c) => ({ c, r: rowByName.get(norm(c.name)) })).filter(({ c, r }) => { const m = metaOf(c, r); return m != null && m > 0; });
+    const bateu = comMetaArr.filter(({ c, r }) => (Number(r?.vendas) || 0) >= (metaOf(c, r) || 0)).length;
+    const pctMeta = comMetaArr.length ? (bateu / comMetaArr.length) * 100 : 0;
+
+    const planoOk = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && (r as any).plano_estrategico === true; }).length;
+    const pctPlano = elig.length ? (planoOk / elig.length) * 100 : 0;
+
+    const comClients = elig.filter((c) => parseServices(c.services).includes("COM"));
+    const convVals = comClients.map((c) => rowByName.get(norm(c.name)))
+      .filter((r) => !!r && (r as any).conversao_comercial != null)
+      .map((r) => Number((r as any).conversao_comercial));
+    const convMedia = convVals.length ? convVals.reduce((a, b) => a + b, 0) / convVals.length : 0;
+
+    const motivosMap = new Map<string, number>();
+    churns.filter((ch) => ymf(ch.churn_month) === M).forEach((ch) => {
+      const k = (ch.reason || "").trim() || "Sem motivo informado";
+      motivosMap.set(k, (motivosMap.get(k) || 0) + 1);
+    });
+
+    return {
+      totalAtivos, eligCount: elig.length, npsRespondidos: npsClients.length, pctResposta, notaMedia,
+      churnRate, churnsMes, churnBase, crmOk, pctCrm, mensaisOk, pctMensais, vendido, comSec, pctSec,
+      comMeta: comMetaArr.length, bateu, pctMeta, planoOk, pctPlano,
+      convMedia, convCount: convVals.length, comTotal: comClients.length,
+      motivos: Array.from(motivosMap.entries()).sort((a, b) => b[1] - a[1]),
+    };
+  }, [clients, engagement, churns, agenda, month, rowByName, eligible]);
+
+  async function saveManual(clientName: string, patch: Record<string, any>) {
+    setSavingRow(clientName);
+    const existing = rowByName.get(norm(clientName));
+    let error: any = null;
+    if (existing) {
+      const res = await (supabase as any).from("squad_engagement").update(patch).eq("id", existing.id);
+      error = res.error;
+    } else {
+      const res = await (supabase as any).from("squad_engagement")
+        .insert({ squad_id: squadId, client_name: clientName, reference_month: `${month}-01`, ...patch });
+      error = res.error;
+    }
+    setSavingRow(null);
+    if (error) {
+      if (/plano_estrategico|conversao_comercial/.test(error.message || "")) {
+        toast.error("O Fechamento precisa da migração (peça ao Lovable).");
+      } else toast.error(error.message);
+      return;
+    }
+    onReload();
+  }
+
+  const cards: { label: string; value: string; ok: boolean | null; hint?: string }[] = [
+    { label: "Clientes ativos no mês", value: String(f.totalAtivos), ok: null, hint: `${f.eligCount} elegíveis (D+30)` },
+    { label: "NPS respondidos × ativos", value: `${f.npsRespondidos}/${f.eligCount}`, ok: null, hint: "sobre a base elegível" },
+    { label: "% de resposta", value: `${f.pctResposta.toFixed(0)}%`, ok: f.pctResposta >= 80, hint: "meta ≥ 80%" },
+    { label: "Nota média do NPS", value: f.notaMedia ? f.notaMedia.toFixed(1) : "—", ok: f.npsRespondidos ? f.notaMedia >= 9 : null, hint: "meta ≥ 9,0" },
+    { label: "Taxa de churn", value: `${f.churnRate.toFixed(1)}%`, ok: f.churnRate < 5, hint: `${f.churnsMes} de ${f.churnBase} · meta < 5%` },
+    { label: "% usando CRM", value: `${f.pctCrm.toFixed(0)}%`, ok: f.pctCrm >= 80, hint: `${f.crmOk} de ${f.eligCount} · nota ≥ 4 · meta ≥ 80%` },
+    { label: "% reunião mensal", value: `${f.pctMensais.toFixed(0)}%`, ok: f.pctMensais >= 80, hint: `${f.mensaisOk} de ${f.eligCount} · meta ≥ 80%` },
+    { label: "R$ vendido no mês", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "meta ≥ R$ 10k · mín R$ 5k" },
+    { label: "% produto secundário", value: `${f.pctSec.toFixed(0)}%`, ok: f.pctSec >= 20, hint: `${f.comSec} clientes · meta ≥ 20%` },
+    { label: "CPL médio", value: "Em breve", ok: null, hint: "vem da dash de Criativos" },
+    { label: "CPMQL médio", value: "Em breve", ok: null, hint: "meta < R$ 45" },
+    { label: "% bateram a meta projetada", value: `${f.pctMeta.toFixed(0)}%`, ok: f.comMeta ? f.pctMeta >= 70 : null, hint: `${f.bateu} de ${f.comMeta} com meta · meta ≥ 70%` },
+    { label: "% plano estratégico documentado", value: `${f.pctPlano.toFixed(0)}%`, ok: f.pctPlano >= 90, hint: `${f.planoOk} de ${f.eligCount} · meta ≥ 90%` },
+    { label: "Conversão comercial (COM)", value: f.convCount ? `${f.convMedia.toFixed(1)}%` : "—", ok: f.convCount ? f.convMedia >= 20 : null, hint: `${f.convCount} de ${f.comTotal} preenchidos · meta ≥ 20%` },
+  ];
+
+  const faltaPreencher = eligible.filter((c) => {
+    const r = rowByName.get(norm(c.name));
+    const isCom = parseServices(c.services).includes("COM");
+    const semPlano = !r || (r as any).plano_estrategico !== true;
+    const semConv = isCom && (!r || (r as any).conversao_comercial == null);
+    return semPlano || semConv;
+  }).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={month} onValueChange={setMonth}>
+          <SelectTrigger className="w-56 bg-card/40 backdrop-blur-sm"><SelectValue placeholder="Mês do fechamento" /></SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex-1" />
+        <Button onClick={() => setPresenting(true)} className="gap-2 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30">
+          <Play className="h-4 w-4" /> Apresentar fechamento de <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+        </Button>
+      </div>
+
+      {missingEntry ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+          ⚠️ Preencha a <strong>Data de entrada</strong> dos clientes (aba Clientes) — o fechamento usa a base D+30.
+        </div>
+      ) : (
+        <div className={`rounded-xl border p-3 text-xs ${faltaPreencher === 0 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200" : "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"}`}>
+          {faltaPreencher === 0
+            ? "✓ Tudo preenchido — pode apresentar o fechamento."
+            : `Faltam preencher ${faltaPreencher} de ${eligible.length} clientes (plano estratégico e/ou conversão comercial).`}
+        </div>
+      )}
+
+      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Preenchimento por cliente <span className="text-xs font-normal text-muted-foreground">· o que o sistema não tem automático</span></CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-border/30">
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-center">NPS</TableHead>
+                  <TableHead className="text-center">Uso CRM</TableHead>
+                  <TableHead className="text-center">Plano estratégico</TableHead>
+                  <TableHead>Link do plano</TableHead>
+                  <TableHead className="text-center">Conversão % (COM)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {eligible.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">Nenhum cliente elegível (D+30) neste mês.</TableCell></TableRow>
+                ) : eligible.map((c) => {
+                  const r = rowByName.get(norm(c.name));
+                  const isCom = parseServices(c.services).includes("COM");
+                  const busy = savingRow === c.name;
+                  return (
+                    <TableRow key={c.id} className="border-border/20">
+                      <TableCell className="font-semibold">{c.name}</TableCell>
+                      <TableCell className="text-center">
+                        {r?.nps_individual != null
+                          ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-700 dark:text-emerald-300">{r.nps_individual}</Badge>
+                          : <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">falta</Badge>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {(r as any)?.crm_usage != null
+                          ? <Badge variant="outline" className={Number((r as any).crm_usage) >= 4 ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-amber-500/40 text-amber-700 dark:text-amber-300"}>{(r as any).crm_usage}/5</Badge>
+                          : <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">falta</Badge>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <input type="checkbox" disabled={busy} checked={!!(r as any)?.plano_estrategico}
+                          onChange={(e) => saveManual(c.name, { plano_estrategico: e.target.checked })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input defaultValue={(r as any)?.plano_estrategico_link || ""} placeholder="https://..." className="h-8 text-xs" disabled={busy}
+                          onBlur={(e) => { const v = e.target.value.trim(); if (v !== (((r as any)?.plano_estrategico_link) || "")) void saveManual(c.name, { plano_estrategico_link: v || null }); }} />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isCom ? (
+                          <Input type="number" min="0" max="100" step="0.1" disabled={busy}
+                            defaultValue={(r as any)?.conversao_comercial ?? ""} placeholder="%"
+                            className="h-8 w-24 text-xs text-center mx-auto"
+                            onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (((r as any)?.conversao_comercial) ?? null)) void saveManual(c.name, { conversao_comercial: v }); }} />
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Apresentação do fechamento */}
+      <Dialog open={presenting} onOpenChange={setPresenting}>
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              Fechamento Operacional · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {cards.map((card) => (
+              <div key={card.label} className={`rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"}`}>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                <p className={`text-2xl font-bold mt-1 ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
+                {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+            <p className="text-sm font-semibold mb-2">Motivos de churn no mês</p>
+            {f.motivos.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhum churn neste mês 🎉</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {f.motivos.map(([m, n]) => (
+                  <Badge key={m} variant="outline" className="gap-1.5 border-red-500/30 text-red-700 dark:text-red-300">
+                    {m} <span className="font-bold">{n}</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
