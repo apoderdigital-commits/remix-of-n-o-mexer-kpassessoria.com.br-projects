@@ -111,8 +111,9 @@ export default function Comercial() {
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
   const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
-  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] } } | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] }; compSplit?: { compareceram: string[]; noshow: string[] } } | null>(null);
   const [mqlView, setMqlView] = useState<"todos" | "agendados" | "naoAgendados">("todos");
+  const [compView, setCompView] = useState<"compareceram" | "noshow">("compareceram");
   const [recuperacaoLists, setRecuperacaoLists] = useState<RecuperacaoLists | null>(null);
   const [recuperacaoDrill, setRecuperacaoDrill] = useState<{ title: string; nomes: string[] } | null>(null);
   const [geralCalendars, setGeralCalendars] = useState<{ id: string; name: string; agendamentos: number; comparecimentos: number; noshows: number }[]>([]);
@@ -366,6 +367,17 @@ export default function Comercial() {
       cc.Geral = excludeC ? cc.A + cc.B + cc.Outro : uniq.length;
       outCounts[st] = cc;
     }
+    // no-show do trafego: nao e etapa do funil, mas usamos no drill de Comparecimentos.
+    if (lists.noshow) {
+      const seen = new Set<string>();
+      const uniq: TrafegoListItem[] = [];
+      for (const it of lists.noshow) {
+        const k = normName(it.nome);
+        if (!k || seen.has(k)) continue;
+        seen.add(k); uniq.push(it);
+      }
+      outLists.noshow = uniq;
+    }
     return { lists: outLists, counts: outCounts };
   };
   const dedupeRecuperacao = (lists: RecuperacaoLists | null) => {
@@ -415,8 +427,19 @@ export default function Comercial() {
       for (const nm of nomes) (agSet.has(normName(nm)) ? agendados : naoAgendados).push(nm);
       mqlSplit = { agendados, naoAgendados };
     }
+    // Comparecimentos: separa quem compareceu de quem foi no-show (lista real do backend).
+    let compSplit: { compareceram: string[]; noshow: string[] } | undefined;
+    if (key === "comparecimentos" && trafegoDedup?.lists.noshow) {
+      const nsItems = trafegoDedup.lists.noshow;
+      const nsFiltered = leadFilter === "Geral"
+        ? nsItems.filter((it) => it.category !== "C")
+        : nsItems.filter((it) => it.category === leadFilter);
+      const noshowNomes = nsFiltered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      compSplit = { compareceram: nomes, noshow: noshowNomes };
+    }
     setMqlView("todos");
-    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes, mqlSplit });
+    setCompView("compareceram");
+    setTrafegoDrill({ title: `${stageLabels[key]}${sufixo}`, nomes, mqlSplit, compSplit });
   };
   const openTrafegoCat = (cat: "A" | "B" | "C") => {
     if (!trafegoLists) { toast.info("Clique em Atualizar para carregar os contatos."); return; }
@@ -1729,6 +1752,37 @@ export default function Comercial() {
             </DialogTitle>
           </DialogHeader>
           {trafegoDrill && (() => {
+            // Comparecimentos: duas abas — quem compareceu x quem foi no-show.
+            const comp = trafegoDrill.compSplit;
+            if (comp) {
+              const list = compView === "noshow" ? comp.noshow : comp.compareceram;
+              return (
+                <>
+                  <div className="flex gap-1.5 mb-1">
+                    {([["compareceram", "Compareceram", comp.compareceram.length], ["noshow", "No-show", comp.noshow.length]] as const).map(([k, label, n]) => (
+                      <button key={k} onClick={() => setCompView(k)}
+                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${compView === k ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-300" : "bg-emerald-500/20 border-emerald-500/40 text-emerald-300") : "bg-card/40 border-white/5 text-muted-foreground hover:bg-card/60"}`}>
+                        {label} <span className="font-bold">{n}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {list.length > 0 ? (
+                    <div className="max-h-[55vh] overflow-y-auto space-y-1 pr-1">
+                      {list.map((nome, i) => (
+                        <div key={`${nome}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-card/40 border border-white/5 flex items-center justify-between gap-2">
+                          <span>{nome}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 border ${compView === "noshow" ? "bg-rose-500/15 text-rose-300 border-rose-500/30" : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"}`}>
+                            {compView === "noshow" ? "No-show" : "Compareceu"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-sm text-muted-foreground">Nenhum contato neste grupo.</div>
+                  )}
+                </>
+              );
+            }
             const split = trafegoDrill.mqlSplit;
             const agSet = split ? new Set(split.agendados.map((n) => n.toLowerCase())) : null;
             const list = split
