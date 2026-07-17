@@ -645,7 +645,10 @@ export default function Index() {
                 since={since}
                 until={until}
               />
+            </div>
           </div>
+
+
 
           <CreativeQualificationChart
             campaigns={(campaigns || []).map((c: any) => ({ ad_name: c.ad_name, leads_total: c.leads_total }))}
