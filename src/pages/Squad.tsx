@@ -3181,6 +3181,74 @@ function FechamentoPanel({
     }
   };
 
+  const saveManual = async (clientName: string, patch: Record<string, any>) => {
+    setSavingRow(clientName);
+    try {
+      const ref = `${month}-01`;
+      const { data: existing } = await (supabase as any)
+        .from("squad_engagement")
+        .select("id")
+        .eq("squad_id", squadId)
+        .eq("reference_month", ref)
+        .ilike("client_name", clientName)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (existing?.id) {
+        const { error } = await (supabase as any).from("squad_engagement").update(patch).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any).from("squad_engagement")
+          .insert({ squad_id: squadId, reference_month: ref, client_name: clientName, ...patch });
+        if (error) throw error;
+      }
+      onReload();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingRow(null);
+    }
+  };
+
+  const openFunil = async (path: string) => {
+    try {
+      const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+      if (error) throw error;
+      setDocViewer({ url: data.signedUrl, name: path.split("/").pop() || "funil" });
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível abrir o anexo");
+    }
+  };
+
+  const uploadFunil = async (c: SquadClient, file: File) => {
+    setUploadingRow(c.name);
+    try {
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+      const base = file.name.slice(0, file.name.length - ext.length)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 60) || "funil";
+      const safeName = `${base}${ext}`;
+      const path = `fechamento/${squadId}/${month}/${c.id}-${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      await saveManual(c.name, { plano_estrategico_link: path });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro no upload");
+    } finally {
+      setUploadingRow(null);
+    }
+  };
+
+  const calcCplMedio = async () => {
+    setCplLoading(true);
+    try {
+      toast.info("Cálculo de CPL em breve");
+    } finally {
+      setCplLoading(false);
+    }
+  };
+
+
+
   const rowByName = useMemo(() => {
     const m = new Map<string, Engagement>();
     engagement.filter((e) => ymf(e.reference_month) === month).forEach((e) => m.set(norm(e.client_name), e));
