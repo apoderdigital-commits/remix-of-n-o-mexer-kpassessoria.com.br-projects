@@ -1226,6 +1226,7 @@ export type Database = {
         Row: {
           client_name: string
           contact: string | null
+          conversao_comercial: number | null
           created_at: string
           crm_usage: number | null
           curve_abc: string | null
@@ -1242,6 +1243,8 @@ export type Database = {
           meta_vendas_trafego: number | null
           nps_individual: number | null
           observation: string | null
+          plano_estrategico: boolean
+          plano_estrategico_link: string | null
           reference_month: string
           sprint: string | null
           squad_id: string
@@ -1255,6 +1258,7 @@ export type Database = {
         Insert: {
           client_name: string
           contact?: string | null
+          conversao_comercial?: number | null
           created_at?: string
           crm_usage?: number | null
           curve_abc?: string | null
@@ -1271,6 +1275,8 @@ export type Database = {
           meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
+          plano_estrategico?: boolean
+          plano_estrategico_link?: string | null
           reference_month: string
           sprint?: string | null
           squad_id: string
@@ -1284,6 +1290,7 @@ export type Database = {
         Update: {
           client_name?: string
           contact?: string | null
+          conversao_comercial?: number | null
           created_at?: string
           crm_usage?: number | null
           curve_abc?: string | null
@@ -1300,6 +1307,8 @@ export type Database = {
           meta_vendas_trafego?: number | null
           nps_individual?: number | null
           observation?: string | null
+          plano_estrategico?: boolean
+          plano_estrategico_link?: string | null
           reference_month?: string
           sprint?: string | null
           squad_id?: string
