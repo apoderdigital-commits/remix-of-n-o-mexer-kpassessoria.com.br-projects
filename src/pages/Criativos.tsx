@@ -8,6 +8,7 @@ import kpLogo from "@/assets/kp-logo.png";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { CampaignFilterDialog } from "@/components/dashboard/CampaignFilterDialog";
 import { CreativeRanking } from "@/components/dashboard/CreativeRanking";
+import { CreativeQualificationChart } from "@/components/dashboard/CreativeQualificationChart";
 import { EvolutionChart } from "@/components/dashboard/EvolutionChart";
 import { SellerRanking } from "@/components/dashboard/SellerRanking";
 import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
@@ -646,6 +647,15 @@ export default function Index() {
               />
             </div>
           </div>
+
+
+
+          <CreativeQualificationChart
+            campaigns={(campaigns || []).map((c: any) => ({ ad_name: c.ad_name, leads_total: c.leads_total }))}
+            leads={(leads || []).map((l: any) => ({ creative_name: l.creative_name, status: l.status }))}
+          />
+
+
 
           <div ref={funnelRef}>
           <GoalsFunnel
