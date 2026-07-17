@@ -3138,6 +3138,117 @@ function FechamentoPanel({
   }, [startedAt]);
   const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  const startFechamento = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("squad_fechamento_sessions")
+        .insert({ squad_id: squadId, reference_month: `${month}-01`, started_at: new Date().toISOString() })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setSessionId((data as any)?.id ?? null);
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível iniciar a sessão");
+    }
+    setStartedAt(Date.now());
+    setElapsed(0);
+    setNotes("");
+    setPresenting(true);
+  };
+
+  const closeFechamento = () => {
+    setPresenting(false);
+    setStartedAt(null);
+    setElapsed(0);
+    setSessionId(null);
+    setNotes("");
+  };
+
+  const saveSession = async (end: boolean) => {
+    if (!sessionId) { if (end) closeFechamento(); return; }
+    setSavingSession(true);
+    try {
+      const payload: any = { notes };
+      if (end) payload.ended_at = new Date().toISOString();
+      const { error } = await supabase.from("squad_fechamento_sessions").update(payload).eq("id", sessionId);
+      if (error) throw error;
+      toast.success(end ? "Fechamento encerrado!" : "Anotações salvas");
+      if (end) closeFechamento();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingSession(false);
+    }
+  };
+
+  const saveManual = async (clientName: string, patch: Record<string, any>) => {
+    setSavingRow(clientName);
+    try {
+      const ref = `${month}-01`;
+      const { data: existing } = await (supabase as any)
+        .from("squad_engagement")
+        .select("id")
+        .eq("squad_id", squadId)
+        .eq("reference_month", ref)
+        .ilike("client_name", clientName)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (existing?.id) {
+        const { error } = await (supabase as any).from("squad_engagement").update(patch).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any).from("squad_engagement")
+          .insert({ squad_id: squadId, reference_month: ref, client_name: clientName, ...patch });
+        if (error) throw error;
+      }
+      onReload();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingRow(null);
+    }
+  };
+
+  const openFunil = async (path: string) => {
+    try {
+      const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+      if (error) throw error;
+      setDocViewer({ url: data.signedUrl, name: path.split("/").pop() || "funil" });
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível abrir o anexo");
+    }
+  };
+
+  const uploadFunil = async (c: SquadClient, file: File) => {
+    setUploadingRow(c.name);
+    try {
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+      const base = file.name.slice(0, file.name.length - ext.length)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 60) || "funil";
+      const safeName = `${base}${ext}`;
+      const path = `fechamento/${squadId}/${month}/${c.id}-${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      await saveManual(c.name, { plano_estrategico_link: path });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro no upload");
+    } finally {
+      setUploadingRow(null);
+    }
+  };
+
+  const calcCplMedio = async () => {
+    setCplLoading(true);
+    try {
+      toast.info("Cálculo de CPL em breve");
+    } finally {
+      setCplLoading(false);
+    }
+  };
+
+
+
   const rowByName = useMemo(() => {
     const m = new Map<string, Engagement>();
     engagement.filter((e) => ymf(e.reference_month) === month).forEach((e) => m.set(norm(e.client_name), e));
@@ -3256,7 +3367,7 @@ function FechamentoPanel({
     {
       label: "NPS respondidos × ativos", value: `${f.npsRespond.length}/${f.eligCount}`, ok: null, hint: "sobre a base elegível",
       detail: { title: "NPS do mês", groups: [
-        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const }))),
+        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as "ok" | "bad" | "warn" }))),
         G("Faltam responder", f.npsFaltam.map((n) => ({ name: n, badge: "sem nota", tone: "bad" as const })), "Todos responderam 🎉"),
       ] },
     },
@@ -3270,7 +3381,7 @@ function FechamentoPanel({
     {
       label: "Nota média do NPS", value: f.notaMedia ? f.notaMedia.toFixed(1) : "—", ok: f.npsRespond.length ? f.notaMedia >= 9 : null, hint: "meta ≥ 9,0",
       detail: { title: "Notas do NPS", groups: [
-        G("Notas coletadas", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const })), "Nenhuma nota no mês"),
+        G("Notas coletadas", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as "ok" | "bad" | "warn" })), "Nenhuma nota no mês"),
       ] },
     },
     {
@@ -3335,7 +3446,7 @@ function FechamentoPanel({
       label: "Conversão comercial (COM)", value: f.convOk.length ? `${f.convMedia.toFixed(1)}%` : "—",
       ok: f.convOk.length ? f.convMedia >= 20 : null, hint: `${f.convOk.length} de ${f.comTotal} preenchidos · meta ≥ 20%`,
       detail: { title: "Conversão comercial (clientes COM)", groups: [
-        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as const })), "Nenhum preenchido"),
+        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as "ok" | "bad" })), "Nenhum preenchido"),
         G("Faltam preencher", f.convFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos preenchidos 🎉"),
       ] },
     },
