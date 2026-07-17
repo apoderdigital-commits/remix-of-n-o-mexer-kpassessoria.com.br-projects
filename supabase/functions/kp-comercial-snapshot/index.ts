@@ -799,7 +799,8 @@ async function buildSnapshot(since: Date, until: Date) {
     mqls: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
     agendamentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
     comparecimentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
-  } = { leads: [], mqls: [], agendamentos: [], comparecimentos: [] };
+    noshow: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+  } = { leads: [], mqls: [], agendamentos: [], comparecimentos: [], noshow: [] };
   const contactName = (c: any) =>
     `${c?.firstName || ""} ${c?.lastName || ""}`.trim() || c?.contactName || c?.email || "—";
 
@@ -852,6 +853,9 @@ async function buildSnapshot(since: Date, until: Date) {
       if (bucket === "realizado") {
         addCat(trafego.comparecimentos, cat);
         trafegoLists.comparecimentos.push({ nome: contactName(c), category: cat });
+      } else if (bucket === "noshow") {
+        // Agendou e nao compareceu — usado no drill de Comparecimentos (compareceu x no-show).
+        trafegoLists.noshow.push({ nome: contactName(c), category: cat });
       }
     }
   }
