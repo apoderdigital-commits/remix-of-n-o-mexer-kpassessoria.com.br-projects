@@ -3378,7 +3378,7 @@ function FechamentoPanel({
       label: "Conversão comercial (COM)", value: f.convOk.length ? `${f.convMedia.toFixed(1)}%` : "—",
       ok: f.convOk.length ? f.convMedia >= 20 : null, hint: `${f.convOk.length} de ${f.comTotal} preenchidos · meta ≥ 20%`,
       detail: { title: "Conversão comercial (clientes COM)", groups: [
-        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as const })), "Nenhum preenchido"),
+        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as "ok" | "bad" })), "Nenhum preenchido"),
         G("Faltam preencher", f.convFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos preenchidos 🎉"),
       ] },
     },
