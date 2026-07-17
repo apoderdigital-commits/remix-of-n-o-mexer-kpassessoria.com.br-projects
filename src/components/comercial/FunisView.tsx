@@ -28,7 +28,7 @@ export interface SdrFunil {
 // Listas de nomes por etapa do funil de tráfego (drill-down clicável)
 export type TrafegoStageKey = "leads" | "mqls" | "agendamentos" | "comparecimentos";
 export interface TrafegoListItem { nome: string; category: "A" | "B" | "C" | "Outro" }
-export type TrafegoLists = Record<TrafegoStageKey, TrafegoListItem[]>;
+export type TrafegoLists = Record<TrafegoStageKey, TrafegoListItem[]> & { noshow?: TrafegoListItem[] };
 
 // Listas de nomes por etapa do funil de recuperação
 export type RecuperacaoStageKey = "agendamentos" | "comparecimentos";
