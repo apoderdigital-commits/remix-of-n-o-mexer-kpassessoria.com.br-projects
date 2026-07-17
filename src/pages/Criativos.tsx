@@ -645,8 +645,14 @@ export default function Index() {
                 since={since}
                 until={until}
               />
-            </div>
           </div>
+
+          <CreativeQualificationChart
+            campaigns={(campaigns || []).map((c: any) => ({ ad_name: c.ad_name, leads_total: c.leads_total }))}
+            leads={(leads || []).map((l: any) => ({ creative_name: l.creative_name, status: l.status }))}
+          />
+
+
 
           <div ref={funnelRef}>
           <GoalsFunnel
