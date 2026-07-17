@@ -1467,7 +1467,6 @@ export default function Squad() {
                   { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-700 dark:text-emerald-300", sub: "/ mês" },
                   { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-700 dark:text-sky-300", sub: "/ mês" },
                   { label: "Ticket Médio", value: financeSummary.ticketMedio, cls: "text-cyan-700 dark:text-cyan-300", sub: `${clients.length} clientes` },
-                  { label: "Meta de Vendas", value: financeSummary.meta, cls: "text-amber-700 dark:text-amber-300", sub: "/ mês" },
                   { label: "Faturamento", value: financeSummary.faturamento, cls: "text-fuchsia-700 dark:text-fuchsia-300", sub: engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "" },
                 ].map((f) => (
                   <div key={f.label} className="rounded-2xl border border-border/30 bg-gradient-to-br from-card/60 to-card/30 backdrop-blur-sm p-4">
