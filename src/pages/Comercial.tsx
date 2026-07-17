@@ -111,7 +111,7 @@ export default function Comercial() {
   const [sdrFunis, setSdrFunis] = useState<SdrFunil[]>([]);
   const [leadFilter, setLeadFilter] = useState<LeadCat>("Geral");
   const [trafegoLists, setTrafegoLists] = useState<TrafegoLists | null>(null);
-  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] }; compSplit?: { compareceram: string[]; noshow: string[] }; agSplit?: { compareceram: string[]; noshow: string[]; aguardando: string[] } } | null>(null);
+  const [trafegoDrill, setTrafegoDrill] = useState<{ title: string; nomes: string[]; mqlSplit?: { agendados: string[]; naoAgendados: string[] }; compSplit?: { compareceram: string[]; noshow: string[] }; agSplit?: { compareceram: string[]; noshow: string[]; aguardando: string[]; real?: boolean } } | null>(null);
   const [mqlView, setMqlView] = useState<"todos" | "agendados" | "naoAgendados">("todos");
   const [compView, setCompView] = useState<"compareceram" | "noshow">("compareceram");
   const [agView, setAgView] = useState<"todos" | "compareceram" | "noshow" | "aguardando">("todos");
@@ -438,19 +438,23 @@ export default function Comercial() {
       const noshowNomes = nsFiltered.map((it) => it.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
       compSplit = { compareceram: nomes, noshow: noshowNomes };
     }
-    // Agendamentos: classifica cada agendado — compareceu, no-show ou ainda aguardando.
-    let agSplit: { compareceram: string[]; noshow: string[]; aguardando: string[] } | undefined;
-    if (key === "agendamentos" && trafegoDedup?.lists.noshow) {
+    // Agendamentos: classifica cada agendado. Sempre separa quem compareceu
+    // (cruzando com a lista de comparecimentos, que já existe hoje). Se o backend
+    // já mandar a lista real de no-show, distingue tambem no-show x aguardando.
+    let agSplit: { compareceram: string[]; noshow: string[]; aguardando: string[]; real?: boolean } | undefined;
+    if (key === "agendamentos") {
       const compSet = new Set((trafegoDedup?.lists.comparecimentos || []).map((it) => normName(it.nome)));
-      const nsSet = new Set(trafegoDedup.lists.noshow.map((it) => normName(it.nome)));
+      const nsList = trafegoDedup?.lists.noshow;
+      const nsSet = nsList ? new Set(nsList.map((it) => normName(it.nome))) : null;
       const compareceram: string[] = [], noshowArr: string[] = [], aguardando: string[] = [];
       for (const nm of nomes) {
         const k = normName(nm);
         if (compSet.has(k)) compareceram.push(nm);
+        else if (!nsSet) noshowArr.push(nm); // sem lista real: tudo que nao compareceu junto
         else if (nsSet.has(k)) noshowArr.push(nm);
         else aguardando.push(nm);
       }
-      agSplit = { compareceram, noshow: noshowArr, aguardando };
+      agSplit = { compareceram, noshow: noshowArr, aguardando, real: !!nsSet };
     }
     setMqlView("todos");
     setCompView("compareceram");
@@ -1780,13 +1784,21 @@ export default function Comercial() {
               const badge = (nome: string) => {
                 const k = nome.toLowerCase();
                 if (compSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">Compareceu</span>;
-                if (nsSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 shrink-0">No-show</span>;
+                if (nsSet.has(k)) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 shrink-0">{ag.real ? "No-show" : "Não compareceu"}</span>;
                 return <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0">Aguardando</span>;
               };
               return (
                 <>
                   <div className="flex gap-1.5 mb-1">
-                    {([["todos", "Todos", trafegoDrill.nomes.length], ["compareceram", "Compareceram", ag.compareceram.length], ["noshow", "No-show", ag.noshow.length], ["aguardando", "Aguardando", ag.aguardando.length]] as const).map(([k, label, n]) => (
+                    {(() => {
+                      const tabs: ["todos" | "compareceram" | "noshow" | "aguardando", string, number][] = [
+                        ["todos", "Todos", trafegoDrill.nomes.length],
+                        ["compareceram", "Compareceram", ag.compareceram.length],
+                        ["noshow", ag.real ? "No-show" : "Não compareceram", ag.noshow.length],
+                      ];
+                      if (ag.real) tabs.push(["aguardando", "Aguardando", ag.aguardando.length]);
+                      return tabs;
+                    })().map(([k, label, n]) => (
                       <button key={k} onClick={() => setAgView(k)}
                         className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition ${agView === k
                           ? (k === "noshow" ? "bg-rose-500/20 border-rose-500/40 text-rose-300"
