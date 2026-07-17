@@ -3313,7 +3313,7 @@ function FechamentoPanel({
     {
       label: "Nota média do NPS", value: f.notaMedia ? f.notaMedia.toFixed(1) : "—", ok: f.npsRespond.length ? f.notaMedia >= 9 : null, hint: "meta ≥ 9,0",
       detail: { title: "Notas do NPS", groups: [
-        G("Notas coletadas", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const })), "Nenhuma nota no mês"),
+        G("Notas coletadas", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as "ok" | "bad" | "warn" })), "Nenhuma nota no mês"),
       ] },
     },
     {
