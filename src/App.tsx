@@ -20,6 +20,7 @@ import ClientView from "./pages/ClientView.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
 import { NewThemeAnnouncement } from "./components/NewThemeAnnouncement";
 import { VersionGate } from "./components/VersionGate";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -84,7 +85,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <VersionGate />
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
           <SupportWhatsAppButton />
           <NewThemeAnnouncement />
         </BrowserRouter>
