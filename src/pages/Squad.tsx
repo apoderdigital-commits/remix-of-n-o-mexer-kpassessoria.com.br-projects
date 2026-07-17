@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -3073,8 +3073,8 @@ function Info({ label, value }: { label: string; value: string }) {
 
 // ── FECHAMENTO OPERACIONAL ───────────────────────────────────────────────────
 // Reaproveita a MESMA lógica das outras abas (base D+30, churn, uso do CRM,
-// mensais, vendido, produto secundário, meta x vendeu). Só o plano estratégico
-// e a conversão comercial são preenchidos à mão.
+// mensais, vendido, produto secundário, meta x vendeu). Preenchimento manual
+// (NPS, uso do CRM, plano estratégico, conversão comercial) acontece aqui mesmo.
 function FechamentoPanel({
   clients, engagement, churns, agenda, squadId, squadName, onReload,
 }: {
@@ -3098,12 +3098,27 @@ function FechamentoPanel({
   }, [engagement, agenda]);
 
   const [month, setMonth] = useState<string>(months[0] || new Date().toISOString().slice(0, 7));
-  const [presenting, setPresenting] = useState(false);
   const [savingRow, setSavingRow] = useState<string | null>(null);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [months.join(",")]);
+
+  // ── sessão do fechamento (timer + anotações) ──
+  const [presenting, setPresenting] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [savingSession, setSavingSession] = useState(false);
+  const timerRef = useRef<number>();
+  useEffect(() => {
+    if (startedAt) {
+      timerRef.current = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+      return () => window.clearInterval(timerRef.current);
+    }
+  }, [startedAt]);
+  const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   const rowByName = useMemo(() => {
     const m = new Map<string, Engagement>();
@@ -3132,7 +3147,6 @@ function FechamentoPanel({
     const notaMedia = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
     const pctResposta = elig.length ? (npsClients.length / elig.length) * 100 : 0;
 
-    // churn — mesma regra da aba Churn (base D+30)
     const activeBefore = clients.filter((c) => c.entry_date && ymf(c.entry_date) < M).length;
     const churnedLater = churns.filter((ch) => ymf(ch.entry_month) && ymf(ch.entry_month) < M && ymf(ch.churn_month) >= M).length;
     const churnBase = activeBefore + churnedLater;
@@ -3192,12 +3206,43 @@ function FechamentoPanel({
     }
     setSavingRow(null);
     if (error) {
-      if (/plano_estrategico|conversao_comercial/.test(error.message || "")) {
+      if (/plano_estrategico|conversao_comercial|crm_usage/.test(error.message || "")) {
         toast.error("O Fechamento precisa da migração (peça ao Lovable).");
       } else toast.error(error.message);
       return;
     }
     onReload();
+  }
+
+  async function startFechamento() {
+    setNotes("");
+    setPresenting(true);
+    setStartedAt(Date.now());
+    setElapsed(0);
+    const res = await (supabase as any).from("squad_fechamento_sessions")
+      .insert({ squad_id: squadId, reference_month: `${month}-01`, started_at: new Date().toISOString() })
+      .select("id").single();
+    if (res.error) {
+      toast("Apresentando sem histórico — rode a migração do Fechamento para guardar as anotações.");
+      return;
+    }
+    setSessionId((res.data as any).id);
+  }
+
+  function closeFechamento() {
+    setPresenting(false); setSessionId(null); setStartedAt(null); setElapsed(0); setNotes("");
+  }
+
+  async function saveSession(close: boolean) {
+    if (!sessionId) { if (close) closeFechamento(); else toast.error("Sem histórico — rode a migração para salvar."); return; }
+    setSavingSession(true);
+    const patch: any = { notes: notes.trim() || null };
+    if (close) patch.ended_at = new Date().toISOString();
+    const res = await (supabase as any).from("squad_fechamento_sessions").update(patch).eq("id", sessionId);
+    setSavingSession(false);
+    if (res.error) { toast.error(res.error.message); return; }
+    toast.success(close ? "Fechamento encerrado e guardado!" : "Anotações salvas.");
+    if (close) closeFechamento();
   }
 
   const cards: { label: string; value: string; ok: boolean | null; hint?: string }[] = [
@@ -3220,16 +3265,52 @@ function FechamentoPanel({
   const faltaPreencher = eligible.filter((c) => {
     const r = rowByName.get(norm(c.name));
     const isCom = parseServices(c.services).includes("COM");
-    const semPlano = !r || (r as any).plano_estrategico !== true;
-    const semConv = isCom && (!r || (r as any).conversao_comercial == null);
-    return semPlano || semConv;
+    return !r || r.nps_individual == null || (r as any).crm_usage == null
+      || (r as any).plano_estrategico !== true
+      || (isCom && (r as any).conversao_comercial == null);
   }).length;
+
+  const MetricsGrid = ({ compact }: { compact?: boolean }) => (
+    <div className={`grid gap-3 ${compact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"}`}>
+      {cards.map((card) => (
+        <div key={card.label} className={`rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"}`}>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
+          <p className={`text-2xl font-bold mt-1 ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
+          {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
+        </div>
+      ))}
+    </div>
+  );
+
+  const ChurnReasons = () => (
+    <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+      <p className="text-sm font-semibold mb-2">Motivos de churn no mês</p>
+      {f.motivos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Nenhum churn neste mês 🎉</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {f.motivos.map(([m, n]) => (
+            <Badge key={m} variant="outline" className="gap-1.5 border-red-500/30 text-red-700 dark:text-red-300">
+              {m} <span className="font-bold">{n}</span>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
+      {/* Cabeçalho: squad + mês + iniciar */}
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-primary" />
+          <span className="font-semibold">{squadName}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-sm text-muted-foreground">fechamento de</span>
+        </div>
         <Select value={month} onValueChange={setMonth}>
-          <SelectTrigger className="w-56 bg-card/40 backdrop-blur-sm"><SelectValue placeholder="Mês do fechamento" /></SelectTrigger>
+          <SelectTrigger className="w-52 bg-card/40 backdrop-blur-sm"><SelectValue placeholder="Mês" /></SelectTrigger>
           <SelectContent>
             {months.map((m) => (
               <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
@@ -3237,7 +3318,7 @@ function FechamentoPanel({
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button onClick={() => setPresenting(true)} className="gap-2 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30">
+        <Button onClick={startFechamento} className="gap-2 bg-gradient-to-r from-primary to-fuchsia-600 hover:opacity-90 shadow-lg shadow-primary/30">
           <Play className="h-4 w-4" /> Apresentar fechamento de <span className="capitalize">{formatMonth(`${month}-01`)}</span>
         </Button>
       </div>
@@ -3250,13 +3331,20 @@ function FechamentoPanel({
         <div className={`rounded-xl border p-3 text-xs ${faltaPreencher === 0 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200" : "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"}`}>
           {faltaPreencher === 0
             ? "✓ Tudo preenchido — pode apresentar o fechamento."
-            : `Faltam preencher ${faltaPreencher} de ${eligible.length} clientes (plano estratégico e/ou conversão comercial).`}
+            : `Faltam preencher ${faltaPreencher} de ${eligible.length} clientes (NPS, uso do CRM, plano estratégico e/ou conversão comercial).`}
         </div>
       )}
 
+      {/* Métricas na própria tela */}
+      <MetricsGrid />
+
+      {/* Motivos de churn na própria tela */}
+      <ChurnReasons />
+
+      {/* Preenchimento */}
       <Card className="bg-card/40 backdrop-blur-sm border-border/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Preenchimento por cliente <span className="text-xs font-normal text-muted-foreground">· o que o sistema não tem automático</span></CardTitle>
+          <CardTitle className="text-sm">Preenchimento por cliente <span className="text-xs font-normal text-muted-foreground">· tudo num lugar só</span></CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -3264,8 +3352,8 @@ function FechamentoPanel({
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/30">
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="text-center">NPS</TableHead>
-                  <TableHead className="text-center">Uso CRM</TableHead>
+                  <TableHead className="text-center">NPS (0-10)</TableHead>
+                  <TableHead className="text-center">Uso CRM (1-5)</TableHead>
                   <TableHead className="text-center">Plano estratégico</TableHead>
                   <TableHead>Link do plano</TableHead>
                   <TableHead className="text-center">Conversão % (COM)</TableHead>
@@ -3278,32 +3366,41 @@ function FechamentoPanel({
                   const r = rowByName.get(norm(c.name));
                   const isCom = parseServices(c.services).includes("COM");
                   const busy = savingRow === c.name;
+                  const link = ((r as any)?.plano_estrategico_link || "") as string;
                   return (
                     <TableRow key={c.id} className="border-border/20">
                       <TableCell className="font-semibold">{c.name}</TableCell>
                       <TableCell className="text-center">
-                        {r?.nps_individual != null
-                          ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-700 dark:text-emerald-300">{r.nps_individual}</Badge>
-                          : <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">falta</Badge>}
+                        <Input key={`nps-${c.id}-${r?.nps_individual ?? "x"}`} type="number" min="0" max="10" step="1" disabled={busy}
+                          defaultValue={r?.nps_individual ?? ""} placeholder="—"
+                          className={`h-8 w-20 text-xs text-center mx-auto ${r?.nps_individual == null ? "border-red-500/40" : ""}`}
+                          onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (r?.nps_individual ?? null)) void saveManual(c.name, { nps_individual: v }); }} />
                       </TableCell>
                       <TableCell className="text-center">
-                        {(r as any)?.crm_usage != null
-                          ? <Badge variant="outline" className={Number((r as any).crm_usage) >= 4 ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-amber-500/40 text-amber-700 dark:text-amber-300"}>{(r as any).crm_usage}/5</Badge>
-                          : <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">falta</Badge>}
+                        <Input key={`crm-${c.id}-${(r as any)?.crm_usage ?? "x"}`} type="number" min="1" max="5" step="1" disabled={busy}
+                          defaultValue={(r as any)?.crm_usage ?? ""} placeholder="—"
+                          className={`h-8 w-20 text-xs text-center mx-auto ${(r as any)?.crm_usage == null ? "border-red-500/40" : ""}`}
+                          onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== ((r as any)?.crm_usage ?? null)) void saveManual(c.name, { crm_usage: v }); }} />
                       </TableCell>
                       <TableCell className="text-center">
                         <input type="checkbox" disabled={busy} checked={!!(r as any)?.plano_estrategico}
-                          onChange={(e) => saveManual(c.name, { plano_estrategico: e.target.checked })} />
+                          onChange={(e) => void saveManual(c.name, { plano_estrategico: e.target.checked })} />
                       </TableCell>
                       <TableCell>
-                        <Input defaultValue={(r as any)?.plano_estrategico_link || ""} placeholder="https://..." className="h-8 text-xs" disabled={busy}
-                          onBlur={(e) => { const v = e.target.value.trim(); if (v !== (((r as any)?.plano_estrategico_link) || "")) void saveManual(c.name, { plano_estrategico_link: v || null }); }} />
+                        <div className="flex items-center gap-1.5">
+                          <Input key={`lnk-${c.id}-${link}`} defaultValue={link} placeholder="https://..." className="h-8 text-xs" disabled={busy}
+                            onBlur={(e) => { const v = e.target.value.trim(); if (v !== link) void saveManual(c.name, { plano_estrategico_link: v || null }); }} />
+                          {link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer" title="Abrir plano"
+                              className="shrink-0 text-primary hover:opacity-80"><FileText className="h-4 w-4" /></a>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {isCom ? (
-                          <Input type="number" min="0" max="100" step="0.1" disabled={busy}
+                          <Input key={`cv-${c.id}-${(r as any)?.conversao_comercial ?? "x"}`} type="number" min="0" max="100" step="0.1" disabled={busy}
                             defaultValue={(r as any)?.conversao_comercial ?? ""} placeholder="%"
-                            className="h-8 w-24 text-xs text-center mx-auto"
+                            className={`h-8 w-24 text-xs text-center mx-auto ${(r as any)?.conversao_comercial == null ? "border-red-500/40" : ""}`}
                             onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (((r as any)?.conversao_comercial) ?? null)) void saveManual(c.name, { conversao_comercial: v }); }} />
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
@@ -3316,43 +3413,46 @@ function FechamentoPanel({
         </CardContent>
       </Card>
 
-      {/* Apresentação do fechamento */}
-      <Dialog open={presenting} onOpenChange={setPresenting}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      {/* Apresentação do fechamento — timer + métricas + anotações */}
+      <Dialog open={presenting} onOpenChange={(o) => { if (!o && !savingSession) closeFechamento(); }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
               <ClipboardList className="h-5 w-5 text-primary" />
               Fechamento Operacional · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {cards.map((card) => (
-              <div key={card.label} className={`rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"}`}>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
-                <p className={`text-2xl font-bold mt-1 ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
-                {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
-              </div>
-            ))}
+
+          <div className="text-center rounded-xl border border-border/30 bg-background/40 p-3">
+            <p className="text-4xl font-black tabular-nums text-primary">{fmtTime(elapsed)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">tempo de reunião</p>
           </div>
-          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-            <p className="text-sm font-semibold mb-2">Motivos de churn no mês</p>
-            {f.motivos.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhum churn neste mês 🎉</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {f.motivos.map(([m, n]) => (
-                  <Badge key={m} variant="outline" className="gap-1.5 border-red-500/30 text-red-700 dark:text-red-300">
-                    {m} <span className="font-bold">{n}</span>
-                  </Badge>
-                ))}
-              </div>
-            )}
+
+          <MetricsGrid compact />
+          <ChurnReasons />
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Pontos discutidos no fechamento</Label>
+            <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="O que foi discutido, decisões, responsáveis e prazos..." />
           </div>
+
+          <DialogFooter>
+            <Button variant="ghost" disabled={savingSession} onClick={closeFechamento}>Fechar</Button>
+            <Button variant="outline" disabled={savingSession} onClick={() => void saveSession(false)}>
+              {savingSession ? "Salvando..." : "Salvar"}
+            </Button>
+            <Button disabled={savingSession} onClick={() => void saveSession(true)}
+              className="gap-2 bg-gradient-to-r from-primary to-fuchsia-600">
+              <CheckCircle2 className="h-4 w-4" /> Encerrar fechamento
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
 
 function StatCard({ label, value, icon: Icon, color, sub, delta, tint, subRaw }: { label: string; value: number | string; icon: any; color: string; sub?: string; delta?: number | null; tint?: "emerald" | "red"; subRaw?: boolean }) {
   const tintCls =
