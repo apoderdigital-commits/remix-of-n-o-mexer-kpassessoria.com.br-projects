@@ -1351,12 +1351,12 @@ export default function Squad() {
                 Escolha qual squad você quer visualizar.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
               {squads.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setSquadId(s.id)}
-                  className="group text-left rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5"
+                  className="group w-full sm:w-64 text-left rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5"
                 >
                   <div className="flex items-center gap-3">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color || "#8B5CF6" }} />
