@@ -3775,7 +3775,7 @@ function FechamentoPanel({
 
       {/* Drill-down genérico dos cards */}
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {detail?.title} <span className="text-xs font-normal text-muted-foreground capitalize">· {formatMonth(`${month}-01`)}</span>
@@ -3790,12 +3790,12 @@ function FechamentoPanel({
                 ) : (
                   <div className="space-y-1">
                     {g.rows.map((r, i) => (
-                      <div key={`${r.name}-${i}`} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm ${
+                      <div key={`${r.name}-${i}`} className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5 text-sm ${
                         r.tone === "ok" ? "border-emerald-500/30 bg-emerald-500/5"
                         : r.tone === "bad" ? "border-red-500/30 bg-red-500/5"
                         : r.tone === "warn" ? "border-amber-500/30 bg-amber-500/5"
                         : "border-border/30 bg-card/40"}`}>
-                        <span className="font-medium truncate">{r.name}</span>
+                        <span className="font-medium min-w-0 break-words">{r.name}</span>
                         {r.badge && (
                           <Badge variant="outline" className={`shrink-0 text-[10px] ${
                             r.tone === "ok" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
