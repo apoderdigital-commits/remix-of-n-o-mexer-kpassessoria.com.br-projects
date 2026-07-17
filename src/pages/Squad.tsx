@@ -3138,6 +3138,49 @@ function FechamentoPanel({
   }, [startedAt]);
   const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  const startFechamento = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("squad_fechamento_sessions")
+        .insert({ squad_id: squadId, reference_month: `${month}-01`, started_at: new Date().toISOString() })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setSessionId((data as any)?.id ?? null);
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível iniciar a sessão");
+    }
+    setStartedAt(Date.now());
+    setElapsed(0);
+    setNotes("");
+    setPresenting(true);
+  };
+
+  const closeFechamento = () => {
+    setPresenting(false);
+    setStartedAt(null);
+    setElapsed(0);
+    setSessionId(null);
+    setNotes("");
+  };
+
+  const saveSession = async (end: boolean) => {
+    if (!sessionId) { if (end) closeFechamento(); return; }
+    setSavingSession(true);
+    try {
+      const payload: any = { notes };
+      if (end) payload.ended_at = new Date().toISOString();
+      const { error } = await supabase.from("squad_fechamento_sessions").update(payload).eq("id", sessionId);
+      if (error) throw error;
+      toast.success(end ? "Fechamento encerrado!" : "Anotações salvas");
+      if (end) closeFechamento();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSavingSession(false);
+    }
+  };
+
   const rowByName = useMemo(() => {
     const m = new Map<string, Engagement>();
     engagement.filter((e) => ymf(e.reference_month) === month).forEach((e) => m.set(norm(e.client_name), e));
