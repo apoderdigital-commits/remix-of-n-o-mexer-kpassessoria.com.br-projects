@@ -429,6 +429,8 @@ export default function Squad() {
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
   const [contractUploading, setContractUploading] = useState(false);
   const [contractViewer, setContractViewer] = useState<{ url: string; name: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description?: string; confirmLabel?: string; destructive?: boolean; onConfirm: () => void | Promise<void> } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
@@ -633,11 +635,16 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function removeMetric(id: string) {
-    if (!confirm("Remover esta métrica?")) return;
-    const { error } = await supabase.from("squad_monthly_metrics").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    void loadAll(squadId);
+  function removeMetric(id: string) {
+    setConfirmDialog({
+      title: "Remover esta métrica?", description: "O registro mensal será apagado. Não dá para desfazer.",
+      confirmLabel: "Remover", destructive: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("squad_monthly_metrics").delete().eq("id", id);
+        if (error) return toast.error(error.message);
+        void loadAll(squadId);
+      },
+    });
   }
 
   // ---------- CHURN ----------
@@ -670,11 +677,16 @@ export default function Squad() {
     void loadAll(squadId);
   }
 
-  async function removeChurn(id: string) {
-    if (!confirm("Remover este registro de churn?")) return;
-    const { error } = await supabase.from("squad_churn").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    void loadAll(squadId);
+  function removeChurn(id: string) {
+    setConfirmDialog({
+      title: "Remover este registro de churn?", description: "Ele sai da lista e das taxas do mês. Não dá para desfazer.",
+      confirmLabel: "Remover", destructive: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("squad_churn").delete().eq("id", id);
+        if (error) return toast.error(error.message);
+        void loadAll(squadId);
+      },
+    });
   }
 
   // ---------- NPS ----------
@@ -703,10 +715,14 @@ export default function Squad() {
     setOpenNps(false);
     void loadAll(squadId);
   }
-  async function removeNps(id: string) {
-    if (!confirm("Remover este NPS?")) return;
-    await (supabase as any).from("squad_nps").delete().eq("id", id);
-    void loadAll(squadId);
+  function removeNps(id: string) {
+    setConfirmDialog({
+      title: "Remover este NPS?", confirmLabel: "Remover", destructive: true,
+      onConfirm: async () => {
+        await (supabase as any).from("squad_nps").delete().eq("id", id);
+        void loadAll(squadId);
+      },
+    });
   }
 
   // ---------- ENGAGEMENT ----------
@@ -781,11 +797,16 @@ export default function Squad() {
     setOpenEng(false);
     void loadAll(squadId);
   }
-  async function removeEng(id: string) {
-    if (!confirm("Mover este registro para a lixeira?")) return;
-    await (supabase as any).from("squad_engagement")
-      .update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    void loadAll(squadId);
+  function removeEng(id: string) {
+    setConfirmDialog({
+      title: "Mover este registro para a lixeira?", description: "Dá para restaurar depois pela lixeira.",
+      confirmLabel: "Mover para lixeira",
+      onConfirm: async () => {
+        await (supabase as any).from("squad_engagement")
+          .update({ deleted_at: new Date().toISOString() }).eq("id", id);
+        void loadAll(squadId);
+      },
+    });
   }
   async function restoreEng(id: string) {
     await (supabase as any).from("squad_engagement")
@@ -824,10 +845,17 @@ export default function Squad() {
     setEngMonth(month);
     void loadAll(squadId);
   }
-  async function trashMonth(month: string) {
+  function trashMonth(month: string) {
     // month = "YYYY-MM"
     const ref = `${month}-01`;
-    if (!confirm(`Mover TODOS os registros de ${month} para a lixeira?`)) return;
+    setConfirmDialog({
+      title: `Mover TODOS os registros de ${month} para a lixeira?`,
+      description: "Todos os engajamentos desse mês vão para a lixeira. Dá para restaurar depois.",
+      confirmLabel: "Mover tudo",
+      onConfirm: async () => { await doTrashMonth(ref); },
+    });
+  }
+  async function doTrashMonth(ref: string) {
     const { error } = await (supabase as any).from("squad_engagement")
       .update({ deleted_at: new Date().toISOString() })
       .eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
@@ -868,10 +896,14 @@ export default function Squad() {
     setOpenAg(false);
     void loadAll(squadId);
   }
-  async function removeAg(id: string) {
-    if (!confirm("Remover este compromisso?")) return;
-    await (supabase as any).from("squad_agenda").delete().eq("id", id);
-    void loadAll(squadId);
+  function removeAg(id: string) {
+    setConfirmDialog({
+      title: "Remover este compromisso?", confirmLabel: "Remover", destructive: true,
+      onConfirm: async () => {
+        await (supabase as any).from("squad_agenda").delete().eq("id", id);
+        void loadAll(squadId);
+      },
+    });
   }
   async function toggleAgDone(a: Agenda) {
     await (supabase as any).from("squad_agenda").update({ done: !a.done }).eq("id", a.id);
@@ -894,7 +926,6 @@ export default function Squad() {
     total: clients.length,
     aa: clients.filter((c) => c.prioritization === "AA").length,
     bm: clients.filter((c) => c.bm_verified).length,
-    renew: clients.filter((c) => c.renewal_60d).length,
   }), [clients]);
 
   // Filtro de prioridade + busca + ordenação na aba de Clientes
@@ -1391,11 +1422,18 @@ export default function Squad() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
-                <StatCard label="BM Verificada" value={stats.bm} icon={CheckCircle2} color="from-green-500 to-emerald-600" />
-                <StatCard label="Renovação 60d" value={stats.renew} icon={Activity} color="from-primary to-fuchsia-600" />
+                <StatCard
+                  label="BM Verificada"
+                  value={stats.bm}
+                  icon={CheckCircle2}
+                  color="from-green-500 to-emerald-600"
+                  tint="emerald"
+                  subRaw
+                  sub={stats.total > 0 ? `de ${stats.total} clientes · ${Math.round((stats.bm / stats.total) * 100)}% da carteira` : "sem clientes"}
+                />
                 <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.npsDelta ?? null} />
                 <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.avgDelta ?? null} />
                 <StatCard label="NPS Médio" value={engHighlights.avgNps ? engHighlights.avgNps.toFixed(1) : "—"} icon={Smile} color="from-indigo-500 to-violet-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
@@ -2288,6 +2326,35 @@ export default function Squad() {
         </DialogContent>
       </Dialog>
 
+      {/* Confirmação estilizada (substitui o confirm() do navegador) */}
+      <Dialog open={!!confirmDialog} onOpenChange={(o) => { if (!o && !confirmBusy) setConfirmDialog(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {confirmDialog?.destructive && <AlertTriangle className="h-4 w-4 text-destructive" />}
+              {confirmDialog?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {confirmDialog?.description && (
+            <p className="text-sm text-muted-foreground">{confirmDialog.description}</p>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" disabled={confirmBusy} onClick={() => setConfirmDialog(null)}>Cancelar</Button>
+            <Button
+              variant={confirmDialog?.destructive ? "destructive" : "default"}
+              disabled={confirmBusy}
+              onClick={async () => {
+                if (!confirmDialog) return;
+                setConfirmBusy(true);
+                try { await confirmDialog.onConfirm(); } finally { setConfirmBusy(false); setConfirmDialog(null); }
+              }}
+            >
+              {confirmBusy ? "Aguarde..." : (confirmDialog?.confirmLabel || "Confirmar")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Painel de detalhes do cliente */}
       <Dialog open={!!detailClient} onOpenChange={(o) => { if (!o) setDetailClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -2989,9 +3056,13 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color, sub, delta }: { label: string; value: number | string; icon: any; color: string; sub?: string; delta?: number | null }) {
+function StatCard({ label, value, icon: Icon, color, sub, delta, tint, subRaw }: { label: string; value: number | string; icon: any; color: string; sub?: string; delta?: number | null; tint?: "emerald" | "red"; subRaw?: boolean }) {
+  const tintCls =
+    tint === "emerald" ? "border-emerald-500/40 bg-emerald-500/10"
+    : tint === "red" ? "border-red-500/40 bg-red-500/10"
+    : "border-border/30 bg-card/40";
   return (
-    <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 shadow-lg">
+    <div className={`rounded-2xl border ${tintCls} backdrop-blur-sm p-4 shadow-lg`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-muted-foreground font-medium">{label}</p>
@@ -3001,7 +3072,7 @@ function StatCard({ label, value, icon: Icon, color, sub, delta }: { label: stri
               {delta > 0 ? "↑" : "↓"} {delta > 0 ? "+" : ""}{delta} vs mês anterior
             </p>
           )}
-          {sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 capitalize">{sub}</p>}
+          {sub && <p className={`text-[10px] text-muted-foreground/70 mt-0.5 ${subRaw ? "" : "capitalize"}`}>{sub}</p>}
         </div>
         <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg`}>
           <Icon className="h-4 w-4 text-white" />
