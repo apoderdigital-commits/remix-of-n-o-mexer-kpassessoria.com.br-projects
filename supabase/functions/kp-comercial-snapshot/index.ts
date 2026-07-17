@@ -797,9 +797,9 @@ async function buildSnapshot(since: Date, until: Date) {
   const trafegoLists: {
     leads: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
     mqls: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
-    agendamentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
-    comparecimentos: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
-    noshow: { nome: string; category: "A" | "B" | "C" | "Outro" }[];
+    agendamentos: { nome: string; category: "A" | "B" | "C" | "Outro"; when?: string | null }[];
+    comparecimentos: { nome: string; category: "A" | "B" | "C" | "Outro"; when?: string | null }[];
+    noshow: { nome: string; category: "A" | "B" | "C" | "Outro"; when?: string | null }[];
   } = { leads: [], mqls: [], agendamentos: [], comparecimentos: [], noshow: [] };
   const contactName = (c: any) =>
     `${c?.firstName || ""} ${c?.lastName || ""}`.trim() || c?.contactName || c?.email || "—";
@@ -848,14 +848,16 @@ async function buildSnapshot(since: Date, until: Date) {
         recuperacaoLists.comparecimentos.push({ nome: contactName(c), category: cat });
       }
     } else if (isTrafego) {
+      // Data da reuniao (dia em que compareceu ou deu no-show), direto do calendario.
+      const whenSrc = a?.startTime || a?.endTime || null;
+      const when = whenSrc ? String(whenSrc).slice(0, 10) : null;
       addCat(trafego.agendamentos, cat);
-      trafegoLists.agendamentos.push({ nome: contactName(c), category: cat });
+      trafegoLists.agendamentos.push({ nome: contactName(c), category: cat, when });
       if (bucket === "realizado") {
         addCat(trafego.comparecimentos, cat);
-        trafegoLists.comparecimentos.push({ nome: contactName(c), category: cat });
+        trafegoLists.comparecimentos.push({ nome: contactName(c), category: cat, when });
       } else if (bucket === "noshow") {
-        // Agendou e nao compareceu — usado no drill de Comparecimentos (compareceu x no-show).
-        trafegoLists.noshow.push({ nome: contactName(c), category: cat });
+        trafegoLists.noshow.push({ nome: contactName(c), category: cat, when });
       }
     }
   }
