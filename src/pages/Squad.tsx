@@ -3072,6 +3072,13 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 // ── FECHAMENTO OPERACIONAL ───────────────────────────────────────────────────
+type DetailRow = { name: string; badge?: string; tone?: "ok" | "bad" | "warn" };
+type DetailGroup = { title: string; rows: DetailRow[]; empty?: string };
+type FechCard = {
+  label: string; value: string; ok: boolean | null; hint?: string;
+  onClick?: () => void;
+  detail?: { title: string; groups: DetailGroup[] };
+};
 // Reaproveita a MESMA lógica das outras abas (base D+30, churn, uso do CRM,
 // mensais, vendido, produto secundário, meta x vendeu). Preenchimento manual
 // (NPS, uso do CRM, plano estratégico, conversão comercial) acontece aqui mesmo.
@@ -3101,6 +3108,7 @@ function FechamentoPanel({
   const [savingRow, setSavingRow] = useState<string | null>(null);
   const [uploadingRow, setUploadingRow] = useState<string | null>(null);
   const [docViewer, setDocViewer] = useState<{ url: string; name: string } | null>(null);
+  const [detail, setDetail] = useState<null | { title: string; groups: DetailGroup[] }>(null);
   const [cplOpen, setCplOpen] = useState(false);
   const [cplLoading, setCplLoading] = useState(false);
   const [cplData, setCplData] = useState<null | {
@@ -3149,43 +3157,68 @@ function FechamentoPanel({
   const f = useMemo(() => {
     const M = month;
     const elig = eligible;
+    const ativos = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= M);
+    const novos = ativos.filter((c) => ymf(c.entry_date!) === M);
     const rows = elig.map((c) => rowByName.get(norm(c.name))).filter(Boolean) as Engagement[];
-    const totalAtivos = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= M).length;
+    const rOf = (c: SquadClient) => rowByName.get(norm(c.name));
 
-    const npsClients = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && r.nps_individual != null; });
-    const notas = npsClients.map((c) => Number(rowByName.get(norm(c.name))!.nps_individual));
-    const notaMedia = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
-    const pctResposta = elig.length ? (npsClients.length / elig.length) * 100 : 0;
+    // NPS (vem do Engajamento do mês)
+    const npsRespond = elig.filter((c) => { const r = rOf(c); return !!r && r.nps_individual != null; })
+      .map((c) => ({ name: c.name, nota: Number(rOf(c)!.nps_individual) }))
+      .sort((a, b) => b.nota - a.nota);
+    const npsFaltam = elig.filter((c) => { const r = rOf(c); return !r || r.nps_individual == null; }).map((c) => c.name);
+    const notaMedia = npsRespond.length ? npsRespond.reduce((s, x) => s + x.nota, 0) / npsRespond.length : 0;
+    const pctResposta = elig.length ? (npsRespond.length / elig.length) * 100 : 0;
 
+    // Churn (base D+30, mesma regra da aba Churn)
+    const churnsEleg = churns.filter((ch) => ymf(ch.churn_month) === M && ymf(ch.entry_month) && ymf(ch.entry_month) < M);
+    const churnsNaoEleg = churns.filter((ch) => ymf(ch.churn_month) === M && !(ymf(ch.entry_month) && ymf(ch.entry_month) < M));
     const activeBefore = clients.filter((c) => c.entry_date && ymf(c.entry_date) < M).length;
     const churnedLater = churns.filter((ch) => ymf(ch.entry_month) && ymf(ch.entry_month) < M && ymf(ch.churn_month) >= M).length;
     const churnBase = activeBefore + churnedLater;
-    const churnsMes = churns.filter((ch) => ymf(ch.churn_month) === M && ymf(ch.entry_month) && ymf(ch.entry_month) < M).length;
-    const churnRate = churnBase ? (churnsMes / churnBase) * 100 : 0;
+    const churnRate = churnBase ? (churnsEleg.length / churnBase) * 100 : 0;
 
-    const crmOk = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && (r as any).crm_usage != null && Number((r as any).crm_usage) >= 4; }).length;
-    const pctCrm = elig.length ? (crmOk / elig.length) * 100 : 0;
+    // Uso do CRM (nota >= 4)
+    const crmUsando = elig.filter((c) => { const r = rOf(c); return !!r && (r as any).crm_usage != null && Number((r as any).crm_usage) >= 4; })
+      .map((c) => ({ name: c.name, nota: Number((rOf(c) as any).crm_usage) }));
+    const crmNao = elig.filter((c) => { const r = rOf(c); return !r || (r as any).crm_usage == null || Number((r as any).crm_usage) < 4; })
+      .map((c) => { const r = rOf(c); return { name: c.name, nota: r ? (r as any).crm_usage as number | null : null }; });
+    const pctCrm = elig.length ? (crmUsando.length / elig.length) * 100 : 0;
 
+    // Reuniões mensais
     const doneNames = new Set(agenda.filter((a) => ymf(a.reference_month) === M && a.done).map((a) => norm(a.client_name)));
-    const mensaisOk = elig.filter((c) => doneNames.has(norm(c.name))).length;
-    const pctMensais = elig.length ? (mensaisOk / elig.length) * 100 : 0;
+    const mensalOk = elig.filter((c) => doneNames.has(norm(c.name))).map((c) => c.name);
+    const mensalNao = elig.filter((c) => !doneNames.has(norm(c.name))).map((c) => c.name);
+    const pctMensais = elig.length ? (mensalOk.length / elig.length) * 100 : 0;
 
-    const vendido = rows.reduce((sum, r) => sum + (Number(r.faturamento) || 0), 0);
-    const comSec = rows.filter((r) => (Number(r.vendas_loja) || 0) > 0).length;
-    const pctSec = elig.length ? (comSec / elig.length) * 100 : 0;
+    // Vendido
+    const vendidoPor = elig.map((c) => ({ name: c.name, v: Number(rOf(c)?.faturamento) || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+    const vendido = vendidoPor.reduce((s, x) => s + x.v, 0);
 
-    const comMetaArr = elig.map((c) => ({ c, r: rowByName.get(norm(c.name)) })).filter(({ c, r }) => { const m = metaOf(c, r); return m != null && m > 0; });
-    const bateu = comMetaArr.filter(({ c, r }) => (Number(r?.vendas) || 0) >= (metaOf(c, r) || 0)).length;
-    const pctMeta = comMetaArr.length ? (bateu / comMetaArr.length) * 100 : 0;
+    // Produto secundário
+    const secOk = elig.filter((c) => (Number(rOf(c)?.vendas_loja) || 0) > 0).map((c) => c.name);
+    const secNao = elig.filter((c) => !((Number(rOf(c)?.vendas_loja) || 0) > 0)).map((c) => c.name);
+    const pctSec = elig.length ? (secOk.length / elig.length) * 100 : 0;
 
-    const planoOk = elig.filter((c) => { const r = rowByName.get(norm(c.name)); return !!r && (r as any).plano_estrategico === true; }).length;
-    const pctPlano = elig.length ? (planoOk / elig.length) * 100 : 0;
+    // Meta x vendeu
+    const comMetaArr = elig.map((c) => { const r = rOf(c); const m = metaOf(c, r); return { name: c.name, meta: m, vendas: Number(r?.vendas) || 0 }; })
+      .filter((x) => x.meta != null && x.meta > 0);
+    const metaBateu = comMetaArr.filter((x) => x.vendas >= (x.meta || 0));
+    const metaNao = comMetaArr.filter((x) => x.vendas < (x.meta || 0));
+    const pctMeta = comMetaArr.length ? (metaBateu.length / comMetaArr.length) * 100 : 0;
 
+    // Planejamento estratégico
+    const planoSim = elig.filter((c) => (rOf(c) as any)?.plano_estrategico === true).map((c) => c.name);
+    const planoNao = elig.filter((c) => (rOf(c) as any)?.plano_estrategico === false).map((c) => c.name);
+    const planoFalta = elig.filter((c) => (rOf(c) as any)?.plano_estrategico == null).map((c) => c.name);
+    const pctPlano = elig.length ? (planoSim.length / elig.length) * 100 : 0;
+
+    // Conversão comercial (só COM)
     const comClients = elig.filter((c) => parseServices(c.services).includes("COM"));
-    const convVals = comClients.map((c) => rowByName.get(norm(c.name)))
-      .filter((r) => !!r && (r as any).conversao_comercial != null)
-      .map((r) => Number((r as any).conversao_comercial));
-    const convMedia = convVals.length ? convVals.reduce((a, b) => a + b, 0) / convVals.length : 0;
+    const convOk = comClients.filter((c) => (rOf(c) as any)?.conversao_comercial != null)
+      .map((c) => ({ name: c.name, v: Number((rOf(c) as any).conversao_comercial) })).sort((a, b) => b.v - a.v);
+    const convFalta = comClients.filter((c) => (rOf(c) as any)?.conversao_comercial == null).map((c) => c.name);
+    const convMedia = convOk.length ? convOk.reduce((s, x) => s + x.v, 0) / convOk.length : 0;
 
     const motivosMap = new Map<string, number>();
     churns.filter((ch) => ymf(ch.churn_month) === M).forEach((ch) => {
@@ -3194,161 +3227,120 @@ function FechamentoPanel({
     });
 
     return {
-      totalAtivos, eligCount: elig.length, npsRespondidos: npsClients.length, pctResposta, notaMedia,
-      churnRate, churnsMes, churnBase, crmOk, pctCrm, mensaisOk, pctMensais, vendido, comSec, pctSec,
-      comMeta: comMetaArr.length, bateu, pctMeta, planoOk, pctPlano,
-      convMedia, convCount: convVals.length, comTotal: comClients.length,
+      ativosNames: ativos.map((c) => c.name), novosNames: novos.map((c) => c.name), eligNames: elig.map((c) => c.name),
+      totalAtivos: ativos.length, eligCount: elig.length,
+      npsRespond, npsFaltam, notaMedia, pctResposta,
+      churnsEleg, churnsNaoEleg, churnBase, churnRate,
+      crmUsando, crmNao, pctCrm,
+      mensalOk, mensalNao, pctMensais,
+      vendidoPor, vendido,
+      secOk, secNao, pctSec,
+      comMetaArr, metaBateu, metaNao, pctMeta,
+      planoSim, planoNao, planoFalta, pctPlano,
+      convOk, convFalta, convMedia, comTotal: comClients.length,
       motivos: Array.from(motivosMap.entries()).sort((a, b) => b[1] - a[1]),
     };
   }, [clients, engagement, churns, agenda, month, rowByName, eligible]);
 
-  async function saveManual(clientName: string, patch: Record<string, any>) {
-    setSavingRow(clientName);
-    const existing = rowByName.get(norm(clientName));
-    let error: any = null;
-    if (existing) {
-      const res = await (supabase as any).from("squad_engagement").update(patch).eq("id", existing.id);
-      error = res.error;
-    } else {
-      const res = await (supabase as any).from("squad_engagement")
-        .insert({ squad_id: squadId, client_name: clientName, reference_month: `${month}-01`, ...patch });
-      error = res.error;
-    }
-    setSavingRow(null);
-    if (error) {
-      if (/plano_estrategico|conversao_comercial|crm_usage/.test(error.message || "")) {
-        toast.error("O Fechamento precisa da migração (peça ao Lovable).");
-      } else toast.error(error.message);
-      return;
-    }
-    onReload();
-  }
+  // helper p/ montar os grupos do popup de detalhe
+  const G = (title: string, rows: DetailRow[], empty?: string): DetailGroup => ({ title: `${title} (${rows.length})`, rows, empty });
 
-  // Anexo do funil de projeção (imagem exportada) — guardado no bucket "projecoes"
-  async function uploadFunil(c: SquadClient, file: File) {
-    setUploadingRow(c.name);
-    const path = `fechamento/${squadId}/${month}/${c.id}-${file.name}`;
-    const up = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
-    if (up.error) { setUploadingRow(null); toast.error("Erro no upload: " + up.error.message); return; }
-    await saveManual(c.name, { plano_estrategico_link: path });
-    setUploadingRow(null);
-  }
-
-  async function openFunil(path: string) {
-    const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
-    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o anexo."); return; }
-    setDocViewer({ url: data.signedUrl, name: path.split("/").pop() || "funil" });
-  }
-
-  // CPL médio do squad = Σ investimento ÷ Σ leads de TODOS os clientes do squad
-  // (puxa da dash de Criativos: clients.squad_id -> meta_campaigns), respeitando o filtro de campanhas.
-  async function calcCplMedio() {
-    setCplLoading(true);
-    try {
-      const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
-      const since = `${month}-01`;
-      const until = `${month}-${String(last).padStart(2, "0")}`;
-
-      const { data: crmClients, error: cErr } = await (supabase as any)
-        .from("clients").select("id, name, meta_account_id")
-        .eq("squad_id", squadId).is("deleted_at", null);
-      if (cErr) { toast.error("Erro ao buscar clientes: " + cErr.message); setCplLoading(false); return; }
-      const ids = (crmClients || []).map((c: any) => c.id);
-      if (ids.length === 0) {
-        setCplData({ since, until, cpl: 0, totalSpent: 0, totalLeads: 0, detalhe: [], faltaram: [] });
-        setCplLoading(false); setCplOpen(true); return;
-      }
-
-      // filtro de campanhas por cliente (mesma regra da dash)
-      const { data: filters } = await (supabase as any)
-        .from("client_campaign_filters").select("client_id, excluded_campaigns").in("client_id", ids);
-      const exclByClient = new Map<string, Set<string>>();
-      (filters || []).forEach((f: any) => exclByClient.set(f.client_id, new Set(((f.excluded_campaigns || []) as string[]).map((x) => (x || "").trim()))));
-
-      const { data: camps } = await (supabase as any)
-        .from("meta_campaigns").select("client_id, campaign_name, amount_spent, leads_total")
-        .in("client_id", ids).gte("date", since).lte("date", until);
-
-      const perClient = new Map<string, { spent: number; leads: number }>();
-      (camps || []).forEach((cp: any) => {
-        const excl = exclByClient.get(cp.client_id);
-        if (excl && excl.has((cp.campaign_name || "").trim())) return;
-        const e = perClient.get(cp.client_id) || { spent: 0, leads: 0 };
-        e.spent += Number(cp.amount_spent) || 0;
-        e.leads += Number(cp.leads_total) || 0;
-        perClient.set(cp.client_id, e);
-      });
-
-      const detalhe = (crmClients || []).map((c: any) => ({
-        name: c.name, account: c.meta_account_id || null,
-        ...(perClient.get(c.id) || { spent: 0, leads: 0 }),
-      })).sort((a: any, b: any) => b.spent - a.spent);
-      const totalSpent = detalhe.reduce((sum: number, d: any) => sum + d.spent, 0);
-      const totalLeads = detalhe.reduce((sum: number, d: any) => sum + d.leads, 0);
-      const faltaram = detalhe.filter((d: any) => d.spent === 0 && d.leads === 0).map((d: any) => ({ name: d.name, account: d.account }));
-
-      setCplData({ since, until, cpl: totalLeads > 0 ? totalSpent / totalLeads : 0, totalSpent, totalLeads, detalhe, faltaram });
-      setCplOpen(true);
-    } finally {
-      setCplLoading(false);
-    }
-  }
-
-  async function startFechamento() {
-    setNotes("");
-    setPresenting(true);
-    setStartedAt(Date.now());
-    setElapsed(0);
-    const res = await (supabase as any).from("squad_fechamento_sessions")
-      .insert({ squad_id: squadId, reference_month: `${month}-01`, started_at: new Date().toISOString() })
-      .select("id").single();
-    if (res.error) {
-      toast("Apresentando sem histórico — rode a migração do Fechamento para guardar as anotações.");
-      return;
-    }
-    setSessionId((res.data as any).id);
-  }
-
-  function closeFechamento() {
-    setPresenting(false); setSessionId(null); setStartedAt(null); setElapsed(0); setNotes("");
-  }
-
-  async function saveSession(close: boolean) {
-    if (!sessionId) { if (close) closeFechamento(); else toast.error("Sem histórico — rode a migração para salvar."); return; }
-    setSavingSession(true);
-    const patch: any = { notes: notes.trim() || null };
-    if (close) patch.ended_at = new Date().toISOString();
-    const res = await (supabase as any).from("squad_fechamento_sessions").update(patch).eq("id", sessionId);
-    setSavingSession(false);
-    if (res.error) { toast.error(res.error.message); return; }
-    toast.success(close ? "Fechamento encerrado e guardado!" : "Anotações salvas.");
-    if (close) closeFechamento();
-  }
-
-  const cards: { label: string; value: string; ok: boolean | null; hint?: string; onClick?: () => void }[] = [
-    { label: "Clientes ativos no mês", value: String(f.totalAtivos), ok: null, hint: `${f.eligCount} elegíveis (D+30)` },
-    { label: "NPS respondidos × ativos", value: `${f.npsRespondidos}/${f.eligCount}`, ok: null, hint: "sobre a base elegível" },
-    { label: "% de resposta", value: `${f.pctResposta.toFixed(0)}%`, ok: f.pctResposta >= 80, hint: "meta ≥ 80%" },
-    { label: "Nota média do NPS", value: f.notaMedia ? f.notaMedia.toFixed(1) : "—", ok: f.npsRespondidos ? f.notaMedia >= 9 : null, hint: "meta ≥ 9,0" },
-    { label: "Taxa de churn", value: `${f.churnRate.toFixed(1)}%`, ok: f.churnRate < 5, hint: `${f.churnsMes} de ${f.churnBase} · meta < 5%` },
-    { label: "% usando CRM", value: `${f.pctCrm.toFixed(0)}%`, ok: f.pctCrm >= 80, hint: `${f.crmOk} de ${f.eligCount} · nota ≥ 4 · meta ≥ 80%` },
-    { label: "% reunião mensal", value: `${f.pctMensais.toFixed(0)}%`, ok: f.pctMensais >= 80, hint: `${f.mensaisOk} de ${f.eligCount} · meta ≥ 80%` },
-    { label: "R$ vendido no mês", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "meta ≥ R$ 10k · mín R$ 5k" },
-    { label: "% produto secundário", value: `${f.pctSec.toFixed(0)}%`, ok: f.pctSec >= 20, hint: `${f.comSec} clientes · meta ≥ 20%` },
+  const cards: FechCard[] = [
+    {
+      label: "Clientes ativos no mês", value: String(f.totalAtivos), ok: null, hint: `${f.eligCount} elegíveis (D+30)`,
+      detail: { title: "Clientes ativos no mês", groups: [
+        G("Elegíveis (D+30) — entram nas metas", f.eligNames.map((n) => ({ name: n, badge: "elegível", tone: "ok" as const }))),
+        G("Novos do mês — não entram (menos de 30 dias)", f.novosNames.map((n) => ({ name: n, badge: "novo", tone: "warn" as const })), "Nenhum cliente novo no mês"),
+      ] },
+    },
+    {
+      label: "NPS respondidos × ativos", value: `${f.npsRespond.length}/${f.eligCount}`, ok: null, hint: "sobre a base elegível",
+      detail: { title: "NPS do mês", groups: [
+        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const }))),
+        G("Faltam responder", f.npsFaltam.map((n) => ({ name: n, badge: "sem nota", tone: "bad" as const })), "Todos responderam 🎉"),
+      ] },
+    },
+    {
+      label: "% de resposta", value: `${f.pctResposta.toFixed(0)}%`, ok: f.pctResposta >= 80, hint: "meta ≥ 80%",
+      detail: { title: "% de resposta do NPS", groups: [
+        G("Responderam", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: "ok" as const }))),
+        G("Faltam responder", f.npsFaltam.map((n) => ({ name: n, badge: "sem nota", tone: "bad" as const })), "Todos responderam 🎉"),
+      ] },
+    },
+    {
+      label: "Nota média do NPS", value: f.notaMedia ? f.notaMedia.toFixed(1) : "—", ok: f.npsRespond.length ? f.notaMedia >= 9 : null, hint: "meta ≥ 9,0",
+      detail: { title: "Notas do NPS", groups: [
+        G("Notas coletadas", f.npsRespond.map((x) => ({ name: x.name, badge: `Nota ${x.nota}`, tone: (x.nota >= 9 ? "ok" : x.nota < 7 ? "bad" : "warn") as const })), "Nenhuma nota no mês"),
+      ] },
+    },
+    {
+      label: "Taxa de churn", value: `${f.churnRate.toFixed(1)}%`, ok: f.churnRate < 5, hint: `${f.churnsEleg.length} de ${f.churnBase} · meta < 5%`,
+      detail: { title: "Churn do mês", groups: [
+        G("Contam na taxa (elegíveis, +30 dias)", f.churnsEleg.map((ch) => ({ name: ch.client_name, badge: (ch.reason || "sem motivo"), tone: "bad" as const })), "Nenhum churn elegível 🎉"),
+        G("Não contam (novos do mês / sem data)", f.churnsNaoEleg.map((ch) => ({ name: ch.client_name, badge: (ch.reason || "sem motivo"), tone: "warn" as const })), "Nenhum"),
+      ] },
+    },
+    {
+      label: "% usando CRM", value: `${f.pctCrm.toFixed(0)}%`, ok: f.pctCrm >= 80, hint: `${f.crmUsando.length} de ${f.eligCount} · nota ≥ 4 · meta ≥ 80%`,
+      detail: { title: "Uso do CRM", groups: [
+        G("Usando (nota ≥ 4)", f.crmUsando.map((x) => ({ name: x.name, badge: `${x.nota}/5`, tone: "ok" as const }))),
+        G("Não usando / sem nota", f.crmNao.map((x) => ({ name: x.name, badge: x.nota != null ? `${x.nota}/5` : "sem nota", tone: "bad" as const })), "Todos usando 🎉"),
+      ] },
+    },
+    {
+      label: "% reunião mensal", value: `${f.pctMensais.toFixed(0)}%`, ok: f.pctMensais >= 80, hint: `${f.mensalOk.length} de ${f.eligCount} · meta ≥ 80%`,
+      detail: { title: "Reuniões mensais", groups: [
+        G("Realizadas", f.mensalOk.map((n) => ({ name: n, badge: "realizada", tone: "ok" as const }))),
+        G("Não realizadas", f.mensalNao.map((n) => ({ name: n, badge: "pendente", tone: "bad" as const })), "Todas realizadas 🎉"),
+      ] },
+    },
+    {
+      label: "R$ vendido no mês", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "meta ≥ R$ 10k · mín R$ 5k",
+      detail: { title: "Vendido no mês", groups: [
+        G("Por cliente", f.vendidoPor.map((x) => ({ name: x.name, badge: formatBRL(x.v), tone: "ok" as const })), "Nenhum faturamento lançado no mês"),
+      ] },
+    },
+    {
+      label: "% produto secundário", value: `${f.pctSec.toFixed(0)}%`, ok: f.pctSec >= 20, hint: `${f.secOk.length} clientes · meta ≥ 20%`,
+      detail: { title: "Produto secundário (venda na loja)", groups: [
+        G("Compraram secundário", f.secOk.map((n) => ({ name: n, badge: "sim", tone: "ok" as const })), "Nenhum"),
+        G("Sem produto secundário", f.secNao.map((n) => ({ name: n, badge: "não", tone: "warn" as const }))),
+      ] },
+    },
     {
       label: "CPL médio",
       value: cplLoading ? "Calculando..." : cplData ? formatBRL(cplData.cpl) : "Ver CPL do mês",
       ok: cplData ? cplData.cpl <= 8 : null,
-      hint: cplData
-        ? `${formatBRL(cplData.totalSpent)} ÷ ${cplData.totalLeads} leads · meta ≤ R$ 8`
-        : "clique para calcular pelos clientes do squad",
+      hint: cplData ? `${formatBRL(cplData.totalSpent)} ÷ ${cplData.totalLeads} leads · meta ≤ R$ 8` : "clique para calcular pelos clientes do squad",
       onClick: () => void calcCplMedio(),
     },
     { label: "CPMQL médio", value: "Em breve", ok: null, hint: "meta < R$ 45" },
-    { label: "% bateram a meta projetada", value: `${f.pctMeta.toFixed(0)}%`, ok: f.comMeta ? f.pctMeta >= 70 : null, hint: `${f.bateu} de ${f.comMeta} com meta · meta ≥ 70%` },
-    { label: "% plano estratégico documentado", value: `${f.pctPlano.toFixed(0)}%`, ok: f.pctPlano >= 90, hint: `${f.planoOk} de ${f.eligCount} · meta ≥ 90%` },
-    { label: "Conversão comercial (COM)", value: f.convCount ? `${f.convMedia.toFixed(1)}%` : "—", ok: f.convCount ? f.convMedia >= 20 : null, hint: `${f.convCount} de ${f.comTotal} preenchidos · meta ≥ 20%` },
+    {
+      label: "% bateram a meta projetada", value: `${f.pctMeta.toFixed(0)}%`, ok: f.comMetaArr.length ? f.pctMeta >= 70 : null,
+      hint: `${f.metaBateu.length} de ${f.comMetaArr.length} com meta · meta ≥ 70%`,
+      detail: { title: "Meta × Vendeu", groups: [
+        G("Bateram a meta", f.metaBateu.map((x) => ({ name: x.name, badge: `${x.vendas} / ${x.meta}`, tone: "ok" as const })), "Ninguém bateu"),
+        G("Não bateram", f.metaNao.map((x) => ({ name: x.name, badge: `${x.vendas} / ${x.meta}`, tone: "bad" as const })), "Todos bateram 🎉"),
+      ] },
+    },
+    {
+      label: "% plano estratégico documentado", value: `${f.pctPlano.toFixed(0)}%`, ok: f.pctPlano >= 90, hint: `${f.planoSim.length} de ${f.eligCount} · meta ≥ 90%`,
+      detail: { title: "Está no planejamento estratégico?", groups: [
+        G("Sim", f.planoSim.map((n) => ({ name: n, badge: "sim", tone: "ok" as const })), "Nenhum"),
+        G("Não", f.planoNao.map((n) => ({ name: n, badge: "não", tone: "bad" as const })), "Nenhum"),
+        G("Não respondido", f.planoFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos respondidos 🎉"),
+      ] },
+    },
+    {
+      label: "Conversão comercial (COM)", value: f.convOk.length ? `${f.convMedia.toFixed(1)}%` : "—",
+      ok: f.convOk.length ? f.convMedia >= 20 : null, hint: `${f.convOk.length} de ${f.comTotal} preenchidos · meta ≥ 20%`,
+      detail: { title: "Conversão comercial (clientes COM)", groups: [
+        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as const })), "Nenhum preenchido"),
+        G("Faltam preencher", f.convFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos preenchidos 🎉"),
+      ] },
+    },
   ];
+
 
   const faltaPreencher = eligible.filter((c) => {
     const r = rowByName.get(norm(c.name));
@@ -3361,7 +3353,8 @@ function FechamentoPanel({
   const MetricsGrid = ({ compact }: { compact?: boolean }) => (
     <div className={`grid gap-3 ${compact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"}`}>
       {cards.map((card) => {
-        const cls = `rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"} ${card.onClick ? "text-left cursor-pointer hover:ring-2 hover:ring-primary/40 transition" : ""}`;
+        const clickable = !!card.onClick || !!card.detail;
+        const cls = `rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"} ${clickable ? "text-left cursor-pointer hover:ring-2 hover:ring-primary/40 transition" : ""}`;
         const inner = (
           <>
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
@@ -3369,8 +3362,8 @@ function FechamentoPanel({
             {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
           </>
         );
-        return card.onClick
-          ? <button key={card.label} type="button" onClick={card.onClick} className={cls}>{inner}</button>
+        return clickable
+          ? <button key={card.label} type="button" onClick={() => (card.onClick ? card.onClick() : setDetail(card.detail!))} className={cls}>{inner}</button>
           : <div key={card.label} className={cls}>{inner}</div>;
       })}
     </div>
@@ -3524,6 +3517,46 @@ function FechamentoPanel({
           </div>
         </CardContent>
       </Card>
+
+      {/* Drill-down genérico dos cards */}
+      <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {detail?.title} <span className="text-xs font-normal text-muted-foreground capitalize">· {formatMonth(`${month}-01`)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {detail?.groups.map((g) => (
+              <div key={g.title}>
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5">{g.title}</p>
+                {g.rows.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">{g.empty || "Nenhum"}</p>
+                ) : (
+                  <div className="space-y-1">
+                    {g.rows.map((r, i) => (
+                      <div key={`${r.name}-${i}`} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm ${
+                        r.tone === "ok" ? "border-emerald-500/30 bg-emerald-500/5"
+                        : r.tone === "bad" ? "border-red-500/30 bg-red-500/5"
+                        : r.tone === "warn" ? "border-amber-500/30 bg-amber-500/5"
+                        : "border-border/30 bg-card/40"}`}>
+                        <span className="font-medium truncate">{r.name}</span>
+                        {r.badge && (
+                          <Badge variant="outline" className={`shrink-0 text-[10px] ${
+                            r.tone === "ok" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+                            : r.tone === "bad" ? "border-red-500/40 text-red-700 dark:text-red-300"
+                            : r.tone === "warn" ? "border-amber-500/40 text-amber-700 dark:text-amber-300"
+                            : ""}`}>{r.badge}</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Detalhe do CPL médio */}
       <Dialog open={cplOpen} onOpenChange={setCplOpen}>
