@@ -3101,6 +3101,14 @@ function FechamentoPanel({
   const [savingRow, setSavingRow] = useState<string | null>(null);
   const [uploadingRow, setUploadingRow] = useState<string | null>(null);
   const [docViewer, setDocViewer] = useState<{ url: string; name: string } | null>(null);
+  const [cplOpen, setCplOpen] = useState(false);
+  const [cplLoading, setCplLoading] = useState(false);
+  const [cplData, setCplData] = useState<null | {
+    since: string; until: string; cpl: number; totalSpent: number; totalLeads: number;
+    detalhe: { name: string; account: string | null; spent: number; leads: number }[];
+    faltaram: { name: string; account: string | null }[];
+  }>(null);
+  useEffect(() => { setCplData(null); }, [month]);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3219,15 +3227,7 @@ function FechamentoPanel({
   // Anexo do funil de projeção (imagem exportada) — guardado no bucket "projecoes"
   async function uploadFunil(c: SquadClient, file: File) {
     setUploadingRow(c.name);
-    const dot = file.name.lastIndexOf(".");
-    const ext = dot >= 0 ? file.name.slice(dot).toLowerCase().replace(/[^a-z0-9.]/g, "") : "";
-    const base = (dot >= 0 ? file.name.slice(0, dot) : file.name)
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9-_]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "arquivo";
-    const safeName = `${base}${ext}`;
-    const path = `fechamento/${squadId}/${month}/${c.id}-${Date.now()}-${safeName}`;
+    const path = `fechamento/${squadId}/${month}/${c.id}-${file.name}`;
     const up = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
     if (up.error) { setUploadingRow(null); toast.error("Erro no upload: " + up.error.message); return; }
     await saveManual(c.name, { plano_estrategico_link: path });
@@ -3238,6 +3238,60 @@ function FechamentoPanel({
     const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o anexo."); return; }
     setDocViewer({ url: data.signedUrl, name: path.split("/").pop() || "funil" });
+  }
+
+  // CPL médio do squad = Σ investimento ÷ Σ leads de TODOS os clientes do squad
+  // (puxa da dash de Criativos: clients.squad_id -> meta_campaigns), respeitando o filtro de campanhas.
+  async function calcCplMedio() {
+    setCplLoading(true);
+    try {
+      const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+      const since = `${month}-01`;
+      const until = `${month}-${String(last).padStart(2, "0")}`;
+
+      const { data: crmClients, error: cErr } = await (supabase as any)
+        .from("clients").select("id, name, meta_account_id")
+        .eq("squad_id", squadId).is("deleted_at", null);
+      if (cErr) { toast.error("Erro ao buscar clientes: " + cErr.message); setCplLoading(false); return; }
+      const ids = (crmClients || []).map((c: any) => c.id);
+      if (ids.length === 0) {
+        setCplData({ since, until, cpl: 0, totalSpent: 0, totalLeads: 0, detalhe: [], faltaram: [] });
+        setCplLoading(false); setCplOpen(true); return;
+      }
+
+      // filtro de campanhas por cliente (mesma regra da dash)
+      const { data: filters } = await (supabase as any)
+        .from("client_campaign_filters").select("client_id, excluded_campaigns").in("client_id", ids);
+      const exclByClient = new Map<string, Set<string>>();
+      (filters || []).forEach((f: any) => exclByClient.set(f.client_id, new Set(((f.excluded_campaigns || []) as string[]).map((x) => (x || "").trim()))));
+
+      const { data: camps } = await (supabase as any)
+        .from("meta_campaigns").select("client_id, campaign_name, amount_spent, leads_total")
+        .in("client_id", ids).gte("date", since).lte("date", until);
+
+      const perClient = new Map<string, { spent: number; leads: number }>();
+      (camps || []).forEach((cp: any) => {
+        const excl = exclByClient.get(cp.client_id);
+        if (excl && excl.has((cp.campaign_name || "").trim())) return;
+        const e = perClient.get(cp.client_id) || { spent: 0, leads: 0 };
+        e.spent += Number(cp.amount_spent) || 0;
+        e.leads += Number(cp.leads_total) || 0;
+        perClient.set(cp.client_id, e);
+      });
+
+      const detalhe = (crmClients || []).map((c: any) => ({
+        name: c.name, account: c.meta_account_id || null,
+        ...(perClient.get(c.id) || { spent: 0, leads: 0 }),
+      })).sort((a: any, b: any) => b.spent - a.spent);
+      const totalSpent = detalhe.reduce((sum: number, d: any) => sum + d.spent, 0);
+      const totalLeads = detalhe.reduce((sum: number, d: any) => sum + d.leads, 0);
+      const faltaram = detalhe.filter((d: any) => d.spent === 0 && d.leads === 0).map((d: any) => ({ name: d.name, account: d.account }));
+
+      setCplData({ since, until, cpl: totalLeads > 0 ? totalSpent / totalLeads : 0, totalSpent, totalLeads, detalhe, faltaram });
+      setCplOpen(true);
+    } finally {
+      setCplLoading(false);
+    }
   }
 
   async function startFechamento() {
@@ -3271,7 +3325,7 @@ function FechamentoPanel({
     if (close) closeFechamento();
   }
 
-  const cards: { label: string; value: string; ok: boolean | null; hint?: string }[] = [
+  const cards: { label: string; value: string; ok: boolean | null; hint?: string; onClick?: () => void }[] = [
     { label: "Clientes ativos no mês", value: String(f.totalAtivos), ok: null, hint: `${f.eligCount} elegíveis (D+30)` },
     { label: "NPS respondidos × ativos", value: `${f.npsRespondidos}/${f.eligCount}`, ok: null, hint: "sobre a base elegível" },
     { label: "% de resposta", value: `${f.pctResposta.toFixed(0)}%`, ok: f.pctResposta >= 80, hint: "meta ≥ 80%" },
@@ -3281,7 +3335,15 @@ function FechamentoPanel({
     { label: "% reunião mensal", value: `${f.pctMensais.toFixed(0)}%`, ok: f.pctMensais >= 80, hint: `${f.mensaisOk} de ${f.eligCount} · meta ≥ 80%` },
     { label: "R$ vendido no mês", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "meta ≥ R$ 10k · mín R$ 5k" },
     { label: "% produto secundário", value: `${f.pctSec.toFixed(0)}%`, ok: f.pctSec >= 20, hint: `${f.comSec} clientes · meta ≥ 20%` },
-    { label: "CPL médio", value: "Em breve", ok: null, hint: "vem da dash de Criativos" },
+    {
+      label: "CPL médio",
+      value: cplLoading ? "Calculando..." : cplData ? formatBRL(cplData.cpl) : "Ver CPL do mês",
+      ok: cplData ? cplData.cpl <= 8 : null,
+      hint: cplData
+        ? `${formatBRL(cplData.totalSpent)} ÷ ${cplData.totalLeads} leads · meta ≤ R$ 8`
+        : "clique para calcular pelos clientes do squad",
+      onClick: () => void calcCplMedio(),
+    },
     { label: "CPMQL médio", value: "Em breve", ok: null, hint: "meta < R$ 45" },
     { label: "% bateram a meta projetada", value: `${f.pctMeta.toFixed(0)}%`, ok: f.comMeta ? f.pctMeta >= 70 : null, hint: `${f.bateu} de ${f.comMeta} com meta · meta ≥ 70%` },
     { label: "% plano estratégico documentado", value: `${f.pctPlano.toFixed(0)}%`, ok: f.pctPlano >= 90, hint: `${f.planoOk} de ${f.eligCount} · meta ≥ 90%` },
@@ -3298,13 +3360,19 @@ function FechamentoPanel({
 
   const MetricsGrid = ({ compact }: { compact?: boolean }) => (
     <div className={`grid gap-3 ${compact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"}`}>
-      {cards.map((card) => (
-        <div key={card.label} className={`rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"}`}>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
-          <p className={`text-2xl font-bold mt-1 ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
-          {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
-        </div>
-      ))}
+      {cards.map((card) => {
+        const cls = `rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"} ${card.onClick ? "text-left cursor-pointer hover:ring-2 hover:ring-primary/40 transition" : ""}`;
+        const inner = (
+          <>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
+            <p className={`font-bold mt-1 ${card.onClick && !cplData ? "text-base text-primary" : "text-2xl"} ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
+            {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
+          </>
+        );
+        return card.onClick
+          ? <button key={card.label} type="button" onClick={card.onClick} className={cls}>{inner}</button>
+          : <div key={card.label} className={cls}>{inner}</div>;
+      })}
     </div>
   );
 
@@ -3456,6 +3524,81 @@ function FechamentoPanel({
           </div>
         </CardContent>
       </Card>
+
+      {/* Detalhe do CPL médio */}
+      <Dialog open={cplOpen} onOpenChange={setCplOpen}>
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-primary" /> CPL médio · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {cplData && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Período <strong>{cplData.since}</strong> a <strong>{cplData.until}</strong> · soma o investimento e os leads de <strong>todos os clientes deste squad</strong> na dash de Criativos (respeitando o filtro de campanhas de cada cliente).
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className={`rounded-2xl border p-4 ${cplData.cpl <= 8 && cplData.totalLeads > 0 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CPL médio</p>
+                  <p className={`text-2xl font-bold mt-1 ${cplData.cpl <= 8 && cplData.totalLeads > 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+                    {cplData.totalLeads > 0 ? formatBRL(cplData.cpl) : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">meta ≤ R$ 8</p>
+                </div>
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Investimento total</p>
+                  <p className="text-2xl font-bold mt-1">{formatBRL(cplData.totalSpent)}</p>
+                </div>
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Leads totais</p>
+                  <p className="text-2xl font-bold mt-1">{cplData.totalLeads.toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+
+              {cplData.faltaram.length > 0 && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1.5">
+                    {cplData.faltaram.length} cliente(s) sem dado no período (não entraram na conta):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cplData.faltaram.map((d) => (
+                      <Badge key={d.name} variant="outline" className="border-amber-500/40 text-amber-800 dark:text-amber-200">
+                        {d.name}{!d.account ? " · sem conta Meta" : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Conta de anúncio</TableHead>
+                      <TableHead className="text-right">Investimento</TableHead>
+                      <TableHead className="text-right">Leads</TableHead>
+                      <TableHead className="text-right">CPL</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cplData.detalhe.map((d) => (
+                      <TableRow key={d.name} className={`border-border/20 ${d.spent === 0 && d.leads === 0 ? "opacity-50" : ""}`}>
+                        <TableCell className="font-medium">{d.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">{d.account || "—"}</TableCell>
+                        <TableCell className="text-right">{formatBRL(d.spent)}</TableCell>
+                        <TableCell className="text-right">{d.leads.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="text-right font-semibold">{d.leads > 0 ? formatBRL(d.spent / d.leads) : "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Visualizador do anexo do funil */}
       <Dialog open={!!docViewer} onOpenChange={(o) => { if (!o) setDocViewer(null); }}>
