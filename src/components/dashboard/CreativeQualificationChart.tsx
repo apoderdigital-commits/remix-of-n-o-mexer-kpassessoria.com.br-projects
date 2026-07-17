@@ -144,8 +144,10 @@ export function CreativeQualificationChart({ campaigns, leads, qualifiedStatuses
                 }}
                 formatter={(_v: number, _k, item: any) => {
                   const d = item?.payload;
+                  if (!d) return ["", "Desempenho"];
+                  const rate = Number(d.rate) || 0;
                   return [
-                    `${d.qualified} qualif. · ${d.total} leads · ${d.rate.toFixed(1)}%`,
+                    `${d.qualified ?? 0} qualif. · ${d.total ?? 0} leads · ${rate.toFixed(1)}%`,
                     "Desempenho",
                   ];
                 }}
@@ -162,7 +164,7 @@ export function CreativeQualificationChart({ campaigns, leads, qualifiedStatuses
                   style={{ fill: "hsl(210 40% 98%)", fontSize: 12, fontWeight: 700 }}
                   formatter={(v: number) => {
                     const item = chartData.find((d) => d.qualified === v);
-                    return item ? `${v} · ${item.rate.toFixed(1)}%` : `${v}`;
+                    return item ? `${v} · ${(Number(item.rate) || 0).toFixed(1)}%` : `${v}`;
                   }}
                 />
               </Bar>
