@@ -6,6 +6,7 @@ interface Props {
 
 interface State {
   error: Error | null;
+  stack: string | null;
 }
 
 /**
@@ -14,15 +15,19 @@ interface State {
  * e um botão de recarregar — e a gente consegue diagnosticar pelo texto.
  */
 export class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, stack: null };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Fica no console do navegador pra facilitar o diagnóstico.
     console.error("[ErrorBoundary] erro de render:", error, info.componentStack);
+    // Guarda as primeiras linhas do stack (qual componente quebrou) pra mostrar na tela.
+    const stack = (info.componentStack || "")
+      .split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4).join("\n");
+    this.setState({ stack });
   }
 
   render() {
@@ -38,8 +43,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             Um erro impediu esta parte de carregar. Recarregar costuma resolver. Se
             continuar acontecendo, mande esta mensagem para o suporte:
           </p>
-          <pre className="text-left text-xs bg-card border border-border/40 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap break-words">
+          <pre className="text-left text-xs bg-card border border-border/40 rounded-lg p-3 overflow-auto max-h-52 whitespace-pre-wrap break-words">
             {error.message || String(error)}
+            {this.state.stack ? `\n\nem:\n${this.state.stack}` : ""}
           </pre>
           <div className="flex items-center justify-center gap-3">
             <button
