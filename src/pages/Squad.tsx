@@ -3116,7 +3116,14 @@ function FechamentoPanel({
     detalhe: { name: string; account: string | null; spent: number; leads: number }[];
     faltaram: { name: string; account: string | null }[];
   }>(null);
-  useEffect(() => { setCplData(null); }, [month]);
+  const [cpmqlOpen, setCpmqlOpen] = useState(false);
+  const [cpmqlLoading, setCpmqlLoading] = useState(false);
+  const [cpmqlData, setCpmqlData] = useState<null | {
+    since: string; until: string; cpmql: number; totalSpent: number; totalMqls: number;
+    detalhe: { name: string; account: string | null; spent: number; mqls: number }[];
+    semMql: { name: string; spent: number }[];
+  }>(null);
+  useEffect(() => { setCplData(null); setCpmqlData(null); }, [month]);
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3238,12 +3245,115 @@ function FechamentoPanel({
     }
   };
 
+  // CPL médio do squad = Σ investimento ÷ Σ leads de TODOS os clientes do squad
+  // (dash de Criativos: clients.squad_id -> meta_campaigns), respeitando o filtro de campanhas.
   const calcCplMedio = async () => {
     setCplLoading(true);
     try {
-      toast.info("Cálculo de CPL em breve");
+      const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+      const since = `${month}-01`;
+      const until = `${month}-${String(last).padStart(2, "0")}`;
+
+      const { data: crmClients, error: cErr } = await (supabase as any)
+        .from("clients").select("id, name, meta_account_id")
+        .eq("squad_id", squadId).is("deleted_at", null);
+      if (cErr) throw cErr;
+      const ids = (crmClients || []).map((c: any) => c.id);
+      if (ids.length === 0) {
+        setCplData({ since, until, cpl: 0, totalSpent: 0, totalLeads: 0, detalhe: [], faltaram: [] });
+        setCplOpen(true); return;
+      }
+
+      const { data: filters } = await (supabase as any)
+        .from("client_campaign_filters").select("client_id, excluded_campaigns").in("client_id", ids);
+      const exclBy = new Map<string, Set<string>>();
+      (filters || []).forEach((fl: any) => exclBy.set(fl.client_id, new Set(((fl.excluded_campaigns || []) as string[]).map((x) => (x || "").trim()))));
+
+      const { data: camps } = await (supabase as any)
+        .from("meta_campaigns").select("client_id, campaign_name, amount_spent, leads_total")
+        .in("client_id", ids).gte("date", since).lte("date", until);
+
+      const per = new Map<string, { spent: number; leads: number }>();
+      (camps || []).forEach((cp: any) => {
+        const excl = exclBy.get(cp.client_id);
+        if (excl && excl.has((cp.campaign_name || "").trim())) return;
+        const e = per.get(cp.client_id) || { spent: 0, leads: 0 };
+        e.spent += Number(cp.amount_spent) || 0;
+        e.leads += Number(cp.leads_total) || 0;
+        per.set(cp.client_id, e);
+      });
+
+      const detalhe = (crmClients || []).map((c: any) => ({
+        name: c.name, account: c.meta_account_id || null,
+        ...(per.get(c.id) || { spent: 0, leads: 0 }),
+      })).sort((a: any, b: any) => b.spent - a.spent);
+      const totalSpent = detalhe.reduce((sum: number, d: any) => sum + d.spent, 0);
+      const totalLeads = detalhe.reduce((sum: number, d: any) => sum + d.leads, 0);
+      const faltaram = detalhe.filter((d: any) => d.spent === 0 && d.leads === 0).map((d: any) => ({ name: d.name, account: d.account }));
+
+      setCplData({ since, until, cpl: totalLeads > 0 ? totalSpent / totalLeads : 0, totalSpent, totalLeads, detalhe, faltaram });
+      setCplOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao calcular o CPL");
     } finally {
       setCplLoading(false);
+    }
+  };
+
+  // CPMQL médio = Σ investimento ÷ Σ leads QUALIFICADOS (CPF aprovado) dos clientes do squad.
+  const calcCpmqlMedio = async () => {
+    setCpmqlLoading(true);
+    try {
+      const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+      const since = `${month}-01`;
+      const until = `${month}-${String(last).padStart(2, "0")}`;
+
+      const { data: crmClients, error: cErr } = await (supabase as any)
+        .from("clients").select("id, name, meta_account_id")
+        .eq("squad_id", squadId).is("deleted_at", null);
+      if (cErr) throw cErr;
+      const ids = (crmClients || []).map((c: any) => c.id);
+      if (ids.length === 0) {
+        setCpmqlData({ since, until, cpmql: 0, totalSpent: 0, totalMqls: 0, detalhe: [], semMql: [] });
+        setCpmqlOpen(true); return;
+      }
+
+      const { data: filters } = await (supabase as any)
+        .from("client_campaign_filters").select("client_id, excluded_campaigns").in("client_id", ids);
+      const exclBy = new Map<string, Set<string>>();
+      (filters || []).forEach((fl: any) => exclBy.set(fl.client_id, new Set(((fl.excluded_campaigns || []) as string[]).map((x) => (x || "").trim()))));
+
+      const { data: camps } = await (supabase as any)
+        .from("meta_campaigns").select("client_id, campaign_name, amount_spent")
+        .in("client_id", ids).gte("date", since).lte("date", until);
+      const spentBy = new Map<string, number>();
+      (camps || []).forEach((cp: any) => {
+        const excl = exclBy.get(cp.client_id);
+        if (excl && excl.has((cp.campaign_name || "").trim())) return;
+        spentBy.set(cp.client_id, (spentBy.get(cp.client_id) || 0) + (Number(cp.amount_spent) || 0));
+      });
+
+      const { data: qls } = await (supabase as any)
+        .from("qualified_leads").select("client_id")
+        .eq("status", "cpf_approved").in("client_id", ids)
+        .gte("lead_date", since).lte("lead_date", until);
+      const mqlBy = new Map<string, number>();
+      (qls || []).forEach((q: any) => mqlBy.set(q.client_id, (mqlBy.get(q.client_id) || 0) + 1));
+
+      const detalhe = (crmClients || []).map((c: any) => ({
+        name: c.name, account: c.meta_account_id || null,
+        spent: spentBy.get(c.id) || 0, mqls: mqlBy.get(c.id) || 0,
+      })).sort((a: any, b: any) => b.spent - a.spent);
+      const totalSpent = detalhe.reduce((sum: number, d: any) => sum + d.spent, 0);
+      const totalMqls = detalhe.reduce((sum: number, d: any) => sum + d.mqls, 0);
+      const semMql = detalhe.filter((d: any) => d.spent > 0 && d.mqls === 0).map((d: any) => ({ name: d.name, spent: d.spent }));
+
+      setCpmqlData({ since, until, cpmql: totalMqls > 0 ? totalSpent / totalMqls : 0, totalSpent, totalMqls, detalhe, semMql });
+      setCpmqlOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao calcular o CPMQL");
+    } finally {
+      setCpmqlLoading(false);
     }
   };
 
@@ -3425,7 +3535,15 @@ function FechamentoPanel({
       hint: cplData ? `${formatBRL(cplData.totalSpent)} ÷ ${cplData.totalLeads} leads · meta ≤ R$ 8` : "clique para calcular pelos clientes do squad",
       onClick: () => void calcCplMedio(),
     },
-    { label: "CPMQL médio", value: "Em breve", ok: null, hint: "meta < R$ 45" },
+    {
+      label: "CPMQL médio",
+      value: cpmqlLoading ? "Calculando..." : cpmqlData ? formatBRL(cpmqlData.cpmql) : "Ver CPMQL do mês",
+      ok: cpmqlData ? (cpmqlData.totalMqls > 0 && cpmqlData.cpmql < 45) : null,
+      hint: cpmqlData
+        ? `${formatBRL(cpmqlData.totalSpent)} ÷ ${cpmqlData.totalMqls} qualificados · meta < R$ 45`
+        : "clique para calcular pelos clientes do squad",
+      onClick: () => void calcCpmqlMedio(),
+    },
     {
       label: "% bateram a meta projetada", value: `${f.pctMeta.toFixed(0)}%`, ok: f.comMetaArr.length ? f.pctMeta >= 70 : null,
       hint: `${f.metaBateu.length} de ${f.comMetaArr.length} com meta · meta ≥ 70%`,
@@ -3666,6 +3784,83 @@ function FechamentoPanel({
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalhe do CPMQL médio */}
+      <Dialog open={cpmqlOpen} onOpenChange={setCpmqlOpen}>
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> CPMQL médio · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {cpmqlData && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Período <strong>{cpmqlData.since}</strong> a <strong>{cpmqlData.until}</strong> · investimento de <strong>todos os clientes deste squad</strong> ÷ <strong>leads qualificados</strong> (CPF aprovado). Respeita o filtro de campanhas de cada cliente.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className={`rounded-2xl border p-4 ${cpmqlData.totalMqls > 0 && cpmqlData.cpmql < 45 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CPMQL médio</p>
+                  <p className={`text-2xl font-bold mt-1 ${cpmqlData.totalMqls > 0 && cpmqlData.cpmql < 45 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+                    {cpmqlData.totalMqls > 0 ? formatBRL(cpmqlData.cpmql) : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">meta &lt; R$ 45</p>
+                </div>
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Investimento total</p>
+                  <p className="text-2xl font-bold mt-1">{formatBRL(cpmqlData.totalSpent)}</p>
+                </div>
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Leads qualificados</p>
+                  <p className="text-2xl font-bold mt-1">{cpmqlData.totalMqls.toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+
+              {cpmqlData.semMql.length > 0 && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1.5">
+                    {cpmqlData.semMql.length} cliente(s) investiram e <strong>não geraram nenhum qualificado</strong> — puxam o CPMQL pra cima:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cpmqlData.semMql.map((d) => (
+                      <Badge key={d.name} variant="outline" className="border-amber-500/40 text-amber-800 dark:text-amber-200">
+                        {d.name} · {formatBRL(d.spent)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Conta de anúncio</TableHead>
+                      <TableHead className="text-right">Investimento</TableHead>
+                      <TableHead className="text-right">Qualificados</TableHead>
+                      <TableHead className="text-right">CPMQL</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cpmqlData.detalhe.map((d) => (
+                      <TableRow key={d.name} className={`border-border/20 ${d.spent === 0 && d.mqls === 0 ? "opacity-50" : ""}`}>
+                        <TableCell className="font-medium">{d.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">{d.account || "—"}</TableCell>
+                        <TableCell className="text-right">{formatBRL(d.spent)}</TableCell>
+                        <TableCell className="text-right">{d.mqls.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className={`text-right font-semibold ${d.mqls > 0 && d.spent / d.mqls < 45 ? "text-emerald-700 dark:text-emerald-300" : d.mqls > 0 ? "text-red-700 dark:text-red-300" : ""}`}>
+                          {d.mqls > 0 ? formatBRL(d.spent / d.mqls) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
