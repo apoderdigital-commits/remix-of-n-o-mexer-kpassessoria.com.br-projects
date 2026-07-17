@@ -316,14 +316,21 @@ export default function Index() {
     evolutionData.forEach((d: any) => byDate.set(d.date, d));
 
     const latestDateStr = evolutionData[evolutionData.length - 1].date;
-    const latest = new Date(latestDateStr + "T00:00:00");
+    const latest = new Date((latestDateStr || "") + "T00:00:00");
+    if (isNaN(latest.getTime())) return { today: 0, yesterday: 0, avg7d: 0 };
 
     const dateAt = (offsetDays: number) => {
       const d = new Date(latest);
       d.setDate(d.getDate() - offsetDays);
       return d;
     };
-    const isoAt = (offsetDays: number) => dateAt(offsetDays).toISOString().slice(0, 10);
+    // Formata manualmente (em vez de toISOString, que lança RangeError se a data
+    // for inválida — bastaria uma data nula vinda do banco pra derrubar a tela).
+    const isoAt = (offsetDays: number) => {
+      const d = dateAt(offsetDays);
+      if (isNaN(d.getTime())) return "";
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
     const valueOn = (offsetDays: number) => {
       const row = byDate.get(isoAt(offsetDays));
       return row ? Number((row as any)[key]) || 0 : 0;
