@@ -15,6 +15,7 @@ import SquadAdmin from "./pages/SquadAdmin.tsx";
 import Comercial from "./pages/Comercial.tsx";
 import Tarefas from "./pages/Tarefas.tsx";
 import Login from "./pages/Login.tsx";
+import Perfil from "./pages/Perfil.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ClientView from "./pages/ClientView.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
@@ -67,6 +68,7 @@ const AppRoutes = () => (
     <Route path="/projecao" element={<ProtectedRoute dashboardKey="projecao"><Projecao /></ProtectedRoute>} />
     <Route path="/clients" element={<ProtectedRoute adminOnly><Clients /></ProtectedRoute>} />
     <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
+    <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
     <Route path="/squad" element={<ProtectedRoute><Squad /></ProtectedRoute>} />
     <Route path="/squad/admin" element={<ProtectedRoute adminOnly><SquadAdmin /></ProtectedRoute>} />
     <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
