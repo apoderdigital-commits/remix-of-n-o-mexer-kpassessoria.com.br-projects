@@ -175,7 +175,7 @@ export default function Login() {
         preload="auto"
         src={loginBgVideo.url}
         className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        style={{ zIndex: 0 }}
+        style={{ zIndex: 0, objectPosition: "left center" }}
       />
 
       {/* Screen 1: Type selection */}
