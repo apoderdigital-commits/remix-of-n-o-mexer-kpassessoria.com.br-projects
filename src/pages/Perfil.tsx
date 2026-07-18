@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 const EMAIL_DOMAIN = "@kp.local";
 const FUNCOES: Record<string, string> = {
@@ -32,6 +33,7 @@ export default function Perfil() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [squadFunction, setSquadFunction] = useState<string | null>(null);
   const [avatarSupported, setAvatarSupported] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +71,10 @@ export default function Perfil() {
         setFullName(data.full_name || "");
         setPhone(data.phone || "");
         setSquadFunction(data.squad_function || null);
-        setAvatarUrl((data as any).avatar_url || null);
+        const raw = (data as any).avatar_url || null;
+        setAvatarPath(raw);
+        const signed = await resolveAvatarUrl(raw);
+        setAvatarUrl(signed);
       }
     })();
     void loadPasskeys();
@@ -108,7 +113,7 @@ export default function Perfil() {
   const saveProfile = async () => {
     setSaving(true);
     try {
-      await persistProfile(avatarUrl);
+      await persistProfile(avatarPath);
       toast.success("Perfil atualizado!");
     } catch (e: any) {
       toast.error(e?.message || "Erro ao salvar");
@@ -129,9 +134,10 @@ export default function Perfil() {
       const path = `${user.id}/avatar-${Date.now()}.${ext}`;
       const up = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
       if (up.error) throw up.error;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      setAvatarUrl(data.publicUrl);
-      await persistProfile(data.publicUrl);
+      await persistProfile(path);
+      setAvatarPath(path);
+      const signed = await resolveAvatarUrl(path);
+      setAvatarUrl(signed);
       toast.success("Foto atualizada!");
     } catch (e: any) {
       toast.error(/bucket/i.test(e?.message || "") ? "A foto de perfil precisa da migração (peça ao Lovable)." : e?.message || "Erro no upload");
