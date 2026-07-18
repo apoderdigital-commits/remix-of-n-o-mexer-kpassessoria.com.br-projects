@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { PortalVideo } from "@/components/PortalVideo";
-import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks, Fingerprint } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks, Fingerprint, UserCog } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -155,6 +156,12 @@ export default function Portal() {
                 </Link>
               </>
             )}
+            <Link to="/perfil">
+              <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
+                <UserCog className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm">Editar perfil</span>
+              </Button>
+            </Link>
             <ThemeToggle />
             <Button size="icon" variant="ghost" onClick={signOut} className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />
@@ -295,22 +302,28 @@ export default function Portal() {
               KP Assessoria · Painel interno
             </p>
 
-            {bioOffer && (
-              <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-md p-4 shadow-2xl shadow-primary/10">
-                <p className="text-sm font-semibold flex items-center gap-2">
-                  <Fingerprint className="h-4 w-4 text-primary" /> Entre mais rápido com biometria
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ative o Touch ID / Windows Hello e entre sem digitar a senha neste aparelho.
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" onClick={enrollBio} disabled={bioBusy} className="gap-1.5">
-                    <Fingerprint className="h-3.5 w-3.5" /> {bioBusy ? "Aguardando..." : "Ativar biometria"}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={dismissBio}>Agora não</Button>
+            <Dialog open={bioOffer} onOpenChange={(o) => { if (!o) dismissBio(); }}>
+              <DialogContent className="max-w-md">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center">
+                  <Fingerprint className="h-8 w-8 text-primary" />
                 </div>
-              </div>
-            )}
+                <DialogHeader>
+                  <DialogTitle className="text-center">Ativar login por biometria?</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground text-center">
+                  Entre sem digitar a senha usando o <strong>Touch ID / Windows Hello</strong> deste aparelho. Mais rápido e mais seguro.
+                </p>
+                <div className="flex flex-col gap-2 mt-1">
+                  <Button onClick={enrollBio} disabled={bioBusy} className="gap-2 h-11">
+                    <Fingerprint className="h-4 w-4" /> {bioBusy ? "Aguardando biometria..." : "Ativar biometria"}
+                  </Button>
+                  <Button variant="ghost" onClick={dismissBio}>Agora não</Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Dá pra ativar depois em <strong>Editar perfil</strong>, no topo da tela.
+                </p>
+              </DialogContent>
+            </Dialog>
           </div>
         </main>
       </div>
