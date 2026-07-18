@@ -116,13 +116,13 @@ export default function Portal() {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
 
       {/* Left side — video (desktop only) */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
+      <div className="dark hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
         <PortalVideo
-          className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
+          className="absolute inset-0 w-full h-full object-cover object-[left_center]"
           src={portalBg.url}
           showControls
         />
-        <div className="absolute inset-0 bg-background/50 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/30 via-[#080810]/10 to-[#080810] pointer-events-none" />
 
         <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-4">
