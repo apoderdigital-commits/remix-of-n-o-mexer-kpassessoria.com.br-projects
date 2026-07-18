@@ -88,11 +88,17 @@ export default function Perfil() {
   };
 
   const persistProfile = async (avatar: string | null) => {
+    const rawPhone = phone.trim();
+    if (rawPhone && !isValidBrPhone(rawPhone)) {
+      throw new Error("Telefone inválido. Use DDD + número (ex.: 81985048696).");
+    }
+    const normalizedPhone = rawPhone ? normalizeBrPhone(rawPhone) : null;
     const { error } = await (supabase as any).rpc("update_own_profile", {
       _full_name: fullName.trim() || null,
-      _phone: phone.trim() || null,
+      _phone: normalizedPhone,
       _avatar_url: avatar,
     });
+    if (normalizedPhone) setPhone(normalizedPhone);
     if (error) {
       if (/update_own_profile/i.test(error.message || "")) throw new Error("A edição de perfil precisa da migração (peça ao Lovable).");
       throw new Error(error.message);
