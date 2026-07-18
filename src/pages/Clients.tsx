@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound, Send } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound, Send, ChevronRight, Users } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -99,6 +99,8 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<"all" | "attention" | "critical">("all");
   const [squadFilter, setSquadFilter] = useState<string>("all");
+  // Tela de seleção: nenhum squad abre de cara — o admin escolhe qual gerenciar.
+  const [squadPicked, setSquadPicked] = useState(false);
   const { data: healthMap } = useClientsHealth();
 
   // Token lock state (shared for the whole tokens card)
@@ -722,8 +724,60 @@ export default function Clients() {
       </Dialog>
 
 
+      {/* Seleção de squad — a lista só abre depois de escolher */}
+      {!squadPicked && (
+        <div className="py-10">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold">Selecione um squad</h2>
+            <p className="text-sm text-muted-foreground mt-1">Escolha de qual squad você quer gerenciar os clientes.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
+            {(squads || []).map((sq) => {
+              const count = (clients || []).filter((c: any) => c.squad_id === sq.id).length;
+              return (
+                <button
+                  key={sq.id}
+                  onClick={() => { setSquadFilter(sq.id); setSquadPicked(true); }}
+                  className="group w-full sm:w-64 text-left rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-lg">{sq.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{count} cliente{count === 1 ? "" : "s"}</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                    Gerenciar clientes <ChevronRight className="h-3 w-3" />
+                  </span>
+                </button>
+              );
+            })}
+            {(() => {
+              const semSquad = (clients || []).filter((c: any) => !c.squad_id).length;
+              if (!semSquad) return null;
+              return (
+                <button
+                  onClick={() => { setSquadFilter("none"); setSquadPicked(true); }}
+                  className="group w-full sm:w-64 text-left rounded-2xl border border-amber-500/50 bg-amber-500/10 p-5 transition-all hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span className="font-semibold text-lg text-amber-800 dark:text-amber-200">Sem squad</span>
+                  </div>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-2">
+                    {semSquad} cliente{semSquad === 1 ? "" : "s"} sem squad configurado — clique para editar
+                  </p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Configurar squads <ChevronRight className="h-3 w-3" />
+                  </span>
+                </button>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Clients Table */}
-      <Card className="glass-card border-border/50">
+      <Card className={`glass-card border-border/50 ${squadPicked ? "" : "hidden"}`}>
         <CardHeader className="gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="text-base">
@@ -754,18 +808,11 @@ export default function Clients() {
                   </button>
                 ))}
               </div>
-              <Select value={squadFilter} onValueChange={setSquadFilter}>
-                <SelectTrigger className="h-8 w-full sm:w-[170px] text-xs">
-                  <SelectValue placeholder="Todos os squads" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os squads</SelectItem>
-                  {squads?.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                  <SelectItem value="none">⚠ Sem squad</SelectItem>
-                </SelectContent>
-              </Select>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setSquadPicked(false)}>
+                <Users className="h-3.5 w-3.5 text-primary" />
+                {squadFilter === "none" ? "Sem squad" : squads?.find((sq) => sq.id === squadFilter)?.name || "Squad"}
+                <span className="text-muted-foreground">· trocar</span>
+              </Button>
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
