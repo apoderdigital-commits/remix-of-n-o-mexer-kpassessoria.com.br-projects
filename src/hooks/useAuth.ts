@@ -134,6 +134,8 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
+    // Evita o login com biometria disparar sozinho logo após sair.
+    try { sessionStorage.setItem("kp-bio-skip-once", "1"); } catch { /* sem sessionStorage */ }
     await supabase.auth.signOut();
   };
 
