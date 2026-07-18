@@ -665,6 +665,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           deleted_at: string | null
           email: string | null
@@ -676,6 +677,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string | null
@@ -687,6 +689,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string | null
@@ -2026,6 +2029,10 @@ export type Database = {
       }
       purge_old_squad_daily_sessions: { Args: never; Returns: undefined }
       purge_old_squad_engagement: { Args: never; Returns: undefined }
+      update_own_profile: {
+        Args: { _avatar_url: string; _full_name: string; _phone: string }
+        Returns: undefined
+      }
       user_can_access_client: { Args: { _client_id: string }; Returns: boolean }
       user_in_squad: { Args: { _squad_id: string }; Returns: boolean }
     }
