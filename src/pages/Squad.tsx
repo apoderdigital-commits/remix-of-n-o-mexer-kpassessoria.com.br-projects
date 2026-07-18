@@ -1006,7 +1006,8 @@ export default function Squad() {
       name: r.name,
       motivo: r.val <= 0 && r.months == null ? "sem contrato e sem data de entrada" : r.val <= 0 ? "sem valor de contrato" : "sem data de entrada",
     }));
-    return { rows: withLtv, total, avg: withLtv.length ? total / withLtv.length : 0, sem };
+    const avgMonths = withLtv.length ? withLtv.reduce((sum, r) => sum + r.months, 0) / withLtv.length : 0;
+    return { rows: withLtv, total, avg: withLtv.length ? total / withLtv.length : 0, avgMonths, sem };
   }, [clients]);
 
   // Resumo financeiro do squad
@@ -1528,7 +1529,7 @@ export default function Squad() {
                   className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-card/30 backdrop-blur-sm p-4 text-left transition hover:border-violet-500/60 hover:shadow-lg hover:shadow-violet-500/10">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">LTV Médio</p>
                   <p className="text-xl font-bold mt-1 text-violet-700 dark:text-violet-300">{formatBRL(ltvData.avg)}</p>
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">por cliente · clique p/ ver</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">tempo médio de contrato: {ltvData.avgMonths ? ltvData.avgMonths.toFixed(1) : "—"} meses · clique p/ ver</p>
                 </button>
               </div>
 
@@ -2722,7 +2723,7 @@ export default function Squad() {
             <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-4">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">LTV médio</p>
               <p className="text-lg font-bold mt-1 text-violet-700 dark:text-violet-300">{formatBRL(ltvData.avg)}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{ltvData.rows.length} clientes</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{ltvData.rows.length} clientes · {ltvData.avgMonths.toFixed(1)} meses médios de contrato</p>
             </div>
           </div>
           <div className="overflow-x-auto">
