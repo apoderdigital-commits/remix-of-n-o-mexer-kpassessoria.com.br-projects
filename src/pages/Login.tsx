@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fi
 import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
+import loginBgVideo from "@/assets/login-bg.mp4.asset.json";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
@@ -174,7 +175,7 @@ export default function Login() {
         muted
         playsInline
         preload="auto"
-        src="/videos/login-bg.mp4"
+        src={loginBgVideo.url}
         className={`fixed inset-0 w-full h-full object-cover object-[left_center] transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         style={{ zIndex: 0 }}
       />
