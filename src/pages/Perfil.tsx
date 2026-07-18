@@ -113,7 +113,7 @@ export default function Perfil() {
   const saveProfile = async () => {
     setSaving(true);
     try {
-      await persistProfile(avatarUrl);
+      await persistProfile(avatarPath);
       toast.success("Perfil atualizado!");
     } catch (e: any) {
       toast.error(e?.message || "Erro ao salvar");
