@@ -111,7 +111,7 @@ export default function Portal() {
           src={portalBg.url}
           showControls
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080810]/80 via-[#080810]/50 to-[#080810]/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080810]/50 via-[#080810]/25 to-[#080810]/35 pointer-events-none" />
 
         <div className="relative z-10 text-center px-12 max-w-md dark">
           <div className="mb-4">
