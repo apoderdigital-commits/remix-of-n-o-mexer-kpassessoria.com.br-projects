@@ -325,6 +325,17 @@ export default function Perfil() {
             ))}
           </div>
         </section>
+
+        {/* Sair */}
+        <div className="pt-2">
+          <Button
+            onClick={signOut}
+            variant="outline"
+            className="w-full gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" /> Sair da conta
+          </Button>
+        </div>
       </main>
 
       <PasswordResetDialog open={resetOpen} onOpenChange={setResetOpen} initialUsername={username} />
