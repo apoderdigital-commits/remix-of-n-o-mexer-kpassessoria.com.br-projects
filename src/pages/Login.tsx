@@ -7,14 +7,10 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fi
 import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
-import loginBgVideo from "@/assets/login-bg.mp4.asset.json";
-import loginBgPoster from "@/assets/login-bg-poster.jpg.asset.json";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
-const LOGIN_VIDEO_URL = `https://kpassessoria.com.br${loginBgVideo.url}`;
-const LOGIN_POSTER_URL = `https://kpassessoria.com.br${loginBgPoster.url}`;
 
 type LoginType = "collaborator" | "client" | null;
 type Step = "type" | "credentials";
@@ -114,7 +110,7 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
-  const handleBioLogin = async () => {
+  const handleBioLogin = async (auto = false) => {
     setBioLoading(true);
     try {
       const { data: opts, error } = await supabase.functions.invoke("passkey-auth", { body: { mode: "login-options" } });
@@ -129,12 +125,31 @@ export default function Login() {
       if (res.error) throw res.error;
       toast.success("Bem-vindo de volta!");
     } catch (e: any) {
-      if (e?.name === "NotAllowedError" || e?.name === "AbortError") toast.info("Biometria cancelada.");
+      if (e?.name === "NotAllowedError" || e?.name === "AbortError") { if (!auto) toast.info("Biometria cancelada."); }
       else toast.error(e?.message || "Não foi possível entrar com biometria");
     } finally {
       setBioLoading(false);
     }
   };
+
+  // Aparelho já cadastrado: pede a biometria sozinho ao abrir a tela.
+  // Uma tentativa só por visita; se cancelar, o formulário normal continua.
+  // Depois de "Sair" não dispara (senão o logout vira briga com o login).
+  const autoBioTried = useRef(false);
+  useEffect(() => {
+    if (autoBioTried.current || !bioAvailable || !bioEnrolled) return;
+    try {
+      if (sessionStorage.getItem("kp-bio-skip-once")) {
+        sessionStorage.removeItem("kp-bio-skip-once");
+        autoBioTried.current = true;
+        return;
+      }
+    } catch { /* sem sessionStorage */ }
+    autoBioTried.current = true;
+    const t = window.setTimeout(() => { void handleBioLogin(true); }, 600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bioAvailable]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,9 +193,8 @@ export default function Login() {
         muted
         playsInline
         preload="auto"
-        src={LOGIN_VIDEO_URL}
-        poster={LOGIN_POSTER_URL}
-        className={`fixed inset-0 w-full h-full object-cover object-center transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        src="/videos/login-bg.mp4"
+        className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         style={{ zIndex: 0 }}
       />
 
@@ -314,8 +328,8 @@ export default function Login() {
         <div className="fixed inset-0 bg-[#080810]/20 backdrop-blur-[2px] lg:hidden" style={{ zIndex: 1 }} />
 
         {/* Left — video (desktop) */}
-        <div className="dark hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/35 via-[#080810]/10 to-[#080810]/45" style={{ zIndex: 1 }} />
+        <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/10 via-transparent to-background" style={{ zIndex: 1 }} />
 
           <div className="relative z-10 text-center px-8">
             <div className="relative inline-block mb-5">
@@ -461,7 +475,7 @@ export default function Login() {
                 {bioAvailable && bioEnrolled && (
                   <button
                     type="button"
-                    onClick={handleBioLogin}
+                    onClick={() => void handleBioLogin()}
                     disabled={bioLoading}
                     className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-sm font-semibold text-primary transition-all disabled:opacity-60"
                   >
