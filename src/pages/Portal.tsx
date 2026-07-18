@@ -48,6 +48,17 @@ const highlights = [
 export default function Portal() {
   const { isAdmin, signOut, user, dashboards, squadCount } = useAuth();
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
+  const initials = (user?.user_metadata?.full_name || user?.email || "?")
+    .split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((s: string) => s[0]?.toUpperCase()).join("") || "?";
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const { data } = await (supabase as any)
+        .from("profiles").select("avatar_url").eq("user_id", user.id).maybeSingle();
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+    })();
+  }, [user?.id]);
 
   const visibleProjects = isAdmin
     ? allProjects
