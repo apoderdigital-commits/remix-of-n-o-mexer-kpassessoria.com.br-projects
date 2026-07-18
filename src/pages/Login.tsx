@@ -311,7 +311,7 @@ export default function Login() {
         <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
           <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/30 via-[#080810]/10 to-[#080810]" style={{ zIndex: 1 }} />
 
-          <div className="relative z-10 text-center px-8">
+          <div className="relative z-10 text-center px-8 dark">
             <div className="relative inline-block mb-5">
               <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl scale-110" />
               <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
