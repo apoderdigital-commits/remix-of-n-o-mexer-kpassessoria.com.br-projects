@@ -12,6 +12,7 @@ import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
+const LOGIN_VIDEO_URL = `https://kpassessoria.com.br${loginBgVideo.url}`;
 
 type LoginType = "collaborator" | "client" | null;
 type Step = "type" | "credentials";
@@ -175,7 +176,7 @@ export default function Login() {
         muted
         playsInline
         preload="auto"
-        src={loginBgVideo.url}
+        src={LOGIN_VIDEO_URL}
         className={`fixed inset-0 w-full h-full object-cover object-[left_center] transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         style={{ zIndex: 0 }}
       />
