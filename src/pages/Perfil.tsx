@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Camera, Fingerprint, KeyRound, Save, Shield, Trash2, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Camera, Fingerprint, KeyRound, LogOut, Save, Shield, Trash2, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ const DASH_LABELS: Record<string, string> = {
 };
 
 export default function Perfil() {
-  const { user, isAdmin, dashboards, clientId, squadCount } = useAuth();
+  const { user, isAdmin, dashboards, clientId, squadCount, signOut } = useAuth();
   const username = (user?.email || "").replace(EMAIL_DOMAIN, "");
 
   const [fullName, setFullName] = useState("");
@@ -325,6 +325,17 @@ export default function Perfil() {
             ))}
           </div>
         </section>
+
+        {/* Sair */}
+        <div className="pt-2">
+          <Button
+            onClick={signOut}
+            variant="outline"
+            className="w-full gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" /> Sair da conta
+          </Button>
+        </div>
       </main>
 
       <PasswordResetDialog open={resetOpen} onOpenChange={setResetOpen} initialUsername={username} />
