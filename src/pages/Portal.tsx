@@ -259,12 +259,12 @@ export default function Portal() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">Dash do Squad</h2>
-                            <span className="text-[10px] uppercase font-semibold text-emerald-300/80 bg-emerald-500/10 px-1.5 py-0.5 rounded">Interno</span>
+                            <span className="text-[10px] uppercase font-semibold text-emerald-900 bg-emerald-500/20 px-1.5 py-0.5 rounded">Interno</span>
                           </div>
                           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">Gestão dos clientes do seu squad: priorização, sprints, BM e acompanhamento.</p>
                         </div>
                         <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-emerald-300 group-hover:gap-2.5 transition-all">
+                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-emerald-700 group-hover:gap-2.5 transition-all">
                           Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </div>
