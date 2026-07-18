@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle } from "lucide-react";
+import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fingerprint } from "lucide-react";
+import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
@@ -96,6 +97,37 @@ export default function Login() {
       setStep("type");
       setScreenTransition(false);
     }, 300);
+  };
+
+  // ── Login por biometria (passkey/WebAuthn: Touch ID, Windows Hello, digital) ──
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
+  useEffect(() => {
+    (window as any).PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
+      .then((ok: boolean) => setBioAvailable(!!ok))
+      .catch(() => {});
+  }, []);
+
+  const handleBioLogin = async () => {
+    setBioLoading(true);
+    try {
+      const { data: opts, error } = await supabase.functions.invoke("passkey-auth", { body: { mode: "login-options" } });
+      if (error || !opts?.options) throw new Error(opts?.error || "Biometria indisponível no momento");
+      const assertion = await startAuthentication({ optionsJSON: opts.options });
+      const { data: ver, error: vErr } = await supabase.functions.invoke("passkey-auth", {
+        body: { mode: "login-verify", challengeId: opts.challengeId, response: assertion },
+      });
+      if (vErr || !ver?.token_hash) throw new Error(ver?.error || "Biometria não reconhecida — entre com a senha e ative de novo");
+      let res = await supabase.auth.verifyOtp({ type: "magiclink", token_hash: ver.token_hash });
+      if (res.error) res = await supabase.auth.verifyOtp({ type: "email", token_hash: ver.token_hash });
+      if (res.error) throw res.error;
+      toast.success("Bem-vindo de volta!");
+    } catch (e: any) {
+      if (e?.name === "NotAllowedError" || e?.name === "AbortError") toast.info("Biometria cancelada.");
+      else toast.error(e?.message || "Não foi possível entrar com biometria");
+    } finally {
+      setBioLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -418,6 +450,18 @@ export default function Login() {
                     </span>
                   ) : "Entrar"}
                 </Button>
+
+                {bioAvailable && (
+                  <button
+                    type="button"
+                    onClick={handleBioLogin}
+                    disabled={bioLoading}
+                    className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-sm font-semibold text-primary transition-all disabled:opacity-60"
+                  >
+                    <Fingerprint className="h-4 w-4" />
+                    {bioLoading ? "Aguardando biometria..." : "Entrar com biometria"}
+                  </button>
+                )}
               </form>
 
               <button
