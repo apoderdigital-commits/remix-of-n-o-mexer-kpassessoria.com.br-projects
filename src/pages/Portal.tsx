@@ -56,7 +56,10 @@ export default function Portal() {
     void (async () => {
       const { data } = await (supabase as any)
         .from("profiles").select("avatar_url").eq("user_id", user.id).maybeSingle();
-      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      if (data?.avatar_url) {
+        const { resolveAvatarUrl } = await import("@/lib/avatar");
+        setAvatarUrl(await resolveAvatarUrl(data.avatar_url));
+      }
     })();
   }, [user?.id]);
 
