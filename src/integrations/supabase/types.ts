@@ -606,6 +606,30 @@ export type Database = {
         }
         Relationships: []
       }
+      passkey_challenges: {
+        Row: {
+          challenge: string
+          created_at: string
+          id: string
+          kind: string
+          user_id: string | null
+        }
+        Insert: {
+          challenge: string
+          created_at?: string
+          id?: string
+          kind: string
+          user_id?: string | null
+        }
+        Update: {
+          challenge?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       password_reset_verifications: {
         Row: {
           attempts: number
@@ -1910,6 +1934,42 @@ export type Database = {
           created_at?: string
           dashboard_key?: string
           id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_passkeys: {
+        Row: {
+          counter: number
+          created_at: string
+          credential_id: string
+          device_name: string | null
+          id: string
+          last_used_at: string | null
+          public_key: string
+          transports: string[] | null
+          user_id: string
+        }
+        Insert: {
+          counter?: number
+          created_at?: string
+          credential_id: string
+          device_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          public_key: string
+          transports?: string[] | null
+          user_id: string
+        }
+        Update: {
+          counter?: number
+          created_at?: string
+          credential_id?: string
+          device_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          public_key?: string
+          transports?: string[] | null
           user_id?: string
         }
         Relationships: []
