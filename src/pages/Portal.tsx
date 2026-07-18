@@ -54,14 +54,25 @@ export default function Portal() {
 
   // ── Oferta de ativar biometria (passkey) neste dispositivo ──
   const [bioOffer, setBioOffer] = useState(false);
+  const [bioHint, setBioHint] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   useEffect(() => {
     (async () => {
       try {
         if (!(window as any).PublicKeyCredential) return;
-        if (localStorage.getItem("kp-passkey-enrolled") || localStorage.getItem("kp-passkey-prompt-dismissed")) return;
+        if (localStorage.getItem("kp-passkey-enrolled")) return;
         const ok = await (window as any).PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.();
         if (!ok) return;
+        // Já recusou uma vez: não pergunta de novo — só pisca um lembrete pequeno
+        // ao lado do "Editar perfil", uma vez por sessão.
+        if (localStorage.getItem("kp-passkey-prompt-dismissed")) {
+          if (!sessionStorage.getItem("kp-bio-hint-shown")) {
+            sessionStorage.setItem("kp-bio-hint-shown", "1");
+            setBioHint(true);
+            window.setTimeout(() => setBioHint(false), 9000);
+          }
+          return;
+        }
         const { data, error } = await (supabase as any).from("user_passkeys").select("id").limit(1);
         if (error) return; // migração ainda não rodou — não oferece
         if (data && data.length) { localStorage.setItem("kp-passkey-enrolled", "1"); return; }
@@ -107,13 +118,13 @@ export default function Portal() {
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
         <PortalVideo
-          className="absolute inset-0 w-full h-full object-cover object-[left_center]"
+          className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
           src={portalBg.url}
           showControls
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080810]/50 via-[#080810]/25 to-[#080810]/35 pointer-events-none" />
+        <div className="absolute inset-0 bg-background/50 pointer-events-none" />
 
-        <div className="relative z-10 text-center px-12 max-w-md dark">
+        <div className="relative z-10 text-center px-12 max-w-md">
           <div className="mb-4">
             <img src={kpLogo} alt="KP Assessoria" className="h-[76px] w-[76px] rounded-2xl mx-auto shadow-2xl" />
           </div>
@@ -156,12 +167,27 @@ export default function Portal() {
                 </Link>
               </>
             )}
-            <Link to="/perfil">
-              <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
-                <UserCog className="h-4 w-4" />
-                <span className="hidden sm:inline text-sm">Editar perfil</span>
-              </Button>
-            </Link>
+            <div className="relative">
+              <Link to="/perfil">
+                <Button size="icon" variant="ghost" className={`h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground ${bioHint ? "ring-2 ring-primary/50 rounded-lg" : ""}`}>
+                  <UserCog className="h-4 w-4" />
+                  <span className="hidden sm:inline text-sm">Editar perfil</span>
+                </Button>
+              </Link>
+              {bioHint && (
+                <Link to="/perfil" onClick={() => setBioHint(false)}>
+                  <div className="absolute top-full right-0 mt-2 w-60 z-50">
+                    <div className="relative rounded-xl border border-primary/40 bg-card/95 backdrop-blur-md p-3 shadow-xl shadow-primary/20 animate-pulse cursor-pointer hover:animate-none">
+                      <span className="absolute -top-1.5 right-7 h-3 w-3 rotate-45 bg-card border-l border-t border-primary/40" />
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        <Fingerprint className="h-3.5 w-3.5 text-primary inline mr-1" />
+                        Quando quiser, ative o <strong className="text-foreground">login por biometria</strong> aqui em <strong className="text-foreground">Editar perfil</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
             <ThemeToggle />
             <Button size="icon" variant="ghost" onClick={signOut} className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />
