@@ -15,6 +15,7 @@ import { ActionVerificationDialog, type SensitiveAction } from "@/components/Act
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
 
 const DASHBOARDS = [
   { key: "criativos", label: "Dashboard de Criativos" },
