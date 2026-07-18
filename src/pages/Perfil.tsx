@@ -71,7 +71,9 @@ export default function Perfil() {
         setFullName(data.full_name || "");
         setPhone(data.phone || "");
         setSquadFunction(data.squad_function || null);
-        const signed = await resolveAvatarUrl((data as any).avatar_url || null);
+        const raw = (data as any).avatar_url || null;
+        setAvatarPath(raw);
+        const signed = await resolveAvatarUrl(raw);
         setAvatarUrl(signed);
       }
     })();
