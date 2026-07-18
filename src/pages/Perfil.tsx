@@ -135,6 +135,7 @@ export default function Perfil() {
       const up = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
       if (up.error) throw up.error;
       await persistProfile(path);
+      setAvatarPath(path);
       const signed = await resolveAvatarUrl(path);
       setAvatarUrl(signed);
       toast.success("Foto atualizada!");
