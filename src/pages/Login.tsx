@@ -8,7 +8,6 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
-import loginBgVideo from "@/assets/login-bg.mp4.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
@@ -103,6 +102,8 @@ export default function Login() {
   // ── Login por biometria (passkey/WebAuthn: Touch ID, Windows Hello, digital) ──
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
+  // Só mostra o botão depois que a biometria foi ativada neste aparelho (no Portal ou em Editar perfil).
+  const [bioEnrolled] = useState(() => { try { return !!localStorage.getItem("kp-passkey-enrolled"); } catch { return false; } });
   useEffect(() => {
     (window as any).PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
       .then((ok: boolean) => setBioAvailable(!!ok))
@@ -173,9 +174,9 @@ export default function Login() {
         muted
         playsInline
         preload="auto"
-        src={loginBgVideo.url}
+        src="/videos/login-bg.mp4"
         className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        style={{ zIndex: 0, objectPosition: "left center" }}
+        style={{ zIndex: 0 }}
       />
 
       {/* Screen 1: Type selection */}
@@ -309,9 +310,9 @@ export default function Login() {
 
         {/* Left — video (desktop) */}
         <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/30 via-[#080810]/10 to-[#080810]" style={{ zIndex: 1 }} />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/10 via-transparent to-background" style={{ zIndex: 1 }} />
 
-          <div className="relative z-10 text-center px-8 dark">
+          <div className="relative z-10 text-center px-8">
             <div className="relative inline-block mb-5">
               <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl scale-110" />
               <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
@@ -452,7 +453,7 @@ export default function Login() {
                   ) : "Entrar"}
                 </Button>
 
-                {bioAvailable && (
+                {bioAvailable && bioEnrolled && (
                   <button
                     type="button"
                     onClick={handleBioLogin}
