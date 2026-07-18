@@ -179,32 +179,30 @@ export default function Portal() {
                 </Link>
               </>
             )}
-            <div className="relative">
-              <Link to="/perfil">
-                <Button size="icon" variant="ghost" className={`h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground ${bioHint ? "ring-2 ring-primary/50 rounded-lg" : ""}`}>
-                  <UserCog className="h-4 w-4" />
-                  <span className="hidden sm:inline text-sm">Editar perfil</span>
-                </Button>
+            <ThemeToggle />
+            <div className="relative ml-1">
+              <Link to="/perfil" aria-label="Editar perfil" title="Editar perfil">
+                <Avatar className={`h-9 w-9 border border-border/60 hover:ring-2 hover:ring-primary/40 transition ${bioHint ? "ring-2 ring-primary/50" : ""}`}>
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={firstName} />}
+                  <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
               </Link>
               {bioHint && (
                 <Link to="/perfil" onClick={() => setBioHint(false)}>
                   <div className="absolute top-full right-0 mt-2 w-60 z-50">
                     <div className="relative rounded-xl border border-primary/40 bg-card/95 backdrop-blur-md p-3 shadow-xl shadow-primary/20 animate-pulse cursor-pointer hover:animate-none">
-                      <span className="absolute -top-1.5 right-7 h-3 w-3 rotate-45 bg-card border-l border-t border-primary/40" />
+                      <span className="absolute -top-1.5 right-3 h-3 w-3 rotate-45 bg-card border-l border-t border-primary/40" />
                       <p className="text-[11px] leading-snug text-muted-foreground">
                         <Fingerprint className="h-3.5 w-3.5 text-primary inline mr-1" />
-                        Quando quiser, ative o <strong className="text-foreground">login por biometria</strong> aqui em <strong className="text-foreground">Editar perfil</strong>.
+                        Quando quiser, ative o <strong className="text-foreground">login por biometria</strong> no seu perfil.
                       </p>
                     </div>
                   </div>
                 </Link>
               )}
             </div>
-            <ThemeToggle />
-            <Button size="icon" variant="ghost" onClick={signOut} className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground">
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline text-sm">Sair</span>
-            </Button>
           </div>
         </header>
 
