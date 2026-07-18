@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 const EMAIL_DOMAIN = "@kp.local";
 const FUNCOES: Record<string, string> = {
