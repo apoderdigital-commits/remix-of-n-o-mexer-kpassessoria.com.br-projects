@@ -198,39 +198,42 @@ export default function Perfil() {
   const inicial = (fullName || username || "?").trim().charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative bg-muted/30">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 -left-40 h-[420px] w-[420px] rounded-full bg-primary/10 blur-[120px]" />
         <div className="absolute bottom-0 right-0 h-[320px] w-[420px] rounded-full bg-fuchsia-500/10 blur-[120px]" />
       </div>
 
-      <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border/30 bg-card/30 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button size="icon" variant="ghost" className="h-9 w-9">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <h1 className="text-lg font-bold flex items-center gap-2">
-            <UserIcon className="h-4 w-4 text-primary" /> Editar perfil
-          </h1>
+      <main className="max-w-3xl mx-auto px-4 py-8 md:py-10 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2">
+          <div className="flex items-center gap-3">
+            <Link to="/">
+              <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full hover:bg-card hover:shadow-sm">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold tracking-tight">Editar perfil</h1>
+          </div>
+          <ThemeToggle />
         </div>
-        <ThemeToggle />
-      </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {/* Dados básicos */}
-        <section className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-6 space-y-5">
-          <div className="flex items-center gap-5">
-            <div className="relative shrink-0">
+        <section className="rounded-2xl border border-border bg-card shadow-sm p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8">
+            <div className="relative group shrink-0">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Foto de perfil" className="h-20 w-20 rounded-2xl object-cover shadow-lg ring-1 ring-border/40" />
+                <img
+                  src={avatarUrl}
+                  alt="Foto de perfil"
+                  className="h-24 w-24 rounded-2xl object-cover shadow-md ring-4 ring-background"
+                />
               ) : (
-                <div className="h-20 w-20 rounded-2xl bg-primary/15 flex items-center justify-center text-2xl font-bold text-primary shadow-lg ring-1 ring-border/40">
+                <div className="h-24 w-24 rounded-2xl bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary shadow-md ring-4 ring-background">
                   {inicial}
                 </div>
               )}
-              <label className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-lg hover:opacity-90 transition">
+              <label className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground p-2 rounded-xl shadow-lg hover:bg-primary/90 hover:scale-105 transition-all cursor-pointer">
                 <Camera className="h-4 w-4" />
                 <input
                   type="file"
@@ -242,93 +245,139 @@ export default function Perfil() {
               </label>
             </div>
             <div className="min-w-0">
-              <p className="font-semibold truncate">{fullName || username}</p>
-              <p className="text-xs text-muted-foreground">@{username}</p>
+              <h3 className="text-xl font-bold truncate">{fullName || username}</h3>
+              <p className="text-sm text-muted-foreground font-medium">@{username}</p>
               {uploading && <p className="text-[11px] text-primary mt-1">Enviando foto...</p>}
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Nome completo</Label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Nome completo</Label>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" className="h-12 rounded-xl bg-muted/50" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Telefone (WhatsApp)</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex.: 5581985048696" />
-              <p className="text-xs text-muted-foreground">Formato: 55 + DDD + número (o 55 é adicionado automaticamente se faltar).</p>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Telefone (WhatsApp)</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex.: 5581985048696" className="h-12 rounded-xl bg-muted/50" />
+              <p className="text-[11px] text-muted-foreground leading-tight italic">Formato: 55 + DDD + número (o 55 é adicionado automaticamente se faltar).</p>
             </div>
           </div>
-          <Button onClick={saveProfile} disabled={saving} className="gap-2">
+
+          <Button
+            onClick={saveProfile}
+            disabled={saving}
+            className="gap-2 h-12 px-8 rounded-xl font-semibold shadow-lg shadow-primary/20"
+          >
             <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </section>
 
         {/* Senha */}
-        <section className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-6 space-y-4">
-          <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4 text-primary" /> Alterar senha</h2>
-          <div className="grid sm:grid-cols-3 gap-3">
-            <Input type="password" value={curPass} onChange={(e) => setCurPass(e.target.value)} placeholder="Senha atual" autoComplete="current-password" />
-            <Input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} placeholder="Nova senha" autoComplete="new-password" />
-            <Input type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} placeholder="Confirmar nova senha" autoComplete="new-password" />
+        <section className="rounded-2xl border border-border bg-card shadow-sm p-6 md:p-8">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <KeyRound className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-bold">Alterar senha</h2>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={changePassword} disabled={passSaving || !curPass || !newPass} className="gap-2">
-              <KeyRound className="h-4 w-4" /> {passSaving ? "Alterando..." : "Alterar senha"}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Input type="password" value={curPass} onChange={(e) => setCurPass(e.target.value)} placeholder="Senha atual" autoComplete="current-password" className="h-12 rounded-xl bg-muted/50" />
+            <Input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} placeholder="Nova senha" autoComplete="new-password" className="h-12 rounded-xl bg-muted/50" />
+            <Input type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} placeholder="Confirmar nova senha" autoComplete="new-password" className="h-12 rounded-xl bg-muted/50" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-6">
+            <Button
+              onClick={changePassword}
+              disabled={passSaving || !curPass || !newPass}
+              className="h-12 px-6 rounded-xl font-bold bg-primary/15 text-primary hover:bg-primary/25 shadow-none"
+            >
+              <KeyRound className="h-4 w-4 mr-2" /> {passSaving ? "Alterando..." : "Alterar senha"}
             </Button>
-            <button type="button" onClick={() => setResetOpen(true)} className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+            <button
+              type="button"
+              onClick={() => setResetOpen(true)}
+              className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+            >
               Não sei minha senha atual
             </button>
           </div>
         </section>
 
         {/* Biometria */}
-        <section className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-6 space-y-4">
-          <h2 className="font-semibold flex items-center gap-2"><Fingerprint className="h-4 w-4 text-primary" /> Login por biometria</h2>
-          <p className="text-xs text-muted-foreground">
-            Entre sem digitar a senha usando Touch ID, Windows Hello ou a digital do celular. A ativação vale para <strong>este aparelho</strong>.
+        <section className="rounded-2xl border border-border bg-card shadow-sm p-6 md:p-8">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Fingerprint className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-bold">Login por biometria</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            Entre sem digitar a senha usando Touch ID, Windows Hello ou a digital do celular. A ativação vale para <strong className="text-foreground">este aparelho</strong>.
           </p>
+
           {passkeys.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3 mb-6">
               {passkeys.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/30 bg-card/40 px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Fingerprint className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div key={p.id} className="flex items-center justify-between p-5 bg-muted/40 border border-border rounded-2xl">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center shrink-0">
+                      <Fingerprint className="h-5 w-5" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{p.device_name || "Dispositivo"}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        ativada em {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                        {p.last_used_at ? ` · último uso ${new Date(p.last_used_at).toLocaleDateString("pt-BR")}` : ""}
+                      <p className="font-bold truncate">{p.device_name || "Dispositivo"}</p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Ativada em {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                        {p.last_used_at ? ` • último uso ${new Date(p.last_used_at).toLocaleDateString("pt-BR")}` : ""}
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost" className="gap-1.5 text-destructive shrink-0" onClick={() => void removePasskey(p.id)}>
+                  <button
+                    onClick={() => void removePasskey(p.id)}
+                    className="px-4 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex items-center gap-1.5"
+                  >
                     <Trash2 className="h-3.5 w-3.5" /> Remover
-                  </Button>
+                  </button>
                 </div>
               ))}
             </div>
           )}
+
           {bioSupported ? (
-            <Button onClick={enrollBio} disabled={bioBusy} variant="outline" className="gap-2 border-primary/40 text-primary hover:bg-primary/10">
+            <Button
+              onClick={enrollBio}
+              disabled={bioBusy}
+              variant="outline"
+              className="h-12 px-6 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/10 hover:text-primary gap-2 w-full md:w-auto"
+            >
               <Fingerprint className="h-4 w-4" /> {bioBusy ? "Aguardando biometria..." : "Ativar neste aparelho"}
             </Button>
           ) : (
-            <p className="text-xs text-muted-foreground">Este aparelho não tem biometria disponível.</p>
+            <p className="text-sm text-muted-foreground">Este aparelho não tem biometria disponível.</p>
           )}
         </section>
 
-        {/* Informações da conta (somente leitura) */}
-        <section className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-6 space-y-3">
-          <h2 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Informações da conta</h2>
-          <p className="text-xs text-muted-foreground">Definidas pelo administrador — para mudar, fale com a gestão.</p>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="border-primary/40 text-primary">{tipo}</Badge>
-            {squadFunction && <Badge variant="outline">{FUNCOES[squadFunction] || squadFunction}</Badge>}
-            {squadCount > 0 && <Badge variant="outline">{squadCount} squad{squadCount > 1 ? "s" : ""}</Badge>}
-            {(isAdmin ? Object.keys(DASH_LABELS) : dashboards).map((d) => (
-              <Badge key={d} variant="outline" className="text-muted-foreground">{DASH_LABELS[d] || d}</Badge>
-            ))}
+        {/* Informações da conta */}
+        <section className="rounded-2xl border border-border bg-card shadow-sm p-6 md:p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-muted rounded-lg">
+              <Shield className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-bold">Informações da conta</h2>
+          </div>
+          <div className="pt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground font-medium mb-4">
+              Definidas pelo administrador — para solicitar mudanças, entre em contato com a gestão da plataforma.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="border-primary/40 text-primary">{tipo}</Badge>
+              {squadFunction && <Badge variant="outline">{FUNCOES[squadFunction] || squadFunction}</Badge>}
+              {squadCount > 0 && <Badge variant="outline">{squadCount} squad{squadCount > 1 ? "s" : ""}</Badge>}
+              {(isAdmin ? Object.keys(DASH_LABELS) : dashboards).map((d) => (
+                <Badge key={d} variant="outline" className="text-muted-foreground">{DASH_LABELS[d] || d}</Badge>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -337,7 +386,7 @@ export default function Perfil() {
           <Button
             onClick={signOut}
             variant="outline"
-            className="w-full gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="w-full h-12 rounded-xl gap-2 font-bold border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="h-4 w-4" /> Sair da conta
           </Button>
