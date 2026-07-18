@@ -195,7 +195,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim(),
+            phone: normalizedPhone,
             squad_function: form.squadFunction || null,
           },
         });
@@ -218,7 +218,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim(),
+            phone: normalizedPhone,
           },
           targetLabel: `Criar usuário ${form.username}`,
           successMessage: "Usuário criado!",
