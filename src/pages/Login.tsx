@@ -8,6 +8,7 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
+import loginBgVideo from "@/assets/login-bg.mp4.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
@@ -172,7 +173,7 @@ export default function Login() {
         muted
         playsInline
         preload="auto"
-        src="/videos/login-bg.mp4"
+        src={loginBgVideo.url}
         className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         style={{ zIndex: 0 }}
       />
