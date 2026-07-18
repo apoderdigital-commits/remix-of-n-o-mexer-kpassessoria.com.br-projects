@@ -15,6 +15,7 @@ import { ActionVerificationDialog, type SensitiveAction } from "@/components/Act
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
 
 const DASHBOARDS = [
   { key: "criativos", label: "Dashboard de Criativos" },
@@ -176,6 +177,11 @@ export default function UsersPage() {
       toast.error("Telefone é obrigatório");
       return;
     }
+    const normalizedPhone = form.phone.trim() ? normalizeBrPhone(form.phone) : "";
+    if (form.phone.trim() && !isValidBrPhone(form.phone)) {
+      toast.error("Telefone inválido. Use DDD + número (ex.: 81985048696).");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -189,7 +195,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim(),
+            phone: normalizedPhone,
             squad_function: form.squadFunction || null,
           },
         });
@@ -212,7 +218,7 @@ export default function UsersPage() {
             role: form.role,
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
-            phone: form.phone.trim(),
+            phone: normalizedPhone,
           },
           targetLabel: `Criar usuário ${form.username}`,
           successMessage: "Usuário criado!",

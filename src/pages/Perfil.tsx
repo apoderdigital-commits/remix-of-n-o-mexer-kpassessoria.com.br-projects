@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
+import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
 
 const EMAIL_DOMAIN = "@kp.local";
 const FUNCOES: Record<string, string> = {
@@ -87,11 +88,17 @@ export default function Perfil() {
   };
 
   const persistProfile = async (avatar: string | null) => {
+    const rawPhone = phone.trim();
+    if (rawPhone && !isValidBrPhone(rawPhone)) {
+      throw new Error("Telefone inválido. Use DDD + número (ex.: 81985048696).");
+    }
+    const normalizedPhone = rawPhone ? normalizeBrPhone(rawPhone) : null;
     const { error } = await (supabase as any).rpc("update_own_profile", {
       _full_name: fullName.trim() || null,
-      _phone: phone.trim() || null,
+      _phone: normalizedPhone,
       _avatar_url: avatar,
     });
+    if (normalizedPhone) setPhone(normalizedPhone);
     if (error) {
       if (/update_own_profile/i.test(error.message || "")) throw new Error("A edição de perfil precisa da migração (peça ao Lovable).");
       throw new Error(error.message);
@@ -242,7 +249,8 @@ export default function Perfil() {
             </div>
             <div className="space-y-1.5">
               <Label>Telefone (WhatsApp)</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="55 + DDD + número" />
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex.: 5581985048696" />
+              <p className="text-xs text-muted-foreground">Formato: 55 + DDD + número (o 55 é adicionado automaticamente se faltar).</p>
             </div>
           </div>
           <Button onClick={saveProfile} disabled={saving} className="gap-2">
