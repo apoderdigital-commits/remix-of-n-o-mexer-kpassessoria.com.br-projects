@@ -107,13 +107,13 @@ export default function Portal() {
       {/* Left side — video (desktop only) */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
         <PortalVideo
-          className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
+          className="absolute inset-0 w-full h-full object-cover object-[left_center]"
           src={portalBg.url}
           showControls
         />
-        <div className="absolute inset-0 bg-background/50 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080810]/80 via-[#080810]/50 to-[#080810]/30 pointer-events-none" />
 
-        <div className="relative z-10 text-center px-12 max-w-md">
+        <div className="relative z-10 text-center px-12 max-w-md dark">
           <div className="mb-4">
             <img src={kpLogo} alt="KP Assessoria" className="h-[76px] w-[76px] rounded-2xl mx-auto shadow-2xl" />
           </div>
