@@ -184,13 +184,19 @@ export default function Portal() {
             )}
             <ThemeToggle />
             <div className="relative ml-1">
-              <Link to="/perfil" aria-label="Editar perfil" title="Editar perfil">
-                <Avatar className={`h-9 w-9 border border-border/60 hover:ring-2 hover:ring-primary/40 transition ${bioHint ? "ring-2 ring-primary/50" : ""}`}>
-                  {avatarUrl && <AvatarImage src={avatarUrl} alt={firstName} />}
+              <Link
+                to="/perfil"
+                aria-label="Editar perfil"
+                title="Editar perfil"
+                className={`flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur-sm pl-1 pr-3 py-1 hover:bg-card hover:border-primary/40 hover:shadow-sm transition ${bioHint ? "ring-2 ring-primary/50" : ""}`}
+              >
+                <Avatar className="h-8 w-8 ring-2 ring-background shadow">
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={firstName} className="object-cover" />}
                   <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
+                <span className="text-sm font-medium text-foreground/90">Perfil</span>
               </Link>
               {bioHint && (
                 <Link to="/perfil" onClick={() => setBioHint(false)}>
