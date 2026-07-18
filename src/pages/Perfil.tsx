@@ -33,6 +33,7 @@ export default function Perfil() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [squadFunction, setSquadFunction] = useState<string | null>(null);
   const [avatarSupported, setAvatarSupported] = useState(true);
   const [saving, setSaving] = useState(false);
