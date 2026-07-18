@@ -249,8 +249,8 @@ export default function Perfil() {
             </div>
             <div className="space-y-1.5">
               <Label>Telefone (WhatsApp)</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="55 + DDD + número" />
-            </div>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex.: 5581985048696" />
+              <p className="text-xs text-muted-foreground">Formato: 55 + DDD + número (o 55 é adicionado automaticamente se faltar).</p>
           </div>
           <Button onClick={saveProfile} disabled={saving} className="gap-2">
             <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar alterações"}
