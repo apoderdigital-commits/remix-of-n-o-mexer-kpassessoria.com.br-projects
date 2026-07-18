@@ -131,9 +131,9 @@ export default function Perfil() {
       const path = `${user.id}/avatar-${Date.now()}.${ext}`;
       const up = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
       if (up.error) throw up.error;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      setAvatarUrl(data.publicUrl);
-      await persistProfile(data.publicUrl);
+      await persistProfile(path);
+      const signed = await resolveAvatarUrl(path);
+      setAvatarUrl(signed);
       toast.success("Foto atualizada!");
     } catch (e: any) {
       toast.error(/bucket/i.test(e?.message || "") ? "A foto de perfil precisa da migração (peça ao Lovable)." : e?.message || "Erro no upload");
