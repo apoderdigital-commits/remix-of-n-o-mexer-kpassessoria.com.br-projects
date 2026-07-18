@@ -177,6 +177,11 @@ export default function UsersPage() {
       toast.error("Telefone é obrigatório");
       return;
     }
+    const normalizedPhone = form.phone.trim() ? normalizeBrPhone(form.phone) : "";
+    if (form.phone.trim() && !isValidBrPhone(form.phone)) {
+      toast.error("Telefone inválido. Use DDD + número (ex.: 81985048696).");
+      return;
+    }
 
     setSaving(true);
     try {
