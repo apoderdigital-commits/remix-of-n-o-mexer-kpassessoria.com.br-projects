@@ -175,7 +175,7 @@ export default function Login() {
         playsInline
         preload="auto"
         src="/videos/login-bg.mp4"
-        className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 w-full h-full object-cover object-[left_center] transition-opacity duration-500 lg:w-[45%] lg:right-auto ${isCredentialStep ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         style={{ zIndex: 0 }}
       />
 
