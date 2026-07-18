@@ -975,6 +975,20 @@ export default function Squad() {
     return { latest: highlightMonth, npsCount, avgEng, avgNps };
   }, [engagement, highlightMonth]);
 
+  // Taxa de churn do mês selecionado — mesma regra D+30 do Fechamento:
+  // conta só churns de clientes com +30 dias (entry_month < M); a base é quem
+  // estava ativo antes do mês (inclui quem depois deu churn, senão a base encolhe).
+  const churnKpi = useMemo(() => {
+    const M = highlightMonth;
+    if (!M) return null;
+    const ym = (d: string | null | undefined) => (d || "").slice(0, 7);
+    const count = churns.filter((ch) => ym(ch.churn_month) === M && ym(ch.entry_month) && ym(ch.entry_month) < M).length;
+    const activeBefore = clients.filter((c) => c.entry_date && ym(c.entry_date) < M).length;
+    const churnedLater = churns.filter((ch) => ym(ch.entry_month) && ym(ch.entry_month) < M && ym(ch.churn_month) >= M).length;
+    const base = activeBefore + churnedLater;
+    return { rate: base ? (count / base) * 100 : 0, count, base };
+  }, [churns, clients, highlightMonth]);
+
   // Resumo financeiro do squad
   const financeSummary = useMemo(() => {
     const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
@@ -1444,7 +1458,7 @@ export default function Squad() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
                 <StatCard label="Total" value={stats.total} icon={Users} color="from-emerald-500 to-teal-600" />
                 <StatCard label="Prioridade AA" value={stats.aa} icon={AlertTriangle} color="from-red-500 to-orange-600" />
                 <StatCard
@@ -1459,6 +1473,15 @@ export default function Squad() {
                 <StatCard label="NPS ativos" value={`${engHighlights.npsCount}/${stats.total}`} icon={Smile} color="from-sky-500 to-blue-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.npsDelta ?? null} />
                 <StatCard label="Média Engajamento" value={engHighlights.avgEng ? engHighlights.avgEng.toFixed(1) : "—"} icon={Star} color="from-amber-500 to-yellow-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} delta={engTrend?.avgDelta ?? null} />
                 <StatCard label="NPS Médio" value={engHighlights.avgNps ? engHighlights.avgNps.toFixed(1) : "—"} icon={Smile} color="from-indigo-500 to-violet-600" sub={engHighlights.latest ? formatMonth(`${engHighlights.latest}-01`) : "sem dados"} />
+                <StatCard
+                  label="Taxa de Churn"
+                  value={churnKpi && churnKpi.base > 0 ? `${churnKpi.rate.toFixed(1)}%` : "—"}
+                  icon={TrendingDown}
+                  color="from-rose-500 to-red-600"
+                  tint={churnKpi && churnKpi.base > 0 && churnKpi.rate >= 5 ? "red" : undefined}
+                  subRaw
+                  sub={churnKpi && churnKpi.base > 0 ? `${churnKpi.count} de ${churnKpi.base} elegíveis (D+30) · meta < 5%` : "sem base elegível no mês"}
+                />
               </div>
 
               {/* Resumo financeiro do squad */}
