@@ -26,7 +26,7 @@ const DASH_LABELS: Record<string, string> = {
 };
 
 export default function Perfil() {
-  const { user, isAdmin, dashboards, clientId, squadCount } = useAuth();
+  const { user, isAdmin, dashboards, clientId, squadCount, signOut } = useAuth();
   const username = (user?.email || "").replace(EMAIL_DOMAIN, "");
 
   const [fullName, setFullName] = useState("");
