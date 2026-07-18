@@ -421,6 +421,7 @@ export default function Squad() {
   const [engMonth, setEngMonth] = useState<string>("all");
   const [npsMonth, setNpsMonth] = useState<string>("all");
   const [npsListDialog, setNpsListDialog] = useState<"responded" | "missed" | "eligible" | null>(null);
+  const [ltvOpen, setLtvOpen] = useState(false);
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
   const [contractUploading, setContractUploading] = useState(false);
   const [contractViewer, setContractViewer] = useState<{ url: string; name: string } | null>(null);
@@ -989,6 +990,25 @@ export default function Squad() {
     return { rate: base ? (count / base) * 100 : 0, count, base };
   }, [churns, clients, highlightMonth]);
 
+  // LTV por cliente = contrato mensal × meses de casa (entrada até hoje, mês atual incluso).
+  const ltvData = useMemo(() => {
+    const nowYM = new Date().toISOString().slice(0, 7);
+    const rows = clients.map((c) => {
+      const val = Number(c.contract_value) || 0;
+      const diff = monthsBetween(c.entry_date, `${nowYM}-01`);
+      const months = c.entry_date && diff != null ? diff + 1 : null;
+      const ltv = val > 0 && months ? val * months : null;
+      return { name: c.name, val, months, ltv };
+    });
+    const withLtv = rows.filter((r) => r.ltv != null).sort((a, b) => (b.ltv as number) - (a.ltv as number)) as { name: string; val: number; months: number; ltv: number }[];
+    const total = withLtv.reduce((sum, r) => sum + r.ltv, 0);
+    const sem = rows.filter((r) => r.ltv == null).map((r) => ({
+      name: r.name,
+      motivo: r.val <= 0 && r.months == null ? "sem contrato e sem data de entrada" : r.val <= 0 ? "sem valor de contrato" : "sem data de entrada",
+    }));
+    return { rows: withLtv, total, avg: withLtv.length ? total / withLtv.length : 0, sem };
+  }, [clients]);
+
   // Resumo financeiro do squad
   const financeSummary = useMemo(() => {
     const investido = clients.reduce((s, c) => s + (parseMoney(c.invested_tp) || 0), 0);
@@ -1485,7 +1505,7 @@ export default function Squad() {
               </div>
 
               {/* Resumo financeiro do squad */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                 {[
                   { label: "Investido TP", value: financeSummary.investido, cls: "text-emerald-700 dark:text-emerald-300", sub: "/ mês" },
                   { label: "Contratos", value: financeSummary.contratos, cls: "text-sky-700 dark:text-sky-300", sub: "/ mês" },
@@ -1498,6 +1518,18 @@ export default function Squad() {
                     {f.sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 capitalize">{f.sub}</p>}
                   </div>
                 ))}
+                <button onClick={() => setLtvOpen(true)}
+                  className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-card/30 backdrop-blur-sm p-4 text-left transition hover:border-violet-500/60 hover:shadow-lg hover:shadow-violet-500/10">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">LTV da Carteira</p>
+                  <p className="text-xl font-bold mt-1 text-violet-700 dark:text-violet-300">{formatBRL(ltvData.total)}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">{ltvData.rows.length} clientes · clique p/ ver</p>
+                </button>
+                <button onClick={() => setLtvOpen(true)}
+                  className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-card/30 backdrop-blur-sm p-4 text-left transition hover:border-violet-500/60 hover:shadow-lg hover:shadow-violet-500/10">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">LTV Médio</p>
+                  <p className="text-xl font-bold mt-1 text-violet-700 dark:text-violet-300">{formatBRL(ltvData.avg)}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">por cliente · clique p/ ver</p>
+                </button>
               </div>
 
 
@@ -2661,6 +2693,72 @@ export default function Squad() {
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save}>Salvar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* LTV da carteira */}
+      <Dialog open={ltvOpen} onOpenChange={setLtvOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-violet-500" /> LTV da carteira · {currentSquad?.name || "Squad"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            LTV = <strong>contrato mensal × meses de casa</strong> (da entrada até hoje, mês atual incluso).
+            {ltvData.rows.length} de {clients.length} clientes com LTV calculado.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Maior LTV</p>
+              <p className="text-lg font-bold mt-1 text-emerald-700 dark:text-emerald-300">{ltvData.rows[0] ? formatBRL(ltvData.rows[0].ltv) : "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{ltvData.rows[0]?.name || "sem dados"}</p>
+            </div>
+            <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Menor LTV</p>
+              <p className="text-lg font-bold mt-1 text-rose-700 dark:text-rose-300">{ltvData.rows.length > 1 ? formatBRL(ltvData.rows[ltvData.rows.length - 1].ltv) : "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{ltvData.rows.length > 1 ? ltvData.rows[ltvData.rows.length - 1].name : "sem dados"}</p>
+            </div>
+            <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">LTV médio</p>
+              <p className="text-lg font-bold mt-1 text-violet-700 dark:text-violet-300">{formatBRL(ltvData.avg)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{ltvData.rows.length} clientes</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-border/30">
+                  <TableHead>#</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-right">Contrato/mês</TableHead>
+                  <TableHead className="text-right">Meses de casa</TableHead>
+                  <TableHead className="text-right">LTV</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ltvData.rows.map((r, i) => (
+                  <TableRow key={r.name} className={`border-border/20 ${i === 0 ? "bg-emerald-500/5" : i === ltvData.rows.length - 1 && ltvData.rows.length > 1 ? "bg-rose-500/5" : ""}`}>
+                    <TableCell className="text-xs text-muted-foreground">{i + 1}º</TableCell>
+                    <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell className="text-right">{formatBRL(r.val)}</TableCell>
+                    <TableCell className="text-right">{r.months}</TableCell>
+                    <TableCell className={`text-right font-semibold ${i === 0 ? "text-emerald-700 dark:text-emerald-300" : i === ltvData.rows.length - 1 && ltvData.rows.length > 1 ? "text-rose-700 dark:text-rose-300" : ""}`}>{formatBRL(r.ltv)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {ltvData.sem.length > 0 && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1.5">{ltvData.sem.length} cliente(s) sem LTV — falta preencher no cadastro:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {ltvData.sem.map((x) => (
+                  <Badge key={x.name} variant="outline" className="border-amber-500/40 text-amber-800 dark:text-amber-200">{x.name} · {x.motivo}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
