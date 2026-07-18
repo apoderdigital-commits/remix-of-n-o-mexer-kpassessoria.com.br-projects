@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { startRegistration } from "@simplewebauthn/browser";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { PortalVideo } from "@/components/PortalVideo";
-import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks, Fingerprint } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +50,46 @@ export default function Portal() {
   const visibleProjects = isAdmin
     ? allProjects
     : allProjects.filter((p) => dashboards.includes(p.key));
+
+  // ── Oferta de ativar biometria (passkey) neste dispositivo ──
+  const [bioOffer, setBioOffer] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!(window as any).PublicKeyCredential) return;
+        if (localStorage.getItem("kp-passkey-enrolled") || localStorage.getItem("kp-passkey-prompt-dismissed")) return;
+        const ok = await (window as any).PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.();
+        if (!ok) return;
+        const { data, error } = await (supabase as any).from("user_passkeys").select("id").limit(1);
+        if (error) return; // migração ainda não rodou — não oferece
+        if (data && data.length) { localStorage.setItem("kp-passkey-enrolled", "1"); return; }
+        setBioOffer(true);
+      } catch { /* sem suporte */ }
+    })();
+  }, []);
+
+  const enrollBio = async () => {
+    setBioBusy(true);
+    try {
+      const { data: opts, error } = await supabase.functions.invoke("passkey-auth", { body: { mode: "register-options" } });
+      if (error || !opts?.options) throw new Error(opts?.error || "Função de biometria ainda não publicada");
+      const att = await startRegistration({ optionsJSON: opts.options });
+      const { data: ver, error: vErr } = await supabase.functions.invoke("passkey-auth", {
+        body: { mode: "register-verify", challengeId: opts.challengeId, response: att },
+      });
+      if (vErr || !ver?.verified) throw new Error(ver?.error || "Não foi possível validar a biometria");
+      localStorage.setItem("kp-passkey-enrolled", "1");
+      setBioOffer(false);
+      toast.success("Biometria ativada! No próximo login, use 'Entrar com biometria'.");
+    } catch (e: any) {
+      if (e?.name === "NotAllowedError" || e?.name === "AbortError") toast.info("Cadastro de biometria cancelado.");
+      else toast.error(e?.message || "Erro ao ativar a biometria");
+    } finally {
+      setBioBusy(false);
+    }
+  };
+  const dismissBio = () => { localStorage.setItem("kp-passkey-prompt-dismissed", "1"); setBioOffer(false); };
 
   const showSquadCard = isAdmin || squadCount > 0;
   const showComercialCard = isAdmin || squadCount > 0 || dashboards.includes("comercial");
@@ -250,6 +294,23 @@ export default function Portal() {
             <p className="text-xs text-muted-foreground/40 text-center mt-6">
               KP Assessoria · Painel interno
             </p>
+
+            {bioOffer && (
+              <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-md p-4 shadow-2xl shadow-primary/10">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <Fingerprint className="h-4 w-4 text-primary" /> Entre mais rápido com biometria
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ative o Touch ID / Windows Hello e entre sem digitar a senha neste aparelho.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button size="sm" onClick={enrollBio} disabled={bioBusy} className="gap-1.5">
+                    <Fingerprint className="h-3.5 w-3.5" /> {bioBusy ? "Aguardando..." : "Ativar biometria"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={dismissBio}>Agora não</Button>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
