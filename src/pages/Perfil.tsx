@@ -69,7 +69,8 @@ export default function Perfil() {
         setFullName(data.full_name || "");
         setPhone(data.phone || "");
         setSquadFunction(data.squad_function || null);
-        setAvatarUrl((data as any).avatar_url || null);
+        const signed = await resolveAvatarUrl((data as any).avatar_url || null);
+        setAvatarUrl(signed);
       }
     })();
     void loadPasskeys();
