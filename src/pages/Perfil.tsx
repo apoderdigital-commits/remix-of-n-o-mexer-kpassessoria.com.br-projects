@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
+import { isValidBrPhone, normalizeBrPhone } from "@/lib/phone";
 
 const EMAIL_DOMAIN = "@kp.local";
 const FUNCOES: Record<string, string> = {
