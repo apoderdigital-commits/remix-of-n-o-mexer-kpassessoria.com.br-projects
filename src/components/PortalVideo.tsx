@@ -26,56 +26,12 @@ export function PortalVideo({
     const el = ref.current;
     if (!el) return;
     el.setAttribute("webkit-playsinline", "");
-    el.volume = volume;
-
-    // 1) Autoplay MUDO garante que o vídeo toca de forma suave (nunca trava).
     el.muted = true;
+    el.volume = volume;
     el.play().catch(() => {});
-
-    // 2) Logo em seguida tenta LIGAR O SOM. Para quem já interagiu com o site
-    //    (Chrome confia no domínio), o som entra de imediato. Se o navegador
-    //    bloquear, voltamos pro mudo e esperamos a 1ª interação (passo 3).
-    const trySound = () => {
-      el.muted = false;
-      el.volume = volume;
-      el.play()
-        .then(() => setMuted(false))
-        .catch(() => {
-          el.muted = true;
-          setMuted(true);
-        });
-    };
-    const t = window.setTimeout(trySound, 150);
-
-    // 3) Na primeira interação do usuário (clique, tecla, scroll, toque),
-    //    liga o som em volume baixo.
-    const onInteraction = () => {
-      const v = ref.current;
-      if (v && v.muted) {
-        v.muted = false;
-        v.volume = volume;
-        v.play().catch(() => {});
-        setMuted(false);
-      }
-      cleanup();
-    };
-    const cleanup = () => {
-      window.removeEventListener("pointerdown", onInteraction);
-      window.removeEventListener("keydown", onInteraction);
-      window.removeEventListener("touchstart", onInteraction);
-      window.removeEventListener("scroll", onInteraction);
-    };
-    window.addEventListener("pointerdown", onInteraction);
-    window.addEventListener("keydown", onInteraction);
-    window.addEventListener("touchstart", onInteraction, { passive: true });
-    window.addEventListener("scroll", onInteraction, { passive: true });
-
-    return () => {
-      window.clearTimeout(t);
-      cleanup();
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const toggleMute = () => {
     const el = ref.current;
