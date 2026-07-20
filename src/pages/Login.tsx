@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fi
 import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
-import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
+import loginBgPartners from "@/assets/login-team.jpg.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
