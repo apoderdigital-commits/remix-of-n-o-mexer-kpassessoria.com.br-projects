@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fi
 import { startAuthentication } from "@simplewebauthn/browser";
 import kpLogo from "@/assets/kp-logo.png";
 import brazilFlag from "@/assets/brazil-flag.png";
-import loginBgPartners from "@/assets/login-bg-partners.png.asset.json";
+import loginBgPartners from "@/assets/login-team.jpg.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
 
 const EMAIL_DOMAIN = "@kp.local";
@@ -208,7 +208,7 @@ export default function Login() {
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
             src={loginBgPartners.url}
-            alt="Parceiros KP Assessoria"
+            alt="Time KP Assessoria"
             className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
             style={{ aspectRatio: "16/9" }}
           />
