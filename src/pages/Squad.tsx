@@ -3495,7 +3495,12 @@ function FechamentoPanel({
       // Chama a mesma edge function por cliente que tem credenciais de CRM.
       const ghlOf = async (cid: string): Promise<number | null> => {
         try {
-          const { data, error } = await (supabase as any).functions.invoke("fetch-ghl-pipeline-v2", { body: { client_id: cid, since, until } });
+          // Mesma estratégia do hook do Criativos: tenta a v2, cai pra v1 se falhar.
+          let { data, error } = await (supabase as any).functions.invoke("fetch-ghl-pipeline-v2", { body: { client_id: cid, since, until } });
+          if (error) {
+            const fb = await (supabase as any).functions.invoke("fetch-ghl-pipeline", { body: { client_id: cid, since, until } });
+            data = fb.data; error = fb.error;
+          }
           if (error || !data || typeof data.cpf_aprovado !== "number") return null;
           return data.cpf_aprovado;
         } catch { return null; }
