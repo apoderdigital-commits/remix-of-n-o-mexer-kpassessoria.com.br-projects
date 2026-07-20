@@ -3262,8 +3262,9 @@ function FechamentoPanel({
   const [cpmqlLoading, setCpmqlLoading] = useState(false);
   const [cpmqlData, setCpmqlData] = useState<null | {
     since: string; until: string; cpmql: number; totalSpent: number; totalMqls: number;
-    detalhe: { name: string; account: string | null; spent: number; mqls: number }[];
+    detalhe: { name: string; account: string | null; spent: number; mqls: number; fonte: "crm" | "planilha" }[];
     semMql: { name: string; spent: number }[];
+    crmCount: number; planilhaCount: number;
   }>(null);
   useEffect(() => { setCplData(null); setCpmqlData(null); }, [month, squadId]);
   useEffect(() => {
@@ -3456,13 +3457,14 @@ function FechamentoPanel({
       const since = `${month}-01`;
       const until = `${month}-${String(last).padStart(2, "0")}`;
 
+      // Puxa os clientes do squad + credenciais do CRM (pra saber quem tem GHL).
       const { data: crmClients, error: cErr } = await (supabase as any)
-        .from("clients").select("id, name, meta_account_id")
+        .from("clients").select("id, name, meta_account_id, ghl_api_key, ghl_location_id")
         .eq("squad_id", squadId).is("deleted_at", null);
       if (cErr) throw cErr;
       const ids = (crmClients || []).map((c: any) => c.id);
       if (ids.length === 0) {
-        setCpmqlData({ since, until, cpmql: 0, totalSpent: 0, totalMqls: 0, detalhe: [], semMql: [] });
+        setCpmqlData({ since, until, cpmql: 0, totalSpent: 0, totalMqls: 0, detalhe: [], semMql: [], crmCount: 0, planilhaCount: 0 });
         setCpmqlOpen(true); return;
       }
 
@@ -3481,22 +3483,43 @@ function FechamentoPanel({
         spentBy.set(cp.client_id, (spentBy.get(cp.client_id) || 0) + (Number(cp.amount_spent) || 0));
       });
 
+      // Fallback: contagem de qualificados da PLANILHA (só usada quando o cliente não tem CRM).
       const { data: qls } = await (supabase as any)
         .from("qualified_leads").select("client_id")
         .eq("status", "cpf_approved").in("client_id", ids)
         .gte("lead_date", since).lte("lead_date", until);
-      const mqlBy = new Map<string, number>();
-      (qls || []).forEach((q: any) => mqlBy.set(q.client_id, (mqlBy.get(q.client_id) || 0) + 1));
+      const planilhaBy = new Map<string, number>();
+      (qls || []).forEach((q: any) => planilhaBy.set(q.client_id, (planilhaBy.get(q.client_id) || 0) + 1));
 
-      const detalhe = (crmClients || []).map((c: any) => ({
-        name: c.name, account: c.meta_account_id || null,
-        spent: spentBy.get(c.id) || 0, mqls: mqlBy.get(c.id) || 0,
-      })).sort((a: any, b: any) => b.spent - a.spent);
+      // Fonte principal: leads qualificados do CRM (GHL cpf_aprovado), igual à dash de Criativos.
+      // Chama a mesma edge function por cliente que tem credenciais de CRM.
+      const ghlOf = async (cid: string): Promise<number | null> => {
+        try {
+          const { data, error } = await (supabase as any).functions.invoke("fetch-ghl-pipeline-v2", { body: { client_id: cid, since, until } });
+          if (error || !data || typeof data.cpf_aprovado !== "number") return null;
+          return data.cpf_aprovado;
+        } catch { return null; }
+      };
+      const comCrm = (crmClients || []).filter((c: any) => c.ghl_api_key && c.ghl_location_id);
+      const ghlPairs = await Promise.all(comCrm.map(async (c: any) => [c.id, await ghlOf(c.id)] as const));
+      const ghlBy = new Map<string, number | null>(ghlPairs);
+
+      const detalhe = (crmClients || []).map((c: any) => {
+        const ghlVal = ghlBy.has(c.id) ? ghlBy.get(c.id) : null;
+        const fromCrm = ghlVal != null;
+        const mqls = fromCrm ? (ghlVal as number) : (planilhaBy.get(c.id) || 0);
+        return {
+          name: c.name, account: c.meta_account_id || null,
+          spent: spentBy.get(c.id) || 0, mqls, fonte: (fromCrm ? "crm" : "planilha") as "crm" | "planilha",
+        };
+      }).sort((a: any, b: any) => b.spent - a.spent);
       const totalSpent = detalhe.reduce((sum: number, d: any) => sum + d.spent, 0);
       const totalMqls = detalhe.reduce((sum: number, d: any) => sum + d.mqls, 0);
       const semMql = detalhe.filter((d: any) => d.spent > 0 && d.mqls === 0).map((d: any) => ({ name: d.name, spent: d.spent }));
+      const crmCount = detalhe.filter((d: any) => d.fonte === "crm").length;
+      const planilhaCount = detalhe.length - crmCount;
 
-      setCpmqlData({ since, until, cpmql: totalMqls > 0 ? totalSpent / totalMqls : 0, totalSpent, totalMqls, detalhe, semMql });
+      setCpmqlData({ since, until, cpmql: totalMqls > 0 ? totalSpent / totalMqls : 0, totalSpent, totalMqls, detalhe, semMql, crmCount, planilhaCount });
       setCpmqlOpen(true);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao calcular o CPMQL");
@@ -3946,7 +3969,7 @@ function FechamentoPanel({
           {cpmqlData && (
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground">
-                Período <strong>{cpmqlData.since}</strong> a <strong>{cpmqlData.until}</strong> · investimento de <strong>todos os clientes deste squad</strong> ÷ <strong>leads qualificados</strong> (CPF aprovado). Respeita o filtro de campanhas de cada cliente.
+                Período <strong>{cpmqlData.since}</strong> a <strong>{cpmqlData.until}</strong> · investimento de <strong>todos os clientes deste squad</strong> ÷ <strong>leads qualificados</strong> (CPF aprovado). Os qualificados vêm do <strong>CRM</strong> (igual à dash de Criativos); só caem pra planilha quando o cliente não tem CRM configurado. Respeita o filtro de campanhas de cada cliente.
               </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className={`rounded-2xl border p-4 ${cpmqlData.totalMqls > 0 && cpmqlData.cpmql < 45 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
@@ -3963,6 +3986,7 @@ function FechamentoPanel({
                 <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Leads qualificados</p>
                   <p className="text-2xl font-bold mt-1">{cpmqlData.totalMqls.toLocaleString("pt-BR")}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{cpmqlData.crmCount} via CRM · {cpmqlData.planilhaCount} via planilha</p>
                 </div>
               </div>
 
@@ -3989,6 +4013,7 @@ function FechamentoPanel({
                       <TableHead>Conta de anúncio</TableHead>
                       <TableHead className="text-right">Investimento</TableHead>
                       <TableHead className="text-right">Qualificados</TableHead>
+                      <TableHead>Fonte</TableHead>
                       <TableHead className="text-right">CPMQL</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -3999,6 +4024,11 @@ function FechamentoPanel({
                         <TableCell className="text-xs text-muted-foreground font-mono">{d.account || "—"}</TableCell>
                         <TableCell className="text-right">{formatBRL(d.spent)}</TableCell>
                         <TableCell className="text-right">{d.mqls.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={d.fonte === "crm" ? "border-sky-500/40 text-sky-700 dark:text-sky-300" : "border-amber-500/40 text-amber-700 dark:text-amber-300"}>
+                            {d.fonte === "crm" ? "CRM" : "Planilha"}
+                          </Badge>
+                        </TableCell>
                         <TableCell className={`text-right font-semibold ${d.mqls > 0 && d.spent / d.mqls < 45 ? "text-emerald-700 dark:text-emerald-300" : d.mqls > 0 ? "text-red-700 dark:text-red-300" : ""}`}>
                           {d.mqls > 0 ? formatBRL(d.spent / d.mqls) : "—"}
                         </TableCell>
