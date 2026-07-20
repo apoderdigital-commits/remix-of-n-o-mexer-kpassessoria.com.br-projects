@@ -3592,7 +3592,13 @@ function FechamentoPanel({
     const vendidoPor = elig.map((c) => ({ name: c.name, v: Number(rOf(c)?.faturamento) || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
     const vendido = vendidoPor.reduce((s, x) => s + x.v, 0);
 
-    // Produto secundário
+    // Produto secundário — valor em R$ (faturamento atribuído à loja, mesma lógica de canais)
+    const secValorPor = elig.map((c) => {
+      const r = rOf(c);
+      const val = r ? computeChannels(r.vendas_trafego, r.vendas_loja, r.faturamento).fatLoja : 0;
+      return { name: c.name, v: val };
+    }).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+    const secValor = secValorPor.reduce((s, x) => s + x.v, 0);
     const secOk = elig.filter((c) => (Number(rOf(c)?.vendas_loja) || 0) > 0).map((c) => c.name);
     const secNao = elig.filter((c) => !((Number(rOf(c)?.vendas_loja) || 0) > 0)).map((c) => c.name);
     const pctSec = elig.length ? (secOk.length / elig.length) * 100 : 0;
@@ -3631,7 +3637,7 @@ function FechamentoPanel({
       crmUsando, crmNao, pctCrm,
       mensalOk, mensalNao, pctMensais,
       vendidoPor, vendido,
-      secOk, secNao, pctSec,
+      secOk, secNao, pctSec, secValor, secValorPor,
       comMetaArr, metaBateu, metaNao, pctMeta,
       planoSim, planoNao, planoFalta, pctPlano,
       convOk, convFalta, convMedia, comTotal: comClients.length,
@@ -3644,7 +3650,7 @@ function FechamentoPanel({
 
   const cards: FechCard[] = [
     {
-      label: "Clientes ativos no mês", value: String(f.totalAtivos), ok: null, hint: `${f.eligCount} elegíveis (D+30)`,
+      label: "Clientes ativos no mês", value: `${f.eligCount}/${f.totalAtivos}`, ok: null, hint: `${f.eligCount} elegíveis (D+30) · ${f.totalAtivos - f.eligCount} novos`,
       detail: { title: "Clientes ativos no mês", groups: [
         G("Elegíveis (D+30) — entram nas metas", f.eligNames.map((n) => ({ name: n, badge: "elegível", tone: "ok" as const }))),
         G("Novos do mês — não entram (menos de 30 dias)", f.novosNames.map((n) => ({ name: n, badge: "novo", tone: "warn" as const })), "Nenhum cliente novo no mês"),
@@ -3698,9 +3704,9 @@ function FechamentoPanel({
       ] },
     },
     {
-      label: "% produto secundário", value: `${f.pctSec.toFixed(0)}%`, ok: f.pctSec >= 20, hint: `${f.secOk.length} clientes · meta ≥ 20%`,
-      detail: { title: "Produto secundário (venda na loja)", groups: [
-        G("Compraram secundário", f.secOk.map((n) => ({ name: n, badge: "sim", tone: "ok" as const })), "Nenhum"),
+      label: "Produto secundário (R$)", value: formatBRL(f.secValor), ok: null, hint: `${f.secOk.length} de ${f.eligCount} clientes venderam na loja`,
+      detail: { title: "Produto secundário — faturamento na loja", groups: [
+        G("Venderam na loja (R$)", f.secValorPor.map((x) => ({ name: x.name, badge: formatBRL(x.v), tone: "ok" as const })), "Ninguém vendeu produto secundário"),
         G("Sem produto secundário", f.secNao.map((n) => ({ name: n, badge: "não", tone: "warn" as const }))),
       ] },
     },
