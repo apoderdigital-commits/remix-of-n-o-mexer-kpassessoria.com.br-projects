@@ -208,7 +208,7 @@ export default function Login() {
         <div className="lg:absolute lg:inset-0 shrink-0">
           <img
             src={loginBgPartners.url}
-            alt="Parceiros KP Assessoria"
+            alt="Time KP Assessoria"
             className="w-full h-full object-cover object-center lg:absolute lg:inset-0"
             style={{ aspectRatio: "16/9" }}
           />
