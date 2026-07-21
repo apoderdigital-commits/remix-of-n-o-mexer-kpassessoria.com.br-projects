@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
@@ -3277,6 +3277,7 @@ function FechamentoPanel({
   const [goalSupported, setGoalSupported] = useState(true);
   const [wpDialogOpen, setWpDialogOpen] = useState(false);
   const [fillOpen, setFillOpen] = useState(false);
+  const [weakFilter, setWeakFilter] = useState<string>("all");
   const [newWp, setNewWp] = useState("");
   const [wpMenuFor, setWpMenuFor] = useState<string | null>(null);
   useEffect(() => {
@@ -3724,6 +3725,11 @@ function FechamentoPanel({
     }).sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
   }, [clients, rowByName, month]);
 
+  // Filtro por ponto fraco: mostra só os projetos que têm aquele problema marcado.
+  const goalRowsView = weakFilter === "all"
+    ? goalRows
+    : goalRows.filter((row) => (goalNotes.get(row.name.trim().toLowerCase())?.weak_points || []).includes(weakFilter));
+
   // helper p/ montar os grupos do popup de detalhe
   const G = (title: string, rows: DetailRow[], empty?: string): DetailGroup => ({ title: `${title} (${rows.length})`, rows, empty });
 
@@ -3944,11 +3950,25 @@ function FechamentoPanel({
             <CardTitle className="text-sm flex items-center gap-2"><Target className="h-4 w-4 text-primary" /> Metas dos projetos</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">Meta × atingimento (R$) de cada cliente, pontos fracos e observações.</p>
           </div>
-          {isAdmin && goalSupported && (
-            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setWpDialogOpen(true)}>
-              <Settings className="h-3.5 w-3.5" /> Pontos fracos
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {goalSupported && weakPoints.length > 0 && (
+              <Select value={weakFilter} onValueChange={setWeakFilter}>
+                <SelectTrigger className={`h-8 w-[200px] text-xs ${weakFilter !== "all" ? "border-primary/50 text-primary" : ""}`}>
+                  <SlidersHorizontal className="h-3.5 w-3.5 mr-1 shrink-0" />
+                  <SelectValue placeholder="Filtrar ponto fraco" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os projetos</SelectItem>
+                  {weakPoints.map((wp) => (<SelectItem key={wp.id} value={wp.label}>{wp.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {isAdmin && goalSupported && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setWpDialogOpen(true)}>
+                <Settings className="h-3.5 w-3.5" /> Pontos fracos
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!goalSupported ? (
@@ -3957,6 +3977,11 @@ function FechamentoPanel({
             </div>
           ) : goalRows.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Nenhum cliente ativo neste mês.</p>
+          ) : goalRowsView.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhum projeto com o ponto fraco <strong className="text-foreground">{weakFilter}</strong> neste mês.
+              <button onClick={() => setWeakFilter("all")} className="ml-2 text-primary font-medium hover:underline">limpar filtro</button>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -3971,7 +3996,7 @@ function FechamentoPanel({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {goalRows.map((row) => {
+                  {goalRowsView.map((row) => {
                     const note = goalNotes.get(row.name.trim().toLowerCase()) || { weak_points: [], observacoes: "" };
                     const st = goalStatus(row.pct);
                     return (
