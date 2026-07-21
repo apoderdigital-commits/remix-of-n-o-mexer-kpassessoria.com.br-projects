@@ -173,17 +173,26 @@ export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfAp
           <h2 className="text-xl font-semibold text-foreground">Funil de Metas Comerciais</h2>
           <p className="text-sm text-muted-foreground">Acompanhe quanto cada etapa bateu vs. a meta esperada</p>
         </div>
-        {ghlTotalLeads != null && (
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-muted-foreground hidden sm:inline">Base de leads:</span>
-            <div className="inline-flex rounded-lg border border-border/40 bg-secondary/30 p-0.5 text-xs">
-              {([["trafego", "Tráfego"], ["crm", "Todos (CRM)"]] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setLeadSource(k)} className={`px-2.5 py-1 rounded transition ${leadSource === k ? "bg-primary/20 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Base do funil: Tráfego x Todos do CRM — sempre visível */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
+        <span className="text-sm font-medium">Base de leads do funil:</span>
+        <div className="inline-flex rounded-lg border border-border/40 bg-background/40 p-1 text-sm">
+          {([["trafego", "Só Tráfego"], ["crm", "Todos do CRM"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setLeadSource(k)} className={`px-3 py-1.5 rounded-md transition ${leadSource === k ? "bg-primary text-primary-foreground font-semibold shadow" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+          ))}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {leadSource === "crm" ? "todos que entraram na pipeline (inclui orgânicos)" : "só os leads captados via anúncio (padrão)"}
+        </span>
+      </div>
+
+      {leadSource === "crm" && ghlTotalLeads == null && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+          ⚠️ O total de leads do CRM ainda não chegou. Recarregue a página (Cmd/Ctrl + Shift + R) e clique em <strong>Atualizar</strong>. Enquanto isso, estou mostrando a base de tráfego.
+        </div>
+      )}
 
       <div className="space-y-2">
         <FunnelStep
