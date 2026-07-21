@@ -3276,6 +3276,7 @@ function FechamentoPanel({
   const [goalNotes, setGoalNotes] = useState<Map<string, { weak_points: string[]; observacoes: string }>>(new Map());
   const [goalSupported, setGoalSupported] = useState(true);
   const [wpDialogOpen, setWpDialogOpen] = useState(false);
+  const [fillOpen, setFillOpen] = useState(false);
   const [newWp, setNewWp] = useState("");
   const [wpMenuFor, setWpMenuFor] = useState<string | null>(null);
   useEffect(() => {
@@ -3917,6 +3918,25 @@ function FechamentoPanel({
       {/* Motivos de churn na própria tela */}
       <ChurnReasons />
 
+      {/* Pasta: Preenchimento por cliente — abre em popup grande */}
+      <button
+        onClick={() => setFillOpen(true)}
+        className="w-full flex items-center gap-4 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm p-4 text-left transition hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+      >
+        <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+          <ClipboardList className="h-6 w-6 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">Preenchimento por cliente</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {faltaPreencher === 0 ? "✓ Tudo preenchido neste mês" : `Faltam preencher ${faltaPreencher} de ${eligible.length} clientes`} · NPS, uso do CRM, plano estratégico, funil, conversão
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary shrink-0">
+          Abrir <ChevronRight className="h-4 w-4" />
+        </span>
+      </button>
+
       {/* Metas dos projetos — meta x atingimento, pontos fracos, observações */}
       <Card className="bg-card/40 backdrop-blur-sm border-border/30">
         <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
@@ -4039,12 +4059,17 @@ function FechamentoPanel({
         </DialogContent>
       </Dialog>
 
-      {/* Preenchimento */}
-      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Preenchimento por cliente <span className="text-xs font-normal text-muted-foreground">· tudo num lugar só</span></CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Preenchimento — popup grande (quase tela cheia) */}
+      <Dialog open={fillOpen} onOpenChange={setFillOpen}>
+        <DialogContent className="max-w-[96vw] w-[96vw] sm:max-w-[96vw] max-h-[94vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex flex-wrap items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" /> Preenchimento por cliente · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {faltaPreencher === 0 ? "· tudo preenchido" : `· faltam ${faltaPreencher} de ${eligible.length}`}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -4126,8 +4151,8 @@ function FechamentoPanel({
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       {/* Drill-down genérico dos cards */}
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
