@@ -3270,7 +3270,13 @@ function FechamentoPanel({
     semMql: { name: string; spent: number }[];
     crmCount: number; planilhaCount: number;
   }>(null);
-  useEffect(() => { setCplData(null); setCpmqlData(null); }, [month, squadId]);
+  const [crmRatesOpen, setCrmRatesOpen] = useState(false);
+  const [crmRatesLoading, setCrmRatesLoading] = useState(false);
+  const [crmRates, setCrmRates] = useState<null | {
+    since: string; until: string; preAtendAvg: number; convAvg: number; preAtendN: number; convN: number;
+    rows: { name: string; leads: number; sim: number; aprov: number; vendas: number; preAtend: number | null; conv: number | null }[];
+  }>(null);
+  useEffect(() => { setCplData(null); setCpmqlData(null); setCrmRates(null); }, [month, squadId]);
 
   // ── Tabela de metas por cliente (pontos fracos configuráveis + observações) ──
   const [weakPoints, setWeakPoints] = useState<{ id: string; label: string }[]>([]);
@@ -3605,6 +3611,81 @@ function FechamentoPanel({
     }
   };
 
+  // Taxa de pré-atendimento (Simulações ÷ Leads) e Conversão comercial (Vendas ÷ Aprovados),
+  // ambas puxadas do CRM (GHL) por cliente — igual à dash de Criativos. Média dos clientes com dado.
+  const calcCrmRates = async () => {
+    setCrmRatesLoading(true);
+    try {
+      const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+      const since = `${month}-01`;
+      const until = `${month}-${String(last).padStart(2, "0")}`;
+
+      const { data: crmClients, error: cErr } = await (supabase as any)
+        .from("clients").select("id, name, ghl_api_key, ghl_location_id")
+        .eq("squad_id", squadId).is("deleted_at", null);
+      if (cErr) throw cErr;
+      const ids = (crmClients || []).map((c: any) => c.id);
+      if (ids.length === 0) {
+        setCrmRates({ since, until, preAtendAvg: 0, convAvg: 0, preAtendN: 0, convN: 0, rows: [] });
+        setCrmRatesOpen(true); return;
+      }
+
+      const { data: filters } = await (supabase as any)
+        .from("client_campaign_filters").select("client_id, excluded_campaigns").in("client_id", ids);
+      const exclBy = new Map<string, Set<string>>();
+      (filters || []).forEach((fl: any) => exclBy.set(fl.client_id, new Set(((fl.excluded_campaigns || []) as string[]).map((x) => (x || "").trim()))));
+
+      const { data: camps } = await (supabase as any)
+        .from("meta_campaigns").select("client_id, campaign_name, leads_total")
+        .in("client_id", ids).gte("date", since).lte("date", until);
+      const leadsBy = new Map<string, number>();
+      (camps || []).forEach((cp: any) => {
+        const excl = exclBy.get(cp.client_id);
+        if (excl && excl.has((cp.campaign_name || "").trim())) return;
+        leadsBy.set(cp.client_id, (leadsBy.get(cp.client_id) || 0) + (Number(cp.leads_total) || 0));
+      });
+
+      const ghlOf = async (cid: string) => {
+        try {
+          let { data, error } = await (supabase as any).functions.invoke("fetch-ghl-pipeline-v2", { body: { client_id: cid, since, until } });
+          if (error) {
+            const fb = await (supabase as any).functions.invoke("fetch-ghl-pipeline", { body: { client_id: cid, since, until } });
+            data = fb.data; error = fb.error;
+          }
+          if (error || !data) return null;
+          return {
+            sim: Number(data.simulacoes) || 0,
+            aprov: Number(data.cpf_aprovado) || 0,
+            vendas: (Number(data.vendas_financiamento) || 0) + (Number(data.vendas_consorcio) || 0),
+          };
+        } catch { return null; }
+      };
+      const comCrm = (crmClients || []).filter((c: any) => c.ghl_api_key && c.ghl_location_id);
+      const ghlPairs = await Promise.all(comCrm.map(async (c: any) => [c.id, await ghlOf(c.id)] as const));
+      const ghlBy = new Map<string, { sim: number; aprov: number; vendas: number } | null>(ghlPairs);
+
+      const rows = (crmClients || []).map((c: any) => {
+        const g = ghlBy.get(c.id) || null;
+        const leads = leadsBy.get(c.id) || 0;
+        const sim = g?.sim || 0, aprov = g?.aprov || 0, vendas = g?.vendas || 0;
+        const preAtend = leads > 0 ? (sim / leads) * 100 : null;
+        const conv = aprov > 0 ? (vendas / aprov) * 100 : null;
+        return { name: c.name, leads, sim, aprov, vendas, preAtend, conv };
+      });
+      const preRows = rows.filter((r: any) => r.preAtend != null);
+      const convRows = rows.filter((r: any) => r.conv != null);
+      const preAtendAvg = preRows.length ? preRows.reduce((s: number, r: any) => s + r.preAtend, 0) / preRows.length : 0;
+      const convAvg = convRows.length ? convRows.reduce((s: number, r: any) => s + r.conv, 0) / convRows.length : 0;
+
+      setCrmRates({ since, until, preAtendAvg, convAvg, preAtendN: preRows.length, convN: convRows.length, rows });
+      setCrmRatesOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao calcular as taxas do CRM");
+    } finally {
+      setCrmRatesLoading(false);
+    }
+  };
+
 
 
   const rowByName = useMemo(() => {
@@ -3843,22 +3924,26 @@ function FechamentoPanel({
       ] },
     },
     {
-      label: "Conversão comercial (COM)", value: f.convOk.length ? `${f.convMedia.toFixed(1)}%` : "—",
-      ok: f.convOk.length ? f.convMedia >= 20 : null, hint: `${f.convOk.length} de ${f.comTotal} preenchidos · meta ≥ 20%`,
-      detail: { title: "Conversão comercial (clientes COM)", groups: [
-        G("Preenchidos", f.convOk.map((x) => ({ name: x.name, badge: `${x.v}%`, tone: (x.v >= 20 ? "ok" : "bad") as "ok" | "bad" })), "Nenhum preenchido"),
-        G("Faltam preencher", f.convFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos preenchidos 🎉"),
-      ] },
+      label: "Taxa de pré-atendimento (média)",
+      value: crmRatesLoading ? "Calculando..." : crmRates ? `${crmRates.preAtendAvg.toFixed(0)}%` : "Ver taxa do mês",
+      ok: crmRates ? crmRates.preAtendAvg >= 60 : null,
+      hint: crmRates ? `Simulações ÷ leads · média de ${crmRates.preAtendN} clientes · meta ≥ 60%` : "clique — média Simulações ÷ Leads (CRM)",
+      onClick: () => void calcCrmRates(),
+    },
+    {
+      label: "Conversão comercial média (COM)",
+      value: crmRatesLoading ? "Calculando..." : crmRates ? `${crmRates.convAvg.toFixed(0)}%` : "Ver conversão do mês",
+      ok: crmRates ? crmRates.convAvg >= 20 : null,
+      hint: crmRates ? `Vendas ÷ aprovados · média de ${crmRates.convN} clientes · meta ≥ 20%` : "clique — média Vendas ÷ Aprovados (CRM)",
+      onClick: () => void calcCrmRates(),
     },
   ];
 
 
   const faltaPreencher = eligible.filter((c) => {
     const r = rowByName.get(norm(c.name));
-    const isCom = parseServices(c.services).includes("COM");
     return !r || r.nps_individual == null || (r as any).crm_usage == null
-      || (r as any).plano_estrategico == null
-      || (isCom && (r as any).conversao_comercial == null);
+      || (r as any).plano_estrategico == null;
   }).length;
 
   const MetricsGrid = ({ compact }: { compact?: boolean }) => (
@@ -4260,6 +4345,65 @@ function FechamentoPanel({
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Taxas do CRM: pré-atendimento + conversão comercial */}
+      <Dialog open={crmRatesOpen} onOpenChange={setCrmRatesOpen}>
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Taxas do CRM · {squadName} · <span className="capitalize">{formatMonth(`${month}-01`)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {crmRates && (
+            <div className="space-y-5">
+              <p className="text-xs text-muted-foreground">
+                Puxado do <strong>CRM</strong> (igual à dash de Criativos), por cliente do squad. Média só dos clientes que têm o dado.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className={`rounded-2xl border p-4 ${crmRates.preAtendAvg >= 60 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pré-atendimento médio</p>
+                  <p className={`text-2xl font-bold mt-1 ${crmRates.preAtendAvg >= 60 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{crmRates.preAtendAvg.toFixed(0)}%</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Simulações ÷ Leads · {crmRates.preAtendN} clientes · meta ≥ 60%</p>
+                </div>
+                <div className={`rounded-2xl border p-4 ${crmRates.convAvg >= 20 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Conversão comercial média</p>
+                  <p className={`text-2xl font-bold mt-1 ${crmRates.convAvg >= 20 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{crmRates.convAvg.toFixed(0)}%</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Vendas ÷ Aprovados · {crmRates.convN} clientes · meta ≥ 20%</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/30">
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">Leads</TableHead>
+                      <TableHead className="text-right">Simul.</TableHead>
+                      <TableHead className="text-right">Aprov.</TableHead>
+                      <TableHead className="text-right">Vendas</TableHead>
+                      <TableHead className="text-right">Pré-atend.</TableHead>
+                      <TableHead className="text-right">Conversão</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...crmRates.rows].sort((a, b) => (b.conv ?? -1) - (a.conv ?? -1)).map((r) => (
+                      <TableRow key={r.name} className="border-border/20">
+                        <TableCell className="font-medium">{r.name}</TableCell>
+                        <TableCell className="text-right">{r.leads.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="text-right">{r.sim.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="text-right">{r.aprov.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="text-right">{r.vendas.toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className={`text-right font-semibold ${r.preAtend == null ? "text-muted-foreground" : r.preAtend >= 60 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{r.preAtend == null ? "—" : `${r.preAtend.toFixed(0)}%`}</TableCell>
+                        <TableCell className={`text-right font-semibold ${r.conv == null ? "text-muted-foreground" : r.conv >= 20 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>{r.conv == null ? "—" : `${r.conv.toFixed(0)}%`}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
