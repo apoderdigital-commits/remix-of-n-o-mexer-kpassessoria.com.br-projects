@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -2332,6 +2333,7 @@ export default function Squad() {
                 agenda={agenda}
                 squadId={squadId}
                 squadName={currentSquad?.name || "Squad"}
+                isAdmin={isAdmin}
                 onReload={() => loadAll(squadId)}
               />
             </TabsContent>
@@ -3225,7 +3227,7 @@ type FechCard = {
 // mensais, vendido, produto secundário, meta x vendeu). Preenchimento manual
 // (NPS, uso do CRM, plano estratégico, conversão comercial) acontece aqui mesmo.
 function FechamentoPanel({
-  clients, engagement, churns, agenda, squadId, squadName, onReload,
+  clients, engagement, churns, agenda, squadId, squadName, isAdmin, onReload,
 }: {
   clients: SquadClient[];
   engagement: Engagement[];
@@ -3233,6 +3235,7 @@ function FechamentoPanel({
   agenda: Agenda[];
   squadId: string;
   squadName: string;
+  isAdmin: boolean;
   onReload: () => void;
 }) {
   const ymf = (d: string | null | undefined) => (d || "").slice(0, 7);
@@ -3267,6 +3270,69 @@ function FechamentoPanel({
     crmCount: number; planilhaCount: number;
   }>(null);
   useEffect(() => { setCplData(null); setCpmqlData(null); }, [month, squadId]);
+
+  // ── Tabela de metas por cliente (pontos fracos configuráveis + observações) ──
+  const [weakPoints, setWeakPoints] = useState<{ id: string; label: string }[]>([]);
+  const [goalNotes, setGoalNotes] = useState<Map<string, { weak_points: string[]; observacoes: string }>>(new Map());
+  const [goalSupported, setGoalSupported] = useState(true);
+  const [wpDialogOpen, setWpDialogOpen] = useState(false);
+  const [newWp, setNewWp] = useState("");
+  const [wpMenuFor, setWpMenuFor] = useState<string | null>(null);
+  useEffect(() => {
+    void (async () => {
+      const { data: wp, error: wpErr } = await (supabase as any).from("squad_weak_points").select("id, label").order("sort_order");
+      if (wpErr) { setGoalSupported(false); return; }
+      setGoalSupported(true);
+      setWeakPoints(wp || []);
+      const { data: notes } = await (supabase as any).from("squad_goal_notes")
+        .select("client_name, weak_points, observacoes").eq("squad_id", squadId).eq("reference_month", month);
+      const m = new Map<string, { weak_points: string[]; observacoes: string }>();
+      (notes || []).forEach((n: any) => m.set((n.client_name || "").trim().toLowerCase(), { weak_points: n.weak_points || [], observacoes: n.observacoes || "" }));
+      setGoalNotes(m);
+    })();
+  }, [squadId, month]);
+
+  const persistGoalNote = async (clientName: string, wp: string[], obs: string) => {
+    try {
+      const { data: ex } = await (supabase as any).from("squad_goal_notes").select("id")
+        .eq("squad_id", squadId).ilike("client_name", clientName).eq("reference_month", month).maybeSingle();
+      if (ex?.id) {
+        await (supabase as any).from("squad_goal_notes").update({ weak_points: wp, observacoes: obs, updated_at: new Date().toISOString() }).eq("id", ex.id);
+      } else {
+        await (supabase as any).from("squad_goal_notes").insert({ squad_id: squadId, client_name: clientName, reference_month: month, weak_points: wp, observacoes: obs });
+      }
+    } catch (e: any) { toast.error(e?.message || "Erro ao salvar"); }
+  };
+  const toggleWeak = (clientName: string, label: string) => {
+    const key = clientName.trim().toLowerCase();
+    const cur = goalNotes.get(key) || { weak_points: [], observacoes: "" };
+    const next = cur.weak_points.includes(label) ? cur.weak_points.filter((x) => x !== label) : [...cur.weak_points, label];
+    setGoalNotes(new Map(goalNotes).set(key, { ...cur, weak_points: next }));
+    void persistGoalNote(clientName, next, cur.observacoes);
+  };
+  const setObs = (clientName: string, obs: string) => {
+    const key = clientName.trim().toLowerCase();
+    const cur = goalNotes.get(key) || { weak_points: [], observacoes: "" };
+    setGoalNotes(new Map(goalNotes).set(key, { ...cur, observacoes: obs }));
+  };
+  const addWeakPoint = async () => {
+    const label = newWp.trim(); if (!label) return;
+    const { data, error } = await (supabase as any).from("squad_weak_points").insert({ label, sort_order: weakPoints.length + 1 }).select("id, label").single();
+    if (error) { toast.error(/permission|policy|row-level/i.test(error.message || "") ? "Só administradores podem criar pontos fracos." : error.message); return; }
+    setWeakPoints([...weakPoints, data]); setNewWp("");
+  };
+  const removeWeakPoint = async (id: string) => {
+    const { error } = await (supabase as any).from("squad_weak_points").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setWeakPoints(weakPoints.filter((w) => w.id !== id));
+  };
+  const goalStatus = (pct: number | null) => {
+    if (pct == null) return { label: "Sem meta", cls: "border-border/40 text-muted-foreground bg-card/40" };
+    if (pct >= 100) return { label: "Atingido", cls: "border-emerald-500/50 text-emerald-700 dark:text-emerald-300 bg-emerald-500/15" };
+    if (pct >= 80) return { label: "Acima de 80%", cls: "border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/15" };
+    if (pct >= 70) return { label: "70–80%", cls: "border-orange-500/50 text-orange-700 dark:text-orange-300 bg-orange-500/15" };
+    return { label: "Não atingido", cls: "border-red-500/50 text-red-700 dark:text-red-300 bg-red-500/15" };
+  };
   useEffect(() => {
     if (!months.includes(month) && months[0]) setMonth(months[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3645,6 +3711,18 @@ function FechamentoPanel({
     };
   }, [clients, engagement, churns, agenda, month, rowByName, eligible]);
 
+  // Linhas da tabela de metas: cliente ativo, meta (R$ sales_goal) x atingimento (R$ faturamento do mês).
+  const goalRows = useMemo(() => {
+    const active = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= month);
+    return active.map((c) => {
+      const r = rowByName.get(norm(c.name));
+      const meta = Number(c.sales_goal) || 0;
+      const atingido = Number(r?.faturamento) || 0;
+      const pct = meta > 0 ? (atingido / meta) * 100 : null;
+      return { name: c.name, meta, atingido, pct };
+    }).sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
+  }, [clients, rowByName, month]);
+
   // helper p/ montar os grupos do popup de detalhe
   const G = (title: string, rows: DetailRow[], empty?: string): DetailGroup => ({ title: `${title} (${rows.length})`, rows, empty });
 
@@ -3838,6 +3916,128 @@ function FechamentoPanel({
 
       {/* Motivos de churn na própria tela */}
       <ChurnReasons />
+
+      {/* Metas dos projetos — meta x atingimento, pontos fracos, observações */}
+      <Card className="bg-card/40 backdrop-blur-sm border-border/30">
+        <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-sm flex items-center gap-2"><Target className="h-4 w-4 text-primary" /> Metas dos projetos</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Meta × atingimento (R$) de cada cliente, pontos fracos e observações.</p>
+          </div>
+          {isAdmin && goalSupported && (
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setWpDialogOpen(true)}>
+              <Settings className="h-3.5 w-3.5" /> Pontos fracos
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {!goalSupported ? (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+              ⚠️ Esta tabela precisa da migração — peça ao Lovable para rodar <strong>squad_weak_points</strong> e <strong>squad_goal_notes</strong>.
+            </div>
+          ) : goalRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Nenhum cliente ativo neste mês.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/30">
+                    <TableHead>Cliente</TableHead>
+                    <TableHead className="text-right">Meta</TableHead>
+                    <TableHead className="text-right">Atingimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Pontos fracos</TableHead>
+                    <TableHead>Observações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {goalRows.map((row) => {
+                    const note = goalNotes.get(row.name.trim().toLowerCase()) || { weak_points: [], observacoes: "" };
+                    const st = goalStatus(row.pct);
+                    return (
+                      <TableRow key={row.name} className="border-border/20 align-top">
+                        <TableCell className="font-medium">{row.name}</TableCell>
+                        <TableCell className="text-right">{row.meta > 0 ? formatBRL(row.meta) : "—"}</TableCell>
+                        <TableCell className="text-right">{formatBRL(row.atingido)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={st.cls}>
+                            {st.label}{row.pct != null ? ` · ${row.pct.toFixed(0)}%` : ""}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="min-w-[180px]">
+                          <Popover open={wpMenuFor === row.name} onOpenChange={(o) => setWpMenuFor(o ? row.name : null)}>
+                            <PopoverTrigger asChild>
+                              <button className="w-full flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card/40 px-2.5 py-1.5 text-xs hover:border-primary/40">
+                                <span className="truncate text-muted-foreground">{note.weak_points.length ? `${note.weak_points.length} selecionado(s)` : "Selecionar"}</span>
+                                <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-2 bg-card border-border/50" align="start">
+                              {weakPoints.length === 0 ? (
+                                <p className="text-xs text-muted-foreground px-2 py-1.5">Nenhum ponto fraco cadastrado{isAdmin ? " — use o botão 'Pontos fracos'." : "."}</p>
+                              ) : weakPoints.map((wp) => {
+                                const checked = note.weak_points.includes(wp.label);
+                                return (
+                                  <label key={wp.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/40 cursor-pointer text-sm">
+                                    <input type="checkbox" checked={checked} onChange={() => toggleWeak(row.name, wp.label)} className="accent-primary" />
+                                    {wp.label}
+                                  </label>
+                                );
+                              })}
+                            </PopoverContent>
+                          </Popover>
+                          {note.weak_points.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {note.weak_points.map((w) => (
+                                <Badge key={w} variant="outline" className="text-[10px] border-primary/30 text-primary dark:text-primary">{w}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="min-w-[200px]">
+                          <Input
+                            value={note.observacoes}
+                            onChange={(e) => setObs(row.name, e.target.value)}
+                            onBlur={() => { const cur = goalNotes.get(row.name.trim().toLowerCase()) || { weak_points: [], observacoes: "" }; void persistGoalNote(row.name, cur.weak_points, cur.observacoes); }}
+                            placeholder="Observações..."
+                            className="h-8 text-xs bg-card/40"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Gerenciar pontos fracos (admin) */}
+      <Dialog open={wpDialogOpen} onOpenChange={setWpDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Settings className="h-4 w-4 text-primary" /> Pontos fracos dos projetos</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">Aparecem na caixa de seleção de cada cliente. Só administradores editam.</p>
+          <div className="flex gap-2">
+            <Input value={newWp} onChange={(e) => setNewWp(e.target.value)} placeholder="Novo ponto fraco (ex: Retenção)" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addWeakPoint(); } }} />
+            <Button onClick={() => void addWeakPoint()} className="gap-1.5 shrink-0"><Plus className="h-4 w-4" /> Add</Button>
+          </div>
+          <div className="space-y-1.5 max-h-72 overflow-y-auto">
+            {weakPoints.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum ponto fraco cadastrado.</p>
+            ) : weakPoints.map((wp) => (
+              <div key={wp.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-card/40 px-3 py-2">
+                <span className="text-sm">{wp.label}</span>
+                <Button size="sm" variant="ghost" className="gap-1.5 text-destructive shrink-0 h-7" onClick={() => void removeWeakPoint(wp.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Preenchimento */}
       <Card className="bg-card/40 backdrop-blur-sm border-border/30">
