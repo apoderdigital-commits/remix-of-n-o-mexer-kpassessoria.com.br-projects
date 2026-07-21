@@ -108,9 +108,22 @@ export function useAuth() {
       }
     );
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      void applyAuthState(session?.user ?? null);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        void applyAuthState(session?.user ?? null);
+      })
+      .catch((err) => {
+        console.error("getSession falhou:", err);
+        if (isMounted) setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+      });
+
+    // Fail-safe: se por qualquer motivo (sessão corrompida no localStorage,
+    // chave rotacionada, rede) o getSession não resolver, libera a tela em 6s
+    // para o usuário conseguir ver o login em vez de ficar em "Carregando...".
+    const loadingSafetyTimeout = window.setTimeout(() => {
+      if (!isMounted) return;
+      setState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+    }, 6000);
 
     // Track user activity
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
@@ -130,6 +143,7 @@ export function useAuth() {
       subscription.unsubscribe();
       events.forEach((e) => window.removeEventListener(e, onActivity));
       clearInterval(interval);
+      clearTimeout(loadingSafetyTimeout);
     };
   }, []);
 
