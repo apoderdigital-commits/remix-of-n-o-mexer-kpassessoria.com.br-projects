@@ -5172,10 +5172,14 @@ function ChurnPanel({
   onEdit: (c: Churn) => void;
   onRemove: (id: string) => void;
 }) {
-  // Filtro por mês de saída
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  // Filtro por mês de saída — começa no mês atual (o filtro serve pra ver os passados).
+  const nowYM = new Date().toISOString().slice(0, 7);
+  const [monthFilter, setMonthFilter] = useState<string>(nowYM);
+  const [activeDetailOpen, setActiveDetailOpen] = useState(false);
+  const [churnDetailList, setChurnDetailList] = useState<{ title: string; list: Churn[] } | null>(null);
   const monthOptions = useMemo(() => {
     const set = new Set(churns.map((c) => (c.churn_month || "").slice(0, 7)).filter(Boolean));
+    set.add(nowYM);
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [churns]);
   const filteredChurns = useMemo(
@@ -5241,13 +5245,15 @@ function ChurnPanel({
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filteredChurns]);
 
-  // Compute active base per month: current active + churns occurring on/after that month
-  const totalChurns = churns.length;
-  const baselineActive = activeClientsCount; // current active
-
-  const totalRate = baselineActive + totalChurns > 0
-    ? (totalChurns / (baselineActive + totalChurns)) * 100
-    : 0;
+  // Clientes ativos: elegíveis (D+30, entraram antes do mês atual) / total — igual ao Fechamento
+  const totalActive = activeClientsCount; // = clients.length (passado pela invocação)
+  const eligList = clients.filter((c) => c.entry_date && ym(c.entry_date) < nowYM);
+  const novosList = clients.filter((c) => !(c.entry_date && ym(c.entry_date) < nowYM));
+  const eligActive = eligList.length;
+  // meses ativos + elegibilidade + LTV de um churn (usado nos popups)
+  const churnMonths = (c: Churn) => monthsBetween(c.entry_month, c.churn_month);
+  const churnEligible = (c: Churn) => !!(ym(c.entry_month) && ym(c.churn_month) && ym(c.entry_month) < ym(c.churn_month));
+  const churnLtv = (c: Churn) => { const m = churnMonths(c); return (c.contract_value != null && m != null && m >= 0) ? c.contract_value * m : null; };
 
   // Average lifetime (in months) of churned clients
   const lifetimes = churns
@@ -5270,66 +5276,107 @@ function ChurnPanel({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-card/40 border-border/30">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
-            <p className="text-3xl font-bold mt-1">{activeClientsCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/40 border-border/30">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de churns</p>
-            <p className="text-3xl font-bold text-red-700 dark:text-red-300 mt-1">{totalChurns}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/40 border-border/30">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Taxa acumulada</p>
-            <p className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1">{totalRate.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/40 border-border/30">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Lifetime médio</p>
-            <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">
-              {avgLifetime != null ? `${avgLifetime.toFixed(1)} ${avgLifetime === 1 ? "mês" : "meses"}` : "—"}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Média de meses ativos dos {lifetimes.length} {lifetimes.length === 1 ? "churn" : "churns"} com datas
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/40 border-border/30">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">LTV total</p>
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">
-              {validLtvs.length > 0 ? formatBRL(totalLtv) : "—"}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Média {avgLtv != null ? formatBRL(avgLtv) : "—"} · {validLtvs.length} {validLtvs.length === 1 ? "cliente" : "clientes"}
-            </p>
-          </CardContent>
-        </Card>
+        <button onClick={() => setActiveDetailOpen(true)} className="text-left rounded-2xl border border-border/30 bg-card/40 p-4 hover:ring-2 hover:ring-primary/40 transition">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
+          <p className="text-3xl font-bold mt-1">{eligActive}/{totalActive}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{eligActive} elegíveis (D+30) · {totalActive - eligActive} novos · clique p/ ver</p>
+        </button>
+        <button onClick={() => setChurnDetailList({ title: `Churns · ${monthFilter === "all" ? "todos os meses" : formatMonth(`${monthFilter}-01`)}`, list: filteredChurns })} className="text-left rounded-2xl border border-red-500/30 bg-red-500/5 p-4 hover:ring-2 hover:ring-red-500/40 transition">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{monthFilter === "all" ? "Churns (todos)" : "Churns no mês"}</p>
+          <p className="text-3xl font-bold text-red-700 dark:text-red-300 mt-1">{filteredChurns.length}</p>
+          <p className="text-[10px] text-muted-foreground mt-1 capitalize">{monthFilter === "all" ? "todos os meses" : formatMonth(`${monthFilter}-01`)} · clique p/ ver</p>
+        </button>
+        <button onClick={() => setChurnDetailList({ title: "Churns por elegibilidade (D+30)", list: filteredChurns })} className="text-left rounded-2xl border border-border/30 bg-card/40 p-4 hover:ring-2 hover:ring-primary/40 transition">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Elegibilidade (D+30)</p>
+          <p className="text-2xl font-bold mt-1"><span className="text-red-700 dark:text-red-300">{churnElig.eleg}</span><span className="text-sm text-muted-foreground font-normal"> eleg</span> · <span className="text-sky-700 dark:text-sky-300">{churnElig.naoEleg}</span><span className="text-sm text-muted-foreground font-normal"> não</span></p>
+          <p className="text-[10px] text-muted-foreground mt-1">saíram +30d vs novos/sem data · clique p/ ver</p>
+        </button>
+        <button onClick={() => setChurnDetailList({ title: "Tempo de casa dos churns (maior → menor)", list: [...filteredChurns].sort((a, b) => (churnMonths(b) ?? -1) - (churnMonths(a) ?? -1)) })} className="text-left rounded-2xl border border-border/30 bg-card/40 p-4 hover:ring-2 hover:ring-primary/40 transition">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Lifetime médio</p>
+          <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{avgLifetime != null ? `${avgLifetime.toFixed(1)} ${avgLifetime === 1 ? "mês" : "meses"}` : "—"}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">média dos {lifetimes.length} churns com datas · clique p/ ver</p>
+        </button>
+        <button onClick={() => setChurnDetailList({ title: "LTV dos churns (contrato × meses, maior → menor)", list: [...filteredChurns].sort((a, b) => (churnLtv(b) ?? -1) - (churnLtv(a) ?? -1)) })} className="text-left rounded-2xl border border-border/30 bg-card/40 p-4 hover:ring-2 hover:ring-primary/40 transition">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">LTV médio</p>
+          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{avgLtv != null ? formatBRL(avgLtv) : "—"}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">total {validLtvs.length ? formatBRL(totalLtv) : "—"} · {validLtvs.length} clientes · clique p/ ver</p>
+        </button>
       </div>
 
-      {/* Churns por elegibilidade — mesma regra do NPS (D+30) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns elegíveis (D+30)</p>
-          <p className="text-3xl font-bold mt-1 text-red-700 dark:text-red-300">{churnElig.eleg}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">saíram após +30 dias (entraram antes do mês da saída)</p>
-        </div>
-        <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Churns não-elegíveis</p>
-          <p className="text-3xl font-bold mt-1 text-sky-700 dark:text-sky-300">{churnElig.naoEleg}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">novos do mês ou sem +30 dias{churnElig.semData > 0 ? ` · ${churnElig.semData} sem data de entrada` : ""}</p>
-        </div>
-        <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total de saídas</p>
-          <p className="text-3xl font-bold mt-1">{churnElig.total}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{churnElig.eleg} elegíveis + {churnElig.naoEleg} não-elegíveis</p>
-        </div>
-      </div>
+      {/* Popup: clientes ativos (elegíveis x novos) */}
+      <Dialog open={activeDetailOpen} onOpenChange={setActiveDetailOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Clientes ativos · {eligActive}/{totalActive}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Elegíveis — D+30 ({eligList.length})</p>
+              <div className="space-y-1">
+                {eligList.length === 0 ? <p className="text-xs text-muted-foreground italic">Nenhum</p> : eligList.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-sm">
+                    <span className="font-medium">{c.name}</span>
+                    <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300">{c.entry_date ? formatMonth(c.entry_date) : "sem data"}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Novos do mês / sem data ({novosList.length})</p>
+              <div className="space-y-1">
+                {novosList.length === 0 ? <p className="text-xs text-muted-foreground italic">Nenhum</p> : novosList.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-sm">
+                    <span className="font-medium">{c.name}</span>
+                    <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">{c.entry_date ? formatMonth(c.entry_date) : "sem data"}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Popup: detalhe completo dos churns */}
+      <Dialog open={!!churnDetailList} onOpenChange={(o) => { if (!o) setChurnDetailList(null); }}>
+        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{churnDetailList?.title} ({churnDetailList?.list.length ?? 0})</DialogTitle></DialogHeader>
+          {churnDetailList && (churnDetailList.list.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma saída neste recorte.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/30">
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Entrada</TableHead>
+                    <TableHead>Saída</TableHead>
+                    <TableHead className="text-right">Meses</TableHead>
+                    <TableHead>Elegível</TableHead>
+                    <TableHead className="text-right">LTV</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {churnDetailList.list.map((c) => {
+                    const m = churnMonths(c); const lt = churnLtv(c); const el = churnEligible(c);
+                    return (
+                      <TableRow key={c.id} className="border-border/20">
+                        <TableCell className="font-medium">{c.client_name}</TableCell>
+                        <TableCell className="text-xs">{c.reason || "—"}</TableCell>
+                        <TableCell className="text-xs">{c.entry_month ? formatMonth(c.entry_month) : "—"}</TableCell>
+                        <TableCell className="text-xs">{c.churn_month ? formatMonth(c.churn_month) : "—"}</TableCell>
+                        <TableCell className="text-right">{m != null ? m : "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={el ? "text-[10px] border-red-500/40 text-red-700 dark:text-red-300" : "text-[10px] border-sky-500/40 text-sky-700 dark:text-sky-300"}>{el ? "Sim (D+30)" : "Não"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{lt != null ? formatBRL(lt) : "—"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ))}
+        </DialogContent>
+      </Dialog>
 
       {/* Filtro por mês + motivos das saídas */}
       <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm p-4 space-y-3">
