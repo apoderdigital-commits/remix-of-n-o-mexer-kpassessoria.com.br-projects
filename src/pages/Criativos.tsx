@@ -667,6 +667,7 @@ export default function Index() {
           <div ref={funnelRef}>
           <GoalsFunnel
             totalLeads={totalLeads}
+            ghlTotalLeads={ghlData?.total_pipeline_leads}
             ghlSimulacoes={ghlData?.simulacoes ?? 0}
             ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
             planilhaCpfApproved={planilhaCpfApproved}
