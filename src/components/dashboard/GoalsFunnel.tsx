@@ -6,6 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 interface GoalsFunnelProps {
   totalLeads: number;
   ghlTotalLeads?: number;
+  sellers?: { id: string; name: string }[];
+  selectedSeller?: string;
+  onSellerChange?: (s: string) => void;
+  sellerLoading?: boolean;
   ghlSimulacoes: number;
   ghlCpfApproved: number;
   planilhaCpfApproved: number;
@@ -150,10 +154,11 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
   );
 }
 
-export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
+export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, sellers, selectedSeller, onSellerChange, sellerLoading, onScrollTo }: GoalsFunnelProps) {
   const [leadSource, setLeadSource] = useState<"trafego" | "crm">("trafego");
   // Base do funil: tráfego (leads da Meta) ou todos os leads da pipeline do CRM (inclui orgânicos).
-  const leadBase = leadSource === "crm" && ghlTotalLeads != null ? ghlTotalLeads : totalLeads;
+  const bySeller = !!selectedSeller && selectedSeller !== "all";
+  const leadBase = bySeller ? (ghlTotalLeads ?? 0) : (leadSource === "crm" && ghlTotalLeads != null ? ghlTotalLeads : totalLeads);
   const [showCpfCompare, setShowCpfCompare] = useState(false);
   const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("ghl");
   const [showSalesCompare, setShowSalesCompare] = useState(false);
@@ -175,24 +180,38 @@ export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfAp
         </div>
       </div>
 
-      {/* Base do funil: Tráfego x Todos do CRM — sempre visível */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
-        <span className="text-sm font-medium">Base de leads do funil:</span>
-        <div className="inline-flex rounded-lg border border-border/40 bg-background/40 p-1 text-sm">
-          {([["trafego", "Só Tráfego"], ["crm", "Todos do CRM"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setLeadSource(k)} className={`px-3 py-1.5 rounded-md transition ${leadSource === k ? "bg-primary text-primary-foreground font-semibold shadow" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-          ))}
-        </div>
+      {/* Filtros do funil: vendedor + base de leads */}
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
+        {sellers && sellers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Vendedor:</span>
+            <select
+              value={selectedSeller ?? "all"}
+              onChange={(e) => onSellerChange?.(e.target.value)}
+              className="h-9 rounded-lg border border-border/40 bg-background/60 px-2 text-sm max-w-[220px]"
+            >
+              <option value="all">Todos os vendedores</option>
+              {sellers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {sellerLoading && <span className="text-xs text-muted-foreground">carregando…</span>}
+          </div>
+        )}
+        {!bySeller && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Base de leads:</span>
+            <div className="inline-flex rounded-lg border border-border/40 bg-background/40 p-1 text-sm">
+              {([["trafego", "Só Tráfego"], ["crm", "Todos do CRM"]] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setLeadSource(k)} className={`px-3 py-1.5 rounded-md transition ${leadSource === k ? "bg-primary text-primary-foreground font-semibold shadow" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <span className="text-xs text-muted-foreground">
-          {leadSource === "crm" ? "todos que entraram na pipeline (inclui orgânicos)" : "só os leads captados via anúncio (padrão)"}
+          {bySeller ? "leads do CRM atribuídos a este vendedor (pelo contato)"
+            : leadSource === "crm" ? "todos que entraram na pipeline (inclui orgânicos)"
+            : "só os leads captados via anúncio (padrão)"}
         </span>
       </div>
-
-      {leadSource === "crm" && ghlTotalLeads == null && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-          ⚠️ O total de leads do CRM ainda não chegou. Recarregue a página (Cmd/Ctrl + Shift + R) e clique em <strong>Atualizar</strong>. Enquanto isso, estou mostrando a base de tráfego.
-        </div>
-      )}
 
       <div className="space-y-2">
         <FunnelStep
@@ -201,7 +220,7 @@ export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfAp
           value={leadBase}
           gradient="from-violet-600 to-purple-700"
           textColor="text-violet-700 dark:text-violet-300"
-          metaLabel={leadSource === "crm" ? "Base do funil — todos os leads da pipeline (CRM, inclui orgânicos)" : "Base do funil — leads captados via tráfego"}
+          metaLabel={bySeller ? "Leads deste vendedor (atribuídos no CRM)" : leadSource === "crm" ? "Base do funil — todos os leads da pipeline (CRM, inclui orgânicos)" : "Base do funil — leads captados via tráfego"}
         />
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
