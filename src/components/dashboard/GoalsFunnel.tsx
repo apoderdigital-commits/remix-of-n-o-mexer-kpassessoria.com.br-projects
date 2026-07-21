@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 interface GoalsFunnelProps {
   totalLeads: number;
+  ghlTotalLeads?: number;
   ghlSimulacoes: number;
   ghlCpfApproved: number;
   planilhaCpfApproved: number;
@@ -149,7 +150,10 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
   );
 }
 
-export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
+export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfApproved, planilhaCpfApproved, salesFinancing, planilhaSalesFinancing, ghlSalesFinancing, onScrollTo }: GoalsFunnelProps) {
+  const [leadSource, setLeadSource] = useState<"trafego" | "crm">("trafego");
+  // Base do funil: tráfego (leads da Meta) ou todos os leads da pipeline do CRM (inclui orgânicos).
+  const leadBase = leadSource === "crm" && ghlTotalLeads != null ? ghlTotalLeads : totalLeads;
   const [showCpfCompare, setShowCpfCompare] = useState(false);
   const [salesSource, setSalesSource] = useState<"planilha" | "ghl">("ghl");
   const [showSalesCompare, setShowSalesCompare] = useState(false);
@@ -169,16 +173,26 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           <h2 className="text-xl font-semibold text-foreground">Funil de Metas Comerciais</h2>
           <p className="text-sm text-muted-foreground">Acompanhe quanto cada etapa bateu vs. a meta esperada</p>
         </div>
+        {ghlTotalLeads != null && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-muted-foreground hidden sm:inline">Base de leads:</span>
+            <div className="inline-flex rounded-lg border border-border/40 bg-secondary/30 p-0.5 text-xs">
+              {([["trafego", "Tráfego"], ["crm", "Todos (CRM)"]] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setLeadSource(k)} className={`px-2.5 py-1 rounded transition ${leadSource === k ? "bg-primary/20 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
         <FunnelStep
           label="Leads"
           icon={Users}
-          value={totalLeads}
+          value={leadBase}
           gradient="from-violet-600 to-purple-700"
           textColor="text-violet-700 dark:text-violet-300"
-          metaLabel="Base do funil — 100% dos leads captados"
+          metaLabel={leadSource === "crm" ? "Base do funil — todos os leads da pipeline (CRM, inclui orgânicos)" : "Base do funil — leads captados via tráfego"}
         />
         <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground/50" /></div>
 
@@ -186,7 +200,7 @@ export function GoalsFunnel({ totalLeads, ghlSimulacoes, ghlCpfApproved, planilh
           label="Qualificações Realizadas (CRM)"
           icon={Calculator}
           value={ghlSimulacoes}
-          baseValue={totalLeads}
+          baseValue={leadBase}
           metaPct={META_SIMULACOES}
           metaLabel={`Mín. ${META_SIMULACOES}% dos leads precisam ser qualificados`}
           description="Leads avaliados, com financiamento ou pagamento à vista/cartão."
