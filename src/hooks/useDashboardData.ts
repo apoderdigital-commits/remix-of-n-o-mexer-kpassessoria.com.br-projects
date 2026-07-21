@@ -141,6 +141,7 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
       }
       return data as {
         simulacoes: number;
+        total_pipeline_leads: number;
         cpf_aprovado: number;
         cpf_nao_aprovado: number;
         vendas_financiamento: number;
