@@ -1381,6 +1381,44 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_goal_notes: {
+        Row: {
+          client_name: string
+          id: string
+          observacoes: string | null
+          reference_month: string
+          squad_id: string
+          updated_at: string
+          weak_points: string[]
+        }
+        Insert: {
+          client_name: string
+          id?: string
+          observacoes?: string | null
+          reference_month: string
+          squad_id: string
+          updated_at?: string
+          weak_points?: string[]
+        }
+        Update: {
+          client_name?: string
+          id?: string
+          observacoes?: string | null
+          reference_month?: string
+          squad_id?: string
+          updated_at?: string
+          weak_points?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_goal_notes_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       squad_members: {
         Row: {
           added_by: string | null
@@ -1824,6 +1862,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      squad_weak_points: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       squads: {
         Row: {
