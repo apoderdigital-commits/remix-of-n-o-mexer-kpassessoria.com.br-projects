@@ -5473,7 +5473,7 @@ function ChurnPanel({
           const k = c.churn_month?.slice(0, 7) || "";
           return k && k >= monthKey;
         }).length;
-        const baseForMonth = baselineActive + churnsFromThisMonthOnward;
+        const baseForMonth = activeClientsCount + churnsFromThisMonthOnward;
         const rate = baseForMonth > 0 ? (items.length / baseForMonth) * 100 : 0;
         const rateColor = rate >= 10 ? "text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30"
           : rate >= 5 ? "text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
