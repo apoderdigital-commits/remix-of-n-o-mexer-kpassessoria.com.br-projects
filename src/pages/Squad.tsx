@@ -3277,7 +3277,8 @@ function FechamentoPanel({
   const [goalSupported, setGoalSupported] = useState(true);
   const [wpDialogOpen, setWpDialogOpen] = useState(false);
   const [fillOpen, setFillOpen] = useState(false);
-  const [weakFilter, setWeakFilter] = useState<string>("all");
+  const [weakFilters, setWeakFilters] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [newWp, setNewWp] = useState("");
   const [wpMenuFor, setWpMenuFor] = useState<string | null>(null);
   useEffect(() => {
@@ -3725,10 +3726,13 @@ function FechamentoPanel({
     }).sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
   }, [clients, rowByName, month]);
 
-  // Filtro por ponto fraco: mostra só os projetos que têm aquele problema marcado.
-  const goalRowsView = weakFilter === "all"
+  // Filtro por pontos fracos (múltiplo): mostra projetos que têm QUALQUER um dos marcados.
+  const goalRowsView = weakFilters.length === 0
     ? goalRows
-    : goalRows.filter((row) => (goalNotes.get(row.name.trim().toLowerCase())?.weak_points || []).includes(weakFilter));
+    : goalRows.filter((row) => {
+        const wps = goalNotes.get(row.name.trim().toLowerCase())?.weak_points || [];
+        return weakFilters.some((fLabel) => wps.includes(fLabel));
+      });
 
   // helper p/ montar os grupos do popup de detalhe
   const G = (title: string, rows: DetailRow[], empty?: string): DetailGroup => ({ title: `${title} (${rows.length})`, rows, empty });
@@ -3952,16 +3956,34 @@ function FechamentoPanel({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {goalSupported && weakPoints.length > 0 && (
-              <Select value={weakFilter} onValueChange={setWeakFilter}>
-                <SelectTrigger className={`h-8 w-[200px] text-xs ${weakFilter !== "all" ? "border-primary/50 text-primary" : ""}`}>
-                  <SlidersHorizontal className="h-3.5 w-3.5 mr-1 shrink-0" />
-                  <SelectValue placeholder="Filtrar ponto fraco" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os projetos</SelectItem>
-                  {weakPoints.map((wp) => (<SelectItem key={wp.id} value={wp.label}>{wp.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={`h-8 gap-1.5 ${weakFilters.length ? "border-primary/50 text-primary" : ""}`}>
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    {weakFilters.length === 0 ? "Filtrar pontos fracos" : weakFilters.length === 1 ? weakFilters[0] : `${weakFilters.length} filtros`}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2 bg-card border-border/50" align="end">
+                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                    <span className="text-xs font-semibold text-muted-foreground">Projetos com algum destes:</span>
+                    {weakFilters.length > 0 && (
+                      <button onClick={() => setWeakFilters([])} className="text-[11px] text-primary font-medium hover:underline">limpar</button>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {weakPoints.map((wp) => {
+                      const checked = weakFilters.includes(wp.label);
+                      return (
+                        <label key={wp.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/40 cursor-pointer text-sm">
+                          <input type="checkbox" checked={checked} onChange={() => setWeakFilters((prev) => checked ? prev.filter((x) => x !== wp.label) : [...prev, wp.label])} className="accent-primary" />
+                          {wp.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
             {isAdmin && goalSupported && (
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setWpDialogOpen(true)}>
@@ -3979,8 +4001,8 @@ function FechamentoPanel({
             <p className="text-sm text-muted-foreground py-6 text-center">Nenhum cliente ativo neste mês.</p>
           ) : goalRowsView.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              Nenhum projeto com o ponto fraco <strong className="text-foreground">{weakFilter}</strong> neste mês.
-              <button onClick={() => setWeakFilter("all")} className="ml-2 text-primary font-medium hover:underline">limpar filtro</button>
+              Nenhum projeto com {weakFilters.length === 1 ? <strong className="text-foreground">{weakFilters[0]}</strong> : "os pontos fracos selecionados"} neste mês.
+              <button onClick={() => setWeakFilters([])} className="ml-2 text-primary font-medium hover:underline">limpar filtro</button>
             </div>
           ) : (
             <div className="overflow-x-auto">
