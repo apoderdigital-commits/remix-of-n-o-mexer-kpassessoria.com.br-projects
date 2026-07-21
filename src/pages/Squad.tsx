@@ -1396,11 +1396,8 @@ export default function Squad() {
           <Tabs defaultValue="clients" className="space-y-6">
             <TabsList className="bg-card/40 backdrop-blur-sm border border-border/30">
               <TabsTrigger value="clients" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Clientes</TabsTrigger>
-              <TabsTrigger value="matrix" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Matriz</TabsTrigger>
-              <TabsTrigger value="metrics" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Métricas dos Projetos</TabsTrigger>
-              <TabsTrigger value="churn" className="gap-1.5"><TrendingDown className="h-3.5 w-3.5" /> Churn</TabsTrigger>
-              <TabsTrigger value="nps" className="gap-1.5"><Smile className="h-3.5 w-3.5" /> % de NPS</TabsTrigger>
               <TabsTrigger value="engagement" className="gap-1.5"><Star className="h-3.5 w-3.5" /> Engajamento</TabsTrigger>
+              <TabsTrigger value="churn" className="gap-1.5"><TrendingDown className="h-3.5 w-3.5" /> Churn</TabsTrigger>
               <TabsTrigger value="agenda" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agenda das Mensais</TabsTrigger>
               <TabsTrigger value="fechamento" className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" /> Fechamento Operacional</TabsTrigger>
             </TabsList>
@@ -1722,10 +1719,7 @@ export default function Squad() {
                   </TableBody>
                 </Table>
               </div>
-            </TabsContent>
-
-            {/* MATRIZ */}
-            <TabsContent value="matrix">
+              {/* Matriz de Priorização — movida da aba antiga pra dentro de Clientes */}
               <Card className="bg-card/40 backdrop-blur-sm border-border/30 shadow-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1801,155 +1795,6 @@ export default function Squad() {
               </Card>
             </TabsContent>
 
-            {/* MÉTRICAS */}
-            <TabsContent value="metrics" className="space-y-4">
-              {/* Fechamento operacional (base D+30) */}
-              {metricsCohort && (metricsCohort.missingEntry ? (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-                  ⚠️ Para o fechamento (engajamento, vendas — base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-end gap-2">
-                    <Activity className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Mês do fechamento:</span>
-                    <Select value={highlightMonth} onValueChange={setHighlightMonth}>
-                      <SelectTrigger className="w-[180px] h-8 bg-card/40 border-border/40 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {engMonths.length === 0 ? <SelectItem value="none" disabled>Sem dados</SelectItem> : engMonths.map((m) => (
-                          <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Engajamento médio</p>
-                      <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{metricsCohort.avgEng ? metricsCohort.avgEng.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.evaluated} de {metricsCohort.eligibleCount} elegíveis avaliados (D+30)</p>
-                    </div>
-                    <div className={`rounded-2xl border p-4 ${metricsCohort.vendido >= 10000 ? "border-emerald-500/40 bg-emerald-500/10" : metricsCohort.vendido >= 5000 ? "border-amber-500/40 bg-amber-500/10" : "border-red-500/40 bg-red-500/10"}`}>
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Vendido no mês</p>
-                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.vendido >= 10000 ? "text-emerald-700 dark:text-emerald-300" : metricsCohort.vendido >= 5000 ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300"}`}>{formatBRL(metricsCohort.vendido)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ R$ 10k · mín R$ 5k</p>
-                    </div>
-                    <div className={`rounded-2xl border p-4 ${metricsCohort.secondaryPct >= 20 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Produto secundário</p>
-                      <p className={`text-2xl font-bold mt-1 ${metricsCohort.secondaryPct >= 20 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{metricsCohort.secondaryPct.toFixed(0)}%</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.withSecondary} clientes · meta ≥ 20%</p>
-                    </div>
-                    <div className="rounded-2xl border border-dashed border-border/40 bg-card/20 p-4">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CPL / CPMQL médios</p>
-                      <p className="text-sm font-semibold mt-1 text-muted-foreground">Vem da dash de Criativos</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">CPL ≤ R$ 8 · CPMQL ≤ R$ 45 — precisa linkar Meta/GHL ao squad</p>
-                    </div>
-                  </div>
-                  {/* Uso do CRM — registro 1-5 por cliente */}
-                  <div className="rounded-2xl border border-border/30 bg-card/40 p-4 space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold">Uso do CRM</p>
-                      <span className="text-[10px] text-muted-foreground">nota 1–5 por cliente · "usando" = nota ≥ 4 · base elegíveis D+30</span>
-                    </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className={`rounded-xl border p-3 ${metricsCohort.crmUsingPct >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% usando CRM</p>
-                        <p className={`text-2xl font-bold mt-1 ${metricsCohort.crmUsingPct >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{metricsCohort.crmUsingPct.toFixed(0)}%</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 80%</p>
-                      </div>
-                      <button onClick={() => setCrmListDialog("using")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estão usando</p>
-                        <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">{metricsCohort.crmUsing}</p>
-                        <p className="text-[10px] text-primary mt-0.5">ver lista</p>
-                      </button>
-                      <button onClick={() => setCrmListDialog("not")} className="text-left rounded-xl border border-border/30 bg-card/40 p-3 hover:bg-card/60 transition">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Não usando / sem nota</p>
-                        <p className="text-2xl font-bold mt-1 text-red-700 dark:text-red-300">{metricsCohort.crmNotUsing}</p>
-                        <p className="text-[10px] text-primary mt-0.5">ver lista</p>
-                      </button>
-                      <div className="rounded-xl border border-border/30 bg-card/40 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
-                        <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{metricsCohort.crmRated ? metricsCohort.crmAvg.toFixed(1) : "—"}<span className="text-sm text-muted-foreground"> / 5</span></p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{metricsCohort.crmRated} de {metricsCohort.eligibleCount} avaliados</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      {metricsCohort.crmDist.map((cnt, i) => {
-                        const nota = i + 1;
-                        const max = Math.max(1, ...metricsCohort.crmDist);
-                        return (
-                          <div key={nota} className="rounded-lg border border-border/20 bg-background/30 p-2 text-center">
-                            <div className="h-16 flex items-end justify-center">
-                              <div className={`w-7 rounded-t ${nota >= 4 ? "bg-emerald-400/70" : nota === 3 ? "bg-amber-400/70" : "bg-red-400/70"}`} style={{ height: `${(cnt / max) * 100}%` }} />
-                            </div>
-                            <p className="text-sm font-bold mt-1">{cnt}</p>
-                            <p className="text-[10px] text-muted-foreground">nota {nota}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              ))}
-
-              <MetricsOverview metrics={metrics} />
-              <div className="flex justify-end">
-                <Button onClick={() => { setEditingMetric({ reference_month: `${new Date().toISOString().slice(0, 7)}-01` }); setOpenMetric(true); }} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Nova métrica mensal
-                </Button>
-              </div>
-              <div className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-x-auto shadow-xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/30">
-                      <TableHead>Mês</TableHead>
-                      <TableHead className="text-center">Ativos</TableHead>
-                      <TableHead className="text-center">Fora meta</TableHead>
-                      <TableHead className="text-center">Churn</TableHead>
-                      <TableHead className="text-center">Entradas</TableHead>
-                      <TableHead className="text-center">Renov.</TableHead>
-                      <TableHead className="text-center">Mensais</TableHead>
-                      <TableHead className="text-center">% Calls</TableHead>
-                      <TableHead>Upsell</TableHead>
-                      <TableHead>LT</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {metrics.length === 0 ? (
-                      <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-12">Nenhuma métrica registrada.</TableCell></TableRow>
-                    ) : metrics.map((m) => (
-                      <TableRow key={m.id} className="border-border/20">
-                        <TableCell className="font-semibold">{formatMonth(m.reference_month)}</TableCell>
-                        <TableCell className="text-center">{m.active_clients ?? "-"}</TableCell>
-                        <TableCell className="text-center">{m.out_of_target ?? "-"}</TableCell>
-                        <TableCell className="text-center">
-                          {m.churn_count != null && m.churn_count > 0
-                            ? <Badge className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30">{m.churn_count}</Badge>
-                            : (m.churn_count ?? "-")}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {m.new_clients != null && m.new_clients > 0
-                            ? <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">+{m.new_clients}</Badge>
-                            : (m.new_clients ?? "-")}
-                        </TableCell>
-                        <TableCell className="text-center">{m.renewals ?? "-"}</TableCell>
-                        <TableCell className="text-center">{m.monthly_clients ?? "-"}</TableCell>
-                        <TableCell className="text-center">
-                          {m.calls_delivered_pct != null ? `${(Number(m.calls_delivered_pct) * 100).toFixed(0)}%` : "-"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{m.upsell_amount}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{m.lifetime}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditingMetric(m); setOpenMetric(true); }}><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeMetric(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-
             {/* CHURN */}
             <TabsContent value="churn" className="space-y-4">
               <ChurnPanel
@@ -1960,135 +1805,6 @@ export default function Squad() {
                 onEdit={(c) => { setEditingChurn(c); setPendingClientDelete(null); setOpenChurn(true); }}
                 onRemove={removeChurn}
               />
-            </TabsContent>
-
-            {/* NPS — dashboard por cliente, filtrável por mês */}
-            <TabsContent value="nps" className="space-y-4">
-              {(() => {
-                const months = Array.from(new Set(engagement.map((e) => (e.reference_month || "").slice(0, 7)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
-                const byMonth = npsMonth === "all" ? engagement : engagement.filter((e) => (e.reference_month || "").slice(0, 7) === npsMonth);
-                const q = npsSearch.trim().toLowerCase();
-                const filtered = q ? byMonth.filter((e) => (e.client_name || "").toLowerCase().includes(q)) : byMonth;
-                const stats = buildNpsStats(filtered);
-                const dist = { ...stats, monthly: npsMonthly };
-
-                // Agrupa por sprint (A, B, C, depois sem sprint)
-                const sprintOrder = ["A", "B", "C"];
-                const groups = new Map<string, Engagement[]>();
-                filtered.forEach((e) => {
-                  const s = (e.sprint || "").toUpperCase() || "—";
-                  if (!groups.has(s)) groups.set(s, []);
-                  groups.get(s)!.push(e);
-                });
-                const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
-                  const ia = sprintOrder.indexOf(a); const ib = sprintOrder.indexOf(b);
-                  return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-                });
-
-                return (
-                  <>
-                    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-                      As notas de NPS são alimentadas pela aba <strong className="text-primary">Engajamento</strong>. Aqui você vê um dashboard completo de cada cliente: NPS, engajamento, vendas e faturamento por canais.
-                    </div>
-
-                    {/* Filtros */}
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-primary" />
-                        <Label className="text-xs text-muted-foreground">Mês:</Label>
-                        <Select value={npsMonth} onValueChange={setNpsMonth}>
-                          <SelectTrigger className="w-[200px] bg-card/40 border-border/40"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos os meses</SelectItem>
-                            {months.map((m) => (
-                              <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="relative flex-1 min-w-[200px] max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          value={npsSearch}
-                          onChange={(e) => setNpsSearch(e.target.value)}
-                          placeholder="Pesquisar cliente..."
-                          className="pl-9 bg-card/40 border-border/40"
-                        />
-                      </div>
-                    </div>
-
-                    {npsCohort && (
-                      npsCohort.missingEntry ? (
-                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-                          ⚠️ Para o fechamento de NPS (base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos totais</p>
-                            <p className="text-2xl font-bold mt-1 text-violet-700 dark:text-violet-300">{npsCohort.totalAtivos}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">no mês · +{npsCohort.novosNoMes} novos</p>
-                          </div>
-                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos elegíveis</p>
-                            <p className="text-2xl font-bold mt-1">{npsCohort.eligible.length}</p>
-                            <button onClick={() => setNpsListDialog("eligible")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista (D+30)</button>
-                          </div>
-                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Responderam</p>
-                            <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{npsCohort.responded.length}</p>
-                            <button onClick={() => setNpsListDialog("responded")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista</button>
-                          </div>
-                          <div className={`rounded-2xl border p-4 ${npsCohort.responseRate >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% de resposta</p>
-                            <p className={`text-2xl font-bold mt-1 ${npsCohort.responseRate >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>{npsCohort.responseRate.toFixed(0)}%</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              meta ≥ 80% · <button onClick={() => setNpsListDialog("missed")} className="text-primary hover:underline">{npsCohort.missed.length} faltaram</button>
-                            </p>
-                          </div>
-                          <div className={`rounded-2xl border p-4 ${npsCohort.avgNps >= 9 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
-                            <p className={`text-2xl font-bold mt-1 ${npsCohort.avgNps >= 9 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{npsCohort.avgNps ? npsCohort.avgNps.toFixed(1) : "—"}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 9,0</p>
-                          </div>
-                        </div>
-                      )
-                    )}
-
-                    <NpsChart dist={dist} />
-
-                    {/* Dashboard por cliente — agrupado por mês (accordion) */}
-                    {(() => {
-                      // Agrupa por mês
-                      const byMonthMap = new Map<string, Engagement[]>();
-                      filtered.forEach((e) => {
-                        const mk = (e.reference_month || "").slice(0, 7) || "sem-mes";
-                        if (!byMonthMap.has(mk)) byMonthMap.set(mk, []);
-                        byMonthMap.get(mk)!.push(e);
-                      });
-                      const sortedMonths = Array.from(byMonthMap.keys()).sort((a, b) => b.localeCompare(a));
-
-                      if (filtered.length === 0) return (
-                        <div className="rounded-2xl border border-border/30 bg-card/40 p-10 text-center text-muted-foreground">
-                          Nenhum cliente encontrado{q ? " para esta pesquisa" : npsMonth !== "all" ? " neste mês" : ""}.
-                        </div>
-                      );
-
-                      return (
-                        <NpsMonthAccordion
-                          sortedMonths={sortedMonths}
-                          byMonthMap={byMonthMap}
-                          sprintOrder={sprintOrder}
-                          formatMonth={formatMonth}
-                          CURVE_COLORS={CURVE_COLORS}
-                          computeChannels={computeChannels}
-                          fmtBRL={fmtBRL}
-                        />
-                      );
-                    })()}
-                  </>
-                );
-              })()}
             </TabsContent>
 
             {/* ENGAJAMENTO — agrupado por mês */}
@@ -2306,6 +2022,136 @@ export default function Squad() {
                 </>
                 );
               })()}
+
+              {/* Histórico de NPS por cliente — movido da aba "% de NPS" */}
+              <div className="space-y-4 pt-5 mt-3 border-t border-border/30">
+                <p className="text-sm font-semibold flex items-center gap-2"><Smile className="h-4 w-4 text-primary" /> Histórico de NPS por cliente</p>
+              {(() => {
+                const months = Array.from(new Set(engagement.map((e) => (e.reference_month || "").slice(0, 7)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+                const byMonth = npsMonth === "all" ? engagement : engagement.filter((e) => (e.reference_month || "").slice(0, 7) === npsMonth);
+                const q = npsSearch.trim().toLowerCase();
+                const filtered = q ? byMonth.filter((e) => (e.client_name || "").toLowerCase().includes(q)) : byMonth;
+                const stats = buildNpsStats(filtered);
+                const dist = { ...stats, monthly: npsMonthly };
+
+                // Agrupa por sprint (A, B, C, depois sem sprint)
+                const sprintOrder = ["A", "B", "C"];
+                const groups = new Map<string, Engagement[]>();
+                filtered.forEach((e) => {
+                  const s = (e.sprint || "").toUpperCase() || "—";
+                  if (!groups.has(s)) groups.set(s, []);
+                  groups.get(s)!.push(e);
+                });
+                const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
+                  const ia = sprintOrder.indexOf(a); const ib = sprintOrder.indexOf(b);
+                  return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                });
+
+                return (
+                  <>
+                    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                      As notas de NPS são alimentadas pela aba <strong className="text-primary">Engajamento</strong>. Aqui você vê um dashboard completo de cada cliente: NPS, engajamento, vendas e faturamento por canais.
+                    </div>
+
+                    {/* Filtros */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        <Label className="text-xs text-muted-foreground">Mês:</Label>
+                        <Select value={npsMonth} onValueChange={setNpsMonth}>
+                          <SelectTrigger className="w-[200px] bg-card/40 border-border/40"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos os meses</SelectItem>
+                            {months.map((m) => (
+                              <SelectItem key={m} value={m} className="capitalize">{formatMonth(`${m}-01`)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="relative flex-1 min-w-[200px] max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={npsSearch}
+                          onChange={(e) => setNpsSearch(e.target.value)}
+                          placeholder="Pesquisar cliente..."
+                          className="pl-9 bg-card/40 border-border/40"
+                        />
+                      </div>
+                    </div>
+
+                    {npsCohort && (
+                      npsCohort.missingEntry ? (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+                          ⚠️ Para o fechamento de NPS (base de clientes ativos há +30 dias), preencha a <strong>Data de entrada</strong> dos clientes na aba <strong>Clientes</strong>.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos totais</p>
+                            <p className="text-2xl font-bold mt-1 text-violet-700 dark:text-violet-300">{npsCohort.totalAtivos}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">no mês · +{npsCohort.novosNoMes} novos</p>
+                          </div>
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos elegíveis</p>
+                            <p className="text-2xl font-bold mt-1">{npsCohort.eligible.length}</p>
+                            <button onClick={() => setNpsListDialog("eligible")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista (D+30)</button>
+                          </div>
+                          <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Responderam</p>
+                            <p className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-300">{npsCohort.responded.length}</p>
+                            <button onClick={() => setNpsListDialog("responded")} className="text-[10px] text-primary hover:underline mt-0.5">ver lista</button>
+                          </div>
+                          <div className={`rounded-2xl border p-4 ${npsCohort.responseRate >= 80 ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">% de resposta</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.responseRate >= 80 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>{npsCohort.responseRate.toFixed(0)}%</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              meta ≥ 80% · <button onClick={() => setNpsListDialog("missed")} className="text-primary hover:underline">{npsCohort.missed.length} faltaram</button>
+                            </p>
+                          </div>
+                          <div className={`rounded-2xl border p-4 ${npsCohort.avgNps >= 9 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nota média</p>
+                            <p className={`text-2xl font-bold mt-1 ${npsCohort.avgNps >= 9 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{npsCohort.avgNps ? npsCohort.avgNps.toFixed(1) : "—"}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">meta ≥ 9,0</p>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    <NpsChart dist={dist} />
+
+                    {/* Dashboard por cliente — agrupado por mês (accordion) */}
+                    {(() => {
+                      // Agrupa por mês
+                      const byMonthMap = new Map<string, Engagement[]>();
+                      filtered.forEach((e) => {
+                        const mk = (e.reference_month || "").slice(0, 7) || "sem-mes";
+                        if (!byMonthMap.has(mk)) byMonthMap.set(mk, []);
+                        byMonthMap.get(mk)!.push(e);
+                      });
+                      const sortedMonths = Array.from(byMonthMap.keys()).sort((a, b) => b.localeCompare(a));
+
+                      if (filtered.length === 0) return (
+                        <div className="rounded-2xl border border-border/30 bg-card/40 p-10 text-center text-muted-foreground">
+                          Nenhum cliente encontrado{q ? " para esta pesquisa" : npsMonth !== "all" ? " neste mês" : ""}.
+                        </div>
+                      );
+
+                      return (
+                        <NpsMonthAccordion
+                          sortedMonths={sortedMonths}
+                          byMonthMap={byMonthMap}
+                          sprintOrder={sprintOrder}
+                          formatMonth={formatMonth}
+                          CURVE_COLORS={CURVE_COLORS}
+                          computeChannels={computeChannels}
+                          fmtBRL={fmtBRL}
+                        />
+                      );
+                    })()}
+                  </>
+                );
+              })()}
+              </div>
             </TabsContent>
 
             {/* AGENDA */}
