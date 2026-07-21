@@ -107,15 +107,15 @@ export function useSyncMeta(clientId: string | null) {
   return { sync };
 }
 
-export function useGhlPipeline(clientId: string | null, since?: string, until?: string) {
+export function useGhlPipeline(clientId: string | null, since?: string, until?: string, assignedTo?: string) {
   return useQuery({
-    queryKey: ["ghl_pipeline", clientId, since, until],
+    queryKey: ["ghl_pipeline", clientId, since, until, assignedTo ?? null],
     queryFn: async () => {
       if (!clientId) return null;
 
       // Tenta a v2 (com auto-detecção de pipeline). Se ainda não deployou, usa a antiga.
       let { data, error } = await supabase.functions.invoke("fetch-ghl-pipeline-v2", {
-        body: { client_id: clientId, since, until },
+        body: { client_id: clientId, since, until, assigned_to: assignedTo },
       });
       if (error) {
         const fb = await supabase.functions.invoke("fetch-ghl-pipeline", {
@@ -148,6 +148,7 @@ export function useGhlPipeline(clientId: string | null, since?: string, until?: 
         vendas_consorcio: number;
         pipeline_name: string;
         stages: { id: string; name: string }[];
+        users?: { id: string; name: string }[];
         mapping_complete: boolean;
         missing_metrics: string[];
         has_manual_mapping: boolean;
