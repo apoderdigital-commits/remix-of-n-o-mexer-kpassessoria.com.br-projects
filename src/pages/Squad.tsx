@@ -3216,7 +3216,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 // ── FECHAMENTO OPERACIONAL ───────────────────────────────────────────────────
-type DetailRow = { name: string; badge?: string; tone?: "ok" | "bad" | "warn" };
+type DetailRow = { name: string; badge?: string; tone?: "ok" | "bad" | "warn"; doc?: { path: string; name: string } };
 type DetailGroup = { title: string; rows: DetailRow[]; empty?: string };
 type FechCard = {
   label: string; value: string; ok: boolean | null; hint?: string;
@@ -3277,6 +3277,28 @@ function FechamentoPanel({
     rows: { name: string; leads: number; sim: number; aprov: number; vendas: number; preAtend: number | null; conv: number | null }[];
   }>(null);
   useEffect(() => { setCplData(null); setCpmqlData(null); setCrmRates(null); }, [month, squadId]);
+
+  // Documentos anexados na reunião mensal (para o atalho "ver documento" no card do plano).
+  const [mensalDocs, setMensalDocs] = useState<Map<string, { path: string; name: string }>>(new Map());
+  useEffect(() => {
+    void (async () => {
+      const { data } = await (supabase as any).from("squad_monthly_sessions")
+        .select("client_name, reference_month, projection_file_url, projection_file_name").eq("squad_id", squadId);
+      const m = new Map<string, { path: string; name: string }>();
+      (data || []).forEach((se: any) => {
+        if ((se.reference_month || "").slice(0, 7) !== month) return;
+        if (!se.projection_file_url) return;
+        const nm = (se.client_name || "").trim().toLowerCase();
+        if (nm) m.set(nm, { path: se.projection_file_url, name: se.projection_file_name || "documento" });
+      });
+      setMensalDocs(m);
+    })();
+  }, [squadId, month]);
+  const openMensalDoc = async (path: string, name: string) => {
+    const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o documento da mensal."); return; }
+    setDocViewer({ url: data.signedUrl, name });
+  };
 
   // ── Tabela de metas por cliente (pontos fracos configuráveis + observações) ──
   const [weakPoints, setWeakPoints] = useState<{ id: string; label: string }[]>([]);
@@ -3918,9 +3940,9 @@ function FechamentoPanel({
     {
       label: "% plano estratégico documentado", value: `${f.pctPlano.toFixed(0)}%`, ok: f.pctPlano >= 90, hint: `${f.planoSim.length} de ${f.eligCount} · meta ≥ 90%`,
       detail: { title: "Está no planejamento estratégico?", groups: [
-        G("Sim", f.planoSim.map((n) => ({ name: n, badge: "sim", tone: "ok" as const })), "Nenhum"),
-        G("Não", f.planoNao.map((n) => ({ name: n, badge: "não", tone: "bad" as const })), "Nenhum"),
-        G("Não respondido", f.planoFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const })), "Todos respondidos 🎉"),
+        G("Sim", f.planoSim.map((n) => ({ name: n, badge: "sim", tone: "ok" as const, doc: mensalDocs.get(n.trim().toLowerCase()) })), "Nenhum"),
+        G("Não", f.planoNao.map((n) => ({ name: n, badge: "não", tone: "bad" as const, doc: mensalDocs.get(n.trim().toLowerCase()) })), "Nenhum"),
+        G("Não respondido", f.planoFalta.map((n) => ({ name: n, badge: "—", tone: "warn" as const, doc: mensalDocs.get(n.trim().toLowerCase()) })), "Todos respondidos 🎉"),
       ] },
     },
     {
@@ -4331,13 +4353,20 @@ function FechamentoPanel({
                         : r.tone === "warn" ? "border-amber-500/30 bg-amber-500/5"
                         : "border-border/30 bg-card/40"}`}>
                         <span className="font-medium min-w-0 break-words">{r.name}</span>
-                        {r.badge && (
-                          <Badge variant="outline" className={`shrink-0 text-[10px] ${
-                            r.tone === "ok" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
-                            : r.tone === "bad" ? "border-red-500/40 text-red-700 dark:text-red-300"
-                            : r.tone === "warn" ? "border-amber-500/40 text-amber-700 dark:text-amber-300"
-                            : ""}`}>{r.badge}</Badge>
-                        )}
+                        <span className="flex items-center gap-2 shrink-0">
+                          {r.doc && (
+                            <button onClick={() => openMensalDoc(r.doc!.path, r.doc!.name)} className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20">
+                              <FileText className="h-3 w-3" /> ver documento
+                            </button>
+                          )}
+                          {r.badge && (
+                            <Badge variant="outline" className={`text-[10px] ${
+                              r.tone === "ok" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+                              : r.tone === "bad" ? "border-red-500/40 text-red-700 dark:text-red-300"
+                              : r.tone === "warn" ? "border-amber-500/40 text-amber-700 dark:text-amber-300"
+                              : ""}`}>{r.badge}</Badge>
+                          )}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -4572,7 +4601,9 @@ function FechamentoPanel({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Funil de projeção anexado</DialogTitle>
           </DialogHeader>
-          {docViewer && <img src={docViewer.url} alt="Funil de projeção" className="w-full h-auto rounded-lg border border-border/30" />}
+          {docViewer && (/\.pdf($|\?)/i.test(docViewer.url) || /\.pdf$/i.test(docViewer.name)
+            ? <iframe src={docViewer.url} title={docViewer.name} className="w-full h-[75vh] rounded-lg border border-border/30" />
+            : <img src={docViewer.url} alt={docViewer.name} className="w-full h-auto rounded-lg border border-border/30" />)}
         </DialogContent>
       </Dialog>
 
