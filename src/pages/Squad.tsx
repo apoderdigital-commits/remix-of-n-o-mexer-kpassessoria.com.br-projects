@@ -3221,6 +3221,7 @@ type DetailGroup = { title: string; rows: DetailRow[]; empty?: string };
 type FechCard = {
   label: string; value: string; ok: boolean | null; hint?: string;
   onClick?: () => void;
+  toggle?: () => void;
   detail?: { title: string; groups: DetailGroup[] };
 };
 // Reaproveita a MESMA lógica das outras abas (base D+30, churn, uso do CRM,
@@ -3277,6 +3278,8 @@ function FechamentoPanel({
   const [goalSupported, setGoalSupported] = useState(true);
   const [wpDialogOpen, setWpDialogOpen] = useState(false);
   const [fillOpen, setFillOpen] = useState(false);
+  const [crmView, setCrmView] = useState<"pct" | "num">("pct");
+  const [mensalView, setMensalView] = useState<"pct" | "num">("pct");
   const [weakFilters, setWeakFilters] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [newWp, setNewWp] = useState("");
@@ -3773,22 +3776,30 @@ function FechamentoPanel({
       ] },
     },
     {
-      label: "% usando CRM", value: `${f.pctCrm.toFixed(0)}%`, ok: f.pctCrm >= 80, hint: `${f.crmUsando.length} de ${f.eligCount} · nota ≥ 4 · meta ≥ 80%`,
-      detail: { title: "Uso do CRM", groups: [
+      label: crmView === "pct" ? "% usando CRM" : "Clientes usando CRM",
+      value: crmView === "pct" ? `${f.pctCrm.toFixed(0)}%` : `${f.crmUsando.length}/${f.eligCount}`,
+      ok: f.pctCrm >= 80,
+      hint: crmView === "pct" ? `${f.crmUsando.length} de ${f.eligCount} · clique p/ ver número` : `${f.crmNao.length} não usando · nota ≥ 4 · meta ≥ 80%`,
+      toggle: () => setCrmView((v) => (v === "pct" ? "num" : "pct")),
+      detail: { title: "Uso do CRM (D+30)", groups: [
         G("Usando (nota ≥ 4)", f.crmUsando.map((x) => ({ name: x.name, badge: `${x.nota}/5`, tone: "ok" as const }))),
         G("Não usando / sem nota", f.crmNao.map((x) => ({ name: x.name, badge: x.nota != null ? `${x.nota}/5` : "sem nota", tone: "bad" as const })), "Todos usando 🎉"),
       ] },
     },
     {
-      label: "% reunião mensal", value: `${f.pctMensais.toFixed(0)}%`, ok: f.pctMensais >= 80, hint: `${f.mensalOk.length} de ${f.eligCount} · meta ≥ 80%`,
-      detail: { title: "Reuniões mensais", groups: [
+      label: mensalView === "pct" ? "% reunião mensal" : "Reuniões mensais feitas",
+      value: mensalView === "pct" ? `${f.pctMensais.toFixed(0)}%` : `${f.mensalOk.length}/${f.eligCount}`,
+      ok: f.pctMensais >= 80,
+      hint: mensalView === "pct" ? `${f.mensalOk.length} de ${f.eligCount} · clique p/ ver número` : `${f.mensalNao.length} pendentes · meta ≥ 80%`,
+      toggle: () => setMensalView((v) => (v === "pct" ? "num" : "pct")),
+      detail: { title: "Reuniões mensais (D+30)", groups: [
         G("Realizadas", f.mensalOk.map((n) => ({ name: n, badge: "realizada", tone: "ok" as const }))),
         G("Não realizadas", f.mensalNao.map((n) => ({ name: n, badge: "pendente", tone: "bad" as const })), "Todas realizadas 🎉"),
       ] },
     },
     {
-      label: "R$ vendido no mês", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "meta ≥ R$ 10k · mín R$ 5k",
-      detail: { title: "Vendido no mês", groups: [
+      label: "Faturamento geral (R$)", value: formatBRL(f.vendido), ok: f.vendido >= 10000, hint: "faturamento dos projetos D+30 · meta ≥ R$ 10k",
+      detail: { title: "Faturamento geral dos projetos (D+30) — do maior ao menor", groups: [
         G("Por cliente", f.vendidoPor.map((x) => ({ name: x.name, badge: formatBRL(x.v), tone: "ok" as const })), "Nenhum faturamento lançado no mês"),
       ] },
     },
@@ -3853,17 +3864,28 @@ function FechamentoPanel({
   const MetricsGrid = ({ compact }: { compact?: boolean }) => (
     <div className={`grid gap-3 ${compact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"}`}>
       {cards.map((card) => {
-        const clickable = !!card.onClick || !!card.detail;
+        const clickable = !!card.onClick || !!card.toggle || !!card.detail;
         const cls = `rounded-2xl border p-4 ${card.ok === true ? "border-emerald-500/40 bg-emerald-500/10" : card.ok === false ? "border-red-500/40 bg-red-500/10" : "border-border/30 bg-card/40"} ${clickable ? "text-left cursor-pointer hover:ring-2 hover:ring-primary/40 transition" : ""}`;
         const inner = (
           <>
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.label}</p>
             <p className={`font-bold mt-1 ${card.onClick && !cplData ? "text-base text-primary" : "text-2xl"} ${card.ok === true ? "text-emerald-700 dark:text-emerald-300" : card.ok === false ? "text-red-700 dark:text-red-300" : ""}`}>{card.value}</p>
             {card.hint && <p className="text-[10px] text-muted-foreground mt-0.5">{card.hint}</p>}
+            {card.toggle && card.detail && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); setDetail(card.detail!); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setDetail(card.detail!); } }}
+                className="inline-block mt-1.5 text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+              >
+                ver clientes →
+              </span>
+            )}
           </>
         );
         return clickable
-          ? <button key={card.label} type="button" onClick={() => (card.onClick ? card.onClick() : setDetail(card.detail!))} className={cls}>{inner}</button>
+          ? <button key={card.label} type="button" onClick={() => (card.onClick ? card.onClick() : card.toggle ? card.toggle() : setDetail(card.detail!))} className={cls}>{inner}</button>
           : <div key={card.label} className={cls}>{inner}</div>;
       })}
     </div>
