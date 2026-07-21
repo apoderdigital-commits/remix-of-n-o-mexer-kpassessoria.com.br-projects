@@ -214,18 +214,35 @@ Deno.serve(async (req) => {
       return total;
     };
 
-    const [simulacoes, cpfAprovado, cpfNaoAprovado, vendasFinanc, vendasConsorcio] =
+    // Total de leads da pipeline inteira (todos os estágios = todos que entraram no CRM,
+    // inclusive orgânicos). Sem filtro de estágio.
+    const countPipelineTotal = async (): Promise<number> => {
+      const params = new URLSearchParams({
+        location_id: client.ghl_location_id,
+        pipeline_id: pipeline.id,
+        limit: "1",
+      });
+      if (since) { const [y, m, d] = since.split("-"); params.set("date", `${m}-${d}-${y}`); }
+      if (until) { const [y, m, d] = until.split("-"); params.set("endDate", `${m}-${d}-${y}`); }
+      const r = await fetch(`${GHL_BASE}/opportunities/search?${params.toString()}`, { method: "GET", headers: ghlHeaders });
+      if (r.ok) { const json = await r.json(); return json.meta?.total ?? json.count ?? 0; }
+      return 0;
+    };
+
+    const [simulacoes, cpfAprovado, cpfNaoAprovado, vendasFinanc, vendasConsorcio, totalPipelineLeads] =
       await Promise.all([
         countForStages(simulacaoStageIds),
         countForStages(cpfAprovadoStageIds),
         countForStages(cpfNaoAprovadoStageIds),
         countForStages(vendasFinancIds),
         countForStages(vendasConsorcioIds),
+        countPipelineTotal(),
       ]);
 
     return new Response(
       JSON.stringify({
         simulacoes,
+        total_pipeline_leads: totalPipelineLeads,
         cpf_aprovado: cpfAprovado,
         cpf_nao_aprovado: cpfNaoAprovado,
         vendas_financiamento: vendasFinanc,
