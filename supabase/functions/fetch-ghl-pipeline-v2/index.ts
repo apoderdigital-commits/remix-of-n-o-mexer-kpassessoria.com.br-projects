@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { client_id, since, until } = await req.json();
+    const { client_id, since, until, assigned_to } = await req.json();
     if (!client_id) {
       return new Response(JSON.stringify({ error: "client_id is required" }), {
         status: 400,
@@ -229,15 +229,84 @@ Deno.serve(async (req) => {
       return 0;
     };
 
-    const [simulacoes, cpfAprovado, cpfNaoAprovado, vendasFinanc, vendasConsorcio, totalPipelineLeads] =
-      await Promise.all([
-        countForStages(simulacaoStageIds),
-        countForStages(cpfAprovadoStageIds),
-        countForStages(cpfNaoAprovadoStageIds),
-        countForStages(vendasFinancIds),
-        countForStages(vendasConsorcioIds),
-        countPipelineTotal(),
-      ]);
+    // Lista de vendedores (usuarios) da subconta — para o dropdown do filtro por vendedor.
+    const fetchUsers = async (): Promise<{ id: string; name: string }[]> => {
+      try {
+        const r = await fetch(`${GHL_BASE}/users/?locationId=${client.ghl_location_id}`, { headers: ghlHeaders });
+        if (!r.ok) return [];
+        const j = await r.json();
+        return (j.users || []).map((u: any) => ({
+          id: u.id,
+          name: u.name || [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || u.id,
+        }));
+      } catch { return []; }
+    };
+
+    // Contatos atribuidos a um vendedor (paginado).
+    const sellerContactIds = async (uid: string): Promise<Set<string>> => {
+      const ids = new Set<string>();
+      let url: string | null = `${GHL_BASE}/contacts/?locationId=${client.ghl_location_id}&assignedTo=${uid}&limit=100`;
+      let guard = 0;
+      while (url && guard < 60) {
+        const r = await fetch(url, { headers: ghlHeaders });
+        if (!r.ok) break;
+        const j = await r.json();
+        for (const c of (j.contacts || [])) if (c.id) ids.add(c.id);
+        url = j.meta?.nextPageUrl || null;
+        guard++;
+      }
+      return ids;
+    };
+
+    // Todas as oportunidades do pipeline no periodo (contactId + estagio).
+    const fetchAllOpps = async (): Promise<{ contactId: string | null; stageId: string }[]> => {
+      const out: { contactId: string | null; stageId: string }[] = [];
+      let startAfterId: string | null = null, startAfter: string | null = null, guard = 0;
+      while (guard < 60) {
+        const p = new URLSearchParams({ location_id: client.ghl_location_id, pipeline_id: pipeline.id, limit: "100" });
+        if (since) { const [y, m, d] = since.split("-"); p.set("date", `${m}-${d}-${y}`); }
+        if (until) { const [y, m, d] = until.split("-"); p.set("endDate", `${m}-${d}-${y}`); }
+        if (startAfterId) p.set("startAfterId", startAfterId);
+        if (startAfter) p.set("startAfter", startAfter);
+        const r = await fetch(`${GHL_BASE}/opportunities/search?${p.toString()}`, { headers: ghlHeaders });
+        if (!r.ok) break;
+        const j = await r.json();
+        const batch = j.opportunities || [];
+        for (const o of batch) out.push({ contactId: o.contactId ?? null, stageId: o.pipelineStageId });
+        startAfterId = j.meta?.startAfterId ?? null;
+        startAfter = j.meta?.startAfter ?? null;
+        guard++;
+        if (!startAfterId || batch.length < 100) break;
+      }
+      return out;
+    };
+
+    const users = await fetchUsers();
+
+    let simulacoes: number, cpfAprovado: number, cpfNaoAprovado: number, vendasFinanc: number, vendasConsorcio: number, totalPipelineLeads: number;
+
+    if (assigned_to) {
+      // Por vendedor: leads = oportunidades cujo CONTATO esta atribuido a esse vendedor (1 dono por lead).
+      const [contactSet, allOpps] = await Promise.all([sellerContactIds(assigned_to), fetchAllOpps()]);
+      const mine = allOpps.filter((o) => o.contactId && contactSet.has(o.contactId));
+      const cnt = (ids: string[]) => mine.filter((o) => ids.includes(o.stageId)).length;
+      simulacoes = cnt(simulacaoStageIds);
+      cpfAprovado = cnt(cpfAprovadoStageIds);
+      cpfNaoAprovado = cnt(cpfNaoAprovadoStageIds);
+      vendasFinanc = cnt(vendasFinancIds);
+      vendasConsorcio = cnt(vendasConsorcioIds);
+      totalPipelineLeads = mine.length;
+    } else {
+      [simulacoes, cpfAprovado, cpfNaoAprovado, vendasFinanc, vendasConsorcio, totalPipelineLeads] =
+        await Promise.all([
+          countForStages(simulacaoStageIds),
+          countForStages(cpfAprovadoStageIds),
+          countForStages(cpfNaoAprovadoStageIds),
+          countForStages(vendasFinancIds),
+          countForStages(vendasConsorcioIds),
+          countPipelineTotal(),
+        ]);
+    }
 
     return new Response(
       JSON.stringify({
@@ -249,6 +318,7 @@ Deno.serve(async (req) => {
         vendas_consorcio: vendasConsorcio,
         pipeline_name: pipeline.name,
         stages: stages.map((s: any) => ({ id: s.id, name: s.name })),
+        users,
         mapping_complete: mappingComplete,
         missing_metrics: missingMetrics,
         has_manual_mapping: hasMapping,
