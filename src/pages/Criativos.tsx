@@ -107,6 +107,10 @@ export default function Index() {
   const [campaignFilterOpen, setCampaignFilterOpen] = useState(false);
   const { data: leads } = useQualifiedLeads(activeClient, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(activeClient, since, until);
+  // Filtro do Funil de Metas por vendedor (contato atribuido). Só busca quando um vendedor é escolhido.
+  const [funnelSeller, setFunnelSeller] = useState<string>("all");
+  const { data: sellerGhl, isLoading: sellerGhlLoading } = useGhlPipeline(funnelSeller !== "all" ? activeClient : null, since, until, funnelSeller !== "all" ? funnelSeller : undefined);
+  const funnelGhl = funnelSeller === "all" ? ghlData : sellerGhl;
   const { data: previousPeriod } = usePreviousPeriodData(activeClient, since, until);
   const { data: monthlyTrend } = useMonthlyTrend(activeClient, 6);
   const { sync } = useSyncMeta(activeClient);
@@ -667,13 +671,17 @@ export default function Index() {
           <div ref={funnelRef}>
           <GoalsFunnel
             totalLeads={totalLeads}
-            ghlTotalLeads={ghlData?.total_pipeline_leads}
-            ghlSimulacoes={ghlData?.simulacoes ?? 0}
-            ghlCpfApproved={ghlData?.cpf_aprovado ?? 0}
+            ghlTotalLeads={funnelGhl?.total_pipeline_leads}
+            ghlSimulacoes={funnelGhl?.simulacoes ?? 0}
+            ghlCpfApproved={funnelGhl?.cpf_aprovado ?? 0}
             planilhaCpfApproved={planilhaCpfApproved}
             salesFinancing={salesFinancing + salesLegacy}
             planilhaSalesFinancing={salesFinancing + salesLegacy}
-            ghlSalesFinancing={ghlData?.vendas_financiamento ?? 0}
+            ghlSalesFinancing={funnelGhl?.vendas_financiamento ?? 0}
+            sellers={ghlData?.users ?? []}
+            selectedSeller={funnelSeller}
+            onSellerChange={setFunnelSeller}
+            sellerLoading={sellerGhlLoading}
             onScrollTo={(t) => handleScrollToRanking(t)}
           />
           </div>
