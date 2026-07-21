@@ -431,6 +431,7 @@ export default function Squad() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [npsSearch, setNpsSearch] = useState("");
   const [engShowTrash, setEngShowTrash] = useState(false);
+  const [openEngMonths, setOpenEngMonths] = useState<Set<string>>(new Set());
   const [engTrash, setEngTrash] = useState<Engagement[]>([]);
   const [purgeMonth, setPurgeMonth] = useState<string | null>(null); // YYYY-MM-DD
   const [editingAg, setEditingAg] = useState<Partial<Agenda> | null>(null);
@@ -1895,13 +1896,16 @@ export default function Squad() {
                   .map(([month, list]) => {
                     const npsList = list.map((e) => e.nps_individual).filter((v): v is number => v != null);
                     const avgNps = npsList.length ? (npsList.reduce((s, n) => s + n, 0) / npsList.length).toFixed(1) : "—";
+                    const isEngOpen = openEngMonths.has(month) || engMonth === month;
                     return (
                       <div key={month} className="rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-hidden shadow-xl">
                         <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-fuchsia-500/5 border-b border-border/30 flex-wrap">
-                          <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => setOpenEngMonths((prev) => { const nx = new Set(prev); if (nx.has(month)) nx.delete(month); else nx.add(month); return nx; })} className="flex items-center gap-2 text-left hover:opacity-80 transition">
+                            <ChevronRight className={`h-4 w-4 text-primary transition-transform ${isEngOpen ? "rotate-90" : ""}`} />
                             <CalendarDays className="h-4 w-4 text-primary" />
                             <span className="font-bold capitalize">{formatMonth(`${month}-01`)}</span>
-                          </div>
+                            <span className="text-[10px] text-muted-foreground font-normal">{isEngOpen ? "· clique p/ fechar" : "· clique p/ abrir"}</span>
+                          </button>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">{list.length} registros</Badge>
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">NPS médio: {avgNps}</Badge>
@@ -1910,6 +1914,7 @@ export default function Squad() {
                             </Button>
                           </div>
                         </div>
+                        {isEngOpen && (
                         <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
@@ -2015,6 +2020,7 @@ export default function Squad() {
                             </TableBody>
                           </Table>
                         </div>
+                        )}
                       </div>
                     );
                   })
