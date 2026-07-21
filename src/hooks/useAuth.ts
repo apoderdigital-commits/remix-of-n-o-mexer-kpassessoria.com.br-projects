@@ -143,6 +143,7 @@ export function useAuth() {
       subscription.unsubscribe();
       events.forEach((e) => window.removeEventListener(e, onActivity));
       clearInterval(interval);
+      clearTimeout(loadingSafetyTimeout);
     };
   }, []);
 
