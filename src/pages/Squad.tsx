@@ -821,16 +821,18 @@ export default function Squad() {
     if (res.error) return toast.error(res.error.message);
     // Metas de venda (colunas opcionais) — save resiliente: se a migração não rodou, avisa sem quebrar
     const engSavedId = editingEng.id || (res.data as any)?.id;
-    const metaTraf = editingEng.meta_vendas_trafego;
-    const metaLoja = editingEng.meta_vendas_loja;
+    // Metas vêm do cadastro do cliente (fonte única); cai pro valor do registro se o cliente não tiver
+    const metaTraf = engCli?.meta_vendas_trafego ?? editingEng.meta_vendas_trafego;
+    const metaLoja = engCli?.meta_vendas_loja ?? editingEng.meta_vendas_loja;
+    const metaFat = (engCli as any)?.sales_goal ?? editingEng.meta_faturamento;
     const metaTotal = (metaTraf != null || metaLoja != null) ? (Number(metaTraf) || 0) + (Number(metaLoja) || 0) : null;
-    const hasMeta = metaTraf != null || metaLoja != null || editingEng.meta_faturamento != null;
+    const hasMeta = metaTraf != null || metaLoja != null || metaFat != null;
     if (engSavedId && hasMeta) {
       const metaRes = await (supabase as any).from("squad_engagement").update({
         meta_vendas: metaTotal,
         meta_vendas_trafego: metaTraf ?? null,
         meta_vendas_loja: metaLoja ?? null,
-        meta_faturamento: editingEng.meta_faturamento ?? null,
+        meta_faturamento: metaFat ?? null,
       }).eq("id", engSavedId);
       if (metaRes.error && /meta_(vendas|faturamento)/.test(metaRes.error.message || "")) {
         toast("Salvo. As metas (por canal/faturamento) precisam da migração (peça ao Lovable).");
@@ -2948,12 +2950,15 @@ export default function Squad() {
                       value={editingEng.client_name || ""}
                       onValueChange={(v) => {
                         const c = clients.find((x) => x.name === v);
-                        // ABC e Sprint vêm SEMPRE do cadastro do cliente (fonte única)
+                        // ABC, Sprint e METAS vêm SEMPRE do cadastro do cliente (fonte única)
                         setEditingEng({
                           ...editingEng,
                           client_name: v,
                           curve_abc: c?.curve_abc || null,
                           sprint: c?.sprint || null,
+                          meta_vendas_trafego: c?.meta_vendas_trafego ?? null,
+                          meta_vendas_loja: c?.meta_vendas_loja ?? null,
+                          meta_faturamento: (c as any)?.sales_goal ?? null,
                         });
                       }}
                     >
@@ -3012,16 +3017,16 @@ export default function Squad() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Vendas Tráfego</Label>
-                    <Input type="number" min="0" placeholder="ex: 5" value={editingEng.meta_vendas_trafego ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Vendas Tráfego <span className="text-[10px] text-muted-foreground">auto · do cliente</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engClient?.meta_vendas_trafego ?? "—"} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Vendas Loja</Label>
-                    <Input type="number" min="0" placeholder="ex: 7" value={editingEng.meta_vendas_loja ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Vendas Loja <span className="text-[10px] text-muted-foreground">auto · do cliente</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engClient?.meta_vendas_loja ?? "—"} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">Meta Vendas (total) <span className="text-[10px] text-muted-foreground">auto</span></Label>
-                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" value={((Number(editingEng.meta_vendas_trafego) || 0) + (Number(editingEng.meta_vendas_loja) || 0)) || ""} placeholder="—" />
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" value={((Number(engClient?.meta_vendas_trafego) || 0) + (Number(engClient?.meta_vendas_loja) || 0)) || ""} placeholder="—" />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Vendas Tráfego</Label>
@@ -3049,8 +3054,8 @@ export default function Squad() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Faturamento</Label>
-                    <Input type="number" min="0" placeholder="ex: 10000" value={editingEng.meta_faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label className="flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-muted-foreground" /> Meta Faturamento <span className="text-[10px] text-muted-foreground">auto · do cliente</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engClient?.sales_goal != null ? formatBRL(engClient.sales_goal) : "—"} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">Faturamento (total){engTicket > 0 && <span className="text-[10px] text-muted-foreground">auto · ticket × vendas</span>}</Label>
