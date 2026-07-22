@@ -92,6 +92,7 @@ type Engagement = {
   vendas: number | null; vendas_trafego: number | null; vendas_loja: number | null;
   vendas_por_canais: string | null; vendas_perc_canais: string | null;
   faturamento: number | null; faturamento_por_canais: string | null; faturamento_perc_canais: string | null;
+  venda_secundaria: number | null;
 };
 type Agenda = {
   id: string; squad_id: string; reference_month: string;
@@ -827,6 +828,14 @@ export default function Squad() {
       const crmRes = await (supabase as any).from("squad_engagement").update({ crm_usage: editingEng.crm_usage }).eq("id", engSavedId);
       if (crmRes.error && /crm_usage/.test(crmRes.error.message || "")) {
         toast("Salvo. O Uso do CRM precisa da migração (peça ao Lovable).");
+      }
+    }
+
+    // Venda secundária / upsell do squad ao cliente em R$ (coluna opcional) — save resiliente
+    if (engSavedId && editingEng.venda_secundaria != null) {
+      const vsRes = await (supabase as any).from("squad_engagement").update({ venda_secundaria: editingEng.venda_secundaria }).eq("id", engSavedId);
+      if (vsRes.error && /venda_secundaria/.test(vsRes.error.message || "")) {
+        toast("Salvo. A Venda secundária (R$) precisa da migração (peça ao Lovable).");
       }
     }
 
@@ -3015,6 +3024,13 @@ export default function Squad() {
                     <Label>Faturamento (total)</Label>
                     <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="flex items-center gap-1.5"><ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Venda secundária <span className="text-[10px] font-normal text-muted-foreground">upsell do squad ao cliente · R$ no mês</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                      <Input type="number" min="0" step="50" className="pl-9" placeholder="ex: 500 (chatbot, CRM, tráfego extra...)" value={editingEng.venda_secundaria ?? ""} onChange={(e) => setEditingEng({ ...editingEng, venda_secundaria: e.target.value === "" ? null : Number(e.target.value) })} />
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">Faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
                     <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPorCanais} />
@@ -3755,15 +3771,12 @@ function FechamentoPanel({
     const vendidoPor = elig.map((c) => ({ name: c.name, v: Number(rOf(c)?.faturamento) || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
     const vendido = vendidoPor.reduce((s, x) => s + x.v, 0);
 
-    // Produto secundário — valor em R$ (faturamento atribuído à loja, mesma lógica de canais)
-    const secValorPor = elig.map((c) => {
-      const r = rOf(c);
-      const val = r ? computeChannels(r.vendas_trafego, r.vendas_loja, r.faturamento).fatLoja : 0;
-      return { name: c.name, v: val };
-    }).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+    // Venda secundária (upsell do squad ao cliente) — valor em R$, campo próprio por cliente/mês
+    const secValorPor = elig.map((c) => ({ name: c.name, v: Number(rOf(c)?.venda_secundaria) || 0 }))
+      .filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
     const secValor = secValorPor.reduce((s, x) => s + x.v, 0);
-    const secOk = elig.filter((c) => (Number(rOf(c)?.vendas_loja) || 0) > 0).map((c) => c.name);
-    const secNao = elig.filter((c) => !((Number(rOf(c)?.vendas_loja) || 0) > 0)).map((c) => c.name);
+    const secOk = elig.filter((c) => (Number(rOf(c)?.venda_secundaria) || 0) > 0).map((c) => c.name);
+    const secNao = elig.filter((c) => !((Number(rOf(c)?.venda_secundaria) || 0) > 0)).map((c) => c.name);
     const pctSec = elig.length ? (secOk.length / elig.length) * 100 : 0;
 
     // Meta x vendeu
@@ -3897,10 +3910,10 @@ function FechamentoPanel({
       ] },
     },
     {
-      label: "Produto secundário (R$)", value: formatBRL(f.secValor), ok: null, hint: `${f.secOk.length} de ${f.eligCount} clientes venderam na loja`,
-      detail: { title: "Produto secundário — faturamento na loja", groups: [
-        G("Venderam na loja (R$)", f.secValorPor.map((x) => ({ name: x.name, badge: formatBRL(x.v), tone: "ok" as const })), "Ninguém vendeu produto secundário"),
-        G("Sem produto secundário", f.secNao.map((n) => ({ name: n, badge: "não", tone: "warn" as const }))),
+      label: "Venda secundária (R$)", value: formatBRL(f.secValor), ok: null, hint: `${f.secOk.length} de ${f.eligCount} clientes com upsell no mês`,
+      detail: { title: "Venda secundária — upsell do squad ao cliente (R$)", groups: [
+        G("Tiveram venda secundária (R$)", f.secValorPor.map((x) => ({ name: x.name, badge: formatBRL(x.v), tone: "ok" as const })), "Nenhuma venda secundária registrada neste mês."),
+        G("Sem venda secundária", f.secNao.map((n) => ({ name: n, badge: "não", tone: "warn" as const }))),
       ] },
     },
     {
