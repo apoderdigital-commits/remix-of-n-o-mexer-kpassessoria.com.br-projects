@@ -3674,8 +3674,10 @@ function FechamentoPanel({
 
   // Linhas da tabela de metas: cliente ativo, meta (R$ sales_goal) x atingimento (R$ faturamento do mês).
   const goalRows = useMemo(() => {
-    const active = clients.filter((c) => c.entry_date && ymf(c.entry_date) <= month);
-    return active.map((c) => {
+    // D+30: só clientes que entraram ANTES do mês analisado (mesma regra do resto do Fechamento).
+    // Clientes novos do mês não entram — não faz sentido cobrar meta de quem acabou de chegar.
+    const elig = clients.filter((c) => c.entry_date && ymf(c.entry_date) < month);
+    return elig.map((c) => {
       const r = rowByName.get(norm(c.name));
       const meta = Number(c.sales_goal) || 0;
       const atingido = Number(r?.faturamento) || 0;
