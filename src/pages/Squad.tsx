@@ -53,6 +53,7 @@ type SquadClient = {
   bm_verified: boolean | null;
   invested_tp: string | null;
   contract_value: number | null;
+  ticket_medio: number | null;
   sales_goal: number | null;
   meta_vendas_trafego: number | null;
   meta_vendas_loja: number | null;
@@ -623,6 +624,13 @@ export default function Squad() {
       if (mvRes.error && /meta_vendas/.test(mvRes.error.message || "")) {
         toast("Cliente salvo. As metas de venda (tráfego/loja) precisam da migração (peça ao Lovable).");
       }
+      const tkRes = await (supabase as any)
+        .from("squad_clients")
+        .update({ ticket_medio: editing.ticket_medio ?? null })
+        .eq("id", clientId);
+      if (tkRes.error && /ticket_medio/.test(tkRes.error.message || "")) {
+        toast("Cliente salvo. O Ticket médio precisa da migração (peça ao Lovable).");
+      }
     }
     toast.success("Salvo — priorização recalculada");
     setOpen(false);
@@ -778,9 +786,15 @@ export default function Squad() {
   async function saveEng() {
     if (!editingEng?.client_name?.trim()) return toast.error("Cliente obrigatório");
     if (!editingEng?.reference_month) return toast.error("Mês obrigatório");
-    const curve = editingEng.curve_abc?.toUpperCase() || null;
-    const sprint = editingEng.sprint?.toUpperCase() || null;
-    const ch = computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento);
+    // ABC/Sprint vêm do cadastro do cliente (fonte única); cai pro valor do registro se o cliente não tiver
+    const engCli = clients.find((c) => c.name.trim().toLowerCase() === (editingEng.client_name || "").trim().toLowerCase());
+    const curve = (engCli?.curve_abc || editingEng.curve_abc)?.toUpperCase() || null;
+    const sprint = (engCli?.sprint || editingEng.sprint)?.toUpperCase() || null;
+    // Faturamento automático: ticket médio do cliente × total de vendas (quando o cliente tiver ticket médio)
+    const engTicketSave = Number((engCli as any)?.ticket_medio) || 0;
+    const totalVendasSave = (Number(editingEng.vendas_trafego) || 0) + (Number(editingEng.vendas_loja) || 0);
+    const fatFinal = engTicketSave > 0 ? engTicketSave * totalVendasSave : (editingEng.faturamento ?? null);
+    const ch = computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, fatFinal);
     const payload: any = {
       squad_id: squadId,
       reference_month: editingEng.reference_month,
@@ -797,7 +811,7 @@ export default function Squad() {
       vendas: ch.vendasTotal || null,
       vendas_por_canais: ch.vendasPorCanais || null,
       vendas_perc_canais: ch.vendasPerc || null,
-      faturamento: editingEng.faturamento ?? null,
+      faturamento: fatFinal,
       faturamento_por_canais: ch.fatPorCanais || null,
       faturamento_perc_canais: ch.fatPerc || null,
     };
@@ -2551,6 +2565,23 @@ export default function Squad() {
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
                 )}
               </div>
+              <div className="col-span-2">
+                <Label className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /> Ticket médio</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="100"
+                    className="pl-9"
+                    placeholder="0"
+                    value={editing.ticket_medio ?? ""}
+                    onChange={(e) => setEditing({ ...editing, ticket_medio: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Usado no Engajamento para calcular o faturamento automaticamente: <strong>ticket médio × total de vendas</strong> (tráfego + loja).</p>
+              </div>
               <div className="col-span-2 mt-2">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5"><Target className="h-3.5 w-3.5" /> Metas de venda</p>
                 <div className="h-px bg-gradient-to-r from-border/60 to-transparent mt-1.5" />
@@ -2893,7 +2924,13 @@ export default function Squad() {
               </div>
             </DialogTitle>
           </DialogHeader>
-          {editingEng && (
+          {editingEng && (() => {
+            const engClient = clients.find((c) => c.name === editingEng.client_name);
+            const engTicket = Number((engClient as any)?.ticket_medio) || 0;
+            const engTotalVendas = (Number(editingEng.vendas_trafego) || 0) + (Number(editingEng.vendas_loja) || 0);
+            const engAutoFat = engTicket > 0 ? engTicket * engTotalVendas : null;
+            const fatForCalc = engAutoFat != null ? engAutoFat : editingEng.faturamento;
+            return (
             <div className="px-6 py-5 space-y-6">
               {/* Identificação */}
               <section className="space-y-3">
@@ -2911,11 +2948,12 @@ export default function Squad() {
                       value={editingEng.client_name || ""}
                       onValueChange={(v) => {
                         const c = clients.find((x) => x.name === v);
+                        // ABC e Sprint vêm SEMPRE do cadastro do cliente (fonte única)
                         setEditingEng({
                           ...editingEng,
                           client_name: v,
-                          curve_abc: editingEng.curve_abc || c?.curve_abc || null,
-                          sprint: editingEng.sprint || c?.sprint || null,
+                          curve_abc: c?.curve_abc || null,
+                          sprint: c?.sprint || null,
                         });
                       }}
                     >
@@ -2926,18 +2964,12 @@ export default function Squad() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Curva ABC</Label>
-                    <Select value={editingEng.curve_abc || ""} onValueChange={(v) => setEditingEng({ ...editingEng, curve_abc: v })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Label className="flex items-center gap-1.5">Curva ABC <span className="text-[10px] text-muted-foreground">auto · do cliente</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engClient?.curve_abc || "—"} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Sprint</Label>
-                    <Select value={editingEng.sprint || ""} onValueChange={(v) => setEditingEng({ ...editingEng, sprint: v })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Label className="flex items-center gap-1.5">Sprint <span className="text-[10px] text-muted-foreground">auto · do cliente</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engClient?.sprint || "—"} />
                   </div>
                 </div>
               </section>
@@ -2993,11 +3025,11 @@ export default function Squad() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Vendas Tráfego</Label>
-                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_trafego ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_trafego ?? ""} onChange={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); const next: any = { ...editingEng, vendas_trafego: v }; if (engTicket > 0) next.faturamento = engTicket * ((Number(v) || 0) + (Number(editingEng.vendas_loja) || 0)); setEditingEng(next); }} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Vendas Loja</Label>
-                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_loja ?? ""} onChange={(e) => setEditingEng({ ...editingEng, vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Input type="number" min="0" placeholder="0" value={editingEng.vendas_loja ?? ""} onChange={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); const next: any = { ...editingEng, vendas_loja: v }; if (engTicket > 0) next.faturamento = engTicket * ((Number(editingEng.vendas_trafego) || 0) + (Number(v) || 0)); setEditingEng(next); }} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">Vendas (total) <span className="text-[10px] text-muted-foreground">auto</span></Label>
@@ -3021,8 +3053,20 @@ export default function Squad() {
                     <Input type="number" min="0" placeholder="ex: 10000" value={editingEng.meta_faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, meta_faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Faturamento (total)</Label>
-                    <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <Label className="flex items-center gap-1.5">Faturamento (total){engTicket > 0 && <span className="text-[10px] text-muted-foreground">auto · ticket × vendas</span>}</Label>
+                    {engTicket > 0 ? (
+                      <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default font-semibold" placeholder="—" value={engAutoFat != null ? formatBRL(engAutoFat) : "—"} />
+                    ) : (
+                      <Input type="number" min="0" placeholder="0" value={editingEng.faturamento ?? ""} onChange={(e) => setEditingEng({ ...editingEng, faturamento: e.target.value === "" ? null : Number(e.target.value) })} />
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">Faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, fatForCalc).fatPorCanais} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">% faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, fatForCalc).fatPerc} />
                   </div>
                   <div className="space-y-1.5 col-span-2">
                     <Label className="flex items-center gap-1.5"><ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Venda secundária <span className="text-[10px] font-normal text-muted-foreground">upsell do squad ao cliente · R$ no mês</span></Label>
@@ -3030,14 +3074,6 @@ export default function Squad() {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
                       <Input type="number" min="0" step="50" className="pl-9" placeholder="ex: 500 (chatbot, CRM, tráfego extra...)" value={editingEng.venda_secundaria ?? ""} onChange={(e) => setEditingEng({ ...editingEng, venda_secundaria: e.target.value === "" ? null : Number(e.target.value) })} />
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5">Faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
-                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPorCanais} />
-                  </div>
-                  <div className="space-y-1.5 col-span-2">
-                    <Label className="flex items-center gap-1.5">% faturamento por canais <span className="text-[10px] text-muted-foreground">auto</span></Label>
-                    <Input readOnly tabIndex={-1} className="bg-muted/40 cursor-default" placeholder="—" value={computeChannels(editingEng.vendas_trafego, editingEng.vendas_loja, editingEng.faturamento).fatPerc} />
                   </div>
                 </div>
               </section>
@@ -3050,7 +3086,8 @@ export default function Squad() {
                 <Textarea rows={2} placeholder="Anotações sobre o cliente neste mês..." value={editingEng.observation || ""} onChange={(e) => setEditingEng({ ...editingEng, observation: e.target.value })} />
               </section>
             </div>
-          )}
+            );
+          })()}
           <DialogFooter className="px-6 py-4 border-t border-border/40 bg-card/40">
             <Button variant="ghost" onClick={() => setOpenEng(false)}>Cancelar</Button>
             <Button onClick={saveEng} className="gap-1.5"><CheckCircle2 className="h-4 w-4" /> Salvar</Button>
