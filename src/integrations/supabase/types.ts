@@ -1282,6 +1282,7 @@ export type Database = {
           sprint: string | null
           squad_id: string
           updated_at: string
+          venda_secundaria: number | null
           vendas: number | null
           vendas_loja: number | null
           vendas_perc_canais: string | null
@@ -1314,6 +1315,7 @@ export type Database = {
           sprint?: string | null
           squad_id: string
           updated_at?: string
+          venda_secundaria?: number | null
           vendas?: number | null
           vendas_loja?: number | null
           vendas_perc_canais?: string | null
@@ -1346,6 +1348,7 @@ export type Database = {
           sprint?: string | null
           squad_id?: string
           updated_at?: string
+          venda_secundaria?: number | null
           vendas?: number | null
           vendas_loja?: number | null
           vendas_perc_canais?: string | null
