@@ -1715,7 +1715,7 @@ export default function Squad() {
                                   : dias < 60 ? `${dias} ${dias === 1 ? "dia" : "dias"} com a gente`
                                   : `${dias} dias · ~${meses} ${meses === 1 ? "mês" : "meses"}`;
                                 return (
-                                  <p className="text-[10px] font-medium text-primary/70 mt-0.5 flex items-center gap-1"
+                                  <p className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 mt-0.5 flex items-center gap-1"
                                      title={`Início: ${new Date(c.entry_date).toLocaleDateString("pt-BR")}`}>
                                     <CalendarDays className="h-3 w-3 shrink-0" /> {txt}
                                   </p>
