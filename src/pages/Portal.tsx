@@ -131,12 +131,12 @@ export default function Portal() {
       />
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden" />
 
-      {/* Left side — video (desktop only) */}
+      {/* Left side — team photo (desktop only) */}
       <div className="dark hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
-        <PortalVideo
-          className="absolute inset-0 w-full h-full object-cover object-[left_center]"
-          src={portalBg.url}
-          showControls
+        <img
+          src={kpTeam.url}
+          alt="Time KP Assessoria"
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/30 via-[#080810]/10 to-[#080810] pointer-events-none" />
 
