@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ArrowLeft, Pencil, LogOut, Search, Lock, Unlock, Check, X, Eye, EyeOff, RotateCcw, AlertTriangle, KeyRound, Send, ChevronRight, Users } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { GhlStageMappingEditor, type StageMapping } from "@/components/clients/GhlStageMappingEditor";
@@ -86,6 +86,7 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function Clients() {
+  const navigate = useNavigate();
   const { data: clients, isLoading } = useClients();
   const { signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -464,9 +465,10 @@ export default function Clients() {
     <div className="min-h-screen p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-          </Link>
+          <Button variant="ghost" size="icon" title="Voltar"
+            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <h1 className="text-2xl font-bold">Gestão de Clientes</h1>
         </div>
         <div className="flex items-center gap-2">
