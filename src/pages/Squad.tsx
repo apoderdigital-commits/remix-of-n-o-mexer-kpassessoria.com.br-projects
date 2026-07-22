@@ -610,9 +610,14 @@ export default function Squad() {
     }
     // Meta de venda — coluna opcional; se a migração ainda não rodou, avisa sem quebrar o save
     if (clientId) {
+      // Meta de faturamento: automática pelo ticket médio × total de metas de venda (quando houver ticket)
+      const tkClient = Number(editing.ticket_medio) || 0;
+      const salesGoalFinal = tkClient > 0
+        ? tkClient * ((Number(editing.meta_vendas_trafego) || 0) + (Number(editing.meta_vendas_loja) || 0))
+        : (editing.sales_goal ?? null);
       const metaRes = await (supabase as any)
         .from("squad_clients")
-        .update({ sales_goal: editing.sales_goal ?? null })
+        .update({ sales_goal: salesGoalFinal })
         .eq("id", clientId);
       if (metaRes.error && /sales_goal/.test(metaRes.error.message || "")) {
         toast("Cliente salvo. A Meta de Venda precisa da migração (peça ao Lovable).");
@@ -2579,41 +2584,36 @@ export default function Squad() {
                     className="pl-9"
                     placeholder="0"
                     value={editing.ticket_medio ?? ""}
-                    onChange={(e) => setEditing({ ...editing, ticket_medio: e.target.value === "" ? null : Number(e.target.value) })}
+                    onChange={(e) => { const t = e.target.value === "" ? null : Number(e.target.value); const next: any = { ...editing, ticket_medio: t }; if (t && t > 0) next.sales_goal = t * ((Number(editing.meta_vendas_trafego) || 0) + (Number(editing.meta_vendas_loja) || 0)); setEditing(next); }}
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Usado no Engajamento para calcular o faturamento automaticamente: <strong>ticket médio × total de vendas</strong> (tráfego + loja).</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Com o ticket médio preenchido, a <strong>Meta de faturamento</strong> abaixo e o faturamento no Engajamento são calculados sozinhos: <strong>ticket médio × total de vendas</strong> (tráfego + loja).</p>
               </div>
               <div className="col-span-2 mt-2">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5"><Target className="h-3.5 w-3.5" /> Metas de venda</p>
                 <div className="h-px bg-gradient-to-r from-border/60 to-transparent mt-1.5" />
               </div>
-              <div className="col-span-2">
-                <Label>Meta de faturamento <span className="font-normal text-muted-foreground">· R$ por mês</span></Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="100"
-                    className="pl-9"
-                    placeholder="0"
-                    value={editing.sales_goal ?? ""}
-                    onChange={(e) => setEditing({ ...editing, sales_goal: e.target.value === "" ? null : Number(e.target.value) })}
-                  />
-                </div>
-                {editing.sales_goal != null && (
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês</p>
-                )}
-              </div>
               <div>
                 <Label>Vendas Tráfego <span className="font-normal text-muted-foreground">· quantidade</span></Label>
-                <Input type="number" min="0" placeholder="ex: 5" value={editing.meta_vendas_trafego ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Input type="number" min="0" placeholder="ex: 5" value={editing.meta_vendas_trafego ?? ""} onChange={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); const next: any = { ...editing, meta_vendas_trafego: v }; const t = Number(editing.ticket_medio) || 0; if (t > 0) next.sales_goal = t * ((Number(v) || 0) + (Number(editing.meta_vendas_loja) || 0)); setEditing(next); }} />
               </div>
               <div>
                 <Label>Vendas Loja <span className="font-normal text-muted-foreground">· quantidade</span></Label>
-                <Input type="number" min="0" placeholder="ex: 7" value={editing.meta_vendas_loja ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Input type="number" min="0" placeholder="ex: 7" value={editing.meta_vendas_loja ?? ""} onChange={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); const next: any = { ...editing, meta_vendas_loja: v }; const t = Number(editing.ticket_medio) || 0; if (t > 0) next.sales_goal = t * ((Number(editing.meta_vendas_trafego) || 0) + (Number(v) || 0)); setEditing(next); }} />
+              </div>
+              <div className="col-span-2">
+                <Label className="flex items-center gap-1.5">Meta de faturamento <span className="font-normal text-muted-foreground">· R$ por mês</span>{(Number(editing.ticket_medio) || 0) > 0 && <span className="text-[10px] text-muted-foreground">auto · ticket × metas de venda</span>}</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
+                  {(Number(editing.ticket_medio) || 0) > 0 ? (
+                    <Input readOnly tabIndex={-1} className="pl-9 bg-muted/40 cursor-default font-semibold" placeholder="0" value={editing.sales_goal ?? ""} />
+                  ) : (
+                    <Input type="number" inputMode="decimal" min="0" step="100" className="pl-9" placeholder="0" value={editing.sales_goal ?? ""} onChange={(e) => setEditing({ ...editing, sales_goal: e.target.value === "" ? null : Number(e.target.value) })} />
+                  )}
+                </div>
+                {editing.sales_goal != null && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 font-semibold">{formatBRL(editing.sales_goal)} / mês{(Number(editing.ticket_medio) || 0) > 0 && <span className="font-normal text-muted-foreground"> · {formatBRL(Number(editing.ticket_medio) || 0)} × {(Number(editing.meta_vendas_trafego) || 0) + (Number(editing.meta_vendas_loja) || 0)} vendas</span>}</p>
+                )}
               </div>
               <div className="col-span-2 mt-2">
                 <button
