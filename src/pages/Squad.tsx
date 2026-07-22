@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -401,6 +401,7 @@ function NpsMonthAccordion({ sortedMonths, byMonthMap, sprintOrder, formatMonth,
 export default function Squad() {
   const { isAdmin } = useAuth();
   const [squads, setSquads] = useState<Squad[]>([]);
+  const navigate = useNavigate();
   const [squadId, setSquadId] = useState<string>("");
   const [clients, setClients] = useState<SquadClient[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -1302,7 +1303,11 @@ export default function Squad() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/30 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <Link to="/"><Button size="icon" variant="ghost"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <Button size="icon" variant="ghost"
+            title={squadId && squads.length > 1 ? "Voltar para a seleção de squad" : "Voltar ao início"}
+            onClick={() => { if (squadId && squads.length > 1) setSquadId(""); else navigate("/"); }}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
               <Users className="h-4.5 w-4.5 text-white" />
