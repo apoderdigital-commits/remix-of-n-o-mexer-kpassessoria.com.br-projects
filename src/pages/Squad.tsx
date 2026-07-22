@@ -58,6 +58,8 @@ type SquadClient = {
   meta_vendas_loja: number | null;
   contract_file_url: string | null;
   contract_file_name: string | null;
+  strategy_file_url: string | null;
+  strategy_file_name: string | null;
   observations: string | null;
 };
 type Metric = {
@@ -425,7 +427,8 @@ export default function Squad() {
   const [ltvOpen, setLtvOpen] = useState(false);
   const [crmListDialog, setCrmListDialog] = useState<null | "using" | "not">(null);
   const [contractUploading, setContractUploading] = useState(false);
-  const [contractViewer, setContractViewer] = useState<{ url: string; name: string } | null>(null);
+  const [strategyUploading, setStrategyUploading] = useState(false);
+  const [contractViewer, setContractViewer] = useState<{ url: string; name: string; title?: string } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description?: string; confirmLabel?: string; destructive?: boolean; onConfirm: () => void | Promise<void> } | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -532,6 +535,48 @@ export default function Squad() {
     const { data, error } = await supabase.storage.from("contratos").createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o contrato."); return; }
     setContractViewer({ url: data.signedUrl, name });
+  }
+
+  // ── Funil de projeções / Planejamento estratégico (1ª reunião) — anexo fixo no cadastro do cliente.
+  //    Guardado no bucket "projecoes" (mesmo que já aceita PNG do funil). Só admin anexa/remove; todos veem. ──
+  async function uploadStrategy(file: File) {
+    if (!editing?.id) { toast.error("Salve o cliente antes de anexar o planejamento."); return; }
+    setStrategyUploading(true);
+    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+    const base = file.name.slice(0, file.name.length - ext.length)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 60) || "planejamento";
+    const path = `planejamento/${squadId}/${editing.id}/${base}${ext}`;
+    const up = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
+    if (up.error) { setStrategyUploading(false); toast.error("Erro no upload: " + up.error.message); return; }
+    const res = await (supabase as any).from("squad_clients")
+      .update({ strategy_file_url: path, strategy_file_name: file.name }).eq("id", editing.id);
+    setStrategyUploading(false);
+    if (res.error) {
+      if (/strategy_file/.test(res.error.message || "")) toast.error("O anexo do planejamento precisa da migração (peça ao Lovable).");
+      else toast.error(res.error.message);
+      return;
+    }
+    setEditing({ ...editing, strategy_file_url: path, strategy_file_name: file.name });
+    toast.success("Planejamento anexado!");
+    void loadAll(squadId);
+  }
+
+  async function removeStrategy() {
+    if (!editing?.id || !editing.strategy_file_url) return;
+    await supabase.storage.from("projecoes").remove([editing.strategy_file_url]);
+    const res = await (supabase as any).from("squad_clients")
+      .update({ strategy_file_url: null, strategy_file_name: null }).eq("id", editing.id);
+    if (res.error) { toast.error(res.error.message); return; }
+    setEditing({ ...editing, strategy_file_url: null, strategy_file_name: null });
+    toast.success("Planejamento removido.");
+    void loadAll(squadId);
+  }
+
+  async function openStrategy(path: string, name: string) {
+    const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o planejamento."); return; }
+    setContractViewer({ url: data.signedUrl, name, title: "Planejamento estratégico" });
   }
 
   async function save() {
@@ -1711,6 +1756,12 @@ export default function Squad() {
                               <FileText className="h-4 w-4 text-primary" />
                             </Button>
                           )}
+                          {(c as any).strategy_file_url && (
+                            <Button size="icon" variant="ghost" title="Ver planejamento estratégico"
+                              onClick={() => openStrategy((c as any).strategy_file_url, (c as any).strategy_file_name || "planejamento")}>
+                              <TrendingUp className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </TableCell>
@@ -2257,7 +2308,7 @@ export default function Squad() {
         <DialogContent className="max-w-4xl max-h-[92vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Contrato{contractViewer?.name ? ` · ${contractViewer.name}` : ""}
+              <FileText className="h-4 w-4 text-primary" /> {contractViewer?.title || "Contrato"}{contractViewer?.name ? ` · ${contractViewer.name}` : ""}
             </DialogTitle>
           </DialogHeader>
           {contractViewer && (
@@ -2530,6 +2581,38 @@ export default function Squad() {
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadContract(f); e.currentTarget.value = ""; }} />
                     ) : (
                       <p className="text-[11px] text-muted-foreground">Somente administradores podem anexar ou remover o contrato.</p>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="col-span-2 rounded-lg border border-border/40 bg-muted/10 p-3 space-y-2">
+                <Label className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Funil de projeções · Planejamento estratégico</Label>
+                <p className="text-[11px] text-muted-foreground -mt-1">PNG exportado do funil de projeções na 1ª reunião (planejamento estratégico do cliente).</p>
+                {!editing.id ? (
+                  <p className="text-xs text-muted-foreground">Salve o cliente primeiro para poder anexar o planejamento.</p>
+                ) : (
+                  <>
+                    {editing.strategy_file_url ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" size="sm" variant="outline" className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => openStrategy(editing.strategy_file_url!, editing.strategy_file_name || "planejamento")}>
+                          <TrendingUp className="h-4 w-4" /> Ver planejamento
+                        </Button>
+                        <span className="text-xs text-muted-foreground truncate max-w-[220px]">{editing.strategy_file_name}</span>
+                        {isAdmin && (
+                          <Button type="button" size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={removeStrategy}>
+                            <Trash2 className="h-4 w-4" /> Remover
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nenhum planejamento anexado.</p>
+                    )}
+                    {isAdmin ? (
+                      <Input type="file" accept="image/png,image/jpeg,image/*,application/pdf,.pdf" disabled={strategyUploading}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadStrategy(f); e.currentTarget.value = ""; }} />
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">Somente administradores podem anexar ou remover o planejamento.</p>
                     )}
                   </>
                 )}
