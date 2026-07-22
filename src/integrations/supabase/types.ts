@@ -957,6 +957,8 @@ export type Database = {
           services: string | null
           sprint: string | null
           squad_id: string
+          strategy_file_name: string | null
+          strategy_file_url: string | null
           updated_at: string
         }
         Insert: {
@@ -982,6 +984,8 @@ export type Database = {
           services?: string | null
           sprint?: string | null
           squad_id: string
+          strategy_file_name?: string | null
+          strategy_file_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -1007,6 +1011,8 @@ export type Database = {
           services?: string | null
           sprint?: string | null
           squad_id?: string
+          strategy_file_name?: string | null
+          strategy_file_url?: string | null
           updated_at?: string
         }
         Relationships: [
