@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import kpLogo from "@/assets/kp-logo.png";
 import portalBg from "@/assets/portal-bg.mp4.asset.json";
+import kpTeam from "@/assets/kp-team.png.asset.json";
 
 const allProjects = [
   {
