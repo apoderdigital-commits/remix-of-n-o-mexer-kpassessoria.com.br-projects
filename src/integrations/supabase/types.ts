@@ -959,6 +959,7 @@ export type Database = {
           squad_id: string
           strategy_file_name: string | null
           strategy_file_url: string | null
+          ticket_medio: number | null
           updated_at: string
         }
         Insert: {
@@ -986,6 +987,7 @@ export type Database = {
           squad_id: string
           strategy_file_name?: string | null
           strategy_file_url?: string | null
+          ticket_medio?: number | null
           updated_at?: string
         }
         Update: {
@@ -1013,6 +1015,7 @@ export type Database = {
           squad_id?: string
           strategy_file_name?: string | null
           strategy_file_url?: string | null
+          ticket_medio?: number | null
           updated_at?: string
         }
         Relationships: [
