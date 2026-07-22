@@ -1707,6 +1707,20 @@ export default function Squad() {
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold leading-tight truncate group-hover/cli:text-primary transition-colors" title={c.name}>{c.name}</p>
                               {c.niche && <p className="text-[11px] text-muted-foreground truncate">{c.niche}</p>}
+                              {c.entry_date && (() => {
+                                const dias = Math.floor((Date.now() - new Date(c.entry_date).getTime()) / 86400000);
+                                if (!Number.isFinite(dias) || dias < 0) return null;
+                                const meses = Math.floor(dias / 30);
+                                const txt = dias === 0 ? "entrou hoje"
+                                  : dias < 60 ? `${dias} ${dias === 1 ? "dia" : "dias"} com a gente`
+                                  : `${dias} dias · ~${meses} ${meses === 1 ? "mês" : "meses"}`;
+                                return (
+                                  <p className="text-[10px] font-medium text-primary/70 mt-0.5 flex items-center gap-1"
+                                     title={`Início: ${new Date(c.entry_date).toLocaleDateString("pt-BR")}`}>
+                                    <CalendarDays className="h-3 w-3 shrink-0" /> {txt}
+                                  </p>
+                                );
+                              })()}
                             </div>
                           </button>
                         </TableCell>
@@ -2481,8 +2495,12 @@ export default function Squad() {
                   <SelectContent>{["A", "B", "C"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              <div className="col-span-2 mt-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Financeiro · valores mensais</p>
+                <div className="h-px bg-gradient-to-r from-border/60 to-transparent mt-1.5" />
+              </div>
               <div>
-                <Label>Valor investido TP (mensal)</Label>
+                <Label>Valor investido TP</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
                   <Input
@@ -2501,7 +2519,7 @@ export default function Squad() {
                 )}
               </div>
               <div>
-                <Label>Valor do contrato (mensal)</Label>
+                <Label>Valor do contrato</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
                   <Input
@@ -2519,8 +2537,12 @@ export default function Squad() {
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-semibold">{formatBRL(editing.contract_value)} / mês</p>
                 )}
               </div>
-              <div>
-                <Label>Meta de Venda (mensal)</Label>
+              <div className="col-span-2 mt-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5"><Target className="h-3.5 w-3.5" /> Metas de venda</p>
+                <div className="h-px bg-gradient-to-r from-border/60 to-transparent mt-1.5" />
+              </div>
+              <div className="col-span-2">
+                <Label>Meta de faturamento <span className="font-normal text-muted-foreground">· R$ por mês</span></Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">R$</span>
                   <Input
@@ -2539,20 +2561,36 @@ export default function Squad() {
                 )}
               </div>
               <div>
-                <Label>Meta vendas Tráfego (qtd)</Label>
+                <Label>Vendas Tráfego <span className="font-normal text-muted-foreground">· quantidade</span></Label>
                 <Input type="number" min="0" placeholder="ex: 5" value={editing.meta_vendas_trafego ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_trafego: e.target.value === "" ? null : Number(e.target.value) })} />
               </div>
               <div>
-                <Label>Meta vendas Loja (qtd)</Label>
+                <Label>Vendas Loja <span className="font-normal text-muted-foreground">· quantidade</span></Label>
                 <Input type="number" min="0" placeholder="ex: 7" value={editing.meta_vendas_loja ?? ""} onChange={(e) => setEditing({ ...editing, meta_vendas_loja: e.target.value === "" ? null : Number(e.target.value) })} />
               </div>
-              <div className="flex items-center gap-2 mt-6">
-                <input id="bm" type="checkbox" checked={!!editing.bm_verified} onChange={(e) => setEditing({ ...editing, bm_verified: e.target.checked })} />
-                <Label htmlFor="bm">BM Verificada</Label>
-              </div>
-              <div className="flex items-center gap-2 mt-6">
-                <input id="ren" type="checkbox" checked={!!editing.renewal_60d} onChange={(e) => setEditing({ ...editing, renewal_60d: e.target.checked })} />
-                <Label htmlFor="ren">Renovação 60d</Label>
+              <div className="col-span-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditing({ ...editing, bm_verified: !editing.bm_verified })}
+                  className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
+                    editing.bm_verified
+                      ? "border-emerald-500/50 bg-emerald-500/10"
+                      : "border-border/40 bg-background/30 hover:bg-background/50"
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full ${editing.bm_verified ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"}`}>
+                      {editing.bm_verified ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    </span>
+                    <span className="flex flex-col text-left leading-tight">
+                      <span className="text-sm font-semibold">BM Verificada</span>
+                      <span className="text-[11px] text-muted-foreground">Business Manager conferida</span>
+                    </span>
+                  </span>
+                  <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editing.bm_verified ? "bg-emerald-500" : "bg-muted-foreground/30"}`}>
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${editing.bm_verified ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+                  </span>
+                </button>
               </div>
               <div className="col-span-2"><Label>Observações</Label><Textarea rows={3} value={editing.observations || ""} onChange={(e) => setEditing({ ...editing, observations: e.target.value })} /></div>
               <div className="col-span-2 rounded-lg border border-border/40 bg-muted/10 p-3 space-y-2">
