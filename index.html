@@ -1,8 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Painel interno em PT-BR. Desliga a auto-traducao do navegador: quando o Chrome
+         traduzia a pagina (trocando nos de texto por <font>), o React quebrava com
+         "removeChild ... nao e filho deste no". lang=pt-BR + notranslate evita isso. -->
+    <meta name="google" content="notranslate" />
     <!-- TODO: Set the document title to the name of your application -->
     <title>Site Oficial KP Assessoria</title>
     <meta name="description" content="DashBoard completo que te fala exatamente qual criativo está trazendo o lead qualificado seu lead qualificado!">
