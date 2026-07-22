@@ -2216,6 +2216,7 @@ export default function Squad() {
               <AgendaPanel
                 agenda={agenda}
                 sessions={sessions}
+                engagement={engagement}
                 clients={clients}
                 squadId={squadId}
                 activeClientsCount={clients.length}
@@ -3217,18 +3218,27 @@ function FechamentoPanel({
   const [mensalDocs, setMensalDocs] = useState<Map<string, { path: string; name: string }>>(new Map());
   useEffect(() => {
     void (async () => {
+      const m = new Map<string, { path: string; name: string }>();
+      // legado (preenche primeiro; será sobrescrito pela fonte atual)
       const { data } = await (supabase as any).from("squad_monthly_sessions")
         .select("client_name, reference_month, projection_file_url, projection_file_name").eq("squad_id", squadId);
-      const m = new Map<string, { path: string; name: string }>();
       (data || []).forEach((se: any) => {
         if ((se.reference_month || "").slice(0, 7) !== month) return;
         if (!se.projection_file_url) return;
         const nm = (se.client_name || "").trim().toLowerCase();
         if (nm) m.set(nm, { path: se.projection_file_url, name: se.projection_file_name || "documento" });
       });
+      // fonte única (mesma do "Anexo do funil" e da Agenda): squad_engagement.plano_estrategico_link
+      for (const e of (engagement || [])) {
+        if ((e.reference_month || "").slice(0, 7) !== month) continue;
+        const link = (e as any).plano_estrategico_link;
+        if (!link) continue;
+        const nm = (e.client_name || "").trim().toLowerCase();
+        if (nm) m.set(nm, { path: link, name: String(link).split("/").pop() || "documento" });
+      }
       setMensalDocs(m);
     })();
-  }, [squadId, month]);
+  }, [squadId, month, engagement]);
   const openMensalDoc = async (path: string, name: string) => {
     const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o documento da mensal."); return; }
@@ -4629,10 +4639,11 @@ function monthsBetween(a: string | null | undefined, b: string | null | undefine
 }
 
 function AgendaPanel({
-  agenda, sessions, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone, onReload,
+  agenda, sessions, engagement, clients, squadId, activeClientsCount, onNew, onEdit, onRemove, onToggleDone, onReload,
 }: {
   agenda: Agenda[];
   sessions: any[];
+  engagement: Engagement[];
   clients: SquadClient[];
   squadId: string;
   activeClientsCount: number;
@@ -4642,6 +4653,7 @@ function AgendaPanel({
   onToggleDone: (a: Agenda) => void;
   onReload: () => void;
 }) {
+  const [uploadingAg, setUploadingAg] = useState<string | null>(null);
   const months = useMemo(() => {
     const set = new Set<string>();
     agenda.forEach((a) => a.reference_month && set.add(a.reference_month.slice(0, 7)));
@@ -4713,34 +4725,84 @@ function AgendaPanel({
     };
   }, [filtered, clients, month]);
 
-  // Clientes com o funil de projeção ANEXADO na reunião mensal deste mês
-  const funilAnexado = useMemo(() => {
-    const names = new Set<string>();
-    for (const s of (sessions || [])) {
-      if ((s.reference_month || "").slice(0, 7) !== month) continue;
-      if (!s.projection_file_url) continue;
-      const nm = (s.client_name || "").trim().toLowerCase();
-      if (nm) names.add(nm);
-    }
-    return names.size;
-  }, [sessions, month]);
-
-  // Documento (PNG do funil) anexado por cliente na reunião mensal deste mês
+  // Documento (funil) da mensal por cliente — FONTE ÚNICA compartilhada com o Fechamento Operacional:
+  // squad_engagement.plano_estrategico_link. Mantém fallback para o legado squad_monthly_sessions.projection_file_url
+  // (dados antigos), mas todo anexo novo (aqui ou no Fechamento) grava no mesmo lugar → "só um para os dois".
   const docByClient = useMemo(() => {
     const m = new Map<string, { path: string; name: string }>();
+    // legado (preenche primeiro; será sobrescrito pela fonte atual)
     for (const s of (sessions || [])) {
       if ((s.reference_month || "").slice(0, 7) !== month) continue;
       if (!s.projection_file_url) continue;
       const nm = (s.client_name || "").trim().toLowerCase();
       if (nm) m.set(nm, { path: s.projection_file_url, name: s.projection_file_name || "documento" });
     }
+    // fonte atual (mesma do Fechamento) — sobrescreve o legado
+    for (const e of (engagement || [])) {
+      if ((e.reference_month || "").slice(0, 7) !== month) continue;
+      const link = (e as any).plano_estrategico_link;
+      if (!link) continue;
+      const nm = (e.client_name || "").trim().toLowerCase();
+      if (nm) m.set(nm, { path: link, name: String(link).split("/").pop() || "documento" });
+    }
     return m;
-  }, [sessions, month]);
+  }, [sessions, engagement, month]);
+
+  // Clientes com o funil da mensal anexado neste mês (mesma fonte única)
+  const funilAnexado = docByClient.size;
 
   const openMensalDoc = async (path: string, name: string) => {
     const { data, error } = await supabase.storage.from("projecoes").createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) { toast.error("Não foi possível abrir o documento da mensal."); return; }
     setDocViewer({ url: data.signedUrl, name });
+  };
+
+  // Anexar/remover o documento da mensal PELA AGENDA — grava no MESMO campo do Fechamento
+  // (squad_engagement.plano_estrategico_link), fazendo upsert da linha do mês se ainda não existir.
+  const uploadFunilAgenda = async (clientName: string, file: File) => {
+    setUploadingAg(clientName);
+    try {
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+      const base = file.name.slice(0, file.name.length - ext.length)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 60) || "funil";
+      const path = `fechamento/${squadId}/${month}/${Date.now()}-${base}${ext}`;
+      const { error: upErr } = await supabase.storage.from("projecoes").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const ref = `${month}-01`;
+      const { data: existing } = await (supabase as any).from("squad_engagement")
+        .select("id").eq("squad_id", squadId).eq("reference_month", ref).ilike("client_name", clientName).is("deleted_at", null).maybeSingle();
+      if (existing?.id) {
+        const { error } = await (supabase as any).from("squad_engagement").update({ plano_estrategico_link: path }).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any).from("squad_engagement")
+          .insert({ squad_id: squadId, reference_month: ref, client_name: clientName, plano_estrategico_link: path });
+        if (error) throw error;
+      }
+      toast.success("Documento da mensal anexado!");
+      onReload();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro no upload");
+    } finally {
+      setUploadingAg(null);
+    }
+  };
+
+  const removeFunilAgenda = async (clientName: string) => {
+    try {
+      const ref = `${month}-01`;
+      const { data: existing } = await (supabase as any).from("squad_engagement")
+        .select("id").eq("squad_id", squadId).eq("reference_month", ref).ilike("client_name", clientName).is("deleted_at", null).maybeSingle();
+      if (existing?.id) {
+        const { error } = await (supabase as any).from("squad_engagement").update({ plano_estrategico_link: null }).eq("id", existing.id);
+        if (error) throw error;
+      }
+      toast.success("Documento removido.");
+      onReload();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao remover");
+    }
   };
 
   return (
@@ -4914,15 +4976,31 @@ function AgendaPanel({
                       ) : (
                         <Badge className="bg-red-500/30 text-red-800 dark:text-red-200 border-red-500/40 gap-1"><AlertCircle className="h-3 w-3" /> Sem motivo</Badge>
                       )}
-                      {docByClient.has((a.client_name || "").trim().toLowerCase()) && (() => {
-                        const doc = docByClient.get((a.client_name || "").trim().toLowerCase())!;
-                        return (
-                          <button
-                            onClick={() => openMensalDoc(doc.path, doc.name)}
-                            className="mt-1.5 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 transition-colors shadow-sm"
-                          >
-                            <FileText className="h-4 w-4" /> Ver documento da mensal
-                          </button>
+                      {(() => {
+                        const nm = (a.client_name || "").trim().toLowerCase();
+                        const doc = docByClient.get(nm);
+                        return doc ? (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <button
+                              onClick={() => openMensalDoc(doc.path, doc.name)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 transition-colors shadow-sm"
+                            >
+                              <FileText className="h-4 w-4" /> Ver documento da mensal
+                            </button>
+                            <button
+                              onClick={() => void removeFunilAgenda(a.client_name)}
+                              title="Remover documento da mensal"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className={`mt-1.5 inline-flex items-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors ${uploadingAg === a.client_name ? "opacity-60 pointer-events-none" : "cursor-pointer"}`}>
+                            <input type="file" accept="image/*,application/pdf,.pdf" className="hidden"
+                              onChange={(e) => { const fl = e.target.files?.[0]; if (fl) void uploadFunilAgenda(a.client_name, fl); e.currentTarget.value = ""; }} />
+                            <FileText className="h-4 w-4" /> {uploadingAg === a.client_name ? "Enviando..." : "Anexar documento da mensal"}
+                          </label>
                         );
                       })()}
                     </div>
