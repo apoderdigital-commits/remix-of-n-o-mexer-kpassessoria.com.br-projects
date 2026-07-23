@@ -8,6 +8,14 @@
 -- Rode depois do passo 9. Idempotente.
 -- ============================================================================
 
+-- 0) Garante TODAS as colunas usadas pelo formulário de Conexões da subconta.
+--    (Corrige o erro "Could not find the 'zapi_client_token' column ...":
+--     o passo 9 não tinha sido aplicado.) Tudo "if not exists" = seguro rodar de novo.
+alter table public.crm_connections add column if not exists zapi_token        text;
+alter table public.crm_connections add column if not exists zapi_client_token text;
+alter table public.crm_connections add column if not exists n8n_send_url       text;
+alter table public.crm_connections add column if not exists webhook_secret     text;
+
 create or replace function public.crm_after_outgoing()
 returns trigger
 language plpgsql
