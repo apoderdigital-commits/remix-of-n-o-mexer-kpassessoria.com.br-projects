@@ -328,7 +328,7 @@ function Conversas() {
     const isImg = file.type.startsWith("image/");
     const isVid = file.type.startsWith("video/");
     if (!isImg && !isVid) { toast.error("Envie apenas imagem ou vídeo."); return; }
-    if (file.size > 25 * 1024 * 1024) { toast.error("Arquivo acima de 25MB."); return; }
+    if (file.size > 100 * 1024 * 1024) { toast.error("Arquivo acima de 100MB."); return; }
     setSending(true);
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
