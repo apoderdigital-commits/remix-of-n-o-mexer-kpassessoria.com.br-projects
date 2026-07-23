@@ -264,7 +264,24 @@ function Conversas() {
       .channel("crm-conversas-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_messages" }, (payload: any) => {
         void loadConversas();
-        const cid = (payload?.new || payload?.old || {}).conversation_id;
+        const row = payload?.new || payload?.old || {};
+        const cid = row.conversation_id;
+        // toque de notificação: apenas INSERT recebido, de contato individual (não grupo),
+        // e ignora a "salva inicial" do realtime nos primeiros 1.5s após montar.
+        if (
+          payload?.eventType === "INSERT" &&
+          row.direcao === "recebida" &&
+          Date.now() - notifBootRef.current > 1500
+        ) {
+          const conv = convsRef.current.find((c) => c.id === cid);
+          const isGroup = !!conv?.crm_contacts?.is_group;
+          if (!isGroup) {
+            try {
+              const a = notifAudioRef.current;
+              if (a) { a.currentTime = 0; void a.play().catch(() => {}); }
+            } catch { /* noop */ }
+          }
+        }
         if (cid && cid === selIdRef.current) void loadMensagens(cid);
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_conversations" }, () => {
