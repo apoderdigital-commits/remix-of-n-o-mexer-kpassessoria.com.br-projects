@@ -187,6 +187,7 @@ export default function UsersPage() {
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
       phone: u.phone || "",
+      crmLinks: u.crm_links || [],
     });
     setOpen(true);
   };
