@@ -105,14 +105,14 @@
       "main": [
         [
           {
-            "node": "Z-API - Texto",
+            "node": "Z-API - Áudio",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Z-API - Áudio",
+            "node": "Z-API - Texto",
             "type": "main",
             "index": 0
           }
