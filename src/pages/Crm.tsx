@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
-  Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield,
+  Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
 } from "lucide-react";
 
 // ============================================================================
@@ -1209,25 +1209,53 @@ function UsuariosSection() {
 
 function ConexoesCard() {
   return (
-    <div className="max-w-lg space-y-3">
+    <div className="max-w-lg space-y-4">
+      {/* API NÃO OFICIAL (Evolution) — recomendada para testes */}
+      <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0"><MessageSquare className="h-5 w-5" /></div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-foreground">WhatsApp — API não oficial</p>
+                <span className="text-[10px] font-semibold rounded-full bg-primary/15 text-primary px-2 py-0.5">Recomendado p/ testes</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Conecta lendo o QR Code do WhatsApp (Evolution API). Sem aprovação da Meta.</p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0"><span className="h-2 w-2 rounded-full bg-rose-500" /> Desconectado</span>
+        </div>
+        <div className="mt-4 space-y-2 opacity-70 pointer-events-none select-none">
+          <input disabled placeholder="URL da Evolution API (ex: https://evo.seudominio.com)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
+          <input disabled placeholder="API Key da Evolution" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
+          <input disabled placeholder="Nome da instância (ex: kp-teste)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
+          <button disabled className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2"><QrCode className="h-4 w-4" /> Gerar QR Code</button>
+        </div>
+      </div>
+
+      {/* API OFICIAL — fica para produção/futuro */}
       <div className="rounded-xl border border-border bg-card/50 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0"><MessageSquare className="h-5 w-5" /></div>
             <div className="min-w-0">
-              <p className="font-semibold text-foreground">WhatsApp — API oficial</p>
-              <p className="text-xs text-muted-foreground">Número, token e status da conexão.</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-foreground">WhatsApp — API oficial</p>
+                <span className="text-[10px] font-semibold rounded-full bg-muted text-muted-foreground px-2 py-0.5">Produção / futuro</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Requer aprovação da Meta e templates. Entra depois dos testes.</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0"><span className="h-2 w-2 rounded-full bg-rose-500" /> Desconectado</span>
         </div>
         <div className="mt-4 space-y-2 opacity-60 pointer-events-none select-none">
-          <input disabled placeholder="Número do WhatsApp (ex: +55 92 ...)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm px-3" />
-          <input disabled placeholder="Token / credencial da API" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm px-3" />
+          <input disabled placeholder="Número do WhatsApp (ex: +55 92 ...)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
+          <input disabled placeholder="Token / credencial da API" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
           <button disabled className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">Conectar</button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">A conexão de verdade com o WhatsApp entra na fase de automação (n8n + API oficial). Por enquanto, é só o lugar visual.</p>
+
+      <p className="text-xs text-muted-foreground">Os campos ainda são visuais. A conexão ao vivo (QR Code + receber/enviar mensagens) entra quando ligarmos o webhook da Evolution — é o próximo passo.</p>
     </div>
   );
 }
