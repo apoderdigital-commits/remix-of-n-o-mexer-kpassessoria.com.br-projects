@@ -548,6 +548,12 @@ function Conversas() {
                         )}
                         {m.tipo === "audio" && m.url_midia ? (
                           <audio controls src={m.url_midia} className="max-w-[240px] block" />
+                        ) : m.tipo === "imagem" && m.url_midia ? (
+                          <a href={m.url_midia} target="_blank" rel="noreferrer">
+                            <img src={m.url_midia} alt="imagem" className="max-w-[240px] max-h-[240px] rounded-md block object-cover" />
+                          </a>
+                        ) : m.tipo === "video" && m.url_midia ? (
+                          <video controls src={m.url_midia} className="max-w-[260px] max-h-[260px] rounded-md block" />
                         ) : (
                           <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
                         )}
