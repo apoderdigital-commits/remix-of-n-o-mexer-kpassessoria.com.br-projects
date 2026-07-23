@@ -21,6 +21,7 @@ const DASHBOARDS = [
   { key: "criativos", label: "Dashboard de Criativos" },
   { key: "projecao", label: "Funil de Projeção de Vendas" },
   { key: "comercial", label: "Dashboard Comercial" },
+  { key: "crm", label: "CRM · Conversas" },
 ];
 
 const SQUAD_FUNCTIONS = [
@@ -31,6 +32,20 @@ const SQUAD_FUNCTIONS = [
 
 const EMAIL_DOMAIN = "@kp.local";
 
+// Permissões granulares por usuário do CRM (bate com Crm.tsx).
+const CRM_PERMISSOES: { key: string; label: string }[] = [
+  { key: "ver_conversas", label: "Ver conversas" },
+  { key: "responder", label: "Responder mensagens" },
+  { key: "add_contato", label: "Adicionar contato" },
+  { key: "editar_contato", label: "Editar contato" },
+  { key: "excluir_contato", label: "Excluir contato" },
+  { key: "ver_oportunidades", label: "Ver oportunidades" },
+  { key: "gerir_oportunidades", label: "Gerir oportunidades" },
+  { key: "ver_config", label: "Ver configurações" },
+];
+
+type CrmLinkForm = { cliente_id: string; papel: "admin" | "usuario"; permissoes: Record<string, boolean> };
+
 interface UserRow {
   user_id: string;
   email: string;
@@ -40,6 +55,7 @@ interface UserRow {
   squad_function: string | null;
   dashboards: string[];
   clients: { id: string; name: string }[];
+  crm_links: CrmLinkForm[];
   deleted_at?: string | null;
 }
 
