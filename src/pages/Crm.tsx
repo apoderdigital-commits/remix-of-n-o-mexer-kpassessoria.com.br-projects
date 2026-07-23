@@ -184,7 +184,7 @@ function Conversas() {
   const loadConversas = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from("crm_conversations")
-      .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email)")
+      .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email,foto_url,is_group)")
       .neq("status", "arquivado")
       // ordena pela última MENSAGEM (não por atualizado_em, que muda ao só ler/abrir);
       // conversas sem mensagem (ultima_em nulo) vão para o fim.
