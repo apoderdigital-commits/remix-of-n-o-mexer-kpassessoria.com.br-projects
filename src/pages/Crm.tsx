@@ -343,6 +343,7 @@ function Conversas() {
             visibleConvs.map((c) => {
               const nome = c.crm_contacts?.nome || "Sem nome";
               const naoLido = c.status === "nao_lido";
+              const isGroup = !!c.crm_contacts?.is_group;
               return (
                 <button
                   key={c.id}
@@ -358,7 +359,10 @@ function Conversas() {
                       <span className="text-[10px] text-muted-foreground shrink-0">{fmtHora(c.ultima_em || c.atualizado_em)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <span className={`text-xs truncate ${naoLido ? "text-foreground" : "text-muted-foreground"}`}>{c.ultima_mensagem || "Sem mensagens"}</span>
+                      <span className={`text-xs truncate ${naoLido ? "text-foreground" : "text-muted-foreground"}`}>
+                        {isGroup && <span className="mr-1 inline-flex items-center rounded px-1 py-[1px] text-[9px] font-semibold bg-primary/15 text-primary align-middle">GRUPO</span>}
+                        {c.ultima_mensagem || "Sem mensagens"}
+                      </span>
                       {naoLido && <span className="shrink-0 h-2 w-2 rounded-full bg-primary mt-0.5" />}
                     </div>
                   </div>
