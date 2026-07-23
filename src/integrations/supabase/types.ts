@@ -2473,6 +2473,8 @@ export type Database = {
         Returns: string
       }
       crm_is_admin: { Args: never; Returns: boolean }
+      crm_sanitize_tipo: { Args: { p_tipo: string }; Returns: string }
+      crm_sanitize_url: { Args: { p_url: string }; Returns: string }
       get_accessible_clients: {
         Args: never
         Returns: {
