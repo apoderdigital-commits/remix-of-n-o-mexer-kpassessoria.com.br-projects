@@ -21,6 +21,7 @@ const DASHBOARDS = [
   { key: "criativos", label: "Dashboard de Criativos" },
   { key: "projecao", label: "Funil de Projeção de Vendas" },
   { key: "comercial", label: "Dashboard Comercial" },
+  { key: "crm", label: "CRM · Conversas" },
 ];
 
 const SQUAD_FUNCTIONS = [
@@ -31,6 +32,20 @@ const SQUAD_FUNCTIONS = [
 
 const EMAIL_DOMAIN = "@kp.local";
 
+// Permissões granulares por usuário do CRM (bate com Crm.tsx).
+const CRM_PERMISSOES: { key: string; label: string }[] = [
+  { key: "ver_conversas", label: "Ver conversas" },
+  { key: "responder", label: "Responder mensagens" },
+  { key: "add_contato", label: "Adicionar contato" },
+  { key: "editar_contato", label: "Editar contato" },
+  { key: "excluir_contato", label: "Excluir contato" },
+  { key: "ver_oportunidades", label: "Ver oportunidades" },
+  { key: "gerir_oportunidades", label: "Gerir oportunidades" },
+  { key: "ver_config", label: "Ver configurações" },
+];
+
+type CrmLinkForm = { cliente_id: string; papel: "admin" | "usuario"; permissoes: Record<string, boolean> };
+
 interface UserRow {
   user_id: string;
   email: string;
@@ -40,6 +55,7 @@ interface UserRow {
   squad_function: string | null;
   dashboards: string[];
   clients: { id: string; name: string }[];
+  crm_links: CrmLinkForm[];
   deleted_at?: string | null;
 }
 
@@ -47,6 +63,15 @@ export default function UsersPage() {
   const { signOut, user: currentUser } = useAuth();
   const { data: clients } = useClients();
   const queryClient = useQueryClient();
+
+  // Subcontas do CRM (para exibir pastas + montar o modal)
+  const { data: crmClients } = useQuery({
+    queryKey: ["crm_clients_admin"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("crm_clients").select("id, nome").order("nome");
+      return (data || []) as Array<{ id: string; nome: string }>;
+    },
+  });
 
   // Fetch users with their roles, dashboard access, and client access
   const fetchUsers = async (trash: boolean): Promise<UserRow[]> => {
@@ -58,6 +83,9 @@ export default function UsersPage() {
     const { data: roles } = await supabase.from("user_roles").select("*");
     const { data: dashAccess } = await supabase.from("user_dashboard_access").select("*");
     const { data: clientAccess } = await supabase.from("user_client_access").select("*, clients(id, name)");
+    const { data: crmLinks } = await (supabase as any)
+      .from("crm_users")
+      .select("auth_user_id, cliente_id, papel, permissoes");
 
     return profiles.map((p: any) => {
       const userRoles = (roles || []).filter((r) => r.user_id === p.user_id);
@@ -66,6 +94,13 @@ export default function UsersPage() {
       const userClients = (clientAccess || [])
         .filter((ca) => ca.user_id === p.user_id)
         .map((ca: any) => ({ id: ca.client_id, name: ca.clients?.name || "—" }));
+      const userCrmLinks: CrmLinkForm[] = ((crmLinks || []) as any[])
+        .filter((l) => l.auth_user_id === p.user_id)
+        .map((l) => ({
+          cliente_id: l.cliente_id,
+          papel: l.papel === "admin" ? "admin" : "usuario",
+          permissoes: (l.permissoes || {}) as Record<string, boolean>,
+        }));
 
       return {
         user_id: p.user_id,
@@ -76,6 +111,7 @@ export default function UsersPage() {
         squad_function: (p as any).squad_function || null,
         dashboards: userDash,
         clients: userClients,
+        crm_links: userCrmLinks,
         deleted_at: p.deleted_at || null,
       } as UserRow;
     });
@@ -104,8 +140,15 @@ export default function UsersPage() {
     dashboards: [] as string[],
     clientIds: [] as string[],
     phone: "",
+    crmLinks: [] as CrmLinkForm[],
   });
   const [saving, setSaving] = useState(false);
+
+  // Folder / view filter (sidebar)
+  // "adm-all"=admin do site, "colab-all"=colaboradores, "cliente-all"=clientes,
+  // "crm-all"=todos com vínculo em qualquer subconta, "crm:<id>"=subconta específica
+  const [folder, setFolder] = useState<string>("todos");
+  const [crmFolderOpen, setCrmFolderOpen] = useState(true);
 
   // Generic action verification dialog
   const [verifyAction, setVerifyAction] = useState<{
@@ -126,7 +169,7 @@ export default function UsersPage() {
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "" });
+    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "", crmLinks: [] });
     setEditingUserId(null);
   };
 
@@ -144,6 +187,7 @@ export default function UsersPage() {
       dashboards: u.dashboards,
       clientIds: u.clients.map((c) => c.id),
       phone: u.phone || "",
+      crmLinks: u.crm_links || [],
     });
     setOpen(true);
   };
@@ -163,6 +207,36 @@ export default function UsersPage() {
       clientIds: f.clientIds.includes(clientId)
         ? f.clientIds.filter((id) => id !== clientId)
         : [...f.clientIds, clientId],
+    }));
+  };
+
+  // Helpers para vínculos com o CRM (múltiplas subcontas)
+  const toggleCrmLink = (clienteId: string) => {
+    setForm((f) => {
+      const exists = f.crmLinks.some((l) => l.cliente_id === clienteId);
+      return {
+        ...f,
+        crmLinks: exists
+          ? f.crmLinks.filter((l) => l.cliente_id !== clienteId)
+          : [...f.crmLinks, { cliente_id: clienteId, papel: "usuario", permissoes: {} }],
+      };
+    });
+  };
+  const setCrmLinkPapel = (clienteId: string, papel: "admin" | "usuario") => {
+    setForm((f) => ({
+      ...f,
+      crmLinks: f.crmLinks.map((l) => l.cliente_id === clienteId ? { ...l, papel, permissoes: papel === "admin" ? {} : l.permissoes } : l),
+    }));
+  };
+  const toggleCrmPerm = (clienteId: string, permKey: string) => {
+    setForm((f) => ({
+      ...f,
+      crmLinks: f.crmLinks.map((l) => {
+        if (l.cliente_id !== clienteId) return l;
+        const cur = { ...(l.permissoes || {}) };
+        cur[permKey] = !cur[permKey];
+        return { ...l, permissoes: cur };
+      }),
     }));
   };
 
@@ -197,6 +271,7 @@ export default function UsersPage() {
             client_ids: form.clientIds,
             phone: normalizedPhone,
             squad_function: form.squadFunction || null,
+            crm_links: form.crmLinks,
           },
         });
         if (error) throw error;
@@ -219,6 +294,7 @@ export default function UsersPage() {
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
             phone: normalizedPhone,
+            crm_links: form.crmLinks,
           },
           targetLabel: `Criar usuário ${form.username}`,
           successMessage: "Usuário criado!",
@@ -466,6 +542,59 @@ export default function UsersPage() {
               )}
             </div>
 
+            {/* CRM subcontas */}
+            <div className="space-y-3">
+              <Label>Acesso ao CRM (subcontas)</Label>
+              {!crmClients?.length ? (
+                <p className="text-sm text-muted-foreground">Nenhuma subconta de CRM cadastrada</p>
+              ) : (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {crmClients.map((cc) => {
+                    const link = form.crmLinks.find((l) => l.cliente_id === cc.id);
+                    const enabled = !!link;
+                    return (
+                      <div key={cc.id} className="rounded-lg border border-border/30 bg-secondary/10">
+                        <label className="flex items-center gap-3 p-3 cursor-pointer">
+                          <Checkbox checked={enabled} onCheckedChange={() => toggleCrmLink(cc.id)} />
+                          <span className="text-sm font-medium flex-1">{cc.nome}</span>
+                          {enabled && (
+                            <Select
+                              value={link!.papel}
+                              onValueChange={(v) => setCrmLinkPapel(cc.id, v === "admin" ? "admin" : "usuario")}
+                            >
+                              <SelectTrigger className="h-7 w-32 text-xs" onClick={(e) => e.stopPropagation()}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="usuario">Usuário</SelectItem>
+                                <SelectItem value="admin">Admin (subconta)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </label>
+                        {enabled && link!.papel === "usuario" && (
+                          <div className="px-3 pb-3 grid grid-cols-2 gap-1.5">
+                            {CRM_PERMISSOES.map((p) => (
+                              <label key={p.key} className="flex items-center gap-2 text-[11px] text-muted-foreground rounded px-2 py-1 hover:bg-secondary/30 cursor-pointer">
+                                <Checkbox
+                                  checked={!!link!.permissoes?.[p.key]}
+                                  onCheckedChange={() => toggleCrmPerm(cc.id, p.key)}
+                                />
+                                <span>{p.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Ao vincular a uma subconta, o usuário recebe automaticamente acesso ao dashboard "CRM · Conversas".
+              </p>
+            </div>
+
             <Button onClick={handleSave} className="w-full" disabled={saving}>
               {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
@@ -486,7 +615,27 @@ export default function UsersPage() {
           ) : (() => {
             const q = userSearch.trim().toLowerCase();
             const norm = (s: string) => (s || "").toLowerCase();
-            const filteredUsers = (users || []).filter((u) => !q || norm(u.email || "").includes(q) || norm(u.full_name || "").includes(q));
+            const allUsers = (users || []).filter((u) => !q || norm(u.email || "").includes(q) || norm(u.full_name || "").includes(q));
+
+            // Contagens por pasta
+            const admCount = allUsers.filter((u) => u.role === "admin" || u.role === "manager").length;
+            const clienteCount = allUsers.filter((u) => u.role === "client").length;
+            const crmAllCount = allUsers.filter((u) => u.crm_links.length > 0).length;
+            const crmSubCount = (id: string) => allUsers.filter((u) => u.crm_links.some((l) => l.cliente_id === id)).length;
+
+            // Aplica filtro da pasta selecionada
+            const folderFiltered = (() => {
+              if (folder === "todos") return allUsers;
+              if (folder === "adm") return allUsers.filter((u) => u.role === "admin" || u.role === "manager");
+              if (folder === "cliente") return allUsers.filter((u) => u.role === "client");
+              if (folder === "crm-all") return allUsers.filter((u) => u.crm_links.length > 0);
+              if (folder.startsWith("crm:")) {
+                const id = folder.slice(4);
+                return allUsers.filter((u) => u.crm_links.some((l) => l.cliente_id === id));
+              }
+              return allUsers;
+            })();
+
             const renderRow = (u: any) => {
               const isAdmin = u.role === "admin";
               const dashCount = isAdmin ? DASHBOARDS.length : u.dashboards.length;
@@ -519,12 +668,12 @@ export default function UsersPage() {
                           </span>
                           <span className="text-muted-foreground text-xs">
                             {isAdmin ? "Todos" : u.dashboards.length > 0
-                              ? u.dashboards.map((d) => DASHBOARDS.find((db) => db.key === d)?.label || d).join(", ")
+                              ? u.dashboards.map((d: string) => DASHBOARDS.find((db) => db.key === d)?.label || d).join(", ")
                               : "Nenhum"}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="align-top max-w-[280px]">
+                      <TableCell className="align-top max-w-[240px]">
                         <div className="flex items-start gap-2">
                           <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-[10px] font-semibold px-1.5 py-0.5 shrink-0 mt-0.5">
                             {clientCount}
@@ -533,6 +682,30 @@ export default function UsersPage() {
                             {clientNames}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell className="align-top max-w-[220px]">
+                        {u.crm_links.length === 0 ? (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {u.crm_links.map((l: CrmLinkForm) => {
+                              const nome = crmClients?.find((c) => c.id === l.cliente_id)?.nome || "Subconta";
+                              return (
+                                <span
+                                  key={l.cliente_id}
+                                  className={`inline-flex items-center gap-1 rounded-md border text-[10px] px-1.5 py-0.5 ${
+                                    l.papel === "admin"
+                                      ? "border-primary/40 bg-primary/10 text-primary"
+                                      : "border-border/40 bg-secondary/40 text-muted-foreground"
+                                  }`}
+                                  title={l.papel === "admin" ? "Admin da subconta" : "Usuário"}
+                                >
+                                  {nome}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right space-x-1 align-top">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
@@ -553,23 +726,58 @@ export default function UsersPage() {
                     </TableRow>
               );
             };
-            const groups = [
-              { key: "colab", label: "Colaboradores", list: filteredUsers.filter((u) => u.role !== "client") },
-              { key: "cliente", label: "Clientes", list: filteredUsers.filter((u) => u.role === "client") },
-            ];
+
+            const FolderBtn = ({ id, label, count, indent = 0 }: { id: string; label: string; count: number; indent?: number }) => (
+              <button
+                type="button"
+                onClick={() => setFolder(id)}
+                className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                  folder === id ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                }`}
+                style={{ paddingLeft: 8 + indent * 12 }}
+              >
+                <span className="truncate">{label}</span>
+                <span className="ml-2 rounded-full bg-secondary/40 text-[10px] px-1.5 py-0.5">{count}</span>
+              </button>
+            );
+
             return (
-              <div className="space-y-6">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Buscar por usuário ou nome..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 bg-secondary/30 border-border/30" />
-                </div>
-                {filteredUsers.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">Nenhum usuário encontrado</p>
-                ) : groups.map((g) => g.list.length === 0 ? null : (
-                  <div key={g.key} className="space-y-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground/80">
-                      {g.label}<span className="text-[11px] rounded-full bg-secondary/40 text-muted-foreground px-2 py-0.5">{g.list.length}</span>
-                    </h3>
+              <div className="flex gap-4">
+                {/* Sidebar de pastas */}
+                <aside className="w-56 shrink-0 space-y-1 border-r border-border/30 pr-3">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 px-2 pb-1">Pastas</div>
+                  <FolderBtn id="todos" label="Todos" count={allUsers.length} />
+                  <FolderBtn id="adm" label="ADM do site" count={admCount} />
+                  <FolderBtn id="cliente" label="Clientes" count={clienteCount} />
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setCrmFolderOpen((v) => !v)}
+                      className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        folder === "crm-all" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">
+                        <span className="text-[10px]">{crmFolderOpen ? "▾" : "▸"}</span>
+                        <span onClick={(e) => { e.stopPropagation(); setFolder("crm-all"); }}>CRM</span>
+                      </span>
+                      <span className="ml-2 rounded-full bg-secondary/40 text-[10px] px-1.5 py-0.5">{crmAllCount}</span>
+                    </button>
+                    {crmFolderOpen && (crmClients || []).map((cc) => (
+                      <FolderBtn key={cc.id} id={`crm:${cc.id}`} label={cc.nome} count={crmSubCount(cc.id)} indent={1} />
+                    ))}
+                  </div>
+                </aside>
+
+                {/* Conteúdo */}
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="relative max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Buscar por usuário ou nome..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 bg-secondary/30 border-border/30" />
+                  </div>
+                  {folderFiltered.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">Nenhum usuário nesta pasta</p>
+                  ) : (
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border/30">
@@ -578,13 +786,14 @@ export default function UsersPage() {
                           <TableHead className="text-muted-foreground">Tipo</TableHead>
                           <TableHead className="text-muted-foreground">Dashboards</TableHead>
                           <TableHead className="text-muted-foreground">Clientes</TableHead>
+                          <TableHead className="text-muted-foreground">CRM</TableHead>
                           <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{g.list.map(renderRow)}</TableBody>
+                      <TableBody>{folderFiltered.map(renderRow)}</TableBody>
                     </Table>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             );
           })()}

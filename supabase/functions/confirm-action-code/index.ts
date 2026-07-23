@@ -19,7 +19,7 @@ async function sha256(text: string): Promise<string> {
 // ===== Action executors =====
 
 async function execCreateUser(admin: SupabaseClient, payload: any) {
-  const { username, password, full_name, role, dashboard_keys, client_ids, phone } = payload;
+  const { username, password, full_name, role, dashboard_keys, client_ids, phone, crm_links } = payload;
   const email = String(username).toLowerCase() + EMAIL_DOMAIN;
   const { data: newUser, error } = await admin.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { full_name: full_name || "" },
@@ -27,9 +27,16 @@ async function execCreateUser(admin: SupabaseClient, payload: any) {
   if (error || !newUser?.user) throw new Error(error?.message || "Erro ao criar usuário");
   const userId = newUser.user.id;
   if (role) await admin.from("user_roles").insert({ user_id: userId, role });
-  if (dashboard_keys?.length) {
+
+  // Se o usuário terá vínculo com o CRM e o admin não marcou nenhum dashboard,
+  // herda "crm" automaticamente — do jeito que o cliente respondeu na Fase 2.
+  const finalDashboards: string[] = Array.isArray(dashboard_keys) ? [...dashboard_keys] : [];
+  if (Array.isArray(crm_links) && crm_links.length > 0 && !finalDashboards.includes("crm")) {
+    finalDashboards.push("crm");
+  }
+  if (finalDashboards.length) {
     await admin.from("user_dashboard_access").insert(
-      dashboard_keys.map((dk: string) => ({ user_id: userId, dashboard_key: dk }))
+      finalDashboards.map((dk: string) => ({ user_id: userId, dashboard_key: dk }))
     );
   }
   if (client_ids?.length) {
@@ -38,6 +45,21 @@ async function execCreateUser(admin: SupabaseClient, payload: any) {
     );
   }
   if (phone) await admin.from("profiles").update({ phone }).eq("user_id", userId);
+
+  // Vínculos com subcontas do CRM (crm_users): papel + permissões por subconta.
+  if (Array.isArray(crm_links) && crm_links.length) {
+    const rows = crm_links
+      .filter((l: any) => l && l.cliente_id)
+      .map((l: any) => ({
+        auth_user_id: userId,
+        cliente_id: l.cliente_id,
+        nome: full_name || String(username),
+        email,
+        papel: l.papel === "admin" ? "admin" : "usuario",
+        permissoes: l.papel === "admin" ? {} : (l.permissoes || {}),
+      }));
+    if (rows.length) await admin.from("crm_users").insert(rows);
+  }
   return { user_id: userId };
 }
 
@@ -59,6 +81,7 @@ async function execPurgeUser(admin: SupabaseClient, payload: any) {
   await admin.from("user_dashboard_access").delete().eq("user_id", user_id);
   await admin.from("user_client_access").delete().eq("user_id", user_id);
   await admin.from("user_roles").delete().eq("user_id", user_id);
+  await admin.from("crm_users").delete().eq("auth_user_id", user_id);
   await admin.from("profiles").delete().eq("user_id", user_id);
   const { error } = await admin.auth.admin.deleteUser(user_id);
   if (error) throw new Error(error.message);

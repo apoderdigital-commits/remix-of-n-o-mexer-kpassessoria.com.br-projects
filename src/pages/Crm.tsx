@@ -1477,6 +1477,12 @@ function UsuariosSection() {
     if (!subcontaId) { toast.error("Sem subconta ativa."); return; }
     setSaving(true);
     try {
+      const linkPayload = {
+        cliente_id: subcontaId,
+        papel: edit.papel === "admin" ? "admin" : "usuario",
+        permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
+      };
+
       // ── CRIAR: cria o login do site (edge function) e vincula em crm_users ──
       if (!edit.id) {
         const username = (edit.username || "").trim().toLowerCase();
@@ -1493,9 +1499,9 @@ function UsuariosSection() {
             password,
             full_name: edit.nome?.trim() || "",
             role: "client",
-            // Fase 1: herda acesso ao dashboard do CRM automaticamente.
             dashboard_keys: ["crm"],
             client_ids: [],
+            crm_links: [linkPayload],
           },
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
@@ -1504,16 +1510,6 @@ function UsuariosSection() {
           setSaving(false);
           return;
         }
-        const newAuthId = (res.data as any).user_id as string;
-        const { error: linkErr } = await (supabase as any).from("crm_users").insert({
-          auth_user_id: newAuthId,
-          nome: edit.nome?.trim() || username,
-          email: `${username}@kp.local`,
-          cliente_id: subcontaId,
-          papel: edit.papel || "usuario",
-          permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
-        });
-        if (linkErr) { toast.error(linkErr.message); setSaving(false); return; }
         toast.success("Usuário criado. Ele já pode entrar com esse usuário e senha.");
         setEdit(null);
         setSaving(false);
@@ -1521,27 +1517,31 @@ function UsuariosSection() {
         return;
       }
 
-      // ── EDITAR: atualiza crm_users e, se pediram, troca a senha via edge function ──
-      const { error: upErr } = await (supabase as any).from("crm_users").update({
-        nome: edit.nome?.trim() || null,
-        papel: edit.papel || "usuario",
-        permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
-      }).eq("id", edit.id);
-      if (upErr) { toast.error(upErr.message); setSaving(false); return; }
-
-      if (edit.password && edit.password.trim() && edit.auth_user_id) {
-        if (edit.password.trim().length < 6) { toast.error("Nova senha precisa ter no mínimo 6 caracteres."); setSaving(false); return; }
-        const { data: authData } = await supabase.auth.getSession();
-        const token = authData.session?.access_token;
-        const res = await supabase.functions.invoke("create-internal-user", {
-          body: { action: "update_user", user_id: edit.auth_user_id, password: edit.password.trim(), full_name: edit.nome?.trim() || "" },
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        if (res.error || (res.data as any)?.error) {
-          toast.error((res.data as any)?.error || res.error?.message || "Falha ao trocar senha.");
-          setSaving(false);
-          return;
-        }
+      // ── EDITAR: papel/permissões + (opcional) troca de senha via edge function ──
+      if (!edit.auth_user_id) {
+        toast.error("Este usuário ainda não tem login vinculado.");
+        setSaving(false);
+        return;
+      }
+      if (edit.password && edit.password.trim() && edit.password.trim().length < 6) {
+        toast.error("Nova senha precisa ter no mínimo 6 caracteres."); setSaving(false); return;
+      }
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+      const res = await supabase.functions.invoke("create-internal-user", {
+        body: {
+          action: "update_user",
+          user_id: edit.auth_user_id,
+          password: edit.password?.trim() || undefined,
+          full_name: edit.nome?.trim() || "",
+          crm_links: [linkPayload],
+        },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (res.error || (res.data as any)?.error) {
+        toast.error((res.data as any)?.error || res.error?.message || "Falha ao salvar.");
+        setSaving(false);
+        return;
       }
       toast.success("Usuário atualizado.");
       setEdit(null);
