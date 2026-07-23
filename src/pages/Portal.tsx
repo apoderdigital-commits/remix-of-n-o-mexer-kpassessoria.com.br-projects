@@ -305,21 +305,21 @@ export default function Portal() {
                 )}
                 {isAdmin && (
                   <Link to="/crm" className="group">
-                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-sky-500/30 hover:border-sky-500/50 bg-gradient-to-r from-sky-500/15 to-cyan-500/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-sky-500/10">
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/30 hover:border-primary/50 bg-gradient-to-r from-primary/15 to-primary/5 p-3.5 sm:p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10">
                       <div className="flex items-center sm:items-start gap-3 sm:gap-4">
-                        <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg">
+                        <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
                           <MessageSquare className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">CRM</h2>
-                            <span className="text-[10px] uppercase font-semibold text-sky-900 dark:text-sky-200 bg-sky-500/20 px-1.5 py-0.5 rounded">Interno</span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/40 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300"><Wrench className="h-3 w-3" /> Em construção</span>
+                            <span className="text-[10px] uppercase font-semibold text-primary bg-primary/20 px-1.5 py-0.5 rounded">Interno</span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/40 px-2 py-0.5 text-[10px] font-semibold text-primary"><Wrench className="h-3 w-3" /> Em construção</span>
                           </div>
                           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">Conversas, contatos e funil de oportunidades num só lugar. Em desenvolvimento.</p>
                         </div>
                         <ChevronRight className="h-4 w-4 sm:hidden text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-sky-700 dark:text-sky-300 group-hover:gap-2.5 transition-all">
+                        <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-primary group-hover:gap-2.5 transition-all">
                           Acessar <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </div>
