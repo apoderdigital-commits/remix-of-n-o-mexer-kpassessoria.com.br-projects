@@ -148,8 +148,21 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
   );
 }
 
-function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; size?: "md" | "lg"; foto?: string | null }) {
-  const cls = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
+function Avatar({ nome, size = "md", foto, isGroup }: { nome: string | null | undefined; size?: "md" | "lg" | "sm"; foto?: string | null; isGroup?: boolean }) {
+  const cls = size === "lg" ? "h-16 w-16 text-xl" : size === "sm" ? "h-6 w-6 text-[10px]" : "h-10 w-10 text-sm";
+  const iconCls = size === "lg" ? "h-7 w-7" : size === "sm" ? "h-3 w-3" : "h-5 w-5";
+  // Em grupo, não usamos foto individual do remetente como avatar do chat.
+  if (isGroup) {
+    return (
+      <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white`}>
+        {foto ? (
+          <img src={foto} alt={nome || "grupo"} className={`${cls} rounded-full object-cover`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        ) : (
+          <Users className={iconCls} />
+        )}
+      </div>
+    );
+  }
   if (foto) {
     return (
       <img
