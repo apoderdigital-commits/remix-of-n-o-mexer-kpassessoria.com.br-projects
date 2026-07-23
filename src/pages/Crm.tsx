@@ -208,6 +208,16 @@ function Conversas() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const selIdRef = useRef<string | null>(null);
   selIdRef.current = selId;
+  const convsRef = useRef<Conversa[]>([]);
+  convsRef.current = convs;
+  const notifAudioRef = useRef<HTMLAudioElement | null>(null);
+  if (typeof window !== "undefined" && !notifAudioRef.current) {
+    const a = new Audio(notificationSound.url);
+    a.volume = 0.5;
+    a.preload = "auto";
+    notifAudioRef.current = a;
+  }
+  const notifBootRef = useRef<number>(Date.now());
 
   const sel = convs.find((c) => c.id === selId) || null;
 
