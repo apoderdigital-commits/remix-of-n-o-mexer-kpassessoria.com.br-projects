@@ -10,10 +10,33 @@ const META_API_BASE = "https://graph.facebook.com/v21.0";
 
 // Campos de conta usados: valores monetários vêm em CENTAVOS (dividir por 100).
 const ACCOUNT_FIELDS =
-  "name,balance,amount_spent,spend_cap,currency,account_status,funding_source_details";
+  "name,balance,amount_spent,spend_cap,currency,account_status,funding_source_details{display_string,type,id}";
 
 const centsToMoney = (v: unknown): number | null =>
   v === null || v === undefined || v === "" ? null : Number(v) / 100;
+
+// Classifica a forma de pagamento em pré-pago (tem "Saldo disponível") x cartão,
+// e, se for pré-pago, extrai o valor disponível do texto da Meta.
+// Ex.: "Saldo disponível (R$2.989,60 BRL)" -> { tipo: "prepago", saldo_disponivel: 2989.6 }
+//      "Mastercard *3252"                  -> { tipo: "cartao",  saldo_disponivel: null }
+function fundingInfo(display: string | null): {
+  tipo: "prepago" | "cartao";
+  saldo_disponivel: number | null;
+} {
+  if (!display) return { tipo: "cartao", saldo_disponivel: null };
+  const isPrepago = /dispon[ií]vel|pr[eé]-?pag/i.test(display);
+  if (!isPrepago) return { tipo: "cartao", saldo_disponivel: null };
+  const m = display.match(/R\$\s*([\d.,]+)/);
+  let val: number | null = null;
+  if (m) {
+    let num = m[1];
+    // Formato brasileiro: "." milhar, "," decimal.
+    if (num.includes(",")) num = num.replace(/\./g, "").replace(",", ".");
+    const p = parseFloat(num);
+    val = Number.isFinite(p) ? p : null;
+  }
+  return { tipo: "prepago", saldo_disponivel: val };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -93,6 +116,8 @@ Deno.serve(async (req) => {
           if (j.error) return { ...base, error: j.error.message };
 
           const spendCap = j.spend_cap != null ? Number(j.spend_cap) : 0;
+          const forma = j.funding_source_details?.display_string ?? null;
+          const funding = fundingInfo(forma);
           return {
             ...base,
             account_name: j.name || null,
@@ -101,7 +126,9 @@ Deno.serve(async (req) => {
             limite: spendCap > 0 ? centsToMoney(spendCap) : null,
             currency: j.currency || "BRL",
             status: j.account_status ?? null,
-            forma_pagamento: j.funding_source_details?.display_string ?? null,
+            forma_pagamento: forma,
+            tipo: funding.tipo,
+            saldo_disponivel: funding.saldo_disponivel,
           };
         } catch (e: any) {
           return { ...base, error: e?.message || "falha ao consultar a Meta" };
