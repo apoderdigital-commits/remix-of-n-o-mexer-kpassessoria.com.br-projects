@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import notificationSound from "@/assets/notification.mp3.asset.json";
 import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
@@ -207,6 +208,16 @@ function Conversas() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const selIdRef = useRef<string | null>(null);
   selIdRef.current = selId;
+  const convsRef = useRef<Conversa[]>([]);
+  convsRef.current = convs;
+  const notifAudioRef = useRef<HTMLAudioElement | null>(null);
+  if (typeof window !== "undefined" && !notifAudioRef.current) {
+    const a = new Audio(notificationSound.url);
+    a.volume = 0.5;
+    a.preload = "auto";
+    notifAudioRef.current = a;
+  }
+  const notifBootRef = useRef<number>(Date.now());
 
   const sel = convs.find((c) => c.id === selId) || null;
 
@@ -253,7 +264,24 @@ function Conversas() {
       .channel("crm-conversas-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_messages" }, (payload: any) => {
         void loadConversas();
-        const cid = (payload?.new || payload?.old || {}).conversation_id;
+        const row = payload?.new || payload?.old || {};
+        const cid = row.conversation_id;
+        // toque de notificação: apenas INSERT recebido, de contato individual (não grupo),
+        // e ignora a "salva inicial" do realtime nos primeiros 1.5s após montar.
+        if (
+          payload?.eventType === "INSERT" &&
+          row.direcao === "recebida" &&
+          Date.now() - notifBootRef.current > 1500
+        ) {
+          const conv = convsRef.current.find((c) => c.id === cid);
+          const isGroup = !!conv?.crm_contacts?.is_group;
+          if (!isGroup) {
+            try {
+              const a = notifAudioRef.current;
+              if (a) { a.currentTime = 0; void a.play().catch(() => {}); }
+            } catch { /* noop */ }
+          }
+        }
         if (cid && cid === selIdRef.current) void loadMensagens(cid);
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_conversations" }, () => {
