@@ -286,8 +286,15 @@ function Conversas() {
   }
 
   const visibleConvs = convs
-    .filter((c) => (filter === "nao_lidos" ? c.status === "nao_lido" : true))
+    .filter((c) => {
+      if (filter === "nao_lidos") return c.status === "nao_lido";
+      const isG = !!c.crm_contacts?.is_group;
+      return filter === "grupos" ? isG : !isG;
+    })
     .filter((c) => !busca.trim() || (c.crm_contacts?.nome || "").toLowerCase().includes(busca.trim().toLowerCase()));
+
+  const countUnread = convs.filter((c) => c.status === "nao_lido").length;
+  const countGroups = convs.filter((c) => c.crm_contacts?.is_group).length;
 
   return (
     <>
@@ -304,15 +311,19 @@ function Conversas() {
             />
           </div>
           <div className="flex gap-1">
-            {(["todos", "nao_lidos"] as const).map((f) => (
+            {([
+              { key: "contatos", label: "Contatos" },
+              { key: "grupos", label: `Grupos${countGroups ? ` (${countGroups})` : ""}` },
+              { key: "nao_lidos", label: `Não lidos${countUnread ? ` (${countUnread})` : ""}` },
+            ] as const).map((f) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
+                key={f.key}
+                onClick={() => setFilter(f.key)}
                 className={`flex-1 text-xs font-semibold rounded-lg py-1.5 transition-colors ${
-                  filter === f ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
+                  filter === f.key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
                 }`}
               >
-                {f === "todos" ? "Todos" : "Não lidos"}
+                {f.label}
               </button>
             ))}
           </div>
@@ -322,7 +333,11 @@ function Conversas() {
             <p className="p-4 text-sm text-muted-foreground">Carregando...</p>
           ) : visibleConvs.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground text-center">
-              {filter === "nao_lidos" ? "Nenhuma conversa não lida." : "Nenhuma conversa ainda."}
+              {filter === "nao_lidos"
+                ? "Nenhuma conversa não lida."
+                : filter === "grupos"
+                ? "Nenhum grupo ainda."
+                : "Nenhum contato ainda."}
             </p>
           ) : (
             visibleConvs.map((c) => {
