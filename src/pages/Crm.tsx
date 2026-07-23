@@ -323,29 +323,57 @@ function Conversas() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const iniciarLigacao = async (telefone: string, nome: string) => {
+  // Estado da ligação: confirmação → chamando → encerrado.
+  const [callState, setCallState] = useState<"idle" | "confirming" | "ringing">("idle");
+  const [callTarget, setCallTarget] = useState<{ nome: string; telefone: string; foto?: string | null } | null>(null);
+  const [callMuted, setCallMuted] = useState(false);
+  const [callElapsed, setCallElapsed] = useState(0);
+
+  useEffect(() => {
+    if (callState !== "ringing") return;
+    setCallElapsed(0);
+    const t = setInterval(() => setCallElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [callState]);
+
+  const iniciarLigacao = (telefone: string, nome: string, foto?: string | null) => {
     const phone = telefone.replace(/\D/g, "");
     if (!phone) { toast.error("Contato sem telefone válido."); return; }
-    if (!confirm(`Iniciar ligação de WhatsApp para ${nome || phone}?`)) return;
+    setCallTarget({ nome, telefone: phone, foto });
+    setCallMuted(false);
+    setCallState("confirming");
+  };
+
+  const confirmarLigacao = async () => {
+    if (!callTarget) return;
+    setCallState("ringing");
     try {
       await fetch("https://kpadm-n8n.a6hrr3.easypanel.host/webhook/crm-whatsapp-call", {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
-          contato_nome: nome,
+          phone: callTarget.telefone,
+          contato_nome: callTarget.nome,
           cliente_id: sel?.cliente_id,
           contact_id: sel?.contact_id,
           callDuration: 30,
           timestamp: new Date().toISOString(),
         }),
       });
-      toast.success("Ligação disparada. Verifique o WhatsApp.");
-    } catch (e: any) {
-      toast.error("Falha ao iniciar ligação.");
+    } catch {
+      toast.error("Falha ao disparar a ligação.");
+      setCallState("idle");
     }
   };
+
+  const encerrarLigacao = () => {
+    setCallState("idle");
+    setCallTarget(null);
+    setCallMuted(false);
+    toast.success("Chamada encerrada.");
+  };
+
 
 
   const sendMediaFile = async (file: File) => {
