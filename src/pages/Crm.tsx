@@ -408,7 +408,7 @@ function Conversas() {
       {sel && (
         <div className="w-64 shrink-0 border-l border-border bg-card/30 p-5 hidden lg:flex flex-col gap-5 overflow-y-auto">
           <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar nome={sel.crm_contacts?.nome} size="lg" />
+            <Avatar nome={sel.crm_contacts?.nome} size="lg" foto={sel.crm_contacts?.foto_url} />
             <p className="font-bold text-foreground">{sel.crm_contacts?.nome || "Sem nome"}</p>
           </div>
           <div className="space-y-3">
