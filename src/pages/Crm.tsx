@@ -151,6 +151,9 @@ function Conversas() {
       .from("crm_conversations")
       .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email)")
       .neq("status", "arquivado")
+      // ordena pela última MENSAGEM (não por atualizado_em, que muda ao só ler/abrir);
+      // conversas sem mensagem (ultima_em nulo) vão para o fim.
+      .order("ultima_em", { ascending: false, nullsFirst: false })
       .order("atualizado_em", { ascending: false });
     if (error) {
       const msg = `${error.message || ""} ${error.code || ""}`;
