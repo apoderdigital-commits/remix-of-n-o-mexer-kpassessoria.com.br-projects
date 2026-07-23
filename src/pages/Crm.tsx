@@ -7,7 +7,7 @@ import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
   Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
-  Mic, Square as StopIcon, Paperclip, PhoneCall,
+  Mic, Square as StopIcon, Paperclip, PhoneCall, PhoneOff, MicOff, Video, MessageCircle,
 } from "lucide-react";
 
 // ============================================================================
@@ -323,29 +323,57 @@ function Conversas() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const iniciarLigacao = async (telefone: string, nome: string) => {
+  // Estado da ligação: confirmação → chamando → encerrado.
+  const [callState, setCallState] = useState<"idle" | "confirming" | "ringing">("idle");
+  const [callTarget, setCallTarget] = useState<{ nome: string; telefone: string; foto?: string | null } | null>(null);
+  const [callMuted, setCallMuted] = useState(false);
+  const [callElapsed, setCallElapsed] = useState(0);
+
+  useEffect(() => {
+    if (callState !== "ringing") return;
+    setCallElapsed(0);
+    const t = setInterval(() => setCallElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [callState]);
+
+  const iniciarLigacao = (telefone: string, nome: string, foto?: string | null) => {
     const phone = telefone.replace(/\D/g, "");
     if (!phone) { toast.error("Contato sem telefone válido."); return; }
-    if (!confirm(`Iniciar ligação de WhatsApp para ${nome || phone}?`)) return;
+    setCallTarget({ nome, telefone: phone, foto });
+    setCallMuted(false);
+    setCallState("confirming");
+  };
+
+  const confirmarLigacao = async () => {
+    if (!callTarget) return;
+    setCallState("ringing");
     try {
       await fetch("https://kpadm-n8n.a6hrr3.easypanel.host/webhook/crm-whatsapp-call", {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
-          contato_nome: nome,
+          phone: callTarget.telefone,
+          contato_nome: callTarget.nome,
           cliente_id: sel?.cliente_id,
           contact_id: sel?.contact_id,
           callDuration: 30,
           timestamp: new Date().toISOString(),
         }),
       });
-      toast.success("Ligação disparada. Verifique o WhatsApp.");
-    } catch (e: any) {
-      toast.error("Falha ao iniciar ligação.");
+    } catch {
+      toast.error("Falha ao disparar a ligação.");
+      setCallState("idle");
     }
   };
+
+  const encerrarLigacao = () => {
+    setCallState("idle");
+    setCallTarget(null);
+    setCallMuted(false);
+    toast.success("Chamada encerrada.");
+  };
+
 
 
   const sendMediaFile = async (file: File) => {
@@ -551,7 +579,7 @@ function Conversas() {
               </div>
               {!sel.crm_contacts?.is_group && sel.crm_contacts?.telefone && (
                 <button
-                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "")}
+                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "", sel.crm_contacts?.foto_url)}
                   title="Ligar via WhatsApp"
                   className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
                 >
@@ -689,6 +717,118 @@ function Conversas() {
           </div>
           <div className="mt-auto pt-4 border-t border-border">
             <p className="text-[11px] text-muted-foreground">Mais dados do contato e oportunidades vinculadas chegam nas próximas fases.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: confirmação de ligação */}
+      {callState === "confirming" && callTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-br from-emerald-500/15 via-primary/10 to-transparent px-6 pt-6 pb-4 flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-muted overflow-hidden ring-4 ring-emerald-500/20 mb-3">
+                <Avatar size="lg" nome={callTarget.nome} foto={callTarget.foto} />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Nova chamada</p>
+              <h3 className="text-lg font-bold text-foreground">{callTarget.nome || "Contato"}</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">+{callTarget.telefone}</p>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Deseja iniciar uma ligação de WhatsApp para este contato agora?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-4 pt-0">
+              <button
+                onClick={() => { setCallState("idle"); setCallTarget(null); }}
+                className="h-11 rounded-xl bg-muted hover:bg-muted/70 text-foreground text-sm font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarLigacao}
+                className="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30"
+              >
+                <PhoneCall className="w-4 h-4" />
+                Ligar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: chamada em andamento (estilo WhatsApp) */}
+      {callState === "ringing" && callTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          {/* padrão sutil de fundo */}
+          <div
+            className="absolute inset-0 opacity-[0.06] pointer-events-none"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px)",
+              backgroundSize: "40px 40px, 60px 60px",
+            }}
+          />
+          <div className="relative w-full max-w-md h-full sm:h-auto sm:max-h-[90vh] flex flex-col items-center justify-between py-16 px-8 text-white">
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="relative">
+                <span className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping" />
+                <span className="absolute inset-0 rounded-full bg-emerald-500/20 animate-pulse" />
+                <div className="relative w-40 h-40 rounded-full overflow-hidden ring-4 ring-white/10 shadow-2xl">
+                  {callTarget.foto ? (
+                    <img src={callTarget.foto} alt={callTarget.nome} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center text-5xl font-bold">
+                      {(callTarget.nome || "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <h3 className="mt-8 text-3xl font-bold text-center">{callTarget.nome || "Contato"}</h3>
+              <p className="mt-2 text-white/70 text-sm">
+                chamando +{callTarget.telefone}…
+              </p>
+              <p className="mt-1 text-white/50 text-xs font-mono tabular-nums">
+                {String(Math.floor(callElapsed / 60)).padStart(2, "0")}:{String(callElapsed % 60).padStart(2, "0")}
+              </p>
+            </div>
+
+            <div className="w-full flex items-center justify-center gap-6">
+              <button
+                onClick={() => setCallMuted((m) => !m)}
+                title={callMuted ? "Ativar microfone" : "Silenciar"}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
+                  callMuted ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20"
+                }`}
+              >
+                {callMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              </button>
+              <button
+                disabled
+                title="Vídeo (indisponível)"
+                className="w-14 h-14 rounded-full bg-white/5 text-white/40 flex items-center justify-center cursor-not-allowed"
+              >
+                <Video className="w-6 h-6" />
+              </button>
+              <button
+                disabled
+                title="Mensagem (indisponível)"
+                className="w-14 h-14 rounded-full bg-white/5 text-white/40 flex items-center justify-center cursor-not-allowed"
+              >
+                <MessageCircle className="w-6 h-6" />
+              </button>
+              <button
+                onClick={encerrarLigacao}
+                title="Encerrar"
+                className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-500/40 transition-colors"
+              >
+                <PhoneOff className="w-7 h-7" />
+              </button>
+            </div>
+
+            <p className="mt-6 text-[11px] text-white/40 text-center max-w-xs">
+              A chamada acontece no seu WhatsApp — atenda pelo celular vinculado à instância.
+            </p>
           </div>
         </div>
       )}
