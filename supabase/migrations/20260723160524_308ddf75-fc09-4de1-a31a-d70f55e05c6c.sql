@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.crm_ingest_whatsapp(text, text, text, text, text, text, boolean, text, text, text, text, text, text);
