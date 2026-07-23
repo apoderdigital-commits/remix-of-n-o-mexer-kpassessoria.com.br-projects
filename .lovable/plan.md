@@ -1,65 +1,73 @@
+# Fase 2 · Gestão de Usuários unificada com CRM
+
 ## Objetivo
+Transformar a tela de Gestão de Usuários no ponto único de cadastro. Um mesmo usuário passa a viver em uma estrutura de pastas por contexto, e o vínculo com subcontas do CRM (papel + permissões) é gerenciado no mesmo modal. Admin de subconta também passa a criar usuários pelo CRM, gerando automaticamente o login do site.
 
-No painel **Comercial → aba Tráfego**, permitir clicar nos números do funil e nos cards Lead A/B/C para ver **quem são os contatos** (nome). Além disso, ajustar o funil para esconder a etapa de MQLs quando um filtro específico (Lead A/B/C) estiver ativo.
+## O que o usuário vê
 
-## O que muda
-
-### 1. Funil de Tráfego clicável (etapas: Leads gerados, MQLs, Agendamentos, Comparecimentos)
-
-- Cada barra do funil passa a ser clicável.
-- Ao clicar, abre um diálogo (modal) listando os **nomes dos contatos** daquela etapa, respeitando o filtro de categoria ativo (Todos / Lead A / Lead B / Lead C).
-
-### 2. Cards Lead A / Lead B / Lead C (abaixo do funil) clicáveis
-
-- Cada card vira clicável e abre o mesmo diálogo, mostrando os nomes dos contatos daquela categoria.
-
-### 3. Funil sem MQLs quando filtrado por categoria
-
-- Filtro **"Todos"**: funil mostra as 4 etapas (Leads gerados, MQLs, Agendamentos, Comparecimentos) — comportamento atual.
-- Filtros **Lead A / Lead B / Lead C**: funil mostra apenas **Leads gerados, Agendamentos e Comparecimentos** (sem MQLs).
-
-## Detalhes técnicos
-
-### Backend — `supabase/functions/kp-comercial-snapshot/index.ts`
-
-- Hoje o funil de tráfego (`trafego`) guarda só contagens (`CatCounts`). Vou adicionar listas de nomes por etapa.
-- Criar `trafegoLists` no payload com 4 arrays:
-  - `leads`, `mqls`, `agendamentos`, `comparecimentos`
-  - Cada item: `{ nome: string; category: "A" | "B" | "C" | "Outro" }`
-  - `nome` montado como nos outros pontos do arquivo: ``${c.firstName||""} ${c.lastName||""}`.trim() || c.contactName || c.email || "—"`
-- Preencher essas listas nos mesmos laços que já calculam as contagens (linhas ~786–822), sem alterar a lógica de filtragem por tag existente.
-- Retornar `trafegoLists` junto de `funis` no objeto de resposta (linha ~916).
-- Redeploy automático da função.
+### Nova estrutura em pastas na Gestão de Usuários
 
 ```text
-trafegoLists = {
-  leads:           [{ nome, category }, ...],
-  mqls:            [{ nome, category }, ...],
-  agendamentos:    [{ nome, category }, ...],
-  comparecimentos: [{ nome, category }, ...],
-}
+📁 ADM do site         (role = admin ou manager, sem vínculo de cliente)
+   └─ lista de usuários
+
+📁 Clientes            (role = client)
+   └─ lista de usuários
+
+📁 CRM                 (usuários com vínculo em crm_users)
+   ├─ 📁 Subconta A    ← nome vindo de crm_clients.nome
+   │   └─ usuários daquela subconta
+   ├─ 📁 Subconta B
+   │   └─ usuários daquela subconta
+   └─ ...
+
+🗑 Lixeira             (mantém o botão atual)
 ```
 
-### Frontend — `src/components/comercial/FunisView.tsx`
+- Sidebar à esquerda com as três pastas fixas expandindo em subpastas (CRM abre para subcontas).
+- Um usuário pode aparecer em mais de uma pasta se tiver vínculo em subcontas diferentes (ex: colaborador interno que também atende no CRM da Loja X).
+- A busca continua funcionando em qualquer pasta selecionada.
+- Contador ao lado do nome de cada pasta (quantos usuários dentro).
 
-- Estender o tipo `FunisData` (ou passar prop separada) com `trafegoLists`.
-- `FunnelChart`/`FunnelCard`: aceitar `onStageClick(stageKey)` e tornar cada barra um botão clicável (cursor pointer + hover).
-- `TrafegoFunnel`:
-  - Receber `trafegoLists` e um callback para abrir o diálogo.
-  - Quando `filter !== "Geral"` (ou seja, Lead A/B/C), remover a etapa **MQLs** do array `stages`.
-  - Tornar `CatSummary` clicável: cada card (A/B/C) chama o callback com a categoria correspondente.
+### Modal "Novo/Editar usuário" ampliado
 
-### Frontend — `src/pages/Comercial.tsx`
+Além dos campos atuais (usuário, senha, nome, tipo, telefone, função de squad, dashboards, clientes), adiciona um bloco novo:
 
-- Guardar `trafegoLists` no estado a partir do payload (`applyPayload`).
-- Novo estado para o diálogo de detalhe, ex.: `trafegoDrill: { title: string; nomes: string[] } | null`.
-- Função que monta a lista filtrada: dada a etapa e o filtro de categoria atual, filtra `trafegoLists[etapa]` por `category` (ou todos quando "Geral") e extrai os nomes.
-- Renderizar um `Dialog` reaproveitando o padrão já usado na página, listando os nomes (lista simples de nomes, ordenada).
+**Acesso ao CRM** (opcional, múltiplas subcontas)
+- Botão "+ vincular subconta" abre um dropdown com as `crm_clients` acessíveis.
+- Para cada subconta vinculada:
+  - Papel: `Admin da subconta` ou `Usuário`
+  - Se `Usuário`: checkboxes das 8 permissões granulares (as mesmas de hoje no CRM)
+  - Botão "remover vínculo"
 
-## Observações
+Ao salvar, o backend sincroniza `crm_users` (insert/update/delete) para bater com o que está no modal.
 
-- Os cards inferiores Lead A/B/C hoje refletem a contagem de **MQLs** por categoria; ao clicar, mostrarão os nomes dos MQLs daquela categoria (consistente com o número exibido).
-- Snapshots em cache não terão `trafegoLists`; será necessário clicar em **Atualizar** uma vez para popular as listas. Vou tratar ausência de dados com um estado vazio amigável no diálogo.
-- Nenhuma mudança de schema/banco é necessária.
+### Criar usuário do CRM continua funcionando
 
-&nbsp;
+A aba **CRM › Config › Usuários** mantém o botão "Novo usuário". Diferença agora: o admin de subconta também pode usar (não precisa ser admin do site). O usuário criado por ali entra automaticamente na pasta "CRM › Subconta X" da Gestão de Usuários.
+
+## O que muda por baixo (detalhes técnicos)
+
+### Edge function `create-internal-user`
+- Nova permissão de chamada: aceita também admins da subconta (`crm_users.papel = 'admin'`) além de admins do site. Quando o chamador é admin de subconta, força `cliente_id` = subconta dele e nega qualquer outro `client_ids`/`dashboard_keys` fora do escopo.
+- Novo campo no body: `crm_links: [{ cliente_id, papel, permissoes }, ...]`. Após criar/atualizar o auth user, sincroniza `crm_users`: insere novos vínculos, atualiza papel/permissões, remove os que sumiram.
+- Ação `create`: se `crm_links` presente, herda automaticamente `dashboard_keys = ["crm"]` quando ainda estiver vazio.
+- Ação `update_user`: idem, sincroniza `crm_links`.
+- Ação `purge`: também remove `crm_users` do user_id.
+
+### Frontend
+
+- `src/pages/UsersPage.tsx`
+  - Layout com sidebar de pastas (novo componente interno `FoldersSidebar`), carregando `crm_clients` e agrupando os usuários.
+  - Query adicional: `crm_users` com join lógico em `crm_clients(nome)` para saber a subpasta de cada usuário.
+  - Modal ganha o bloco "Acesso ao CRM" com estado `crm_links: CrmLink[]`.
+  - Ao salvar, envia `crm_links` no invoke.
+
+- `src/pages/Crm.tsx › UsuariosSection`
+  - Continua chamando `create-internal-user`, agora com `crm_links: [{ cliente_id: subcontaId, papel, permissoes }]` no lugar do insert manual em `crm_users`.
+  - Edição também passa a rota via edge function (garante que admin de subconta consiga salvar sem depender só da RLS).
+
+## O que fica de fora nesta fase
+- Convite por email/link mágico para o usuário definir a própria senha.
+- Auditoria de quem criou/alterou cada vínculo.
+- Filtro de dashboard "só CRM" na home do cliente (o roteamento atual já esconde o que não tem acesso).
