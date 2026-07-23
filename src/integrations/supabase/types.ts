@@ -362,26 +362,35 @@ export type Database = {
       }
       crm_contacts: {
         Row: {
+          chat_id: string | null
           cliente_id: string
           criado_em: string
           email: string | null
+          foto_url: string | null
           id: string
+          is_group: boolean
           nome: string | null
           telefone: string | null
         }
         Insert: {
+          chat_id?: string | null
           cliente_id: string
           criado_em?: string
           email?: string | null
+          foto_url?: string | null
           id?: string
+          is_group?: boolean
           nome?: string | null
           telefone?: string | null
         }
         Update: {
+          chat_id?: string | null
           cliente_id?: string
           criado_em?: string
           email?: string | null
+          foto_url?: string | null
           id?: string
+          is_group?: boolean
           nome?: string | null
           telefone?: string | null
         }
@@ -452,6 +461,8 @@ export type Database = {
           direcao: string
           id: string
           lida: boolean
+          remetente_nome: string | null
+          remetente_telefone: string | null
           tipo: string
           url_midia: string | null
         }
@@ -463,6 +474,8 @@ export type Database = {
           direcao: string
           id?: string
           lida?: boolean
+          remetente_nome?: string | null
+          remetente_telefone?: string | null
           tipo?: string
           url_midia?: string | null
         }
@@ -474,6 +487,8 @@ export type Database = {
           direcao?: string
           id?: string
           lida?: boolean
+          remetente_nome?: string | null
+          remetente_telefone?: string | null
           tipo?: string
           url_midia?: string | null
         }
@@ -2437,10 +2452,15 @@ export type Database = {
       crm_current_cliente_id: { Args: never; Returns: string }
       crm_ingest_whatsapp: {
         Args: {
+          p_chat_id?: string
           p_instance_id: string
+          p_is_group?: boolean
           p_message_id?: string
           p_nome?: string
+          p_participant_name?: string
+          p_participant_phone?: string
           p_phone: string
+          p_photo?: string
           p_secret: string
           p_texto?: string
         }
