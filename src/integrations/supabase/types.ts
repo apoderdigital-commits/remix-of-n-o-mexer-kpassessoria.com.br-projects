@@ -295,6 +295,316 @@ export type Database = {
           },
         ]
       }
+      crm_clients: {
+        Row: {
+          cidade: string | null
+          criado_em: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          cidade?: string | null
+          criado_em?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          cidade?: string | null
+          criado_em?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      crm_contacts: {
+        Row: {
+          cliente_id: string
+          criado_em: string
+          email: string | null
+          id: string
+          nome: string | null
+          telefone: string | null
+        }
+        Insert: {
+          cliente_id: string
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome?: string | null
+          telefone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_conversations: {
+        Row: {
+          atualizado_em: string
+          cliente_id: string
+          contact_id: string
+          criado_em: string
+          id: string
+          status: string
+        }
+        Insert: {
+          atualizado_em?: string
+          cliente_id: string
+          contact_id: string
+          criado_em?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          atualizado_em?: string
+          cliente_id?: string
+          contact_id?: string
+          criado_em?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversations_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_messages: {
+        Row: {
+          cliente_id: string
+          conteudo: string | null
+          conversation_id: string
+          criado_em: string
+          direcao: string
+          id: string
+          lida: boolean
+          tipo: string
+          url_midia: string | null
+        }
+        Insert: {
+          cliente_id: string
+          conteudo?: string | null
+          conversation_id: string
+          criado_em?: string
+          direcao: string
+          id?: string
+          lida?: boolean
+          tipo?: string
+          url_midia?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          conteudo?: string | null
+          conversation_id?: string
+          criado_em?: string
+          direcao?: string
+          id?: string
+          lida?: boolean
+          tipo?: string
+          url_midia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_messages_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_opportunities: {
+        Row: {
+          atualizado_em: string
+          cliente_id: string
+          contact_id: string
+          criado_em: string
+          id: string
+          pipeline_stage_id: string | null
+          status: string
+          valor: number | null
+        }
+        Insert: {
+          atualizado_em?: string
+          cliente_id: string
+          contact_id: string
+          criado_em?: string
+          id?: string
+          pipeline_stage_id?: string | null
+          status?: string
+          valor?: number | null
+        }
+        Update: {
+          atualizado_em?: string
+          cliente_id?: string
+          contact_id?: string
+          criado_em?: string
+          id?: string
+          pipeline_stage_id?: string | null
+          status?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_opportunities_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_pipeline_stages: {
+        Row: {
+          cliente_id: string
+          id: string
+          nome: string
+          ordem: number
+          pipeline_id: string
+        }
+        Insert: {
+          cliente_id: string
+          id?: string
+          nome: string
+          ordem?: number
+          pipeline_id: string
+        }
+        Update: {
+          cliente_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          pipeline_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stages_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_pipelines: {
+        Row: {
+          cliente_id: string
+          criado_em: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          cliente_id: string
+          criado_em?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          cliente_id?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipelines_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_users: {
+        Row: {
+          auth_user_id: string | null
+          cliente_id: string
+          criado_em: string
+          email: string | null
+          id: string
+          nome: string
+          papel: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          cliente_id: string
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome: string
+          papel?: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          cliente_id?: string
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          papel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_users_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kp_comercial_calendars: {
         Row: {
           enabled: boolean
@@ -2074,6 +2384,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      crm_current_cliente_id: { Args: never; Returns: string }
+      crm_is_admin: { Args: never; Returns: boolean }
       get_accessible_clients: {
         Args: never
         Returns: {
