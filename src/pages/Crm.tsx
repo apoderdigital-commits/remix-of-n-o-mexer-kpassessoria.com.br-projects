@@ -410,9 +410,14 @@ function Conversas() {
                 <p className="text-center text-sm text-muted-foreground pt-6">Nenhuma mensagem ainda. Envie a primeira 👇</p>
               ) : (
                 msgs.map((m) => {
-                  const showRemetente = !!sel.crm_contacts?.is_group && m.direcao === "recebida" && !!m.remetente_nome;
+                  const isGroupChat = !!sel.crm_contacts?.is_group;
+                  const showRemetente = isGroupChat && m.direcao === "recebida" && !!m.remetente_nome;
+                  const showParticipantAvatar = isGroupChat && m.direcao === "recebida";
                   return (
-                    <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                    <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                      {showParticipantAvatar && (
+                        <Avatar size="sm" nome={m.remetente_nome} foto={m.remetente_foto} />
+                      )}
                       <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
                         m.direcao === "enviada"
                           ? "bg-primary text-white rounded-tr-sm"
