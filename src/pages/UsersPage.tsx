@@ -140,8 +140,15 @@ export default function UsersPage() {
     dashboards: [] as string[],
     clientIds: [] as string[],
     phone: "",
+    crmLinks: [] as CrmLinkForm[],
   });
   const [saving, setSaving] = useState(false);
+
+  // Folder / view filter (sidebar)
+  // "adm-all"=admin do site, "colab-all"=colaboradores, "cliente-all"=clientes,
+  // "crm-all"=todos com vínculo em qualquer subconta, "crm:<id>"=subconta específica
+  const [folder, setFolder] = useState<string>("todos");
+  const [crmFolderOpen, setCrmFolderOpen] = useState(true);
 
   // Generic action verification dialog
   const [verifyAction, setVerifyAction] = useState<{
@@ -162,7 +169,7 @@ export default function UsersPage() {
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
   const resetForm = () => {
-    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "" });
+    setForm({ username: "", password: "", fullName: "", role: "manager", squadFunction: "", dashboards: [], clientIds: [], phone: "", crmLinks: [] });
     setEditingUserId(null);
   };
 
