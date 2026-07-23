@@ -30,6 +30,7 @@ import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
 import { SquadNotesReport } from "@/components/squad/SquadNotesReport";
 import { MonthlyMeetingDialog } from "@/components/squad/MonthlyMeetingDialog";
 import { SquadConsolidated } from "@/components/squad/SquadConsolidated";
+import { SquadSaldoContas } from "@/components/squad/SquadSaldoContas";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -450,6 +451,7 @@ export default function Squad() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [reportOpen, setReportOpen] = useState(false);
   const [notesReportOpen, setNotesReportOpen] = useState(false);
+  const [saldoOpen, setSaldoOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<{ id: string; started_at: string } | null>(null);
   const [newMonthOpen, setNewMonthOpen] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState<string>(() => new Date().toISOString().slice(0, 7));
@@ -1388,6 +1390,15 @@ export default function Squad() {
               <NotebookPen className="h-4 w-4" /> Relatório de Anotações
             </Button>
           )}
+          {squadId && (
+            <Button
+              variant="outline"
+              onClick={() => setSaldoOpen(true)}
+              className="gap-1.5"
+            >
+              <DollarSign className="h-4 w-4" /> Saldo das Contas
+            </Button>
+          )}
           {squadId && clients.length > 0 && (
             <Button
               onClick={() => setConsolidatedOpen(true)}
@@ -1435,6 +1446,11 @@ export default function Squad() {
           onClose={() => setNotesReportOpen(false)}
           squadId={squadId}
           clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+        />
+        <SquadSaldoContas
+          open={saldoOpen}
+          onClose={() => setSaldoOpen(false)}
+          squadId={squadId}
         />
 
         {loading ? (
