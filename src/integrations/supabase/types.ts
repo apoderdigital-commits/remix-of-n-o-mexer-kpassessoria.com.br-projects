@@ -323,6 +323,7 @@ export type Database = {
           criado_em: string
           id: string
           instance_id: string
+          n8n_send_url: string | null
           numero: string | null
           provedor: string
           webhook_secret: string | null
@@ -333,6 +334,7 @@ export type Database = {
           criado_em?: string
           id?: string
           instance_id: string
+          n8n_send_url?: string | null
           numero?: string | null
           provedor?: string
           webhook_secret?: string | null
@@ -343,6 +345,7 @@ export type Database = {
           criado_em?: string
           id?: string
           instance_id?: string
+          n8n_send_url?: string | null
           numero?: string | null
           provedor?: string
           webhook_secret?: string | null
