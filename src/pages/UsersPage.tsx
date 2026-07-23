@@ -210,6 +210,36 @@ export default function UsersPage() {
     }));
   };
 
+  // Helpers para vínculos com o CRM (múltiplas subcontas)
+  const toggleCrmLink = (clienteId: string) => {
+    setForm((f) => {
+      const exists = f.crmLinks.some((l) => l.cliente_id === clienteId);
+      return {
+        ...f,
+        crmLinks: exists
+          ? f.crmLinks.filter((l) => l.cliente_id !== clienteId)
+          : [...f.crmLinks, { cliente_id: clienteId, papel: "usuario", permissoes: {} }],
+      };
+    });
+  };
+  const setCrmLinkPapel = (clienteId: string, papel: "admin" | "usuario") => {
+    setForm((f) => ({
+      ...f,
+      crmLinks: f.crmLinks.map((l) => l.cliente_id === clienteId ? { ...l, papel, permissoes: papel === "admin" ? {} : l.permissoes } : l),
+    }));
+  };
+  const toggleCrmPerm = (clienteId: string, permKey: string) => {
+    setForm((f) => ({
+      ...f,
+      crmLinks: f.crmLinks.map((l) => {
+        if (l.cliente_id !== clienteId) return l;
+        const cur = { ...(l.permissoes || {}) };
+        cur[permKey] = !cur[permKey];
+        return { ...l, permissoes: cur };
+      }),
+    }));
+  };
+
   const handleSave = async () => {
     if (!form.username.trim()) { toast.error("Usuário é obrigatório"); return; }
     if (!editingUserId && !form.password) { toast.error("Senha é obrigatória"); return; }
