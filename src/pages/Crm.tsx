@@ -323,6 +323,31 @@ function Conversas() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const iniciarLigacao = async (telefone: string, nome: string) => {
+    const phone = telefone.replace(/\D/g, "");
+    if (!phone) { toast.error("Contato sem telefone válido."); return; }
+    if (!confirm(`Iniciar ligação de WhatsApp para ${nome || phone}?`)) return;
+    try {
+      await fetch("https://kpadm-n8n.a6hrr3.easypanel.host/webhook/crm-whatsapp-call", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          contato_nome: nome,
+          cliente_id: sel?.cliente_id,
+          contact_id: sel?.contact_id,
+          callDuration: 30,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      toast.success("Ligação disparada. Verifique o WhatsApp.");
+    } catch (e: any) {
+      toast.error("Falha ao iniciar ligação.");
+    }
+  };
+
+
   const sendMediaFile = async (file: File) => {
     if (!sel) return;
     const isImg = file.type.startsWith("image/");
