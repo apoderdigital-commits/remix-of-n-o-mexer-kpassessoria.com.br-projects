@@ -515,7 +515,7 @@ function Conversas() {
           <>
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
               <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} isGroup={!!sel.crm_contacts?.is_group} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm text-foreground truncate flex items-center gap-2">
                   {sel.crm_contacts?.nome || "Sem nome"}
                   {sel.crm_contacts?.is_group && (
@@ -524,6 +524,16 @@ function Conversas() {
                 </p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
               </div>
+              {!sel.crm_contacts?.is_group && sel.crm_contacts?.telefone && (
+                <button
+                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "")}
+                  title="Ligar via WhatsApp"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                  Ligar
+                </button>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {msgs.length === 0 ? (
