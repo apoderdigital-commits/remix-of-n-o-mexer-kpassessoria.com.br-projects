@@ -1,0 +1,1 @@
+UPDATE public.crm_contacts SET foto_url = NULL WHERE is_group = true;

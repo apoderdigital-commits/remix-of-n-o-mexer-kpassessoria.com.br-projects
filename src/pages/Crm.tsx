@@ -57,6 +57,7 @@ type Mensagem = {
   criado_em: string;
   remetente_nome?: string | null;
   remetente_telefone?: string | null;
+  remetente_foto?: string | null;
 };
 type Pipeline = { id: string; cliente_id: string; nome: string };
 type Stage = { id: string; nome: string; ordem: number; cliente_id: string; pipeline_id: string };
@@ -147,8 +148,21 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
   );
 }
 
-function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; size?: "md" | "lg"; foto?: string | null }) {
-  const cls = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
+function Avatar({ nome, size = "md", foto, isGroup }: { nome: string | null | undefined; size?: "md" | "lg" | "sm"; foto?: string | null; isGroup?: boolean }) {
+  const cls = size === "lg" ? "h-16 w-16 text-xl" : size === "sm" ? "h-6 w-6 text-[10px]" : "h-10 w-10 text-sm";
+  const iconCls = size === "lg" ? "h-7 w-7" : size === "sm" ? "h-3 w-3" : "h-5 w-5";
+  // Em grupo, não usamos foto individual do remetente como avatar do chat.
+  if (isGroup) {
+    return (
+      <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white`}>
+        {foto ? (
+          <img src={foto} alt={nome || "grupo"} className={`${cls} rounded-full object-cover`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        ) : (
+          <Users className={iconCls} />
+        )}
+      </div>
+    );
+  }
   if (foto) {
     return (
       <img
@@ -352,7 +366,7 @@ function Conversas() {
                     selId === c.id ? "bg-primary/10" : "hover:bg-muted/50"
                   }`}
                 >
-                  <Avatar nome={nome} foto={c.crm_contacts?.foto_url} />
+                  <Avatar nome={nome} foto={c.crm_contacts?.foto_url} isGroup={isGroup} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`text-sm text-foreground truncate ${naoLido ? "font-bold" : "font-semibold"}`}>{nome}</span>
@@ -380,7 +394,7 @@ function Conversas() {
         ) : (
           <>
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
-              <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} />
+              <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} isGroup={!!sel.crm_contacts?.is_group} />
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-foreground truncate flex items-center gap-2">
                   {sel.crm_contacts?.nome || "Sem nome"}
@@ -396,9 +410,14 @@ function Conversas() {
                 <p className="text-center text-sm text-muted-foreground pt-6">Nenhuma mensagem ainda. Envie a primeira 👇</p>
               ) : (
                 msgs.map((m) => {
-                  const showRemetente = !!sel.crm_contacts?.is_group && m.direcao === "recebida" && !!m.remetente_nome;
+                  const isGroupChat = !!sel.crm_contacts?.is_group;
+                  const showRemetente = isGroupChat && m.direcao === "recebida" && !!m.remetente_nome;
+                  const showParticipantAvatar = isGroupChat && m.direcao === "recebida";
                   return (
-                    <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                    <div key={m.id} className={`flex items-end gap-2 ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                      {showParticipantAvatar && (
+                        <Avatar size="sm" nome={m.remetente_nome} foto={m.remetente_foto} />
+                      )}
                       <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
                         m.direcao === "enviada"
                           ? "bg-primary text-white rounded-tr-sm"
@@ -440,7 +459,7 @@ function Conversas() {
       {sel && (
         <div className="w-64 shrink-0 border-l border-border bg-card/30 p-5 hidden lg:flex flex-col gap-5 overflow-y-auto">
           <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar nome={sel.crm_contacts?.nome} size="lg" foto={sel.crm_contacts?.foto_url} />
+            <Avatar nome={sel.crm_contacts?.nome} size="lg" foto={sel.crm_contacts?.foto_url} isGroup={!!sel.crm_contacts?.is_group} />
             <p className="font-bold text-foreground">{sel.crm_contacts?.nome || "Sem nome"}</p>
           </div>
           <div className="space-y-3">
