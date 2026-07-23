@@ -2462,6 +2462,7 @@ export type Database = {
     }
     Functions: {
       crm_current_cliente_id: { Args: never; Returns: string }
+      crm_has_perm: { Args: { _perm: string }; Returns: boolean }
       crm_ingest_whatsapp: {
         Args: {
           p_chat_id?: string
