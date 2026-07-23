@@ -41,11 +41,40 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data: roles } = await adminClient
       .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
-    if (!roles?.length) {
-      return new Response(JSON.stringify({ error: "Apenas admins" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const isSiteAdmin = !!roles?.length;
+
+    // Fase 2: admin de subconta do CRM também pode criar/editar usuários,
+    // mas apenas dentro da(s) subconta(s) que ele administra e com escopo restrito
+    // (role='client', dashboards ⊆ ['crm'], sem client_ids, apenas crm_links da subconta dele).
+    let crmAdminSubcontas: string[] = [];
+    if (!isSiteAdmin) {
+      const { data: crmAdminRows } = await adminClient
+        .from("crm_users").select("cliente_id").eq("auth_user_id", user.id).eq("papel", "admin");
+      crmAdminSubcontas = (crmAdminRows || []).map((r: any) => r.cliente_id).filter(Boolean);
+      if (!crmAdminSubcontas.length) {
+        return new Response(JSON.stringify({ error: "Sem permissão para gerenciar usuários" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
+    // Aplica o escopo do admin de subconta em cima do body recebido.
+    const enforceCrmAdminScope = (b: any) => {
+      if (isSiteAdmin) return b;
+      const links = Array.isArray(b.crm_links) ? b.crm_links : [];
+      const filtered = links.filter((l: any) => l && crmAdminSubcontas.includes(l.cliente_id));
+      if (!filtered.length) {
+        throw new Error("Admin de subconta só pode gerenciar vínculos da(s) subconta(s) dele.");
+      }
+      return {
+        ...b,
+        role: "client",
+        dashboard_keys: ["crm"],
+        client_ids: [],
+        squad_function: null,
+        crm_links: filtered,
+      };
+    };
 
     const body = await req.json();
 
