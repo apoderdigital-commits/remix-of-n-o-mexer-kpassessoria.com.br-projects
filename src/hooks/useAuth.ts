@@ -38,7 +38,7 @@ export function useAuth() {
       if (!isMounted) return;
 
       if (!user) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
         return;
       }
 
@@ -94,11 +94,11 @@ export function useAuth() {
           .eq("user_id", user.id);
 
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0 });
+        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0, hasCrm });
       } catch (error) {
         console.error("Erro ao carregar autenticação:", error);
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
       }
     };
 
@@ -115,7 +115,7 @@ export function useAuth() {
       })
       .catch((err) => {
         console.error("getSession falhou:", err);
-        if (isMounted) setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        if (isMounted) setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
       });
 
     // Fail-safe: se por qualquer motivo (sessão corrompida no localStorage,
