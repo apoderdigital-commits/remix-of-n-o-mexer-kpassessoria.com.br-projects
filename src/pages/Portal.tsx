@@ -47,7 +47,7 @@ const highlights = [
 ];
 
 export default function Portal() {
-  const { isAdmin, signOut, user, dashboards, squadCount } = useAuth();
+  const { isAdmin, signOut, user, dashboards, squadCount, hasCrm } = useAuth();
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
   const initials = (user?.user_metadata?.full_name || user?.email || "?")
     .split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((s: string) => s[0]?.toUpperCase()).join("") || "?";
@@ -184,7 +184,14 @@ export default function Portal() {
               </>
             )}
             <ThemeToggle />
-            <div className="relative ml-1">
+            {hasCrm && (
+              <Link to="/hub">
+                <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:gap-1.5 text-muted-foreground hover:text-foreground" title="Trocar área">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline text-sm">Trocar área</span>
+                </Button>
+              </Link>
+            )}
               <Link
                 to="/perfil"
                 aria-label="Editar perfil"
