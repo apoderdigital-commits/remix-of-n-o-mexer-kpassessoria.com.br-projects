@@ -644,6 +644,7 @@ export type Database = {
           id: string
           nome: string
           papel: string
+          permissoes: Json
         }
         Insert: {
           auth_user_id?: string | null
@@ -653,6 +654,7 @@ export type Database = {
           id?: string
           nome: string
           papel?: string
+          permissoes?: Json
         }
         Update: {
           auth_user_id?: string | null
@@ -662,6 +664,7 @@ export type Database = {
           id?: string
           nome?: string
           papel?: string
+          permissoes?: Json
         }
         Relationships: [
           {
@@ -2473,6 +2476,7 @@ export type Database = {
         Returns: string
       }
       crm_is_admin: { Args: never; Returns: boolean }
+      crm_is_agencia: { Args: never; Returns: boolean }
       crm_sanitize_tipo: { Args: { p_tipo: string }; Returns: string }
       crm_sanitize_url: { Args: { p_url: string }; Returns: string }
       get_accessible_clients: {
