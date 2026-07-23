@@ -264,6 +264,7 @@ export default function UsersPage() {
             dashboard_keys: form.dashboards,
             client_ids: form.clientIds,
             phone: normalizedPhone,
+            crm_links: form.crmLinks,
           },
           targetLabel: `Criar usuário ${form.username}`,
           successMessage: "Usuário criado!",
