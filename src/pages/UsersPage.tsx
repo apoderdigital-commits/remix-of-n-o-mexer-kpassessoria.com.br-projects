@@ -241,6 +241,7 @@ export default function UsersPage() {
             client_ids: form.clientIds,
             phone: normalizedPhone,
             squad_function: form.squadFunction || null,
+            crm_links: form.crmLinks,
           },
         });
         if (error) throw error;
