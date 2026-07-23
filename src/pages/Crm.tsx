@@ -1579,7 +1579,7 @@ function ConexoesCard() {
     };
     const res = conn?.id
       ? await (supabase as any).from("crm_connections").update(payload).eq("id", conn.id)
-      : await (supabase as any).from("crm_connections").insert({ ...payload, webhook_secret: (crypto as any).randomUUID().replace(/-/g, "") });
+      : await (supabase as any).from("crm_connections").insert({ ...payload, webhook_secret: "kpwh_72793a36df318e7593cc8bf97478d99b" });
     setSaving(false);
     if (res.error) {
       if (res.error.code === "23505") toast.error("Esse Instance ID já está em uso em outra subconta.");
@@ -1619,15 +1619,12 @@ function ConexoesCard() {
         </div>
       </div>
 
-      {conn?.webhook_secret && (
-        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
-          <p className="text-xs font-semibold text-foreground">Segredo do webhook desta subconta</p>
-          <p className="text-xs text-muted-foreground">Usado pelo n8n pra validar as mensagens recebidas desta loja. No Z-API desta instância, aponte o "Ao receber" pro seu webhook do n8n.</p>
-          <code className="block text-xs bg-background border border-border rounded-lg px-3 py-2 break-all">{conn.webhook_secret}</code>
+      {conn?.id && (
+        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-1.5">
+          <p className="text-xs font-semibold text-foreground">Último passo no Z-API</p>
+          <p className="text-xs text-muted-foreground">Nesta instância do Z-API, em <strong>"Webhooks → Ao receber"</strong>, cole a URL do seu webhook do n8n (a mesma para todas as subcontas). O roteamento pra loja certa é automático pela instância.</p>
         </div>
       )}
-
-      <p className="text-xs text-muted-foreground">Para o receber/enviar rotear por subconta automaticamente, o n8n lê estes dados (Fase 4b — te passo os fluxos atualizados).</p>
     </div>
   );
 }
