@@ -64,6 +64,15 @@ export default function UsersPage() {
   const { data: clients } = useClients();
   const queryClient = useQueryClient();
 
+  // Subcontas do CRM (para exibir pastas + montar o modal)
+  const { data: crmClients } = useQuery({
+    queryKey: ["crm_clients_admin"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("crm_clients").select("id, nome").order("nome");
+      return (data || []) as Array<{ id: string; nome: string }>;
+    },
+  });
+
   // Fetch users with their roles, dashboard access, and client access
   const fetchUsers = async (trash: boolean): Promise<UserRow[]> => {
     let q = supabase.from("profiles").select("*");
@@ -74,6 +83,9 @@ export default function UsersPage() {
     const { data: roles } = await supabase.from("user_roles").select("*");
     const { data: dashAccess } = await supabase.from("user_dashboard_access").select("*");
     const { data: clientAccess } = await supabase.from("user_client_access").select("*, clients(id, name)");
+    const { data: crmLinks } = await (supabase as any)
+      .from("crm_users")
+      .select("auth_user_id, cliente_id, papel, permissoes");
 
     return profiles.map((p: any) => {
       const userRoles = (roles || []).filter((r) => r.user_id === p.user_id);
@@ -82,6 +94,13 @@ export default function UsersPage() {
       const userClients = (clientAccess || [])
         .filter((ca) => ca.user_id === p.user_id)
         .map((ca: any) => ({ id: ca.client_id, name: ca.clients?.name || "—" }));
+      const userCrmLinks: CrmLinkForm[] = ((crmLinks || []) as any[])
+        .filter((l) => l.auth_user_id === p.user_id)
+        .map((l) => ({
+          cliente_id: l.cliente_id,
+          papel: l.papel === "admin" ? "admin" : "usuario",
+          permissoes: (l.permissoes || {}) as Record<string, boolean>,
+        }));
 
       return {
         user_id: p.user_id,
@@ -92,6 +111,7 @@ export default function UsersPage() {
         squad_function: (p as any).squad_function || null,
         dashboards: userDash,
         clients: userClients,
+        crm_links: userCrmLinks,
         deleted_at: p.deleted_at || null,
       } as UserRow;
     });
