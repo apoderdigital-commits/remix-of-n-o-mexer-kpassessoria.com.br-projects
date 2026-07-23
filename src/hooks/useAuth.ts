@@ -10,6 +10,7 @@ interface AuthState {
   dashboards: string[];
   accessibleClientIds: string[];
   squadCount: number;
+  hasCrm: boolean;
 }
 
 const INACTIVITY_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours in ms
