@@ -30,9 +30,21 @@ const NAV: { key: Section; label: string; icon: typeof MessageSquare }[] = [
   { key: "config", label: "Config", icon: Settings },
 ];
 
-// ── Multi-conta: subconta ativa (agência escolhe; adm/usuário entram na sua) ──
-type CrmScopeT = { subcontaId: string; isAgencia: boolean; subcontaNome: string };
-const CrmScope = createContext<CrmScopeT>({ subcontaId: "", isAgencia: false, subcontaNome: "" });
+// ── Permissões granulares (tipo 'usuario'). admin da subconta e agência têm tudo ──
+const PERMISSOES: { key: string; label: string }[] = [
+  { key: "ver_conversas", label: "Ver conversas" },
+  { key: "responder", label: "Responder mensagens" },
+  { key: "add_contato", label: "Adicionar contato" },
+  { key: "editar_contato", label: "Editar contato" },
+  { key: "excluir_contato", label: "Excluir contato" },
+  { key: "ver_oportunidades", label: "Ver oportunidades" },
+  { key: "gerir_oportunidades", label: "Gerir oportunidades" },
+  { key: "ver_config", label: "Ver configurações" },
+];
+
+// ── Multi-conta: subconta ativa + papel/permissões do usuário logado ──
+type CrmScopeT = { subcontaId: string; isAgencia: boolean; subcontaNome: string; papel: string; can: (k: string) => boolean };
+const CrmScope = createContext<CrmScopeT>({ subcontaId: "", isAgencia: false, subcontaNome: "", papel: "usuario", can: () => false });
 const useScope = () => useContext(CrmScope);
 
 // Etapas padrão ao criar um funil do zero + cor do marcador por posição.
@@ -81,7 +93,7 @@ type Opp = {
   crm_contacts: { id: string; nome: string | null } | null;
 };
 type ContatoFull = { id: string; cliente_id: string; nome: string | null; telefone: string | null; email: string | null; criado_em: string };
-type CrmUser = { id: string; auth_user_id: string | null; nome: string | null; email: string | null; cliente_id: string; papel: "admin" | "atendente" | "gestor" };
+type CrmUser = { id: string; auth_user_id: string | null; nome: string | null; email: string | null; cliente_id: string; papel: "admin" | "usuario"; permissoes?: Record<string, boolean> };
 type ClienteRow = { id: string; nome: string | null };
 
 // ---------------------------------------------------------------------------
@@ -189,7 +201,7 @@ function Avatar({ nome, size = "md", foto, isGroup }: { nome: string | null | un
 
 // ---------------------------- CONVERSAS (real) -----------------------------
 function Conversas() {
-  const { subcontaId } = useScope();
+  const { subcontaId, can } = useScope();
   const [filter, setFilter] = useState<"contatos" | "grupos" | "nao_lidos">("contatos");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState<Conversa[]>([]);
@@ -654,7 +666,9 @@ function Conversas() {
               <div ref={bottomRef} />
             </div>
             <div className="shrink-0 border-t border-border p-3 flex items-center gap-2 bg-card/40">
-              {recording ? (
+              {!can("responder") ? (
+                <p className="w-full text-center text-xs text-muted-foreground py-1">Você não tem permissão para responder nesta conta.</p>
+              ) : recording ? (
                 <>
                   <div className="flex-1 h-10 px-3 rounded-lg bg-rose-500/10 border border-rose-500/40 text-sm text-rose-600 dark:text-rose-300 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
@@ -752,7 +766,8 @@ function Conversas() {
 
 // -------------------------- OPORTUNIDADES (Kanban real) --------------------
 function Oportunidades() {
-  const { subcontaId } = useScope();
+  const { subcontaId, can } = useScope();
+  const podeGerir = can("gerir_oportunidades");
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
@@ -890,13 +905,13 @@ function Oportunidades() {
               {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           )}
-          {pipeline && (
+          {pipeline && podeGerir && (
             <button onClick={() => setManageStages(true)} title="Editar etapas do funil" className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-semibold px-2.5 transition-colors shrink-0">
               <Pencil className="h-3.5 w-3.5" /> Etapas
             </button>
           )}
         </div>
-        {pipeline && (
+        {pipeline && podeGerir && (
           <button onClick={() => setEditing({ status: "aberto", pipeline_stage_id: stages[0]?.id })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 transition-colors shrink-0">
             <Plus className="h-4 w-4" /> Nova oportunidade
           </button>
@@ -945,10 +960,10 @@ function Oportunidades() {
                       list.map((o) => (
                         <div
                           key={o.id}
-                          draggable
-                          onDragStart={() => setDragId(o.id)}
+                          draggable={podeGerir}
+                          onDragStart={() => podeGerir && setDragId(o.id)}
                           onDragEnd={() => setDragId(null)}
-                          onClick={() => setEditing({ ...o })}
+                          onClick={() => podeGerir && setEditing({ ...o })}
                           className="rounded-lg border border-border bg-card p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/40 transition-colors"
                         >
                           <p className="font-semibold text-sm text-foreground truncate">{o.crm_contacts?.nome || "Sem contato"}</p>
@@ -1158,7 +1173,7 @@ function NotConfigured({ children }: { children: ReactNode }) {
 }
 
 function Contatos() {
-  const { subcontaId } = useScope();
+  const { subcontaId, can } = useScope();
   const [contatos, setContatos] = useState<ContatoFull[]>([]);
   const [clientes, setClientes] = useState<ClienteRow[]>([]);
   const [busca, setBusca] = useState("");
@@ -1244,7 +1259,7 @@ function Contatos() {
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-bold text-foreground">Contatos</h2>
-            <button onClick={() => setEditing({})} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-2.5 py-1.5"><Plus className="h-3.5 w-3.5" /> Novo</button>
+            {can("add_contato") && <button onClick={() => setEditing({})} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-2.5 py-1.5"><Plus className="h-3.5 w-3.5" /> Novo</button>}
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1278,7 +1293,7 @@ function Contatos() {
                 <p className="font-bold text-lg text-foreground truncate">{sel.nome || "Sem nome"}</p>
                 <p className="text-xs text-muted-foreground">Criado em {new Date(sel.criado_em).toLocaleDateString("pt-BR")}</p>
               </div>
-              <button onClick={() => setEditing({ ...sel })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/15 transition-colors"><Pencil className="h-3.5 w-3.5" /> Editar</button>
+              {can("editar_contato") && <button onClick={() => setEditing({ ...sel })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/15 transition-colors"><Pencil className="h-3.5 w-3.5" /> Editar</button>}
             </div>
             <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
               <InfoRow icon={Phone} label="Telefone" value={sel.telefone} />
@@ -1315,13 +1330,13 @@ function Contatos() {
         )}
       </div>
 
-      {editing && <ContatoModal editing={editing} setEditing={setEditing} clientes={clientes} onSave={salvar} onDelete={excluir} saving={saving} />}
+      {editing && <ContatoModal editing={editing} setEditing={setEditing} clientes={clientes} onSave={salvar} onDelete={excluir} saving={saving} podeExcluir={can("excluir_contato")} />}
     </>
   );
 }
 
 function ContatoModal({
-  editing, setEditing, clientes, onSave, onDelete, saving,
+  editing, setEditing, clientes, onSave, onDelete, saving, podeExcluir,
 }: {
   editing: Partial<ContatoFull>;
   setEditing: (v: Partial<ContatoFull> | null) => void;
@@ -1329,6 +1344,7 @@ function ContatoModal({
   onSave: () => void;
   onDelete: (id: string) => void;
   saving: boolean;
+  podeExcluir: boolean;
 }) {
   const isNew = !editing.id;
   return (
@@ -1353,7 +1369,7 @@ function ContatoModal({
           </div>
         </div>
         <div className="flex items-center justify-between pt-2">
-          {editing.id ? <button onClick={() => onDelete(editing.id!)} className="text-sm font-semibold text-rose-600 dark:text-rose-400 hover:underline">Excluir</button> : <span />}
+          {editing.id && podeExcluir ? <button onClick={() => onDelete(editing.id!)} className="text-sm font-semibold text-rose-600 dark:text-rose-400 hover:underline">Excluir</button> : <span />}
           <div className="flex gap-2">
             <button onClick={() => setEditing(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
             <button onClick={() => onSave()} disabled={saving} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 disabled:opacity-60">{saving ? "Salvando..." : "Salvar"}</button>
@@ -1365,17 +1381,19 @@ function ContatoModal({
 }
 
 // --------------------------- CONFIGURAÇÕES (real) --------------------------
-const PAPEL_LABEL: Record<string, string> = { admin: "Admin", gestor: "Gestor", atendente: "Atendente" };
+const PAPEL_LABEL: Record<string, string> = { agencia: "Agência", admin: "Admin da subconta", usuario: "Usuário" };
 type ConfTab = { key: "perfil" | "usuarios" | "conexoes" | "fases"; label: string; icon: typeof User };
 
 function Config() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { isAgencia, papel } = useScope();
+  const gerirSubconta = isAgencia || papel === "admin";
   const [tab, setTab] = useState<ConfTab["key"]>("perfil");
   const tabs: ConfTab[] = [
     { key: "perfil", label: "Perfil", icon: User },
-    ...(isAdmin ? [{ key: "usuarios", label: "Usuários", icon: Users } as ConfTab] : []),
+    ...(gerirSubconta ? [{ key: "usuarios", label: "Usuários", icon: Users } as ConfTab] : []),
     { key: "conexoes", label: "Conexões", icon: Link2 },
-    ...(isAdmin ? [{ key: "fases", label: "Fases do funil", icon: Target } as ConfTab] : []),
+    ...(gerirSubconta ? [{ key: "fases", label: "Fases do funil", icon: Target } as ConfTab] : []),
   ];
   return (
     <div className="flex-1 min-w-0 flex flex-col min-h-0">
@@ -1389,10 +1407,10 @@ function Config() {
           ))}
         </nav>
         <div className="flex-1 min-w-0 overflow-y-auto p-5">
-          {tab === "perfil" && <PerfilCard user={user} isAdmin={isAdmin} />}
-          {tab === "usuarios" && isAdmin && <UsuariosSection />}
+          {tab === "perfil" && <PerfilCard user={user} isAdmin={isAgencia} />}
+          {tab === "usuarios" && gerirSubconta && <UsuariosSection />}
           {tab === "conexoes" && <ConexoesCard />}
-          {tab === "fases" && isAdmin && <FasesSection />}
+          {tab === "fases" && gerirSubconta && <FasesSection />}
         </div>
       </div>
     </div>
@@ -1434,40 +1452,34 @@ function PerfilCard({ user, isAdmin }: { user: any; isAdmin: boolean }) {
 function UsuariosSection() {
   const { subcontaId } = useScope();
   const [users, setUsers] = useState<CrmUser[]>([]);
-  const [clientes, setClientes] = useState<ClienteRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [novo, setNovo] = useState<Partial<CrmUser> | null>(null);
+  const [edit, setEdit] = useState<Partial<CrmUser> | null>(null);
   const load = useCallback(async () => {
-    const [u, c] = await Promise.all([
-      (supabase as any).from("crm_users").select("id,auth_user_id,nome,email,cliente_id,papel").eq("cliente_id", subcontaId).order("nome", { ascending: true }),
-      (supabase as any).from("crm_clients").select("id,nome").order("nome", { ascending: true }),
-    ]);
-    setUsers((u.data as CrmUser[]) || []);
-    setClientes((c.data as ClienteRow[]) || []);
+    const { data } = await (supabase as any).from("crm_users").select("id,auth_user_id,nome,email,cliente_id,papel,permissoes").eq("cliente_id", subcontaId).order("nome", { ascending: true });
+    setUsers((data as CrmUser[]) || []);
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  const changePapel = async (id: string, papel: string) => {
-    const { error } = await (supabase as any).from("crm_users").update({ papel }).eq("id", id);
-    if (error) toast.error(error.message); else void load();
-  };
   const remove = async (id: string) => {
     const { error } = await (supabase as any).from("crm_users").delete().eq("id", id);
     if (error) toast.error(error.message); else void load();
   };
-  const salvarNovo = async () => {
-    if (!novo) return;
-    if (!novo.nome?.trim() && !novo.email?.trim()) { toast.error("Preencha nome ou email."); return; }
-    const cliente_id = subcontaId;
-    if (!cliente_id) { toast.error("Nenhuma loja disponível."); return; }
-    const { error } = await (supabase as any).from("crm_users").insert({
-      nome: novo.nome?.trim() || null,
-      email: novo.email?.trim() || null,
-      cliente_id,
-      papel: novo.papel || "atendente",
-    });
-    if (error) toast.error(error.message); else { setNovo(null); void load(); }
+  const salvar = async () => {
+    if (!edit) return;
+    if (!edit.nome?.trim() && !edit.email?.trim()) { toast.error("Preencha nome ou email."); return; }
+    if (!subcontaId) { toast.error("Sem subconta ativa."); return; }
+    const payload = {
+      nome: edit.nome?.trim() || null,
+      email: edit.email?.trim() || null,
+      cliente_id: subcontaId,
+      papel: edit.papel || "usuario",
+      permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
+    };
+    const res = edit.id
+      ? await (supabase as any).from("crm_users").update(payload).eq("id", edit.id)
+      : await (supabase as any).from("crm_users").insert(payload);
+    if (res.error) toast.error(res.error.message); else { setEdit(null); void load(); }
   };
 
   return (
@@ -1475,9 +1487,9 @@ function UsuariosSection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold text-foreground">Usuários do CRM</p>
-          <p className="text-xs text-muted-foreground">Quem tem acesso. O convite por email vem depois — por ora, cria o cadastro (ele se vincula ao login na 1ª vez que a pessoa entrar).</p>
+          <p className="text-xs text-muted-foreground">Quem tem acesso a esta subconta. O convite por email vem depois — por ora, cria o cadastro (ele se vincula ao login na 1ª vez que a pessoa entrar).</p>
         </div>
-        <button onClick={() => setNovo({ papel: "atendente" })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 shrink-0"><UserPlus className="h-4 w-4" /> Novo usuário</button>
+        <button onClick={() => setEdit({ papel: "usuario", permissoes: {} })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 shrink-0"><UserPlus className="h-4 w-4" /> Novo usuário</button>
       </div>
       {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
         <div className="rounded-xl border border-border overflow-hidden">
@@ -1488,39 +1500,47 @@ function UsuariosSection() {
                 <p className="font-semibold text-sm text-foreground truncate">{u.nome || "Sem nome"}</p>
                 <p className="text-xs text-muted-foreground truncate">{u.email || "—"}{!u.auth_user_id && " · não vinculado"}</p>
               </div>
-              <select value={u.papel} onChange={(e) => changePapel(u.id, e.target.value)} className="h-8 rounded-lg bg-muted/50 border border-border text-xs text-foreground px-2 outline-none focus:border-primary/50 shrink-0">
-                <option value="admin">Admin</option>
-                <option value="gestor">Gestor</option>
-                <option value="atendente">Atendente</option>
-              </select>
+              <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.papel === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{u.papel === "admin" ? "Admin" : "Usuário"}</span>
+              <button onClick={() => setEdit({ ...u, permissoes: u.permissoes || {} })} title="Editar" className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"><Pencil className="h-4 w-4" /></button>
               <button onClick={() => void remove(u.id)} title="Remover" className="h-8 w-8 rounded-lg flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
         </div>
       )}
-      {novo && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setNovo(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-background border border-border shadow-xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      {edit && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEdit(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-background border border-border shadow-xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-foreground">Novo usuário</h3>
-              <button onClick={() => setNovo(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+              <h3 className="font-bold text-foreground">{edit.id ? "Editar usuário" : "Novo usuário"}</h3>
+              <button onClick={() => setEdit(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
-              <div><label className="text-xs font-semibold text-muted-foreground">Nome</label><input value={novo.nome ?? ""} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Email</label><input value={novo.email ?? ""} onChange={(e) => setNovo({ ...novo, email: e.target.value })} placeholder="email@exemplo.com" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-xs font-semibold text-muted-foreground">Papel</label>
-                  <select value={novo.papel || "atendente"} onChange={(e) => setNovo({ ...novo, papel: e.target.value as CrmUser["papel"] })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
-                    <option value="admin">Admin</option>
-                    <option value="gestor">Gestor</option>
-                    <option value="atendente">Atendente</option>
-                  </select>
-                </div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Nome</label><input value={edit.nome ?? ""} onChange={(e) => setEdit({ ...edit, nome: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Email</label><input value={edit.email ?? ""} onChange={(e) => setEdit({ ...edit, email: e.target.value })} placeholder="email@exemplo.com" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Papel</label>
+                <select value={edit.papel || "usuario"} onChange={(e) => setEdit({ ...edit, papel: e.target.value as CrmUser["papel"] })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
+                  <option value="admin">Admin da subconta (tudo)</option>
+                  <option value="usuario">Usuário (limitado)</option>
+                </select>
               </div>
+              {edit.papel === "usuario" && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5">Permissões — marque o que este usuário pode fazer</p>
+                  <div className="space-y-1.5 rounded-lg border border-border p-3">
+                    {PERMISSOES.map((p) => (
+                      <label key={p.key} className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer">
+                        <input type="checkbox" checked={!!edit.permissoes?.[p.key]} onChange={(e) => setEdit({ ...edit, permissoes: { ...(edit.permissoes || {}), [p.key]: e.target.checked } })} className="h-4 w-4 accent-primary" />
+                        {p.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setNovo(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
-              <button onClick={() => void salvarNovo()} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2">Salvar</button>
+              <button onClick={() => setEdit(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
+              <button onClick={() => void salvar()} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2">Salvar</button>
             </div>
           </div>
         </div>
@@ -1651,20 +1671,26 @@ export default function Crm() {
   const [loadingScope, setLoadingScope] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
   const [criando, setCriando] = useState(false);
+  const [meuPapel, setMeuPapel] = useState<string>("usuario");
+  const [minhasPerms, setMinhasPerms] = useState<Record<string, boolean>>({});
 
   const loadSubcontas = useCallback(async () => {
     if (!user?.id) return;
     setLoadingScope(true);
     if (isAdmin) {
-      // AGÊNCIA: escolhe em qual subconta entrar
+      // AGÊNCIA: vê tudo, escolhe em qual subconta entrar
+      setMeuPapel("agencia");
+      setMinhasPerms({});
       const { data } = await (supabase as any).from("crm_clients").select("id,nome").order("nome", { ascending: true });
       const list = ((data as any[]) || []).map((c) => ({ id: c.id, nome: c.nome }));
       setSubcontas(list);
       setSubcontaId((prev) => prev || (list.length === 1 ? list[0].id : null));
     } else {
-      // ADMIN/USUÁRIO de subconta: entra direto na sua
-      const { data } = await (supabase as any).from("crm_users").select("cliente_id").eq("auth_user_id", user.id).maybeSingle();
+      // ADMIN/USUÁRIO de subconta: entra direto na sua, com seu papel/permissões
+      const { data } = await (supabase as any).from("crm_users").select("cliente_id, papel, permissoes").eq("auth_user_id", user.id).maybeSingle();
       if (data?.cliente_id) {
+        setMeuPapel(data.papel || "usuario");
+        setMinhasPerms((data.permissoes as Record<string, boolean>) || {});
         const { data: cl } = await (supabase as any).from("crm_clients").select("nome").eq("id", data.cliente_id).maybeSingle();
         setSubcontaId(data.cliente_id);
         setSubcontas([{ id: data.cliente_id, nome: cl?.nome ?? null }]);
@@ -1689,6 +1715,10 @@ export default function Crm() {
   };
 
   const subcontaNome = subcontas.find((s) => s.id === subcontaId)?.nome || "";
+  const can = (k: string) => isAdmin || meuPapel === "admin" || !!minhasPerms[k];
+  const navPerm: Record<Section, string | null> = { conversas: "ver_conversas", oportunidades: "ver_oportunidades", contatos: null, config: "ver_config" };
+  const navVisible = NAV.filter((item) => { const p = navPerm[item.key]; return !p || can(p); });
+  const effectiveSection: Section = navVisible.some((n) => n.key === section) ? section : (navVisible[0]?.key || "conversas");
 
   const Header = (
     <header className="h-14 shrink-0 border-b border-border bg-card/50 backdrop-blur px-3 sm:px-4 flex items-center gap-3">
@@ -1772,13 +1802,13 @@ export default function Crm() {
   }
 
   return (
-    <CrmScope.Provider value={{ subcontaId, isAgencia: isAdmin, subcontaNome }}>
+    <CrmScope.Provider value={{ subcontaId, isAgencia: isAdmin, subcontaNome, papel: meuPapel, can }}>
       <div className="h-screen flex flex-col bg-background text-foreground">
         {Header}
         <div className="flex-1 flex min-h-0">
           <nav className="w-[72px] shrink-0 border-r border-border bg-card/30 p-2 flex flex-col gap-1">
-            {NAV.map((item) => {
-              const activeItem = section === item.key;
+            {navVisible.map((item) => {
+              const activeItem = effectiveSection === item.key;
               return (
                 <button key={item.key} onClick={() => setSection(item.key)} className={`w-full flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 transition-colors ${activeItem ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
                   <item.icon className="h-5 w-5" />
@@ -1788,10 +1818,10 @@ export default function Crm() {
             })}
           </nav>
           <div className="flex-1 min-w-0 flex" key={subcontaId}>
-            {section === "conversas" && <Conversas />}
-            {section === "oportunidades" && <Oportunidades />}
-            {section === "contatos" && <Contatos />}
-            {section === "config" && <Config />}
+            {effectiveSection === "conversas" && <Conversas />}
+            {effectiveSection === "oportunidades" && <Oportunidades />}
+            {effectiveSection === "contatos" && <Contatos />}
+            {effectiveSection === "config" && <Config />}
           </div>
         </div>
       </div>
