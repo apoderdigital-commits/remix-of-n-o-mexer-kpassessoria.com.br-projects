@@ -57,6 +57,7 @@ type Mensagem = {
   criado_em: string;
   remetente_nome?: string | null;
   remetente_telefone?: string | null;
+  remetente_foto?: string | null;
 };
 type Pipeline = { id: string; cliente_id: string; nome: string };
 type Stage = { id: string; nome: string; ordem: number; cliente_id: string; pipeline_id: string };
