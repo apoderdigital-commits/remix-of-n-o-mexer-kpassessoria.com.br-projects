@@ -10,6 +10,7 @@ interface AuthState {
   dashboards: string[];
   accessibleClientIds: string[];
   squadCount: number;
+  hasCrm: boolean;
 }
 
 const INACTIVITY_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours in ms
@@ -28,6 +29,7 @@ export function useAuth() {
     dashboards: [],
     accessibleClientIds: [],
     squadCount: 0,
+    hasCrm: false,
   });
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function useAuth() {
       if (!isMounted) return;
 
       if (!user) {
-        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
         return;
       }
 
@@ -92,12 +94,23 @@ export function useAuth() {
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id);
 
+        // CRM access: admin do site vê tudo; senão precisa de vínculo em crm_users.
+        let hasCrm = isAdmin;
+        if (!hasCrm) {
+          const { count: crmCount } = await supabase
+            .from("crm_users")
+            .select("id", { count: "exact", head: true })
+            .eq("auth_user_id", user.id);
+          hasCrm = (crmCount || 0) > 0;
+        }
+
+
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0 });
+        setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0, hasCrm });
       } catch (error) {
         console.error("Erro ao carregar autenticação:", error);
         if (!isMounted) return;
-        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        setState({ user, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
       }
     };
 
@@ -114,7 +127,7 @@ export function useAuth() {
       })
       .catch((err) => {
         console.error("getSession falhou:", err);
-        if (isMounted) setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0 });
+        if (isMounted) setState({ user: null, loading: false, isAdmin: false, clientId: null, dashboards: [], accessibleClientIds: [], squadCount: 0, hasCrm: false });
       });
 
     // Fail-safe: se por qualquer motivo (sessão corrompida no localStorage,
