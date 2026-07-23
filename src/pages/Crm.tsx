@@ -145,8 +145,18 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
   );
 }
 
-function Avatar({ nome, size = "md" }: { nome: string | null | undefined; size?: "md" | "lg" }) {
+function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; size?: "md" | "lg"; foto?: string | null }) {
   const cls = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
+  if (foto) {
+    return (
+      <img
+        src={foto}
+        alt={nome || "avatar"}
+        className={`${cls} shrink-0 rounded-full object-cover bg-muted`}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   return (
     <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold`}>
       {(nome || "?").charAt(0).toUpperCase()}
