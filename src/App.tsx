@@ -27,8 +27,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children, adminOnly = false, dashboardKey }: { children: React.ReactNode; adminOnly?: boolean; dashboardKey?: string }) {
-  const { user, loading, isAdmin, dashboards } = useAuth();
+function ProtectedRoute({ children, adminOnly = false, dashboardKey, crmAccess = false }: { children: React.ReactNode; adminOnly?: boolean; dashboardKey?: string; crmAccess?: boolean }) {
+  const { user, loading, isAdmin, dashboards, hasCrm } = useAuth();
 
   if (loading) {
     return (
@@ -39,6 +39,7 @@ function ProtectedRoute({ children, adminOnly = false, dashboardKey }: { childre
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (crmAccess && !hasCrm) return <Navigate to="/hub" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
   if (dashboardKey && !isAdmin && !dashboards.includes(dashboardKey)) {
     return <Navigate to="/" replace />;
@@ -76,7 +77,7 @@ const AppRoutes = () => (
     <Route path="/squad/admin" element={<ProtectedRoute adminOnly><SquadAdmin /></ProtectedRoute>} />
     <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
     <Route path="/tarefas" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
-    <Route path="/crm" element={<ProtectedRoute adminOnly><Crm /></ProtectedRoute>} />
+    <Route path="/crm" element={<ProtectedRoute crmAccess><Crm /></ProtectedRoute>} />
     {/* Rota pública — iframe embutido no GHL por subconta */}
     <Route path="/view" element={<ClientView />} />
     <Route path="*" element={<NotFound />} />
