@@ -1,67 +1,81 @@
 {
-  "name": "CRM WhatsApp - Saída (texto + audio)",
+  "name": "CRM WhatsApp - Saída (texto + audio + imagem + video)",
   "nodes": [
     {
-      "parameters": {},
-      "id": "webhook-saida",
-      "name": "Webhook CRM",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [240, 300],
-      "webhookId": "crm-send"
-    },
-    {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "=",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "tipo-audio",
-              "leftValue": "={{ $json.body.tipo || $json.body.type }}",
-              "rightValue": "audio",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "id": "if-audio",
-      "name": "É áudio?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/<ZAPI_TOKEN>/send-text",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "phone", "value": "={{ $json.body.phone }}" },
-            { "name": "message", "value": "={{ $json.body.message }}" }
-          ]
-        },
+        "httpMethod": "POST",
+        "path": "crm-whatsapp-out",
+        "responseMode": "onReceived",
         "options": {}
       },
-      "id": "zapi-text",
-      "name": "Z-API - Texto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [700, 240]
+      "id": "webhook-saida",
+      "name": "Webhook Enviar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "crm-whatsapp-out"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c-audio",
+                    "leftValue": "={{ $json.body.tipo }}",
+                    "rightValue": "audio",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c-imagem",
+                    "leftValue": "={{ $json.body.tipo }}",
+                    "rightValue": "imagem",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "imagem"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "typeValidation": "loose" },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c-video",
+                    "leftValue": "={{ $json.body.tipo }}",
+                    "rightValue": "video",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "video"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra", "renameFallbackOutput": "texto" }
+      },
+      "id": "switch-tipo",
+      "name": "Tipo da mensagem",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [440, 300]
     },
     {
       "parameters": {
@@ -70,53 +84,98 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Client-Token", "value": "<ZAPI_CLIENT_TOKEN>" }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "phone", "value": "={{ $json.body.phone }}" },
-            { "name": "audio", "value": "={{ $json.body.audio_url }}" }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.body.phone }}\",\n  \"audio\": \"{{ $json.body.url_midia }}\"\n}",
         "options": {}
       },
       "id": "zapi-audio",
-      "name": "Z-API - Áudio",
+      "name": "Z-API Áudio",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [700, 360]
+      "typeVersion": 4.2,
+      "position": [720, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/<ZAPI_TOKEN>/send-image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Client-Token", "value": "<ZAPI_CLIENT_TOKEN>" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.body.phone }}\",\n  \"image\": \"{{ $json.body.url_midia }}\",\n  \"caption\": \"{{ $json.body.message || '' }}\"\n}",
+        "options": {}
+      },
+      "id": "zapi-imagem",
+      "name": "Z-API Imagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/<ZAPI_TOKEN>/send-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Client-Token", "value": "<ZAPI_CLIENT_TOKEN>" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.body.phone }}\",\n  \"video\": \"{{ $json.body.url_midia }}\",\n  \"caption\": \"{{ $json.body.message || '' }}\"\n}",
+        "options": {}
+      },
+      "id": "zapi-video",
+      "name": "Z-API Vídeo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/<ZAPI_TOKEN>/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Client-Token", "value": "<ZAPI_CLIENT_TOKEN>" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.body.phone }}\",\n  \"message\": \"{{ $json.body.message }}\"\n}",
+        "options": {}
+      },
+      "id": "zapi-texto",
+      "name": "Z-API Texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 540]
     }
   ],
   "connections": {
-    "Webhook CRM": {
-      "main": [
-        [
-          {
-            "node": "É áudio?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Webhook Enviar": {
+      "main": [[{ "node": "Tipo da mensagem", "type": "main", "index": 0 }]]
     },
-    "É áudio?": {
+    "Tipo da mensagem": {
       "main": [
-        [
-          {
-            "node": "Z-API - Áudio",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Z-API - Texto",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Z-API Áudio", "type": "main", "index": 0 }],
+        [{ "node": "Z-API Imagem", "type": "main", "index": 0 }],
+        [{ "node": "Z-API Vídeo", "type": "main", "index": 0 }],
+        [{ "node": "Z-API Texto", "type": "main", "index": 0 }]
       ]
     }
   },
