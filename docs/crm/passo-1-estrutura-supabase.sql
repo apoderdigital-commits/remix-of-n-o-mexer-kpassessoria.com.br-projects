@@ -140,6 +140,9 @@ as $$
 $$;
 
 -- o usuário logado é admin? (admin enxerga todos os clientes)
+-- Fonte de admin = a MESMA do app (public.user_roles, role='admin'), assim todo
+-- admin do painel já enxerga o CRM sem precisar de linha em crm_users.
+-- (mantém também crm_users.papel='admin' como opção, p/ admins só-do-CRM no futuro)
 create or replace function public.crm_is_admin()
 returns boolean
 language sql
@@ -148,6 +151,10 @@ security definer
 set search_path = public
 as $$
   select exists (
+    select 1 from public.user_roles
+    where user_id = auth.uid() and role = 'admin'
+  )
+  or exists (
     select 1 from public.crm_users
     where auth_user_id = auth.uid() and papel = 'admin'
   );
