@@ -29,6 +29,7 @@ export function useAuth() {
     dashboards: [],
     accessibleClientIds: [],
     squadCount: 0,
+    hasCrm: false,
   });
 
   useEffect(() => {
