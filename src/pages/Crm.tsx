@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,11 @@ const NAV: { key: Section; label: string; icon: typeof MessageSquare }[] = [
   { key: "contatos", label: "Contatos", icon: Users },
   { key: "config", label: "Config", icon: Settings },
 ];
+
+// ── Multi-conta: subconta ativa (agência escolhe; adm/usuário entram na sua) ──
+type CrmScopeT = { subcontaId: string; isAgencia: boolean; subcontaNome: string };
+const CrmScope = createContext<CrmScopeT>({ subcontaId: "", isAgencia: false, subcontaNome: "" });
+const useScope = () => useContext(CrmScope);
 
 // Etapas padrão ao criar um funil do zero + cor do marcador por posição.
 const DEFAULT_STAGES = ["Novo lead", "Em atendimento", "Proposta enviada", "Ganho", "Perdido"];
@@ -183,6 +188,7 @@ function Avatar({ nome, size = "md", foto, isGroup }: { nome: string | null | un
 
 // ---------------------------- CONVERSAS (real) -----------------------------
 function Conversas() {
+  const { subcontaId } = useScope();
   const [filter, setFilter] = useState<"contatos" | "grupos" | "nao_lidos">("contatos");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState<Conversa[]>([]);
@@ -208,6 +214,7 @@ function Conversas() {
     const { data, error } = await (supabase as any)
       .from("crm_conversations")
       .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email,foto_url,is_group)")
+      .eq("cliente_id", subcontaId)
       .neq("status", "arquivado")
       // ordena pela última MENSAGEM (não por atualizado_em, que muda ao só ler/abrir);
       // conversas sem mensagem (ultima_em nulo) vão para o fim.
@@ -717,6 +724,7 @@ function Conversas() {
 
 // -------------------------- OPORTUNIDADES (Kanban real) --------------------
 function Oportunidades() {
+  const { subcontaId } = useScope();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
@@ -736,7 +744,7 @@ function Oportunidades() {
 
   const loadPipelines = useCallback(async () => {
     const { data, error } = await (supabase as any)
-      .from("crm_pipelines").select("id,cliente_id,nome").order("criado_em", { ascending: true });
+      .from("crm_pipelines").select("id,cliente_id,nome").eq("cliente_id", subcontaId).order("criado_em", { ascending: true });
     if (error) { if (isSchemaMissing(error)) setNotReady(true); setLoading(false); return; }
     setPipelines((data as Pipeline[]) || []);
     setPipelineId((prev) => prev || ((data as Pipeline[])?.[0]?.id ?? null));
@@ -769,11 +777,9 @@ function Oportunidades() {
   const criarFunilPadrao = async () => {
     setBusyPipe(true);
     try {
-      const { data: cli } = await (supabase as any).from("crm_clients").select("id").order("criado_em", { ascending: true }).limit(1).maybeSingle();
-      if (!cli?.id) { toast.error("Nenhuma loja disponível para criar o funil."); return; }
-      const { data: pipe, error } = await (supabase as any).from("crm_pipelines").insert({ cliente_id: cli.id, nome: "Funil de Vendas" }).select("id,cliente_id,nome").single();
+      const { data: pipe, error } = await (supabase as any).from("crm_pipelines").insert({ cliente_id: subcontaId, nome: "Funil de Vendas" }).select("id,cliente_id,nome").single();
       if (error) throw error;
-      const { error: sErr } = await (supabase as any).from("crm_pipeline_stages").insert(DEFAULT_STAGES.map((n, i) => ({ cliente_id: cli.id, pipeline_id: pipe.id, nome: n, ordem: i })));
+      const { error: sErr } = await (supabase as any).from("crm_pipeline_stages").insert(DEFAULT_STAGES.map((n, i) => ({ cliente_id: subcontaId, pipeline_id: pipe.id, nome: n, ordem: i })));
       if (sErr) throw sErr;
       await loadPipelines();
       setPipelineId(pipe.id);
@@ -1124,6 +1130,7 @@ function NotConfigured({ children }: { children: ReactNode }) {
 }
 
 function Contatos() {
+  const { subcontaId } = useScope();
   const [contatos, setContatos] = useState<ContatoFull[]>([]);
   const [clientes, setClientes] = useState<ClienteRow[]>([]);
   const [busca, setBusca] = useState("");
@@ -1138,7 +1145,7 @@ function Contatos() {
 
   const loadContatos = useCallback(async () => {
     const [ct, cl] = await Promise.all([
-      (supabase as any).from("crm_contacts").select("id,cliente_id,nome,telefone,email,criado_em").order("nome", { ascending: true }),
+      (supabase as any).from("crm_contacts").select("id,cliente_id,nome,telefone,email,criado_em").eq("cliente_id", subcontaId).order("nome", { ascending: true }),
       (supabase as any).from("crm_clients").select("id,nome").order("nome", { ascending: true }),
     ]);
     if (ct.error) { if (isSchemaMissing(ct.error)) setNotReady(true); setLoading(false); return; }
@@ -1162,7 +1169,7 @@ function Contatos() {
   const salvar = async () => {
     if (!editing) return;
     if (!editing.nome?.trim() && !editing.telefone?.trim()) { toast.error("Preencha ao menos o nome ou o telefone."); return; }
-    const clienteId = editing.cliente_id || clientes[0]?.id;
+    const clienteId = editing.id ? (editing.cliente_id || subcontaId) : subcontaId;
     if (!clienteId) { toast.error("Nenhuma loja disponível para vincular o contato."); return; }
     setSaving(true);
     const payload = {
@@ -1304,14 +1311,6 @@ function ContatoModal({
           <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-3">
-          {isNew && clientes.length > 1 && (
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">Loja</label>
-              <select value={editing.cliente_id || clientes[0]?.id || ""} onChange={(e) => setEditing({ ...editing, cliente_id: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
-                {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome || "Loja"}</option>)}
-              </select>
-            </div>
-          )}
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Nome</label>
             <input value={editing.nome ?? ""} onChange={(e) => setEditing({ ...editing, nome: e.target.value })} placeholder="Nome do contato" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
@@ -1405,13 +1404,14 @@ function PerfilCard({ user, isAdmin }: { user: any; isAdmin: boolean }) {
 }
 
 function UsuariosSection() {
+  const { subcontaId } = useScope();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [clientes, setClientes] = useState<ClienteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [novo, setNovo] = useState<Partial<CrmUser> | null>(null);
   const load = useCallback(async () => {
     const [u, c] = await Promise.all([
-      (supabase as any).from("crm_users").select("id,auth_user_id,nome,email,cliente_id,papel").order("nome", { ascending: true }),
+      (supabase as any).from("crm_users").select("id,auth_user_id,nome,email,cliente_id,papel").eq("cliente_id", subcontaId).order("nome", { ascending: true }),
       (supabase as any).from("crm_clients").select("id,nome").order("nome", { ascending: true }),
     ]);
     setUsers((u.data as CrmUser[]) || []);
@@ -1431,7 +1431,7 @@ function UsuariosSection() {
   const salvarNovo = async () => {
     if (!novo) return;
     if (!novo.nome?.trim() && !novo.email?.trim()) { toast.error("Preencha nome ou email."); return; }
-    const cliente_id = novo.cliente_id || clientes[0]?.id;
+    const cliente_id = subcontaId;
     if (!cliente_id) { toast.error("Nenhuma loja disponível."); return; }
     const { error } = await (supabase as any).from("crm_users").insert({
       nome: novo.nome?.trim() || null,
@@ -1481,13 +1481,6 @@ function UsuariosSection() {
               <div><label className="text-xs font-semibold text-muted-foreground">Nome</label><input value={novo.nome ?? ""} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
               <div><label className="text-xs font-semibold text-muted-foreground">Email</label><input value={novo.email ?? ""} onChange={(e) => setNovo({ ...novo, email: e.target.value })} placeholder="email@exemplo.com" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
               <div className="grid grid-cols-2 gap-3">
-                {clientes.length > 1 && (
-                  <div><label className="text-xs font-semibold text-muted-foreground">Loja</label>
-                    <select value={novo.cliente_id || clientes[0]?.id || ""} onChange={(e) => setNovo({ ...novo, cliente_id: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
-                      {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome || "Loja"}</option>)}
-                    </select>
-                  </div>
-                )}
                 <div><label className="text-xs font-semibold text-muted-foreground">Papel</label>
                   <select value={novo.papel || "atendente"} onChange={(e) => setNovo({ ...novo, papel: e.target.value as CrmUser["papel"] })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
                     <option value="admin">Admin</option>
@@ -1562,6 +1555,7 @@ function ConexoesCard() {
 }
 
 function FasesSection() {
+  const { subcontaId } = useScope();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
@@ -1571,7 +1565,7 @@ function FasesSection() {
   const clienteId = pipeline?.cliente_id || null;
 
   const loadPipes = useCallback(async () => {
-    const { data } = await (supabase as any).from("crm_pipelines").select("id,cliente_id,nome").order("criado_em", { ascending: true });
+    const { data } = await (supabase as any).from("crm_pipelines").select("id,cliente_id,nome").eq("cliente_id", subcontaId).order("criado_em", { ascending: true });
     setPipelines((data as Pipeline[]) || []);
     setPipelineId((prev) => prev || ((data as Pipeline[])?.[0]?.id ?? null));
   }, []);
@@ -1622,50 +1616,157 @@ function FasesSection() {
 
 // ------------------------------- SHELL -------------------------------------
 export default function Crm() {
+  const { user, isAdmin } = useAuth();
   const [section, setSection] = useState<Section>("conversas");
-  return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
-      <header className="h-14 shrink-0 border-b border-border bg-card/50 backdrop-blur px-3 sm:px-4 flex items-center gap-3">
-        <Link to="/" className="p-2 -ml-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Voltar ao início">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
-          <MessageSquare className="h-4 w-4 text-white" />
-        </div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-base font-bold text-foreground">CRM</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/40 px-2 py-0.5 text-[10px] font-semibold text-primary">
-            <Wrench className="h-3 w-3" /> Em construção
-          </span>
-        </div>
-      </header>
+  const [subcontas, setSubcontas] = useState<{ id: string; nome: string | null }[]>([]);
+  const [subcontaId, setSubcontaId] = useState<string | null>(null);
+  const [loadingScope, setLoadingScope] = useState(true);
+  const [semAcesso, setSemAcesso] = useState(false);
+  const [criando, setCriando] = useState(false);
 
-      <div className="flex-1 flex min-h-0">
-        <nav className="w-[72px] shrink-0 border-r border-border bg-card/30 p-2 flex flex-col gap-1">
-          {NAV.map((item) => {
-            const activeItem = section === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => setSection(item.key)}
-                className={`w-full flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 transition-colors ${
-                  activeItem ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="text-[10px] font-medium leading-none text-center">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+  const loadSubcontas = useCallback(async () => {
+    if (!user?.id) return;
+    setLoadingScope(true);
+    if (isAdmin) {
+      // AGÊNCIA: escolhe em qual subconta entrar
+      const { data } = await (supabase as any).from("crm_clients").select("id,nome").order("nome", { ascending: true });
+      const list = ((data as any[]) || []).map((c) => ({ id: c.id, nome: c.nome }));
+      setSubcontas(list);
+      setSubcontaId((prev) => prev || (list.length === 1 ? list[0].id : null));
+    } else {
+      // ADMIN/USUÁRIO de subconta: entra direto na sua
+      const { data } = await (supabase as any).from("crm_users").select("cliente_id").eq("auth_user_id", user.id).maybeSingle();
+      if (data?.cliente_id) {
+        const { data: cl } = await (supabase as any).from("crm_clients").select("nome").eq("id", data.cliente_id).maybeSingle();
+        setSubcontaId(data.cliente_id);
+        setSubcontas([{ id: data.cliente_id, nome: cl?.nome ?? null }]);
+      } else {
+        setSemAcesso(true);
+      }
+    }
+    setLoadingScope(false);
+  }, [user?.id, isAdmin]);
 
-        <div className="flex-1 min-w-0 flex">
-          {section === "conversas" && <Conversas />}
-          {section === "oportunidades" && <Oportunidades />}
-          {section === "contatos" && <Contatos />}
-          {section === "config" && <Config />}
+  useEffect(() => { void loadSubcontas(); }, [loadSubcontas]);
+
+  const criarSubconta = async () => {
+    const nome = window.prompt("Nome da nova subconta (loja):")?.trim();
+    if (!nome) return;
+    setCriando(true);
+    const { data, error } = await (supabase as any).from("crm_clients").insert({ nome }).select("id,nome").single();
+    setCriando(false);
+    if (error) { toast.error(error.message); return; }
+    await loadSubcontas();
+    setSubcontaId(data.id);
+  };
+
+  const subcontaNome = subcontas.find((s) => s.id === subcontaId)?.nome || "";
+
+  const Header = (
+    <header className="h-14 shrink-0 border-b border-border bg-card/50 backdrop-blur px-3 sm:px-4 flex items-center gap-3">
+      <Link to="/" className="p-2 -ml-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Voltar ao início">
+        <ArrowLeft className="h-4 w-4" />
+      </Link>
+      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
+        <MessageSquare className="h-4 w-4 text-white" />
+      </div>
+      <div className="flex items-center gap-2 min-w-0">
+        <h1 className="text-base font-bold text-foreground shrink-0">CRM</h1>
+        {subcontaId && <span className="text-sm text-muted-foreground truncate">· {subcontaNome || "Subconta"}</span>}
+        {isAdmin && subcontaId && (
+          <button onClick={() => setSubcontaId(null)} className="ml-1 text-[11px] font-semibold text-primary bg-primary/10 border border-primary/30 rounded-lg px-2 py-0.5 hover:bg-primary/15 shrink-0">Trocar</button>
+        )}
+      </div>
+      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/40 px-2 py-0.5 text-[10px] font-semibold text-primary shrink-0">
+        <Wrench className="h-3 w-3" /> Em construção
+      </span>
+    </header>
+  );
+
+  if (semAcesso) {
+    return (
+      <div className="h-screen flex flex-col bg-background text-foreground">
+        {Header}
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-2">
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center"><Users className="h-7 w-7 text-muted-foreground" /></div>
+          <p className="font-semibold text-foreground">Você ainda não tem acesso a uma subconta do CRM.</p>
+          <p className="text-sm text-muted-foreground max-w-sm">Peça a um admin para te vincular a uma subconta.</p>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (isAdmin && !subcontaId) {
+    return (
+      <div className="h-screen flex flex-col bg-background text-foreground">
+        {Header}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Subcontas</h2>
+                <p className="text-sm text-muted-foreground">Escolha em qual subconta você quer entrar.</p>
+              </div>
+              <button onClick={() => void criarSubconta()} disabled={criando} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 disabled:opacity-60"><Plus className="h-4 w-4" /> Nova subconta</button>
+            </div>
+            {loadingScope ? (
+              <p className="text-sm text-muted-foreground">Carregando...</p>
+            ) : subcontas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma subconta ainda. Crie a primeira acima.</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {subcontas.map((s) => (
+                  <button key={s.id} onClick={() => setSubcontaId(s.id)} className="text-left rounded-xl border border-border bg-card/50 hover:border-primary/50 hover:bg-primary/5 p-4 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold">{(s.nome || "?").charAt(0).toUpperCase()}</div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground truncate">{s.nome || "Sem nome"}</p>
+                        <p className="text-xs text-muted-foreground">Entrar →</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingScope || !subcontaId) {
+    return (
+      <div className="h-screen flex flex-col bg-background text-foreground">
+        {Header}
+        <div className="flex-1 flex items-center justify-center"><p className="text-sm text-muted-foreground">Carregando...</p></div>
+      </div>
+    );
+  }
+
+  return (
+    <CrmScope.Provider value={{ subcontaId, isAgencia: isAdmin, subcontaNome }}>
+      <div className="h-screen flex flex-col bg-background text-foreground">
+        {Header}
+        <div className="flex-1 flex min-h-0">
+          <nav className="w-[72px] shrink-0 border-r border-border bg-card/30 p-2 flex flex-col gap-1">
+            {NAV.map((item) => {
+              const activeItem = section === item.key;
+              return (
+                <button key={item.key} onClick={() => setSection(item.key)} className={`w-full flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 transition-colors ${activeItem ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-[10px] font-medium leading-none text-center">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="flex-1 min-w-0 flex" key={subcontaId}>
+            {section === "conversas" && <Conversas />}
+            {section === "oportunidades" && <Oportunidades />}
+            {section === "contatos" && <Contatos />}
+            {section === "config" && <Config />}
+          </div>
+        </div>
+      </div>
+    </CrmScope.Provider>
   );
 }
