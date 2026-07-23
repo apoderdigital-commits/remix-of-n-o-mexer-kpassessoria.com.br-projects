@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
+  Pencil, ChevronUp, ChevronDown, Trash2,
 } from "lucide-react";
 
 // ============================================================================
@@ -63,6 +64,9 @@ type Opp = {
   pipeline_stage_id: string | null;
   valor: number | null;
   status: "aberto" | "ganho" | "perdido";
+  item_compra?: string | null;
+  vendedor?: string | null;
+  observacao?: string | null;
   crm_contacts: { id: string; nome: string | null } | null;
 };
 
@@ -431,6 +435,7 @@ function Oportunidades() {
   const [overStage, setOverStage] = useState<string | null>(null);
   const [editing, setEditing] = useState<Partial<Opp> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [manageStages, setManageStages] = useState(false);
 
   const pipeline = pipelines.find((p) => p.id === pipelineId) || null;
   const clienteId = pipeline?.cliente_id || null;
@@ -448,7 +453,7 @@ function Oportunidades() {
   const loadBoard = useCallback(async (pid: string, cid: string) => {
     const [st, op, ct] = await Promise.all([
       (supabase as any).from("crm_pipeline_stages").select("id,nome,ordem,cliente_id,pipeline_id").eq("pipeline_id", pid).order("ordem", { ascending: true }),
-      (supabase as any).from("crm_opportunities").select("id,cliente_id,contact_id,pipeline_stage_id,valor,status,crm_contacts(id,nome)").eq("cliente_id", cid),
+      (supabase as any).from("crm_opportunities").select("*,crm_contacts(id,nome)").eq("cliente_id", cid),
       (supabase as any).from("crm_contacts").select("id,nome").eq("cliente_id", cid).order("nome", { ascending: true }),
     ]);
     setStages((st.data as Stage[]) || []);
@@ -496,18 +501,33 @@ function Oportunidades() {
     if (!editing || !clienteId) return;
     if (!editing.contact_id) { toast.error("Escolha um contato."); return; }
     setSaving(true);
-    const payload = {
+    const core = {
       cliente_id: clienteId,
       contact_id: editing.contact_id,
       pipeline_stage_id: editing.pipeline_stage_id ?? stages[0]?.id ?? null,
       valor: editing.valor ?? null,
       status: editing.status || "aberto",
     };
-    const res = editing.id
-      ? await (supabase as any).from("crm_opportunities").update(payload).eq("id", editing.id)
-      : await (supabase as any).from("crm_opportunities").insert(payload);
+    let oppId = editing.id;
+    if (editing.id) {
+      const r = await (supabase as any).from("crm_opportunities").update(core).eq("id", editing.id);
+      if (r.error) { setSaving(false); toast.error(r.error.message); return; }
+    } else {
+      const r = await (supabase as any).from("crm_opportunities").insert(core).select("id").single();
+      if (r.error) { setSaving(false); toast.error(r.error.message); return; }
+      oppId = (r.data as any)?.id;
+    }
+    // Campos extras (colunas opcionais) — save resiliente: se a migração não rodou, avisa sem quebrar
+    if (oppId) {
+      const extras = { item_compra: editing.item_compra ?? null, vendedor: editing.vendedor ?? null, observacao: editing.observacao ?? null };
+      const r2 = await (supabase as any).from("crm_opportunities").update(extras).eq("id", oppId);
+      if (r2.error && /item_compra|vendedor|observacao|column|schema cache|PGRST/i.test(`${r2.error.message} ${r2.error.code}`)) {
+        toast("Oportunidade salva. Os campos extras (item/vendedor/obs) precisam da migração — peça ao Lovable.");
+      } else if (r2.error) {
+        toast.error(r2.error.message);
+      }
+    }
     setSaving(false);
-    if (res.error) { toast.error(res.error.message); return; }
     setEditing(null);
     if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId);
   };
@@ -542,9 +562,14 @@ function Oportunidades() {
               {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           )}
+          {pipeline && (
+            <button onClick={() => setManageStages(true)} title="Editar etapas do funil" className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-semibold px-2.5 transition-colors shrink-0">
+              <Pencil className="h-3.5 w-3.5" /> Etapas
+            </button>
+          )}
         </div>
         {pipeline && (
-          <button onClick={() => setEditing({ status: "aberto", pipeline_stage_id: stages[0]?.id })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 transition-colors">
+          <button onClick={() => setEditing({ status: "aberto", pipeline_stage_id: stages[0]?.id })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 transition-colors shrink-0">
             <Plus className="h-4 w-4" /> Nova oportunidade
           </button>
         )}
@@ -599,10 +624,12 @@ function Oportunidades() {
                           className="rounded-lg border border-border bg-card p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/40 transition-colors"
                         >
                           <p className="font-semibold text-sm text-foreground truncate">{o.crm_contacts?.nome || "Sem contato"}</p>
-                          <div className="flex items-center justify-between mt-1">
+                          {o.item_compra && <p className="text-xs text-muted-foreground truncate mt-0.5">{o.item_compra}</p>}
+                          <div className="flex items-center justify-between mt-1.5">
                             <span className="text-sm font-bold text-primary">{formatBRL(o.valor)}</span>
                             {o.status !== "aberto" && <StatusBadge status={o.status} />}
                           </div>
+                          {o.vendedor && <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 truncate"><User className="h-3 w-3 shrink-0" /> {o.vendedor}</p>}
                         </div>
                       ))
                     )}
@@ -616,6 +643,16 @@ function Oportunidades() {
 
       {editing && (
         <OppModal editing={editing} setEditing={setEditing} contacts={contacts} stages={stages} onSave={salvarOpp} onDelete={excluirOpp} saving={saving} />
+      )}
+      {manageStages && pipeline && (
+        <StagesModal
+          stages={stages}
+          opps={opps}
+          clienteId={clienteId!}
+          pipelineId={pipelineId!}
+          onClose={() => setManageStages(false)}
+          onChanged={() => { if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId); }}
+        />
       )}
     </div>
   );
@@ -648,8 +685,18 @@ function OppModal({
             </select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Valor (R$)</label>
-            <input type="number" min="0" step="100" value={editing.valor ?? ""} onChange={(e) => setEditing({ ...editing, valor: e.target.value === "" ? null : Number(e.target.value) })} placeholder="0" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+            <label className="text-xs font-semibold text-muted-foreground">Item de compra</label>
+            <input value={editing.item_compra ?? ""} onChange={(e) => setEditing({ ...editing, item_compra: e.target.value })} placeholder="ex: Honda CG 160 Start" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Valor (R$)</label>
+              <input type="number" min="0" step="100" value={editing.valor ?? ""} onChange={(e) => setEditing({ ...editing, valor: e.target.value === "" ? null : Number(e.target.value) })} placeholder="0" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Vendedor</label>
+              <input value={editing.vendedor ?? ""} onChange={(e) => setEditing({ ...editing, vendedor: e.target.value })} placeholder="ex: Pedro" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -667,6 +714,10 @@ function OppModal({
               </select>
             </div>
           </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Observação</label>
+            <textarea rows={2} value={editing.observacao ?? ""} onChange={(e) => setEditing({ ...editing, observacao: e.target.value })} placeholder="Detalhes, próximos passos..." className="mt-1 w-full rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 py-2 outline-none focus:border-primary/50 resize-none" />
+          </div>
         </div>
         <div className="flex items-center justify-between pt-2">
           {editing.id ? (
@@ -676,6 +727,89 @@ function OppModal({
             <button onClick={() => setEditing(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
             <button onClick={() => onSave()} disabled={saving} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 disabled:opacity-60">{saving ? "Salvando..." : "Salvar"}</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StagesModal({
+  stages, opps, clienteId, pipelineId, onClose, onChanged,
+}: {
+  stages: Stage[];
+  opps: Opp[];
+  clienteId: string;
+  pipelineId: string;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [novo, setNovo] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const add = async () => {
+    const nome = novo.trim();
+    if (!nome) return;
+    setBusy(true);
+    const maxOrdem = stages.reduce((m, s) => Math.max(m, s.ordem), -1);
+    const { error } = await (supabase as any).from("crm_pipeline_stages").insert({ cliente_id: clienteId, pipeline_id: pipelineId, nome, ordem: maxOrdem + 1 });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setNovo("");
+    onChanged();
+  };
+  const rename = async (id: string, nome: string) => {
+    const n = nome.trim();
+    const cur = stages.find((s) => s.id === id);
+    if (!n || (cur && cur.nome === n)) return;
+    const { error } = await (supabase as any).from("crm_pipeline_stages").update({ nome: n }).eq("id", id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+  const move = async (idx: number, dir: -1 | 1) => {
+    const a = stages[idx], b = stages[idx + dir];
+    if (!a || !b) return;
+    await (supabase as any).from("crm_pipeline_stages").update({ ordem: b.ordem }).eq("id", a.id);
+    await (supabase as any).from("crm_pipeline_stages").update({ ordem: a.ordem }).eq("id", b.id);
+    onChanged();
+  };
+  const del = async (id: string) => {
+    if (opps.filter((o) => o.pipeline_stage_id === id).length > 0) {
+      toast.error("Mova as oportunidades desta etapa antes de excluir.");
+      return;
+    }
+    const { error } = await (supabase as any).from("crm_pipeline_stages").delete().eq("id", id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-background border border-border shadow-xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-foreground">Etapas do funil</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+          {stages.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma etapa ainda. Adicione a primeira abaixo.</p>}
+          {stages.map((s, i) => {
+            const count = opps.filter((o) => o.pipeline_stage_id === s.id).length;
+            return (
+              <div key={s.id} className="flex items-center gap-1.5">
+                <input defaultValue={s.nome} onBlur={(e) => void rename(s.id, e.target.value)} className="flex-1 h-9 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+                <span className="text-[10px] text-muted-foreground w-6 text-center shrink-0" title="oportunidades nesta etapa">{count}</span>
+                <button onClick={() => void move(i, -1)} disabled={i === 0} className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                <button onClick={() => void move(i, 1)} disabled={i === stages.length - 1} className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                <button onClick={() => void del(s.id)} title="Excluir etapa" className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2 pt-3 border-t border-border">
+          <input value={novo} onChange={(e) => setNovo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="Nova etapa..." className="flex-1 h-9 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+          <button onClick={() => void add()} disabled={busy || !novo.trim()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-2 disabled:opacity-60 shrink-0">
+            <Plus className="h-4 w-4" /> Adicionar
+          </button>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={onClose} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Fechar</button>
         </div>
       </div>
     </div>
