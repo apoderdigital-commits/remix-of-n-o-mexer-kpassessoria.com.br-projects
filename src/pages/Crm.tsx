@@ -168,7 +168,7 @@ function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; 
 
 // ---------------------------- CONVERSAS (real) -----------------------------
 function Conversas() {
-  const [filter, setFilter] = useState<"todos" | "nao_lidos">("todos");
+  const [filter, setFilter] = useState<"contatos" | "grupos" | "nao_lidos">("contatos");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState<Conversa[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
