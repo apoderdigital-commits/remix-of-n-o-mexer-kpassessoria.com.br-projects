@@ -289,6 +289,81 @@ function Conversas() {
     void loadConversas();
   };
 
+  const sendAudioBlob = async (blob: Blob) => {
+    if (!sel) return;
+    setSending(true);
+    try {
+      const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
+      const path = `${sel.cliente_id}/${sel.id}/${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("crm-audios").upload(path, blob, {
+        contentType: blob.type || "audio/webm",
+        upsert: false,
+      });
+      if (up.error) throw up.error;
+      const signed = await supabase.storage.from("crm-audios").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error || new Error("sem URL");
+      const { error } = await (supabase as any).from("crm_messages").insert({
+        cliente_id: sel.cliente_id,
+        conversation_id: sel.id,
+        direcao: "enviada",
+        tipo: "audio",
+        conteudo: null,
+        url_midia: signed.data.signedUrl,
+        lida: true,
+      });
+      if (error) throw error;
+      await loadMensagens(sel.id);
+      void loadConversas();
+    } catch (e: any) {
+      toast.error("Falha ao enviar áudio: " + (e?.message || ""));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const startRec = async () => {
+    if (recording || sending || !sel) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recStreamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const type = mr.mimeType || "audio/webm";
+        const blob = new Blob(recChunksRef.current, { type });
+        recStreamRef.current?.getTracks().forEach((t) => t.stop());
+        recStreamRef.current = null;
+        if (recTimerRef.current) { window.clearInterval(recTimerRef.current); recTimerRef.current = null; }
+        setRecSecs(0);
+        setRecording(false);
+        if (blob.size > 1024) void sendAudioBlob(blob);
+      };
+      mr.start();
+      recRef.current = mr;
+      setRecording(true);
+      setRecSecs(0);
+      recTimerRef.current = window.setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch (e: any) {
+      toast.error("Permita o acesso ao microfone para gravar áudio.");
+    }
+  };
+
+  const stopRec = (cancel = false) => {
+    const mr = recRef.current;
+    if (!mr) return;
+    if (cancel) {
+      recChunksRef.current = [];
+    }
+    try { mr.stop(); } catch { /* noop */ }
+    recRef.current = null;
+  };
+
   if (notReady) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
