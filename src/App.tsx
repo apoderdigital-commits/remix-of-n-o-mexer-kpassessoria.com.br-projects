@@ -19,6 +19,7 @@ import Perfil from "./pages/Perfil.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ClientView from "./pages/ClientView.tsx";
 import Crm from "./pages/Crm.tsx";
+import Hub from "./pages/Hub.tsx";
 import { SupportWhatsAppButton } from "./components/SupportWhatsAppButton";
 import { NewThemeAnnouncement } from "./components/NewThemeAnnouncement";
 import { VersionGate } from "./components/VersionGate";
