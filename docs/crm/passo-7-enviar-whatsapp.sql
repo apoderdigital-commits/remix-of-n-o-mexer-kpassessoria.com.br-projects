@@ -6,6 +6,9 @@
 -- Pré-requisitos: passos 1, 3, 6/6b. Idempotente.
 -- ============================================================================
 
+-- pg_net: permite chamar HTTP de dentro do banco (net.http_post)
+create extension if not exists pg_net;
+
 -- onde fica a URL do webhook de ENVIO do n8n (por loja)
 alter table public.crm_connections add column if not exists n8n_send_url text;
 
