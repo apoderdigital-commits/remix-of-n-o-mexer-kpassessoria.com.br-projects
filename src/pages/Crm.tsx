@@ -321,6 +321,44 @@ function Conversas() {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const sendMediaFile = async (file: File) => {
+    if (!sel) return;
+    const isImg = file.type.startsWith("image/");
+    const isVid = file.type.startsWith("video/");
+    if (!isImg && !isVid) { toast.error("Envie apenas imagem ou vídeo."); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error("Arquivo acima de 25MB."); return; }
+    setSending(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${sel.cliente_id}/${sel.id}/${Date.now()}_${safeName}`;
+      const up = await supabase.storage.from("crm-audios").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (up.error) throw up.error;
+      const signed = await supabase.storage.from("crm-audios").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error || new Error("sem URL");
+      const { error } = await (supabase as any).from("crm_messages").insert({
+        cliente_id: sel.cliente_id,
+        conversation_id: sel.id,
+        direcao: "enviada",
+        tipo: isImg ? "imagem" : "video",
+        conteudo: null,
+        url_midia: signed.data.signedUrl,
+        lida: true,
+      });
+      if (error) throw error;
+      await loadMensagens(sel.id);
+      void loadConversas();
+    } catch (e: any) {
+      toast.error("Falha ao enviar arquivo: " + (e?.message || ""));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const startRec = async () => {
     if (recording || sending || !sel) return;
     try {
