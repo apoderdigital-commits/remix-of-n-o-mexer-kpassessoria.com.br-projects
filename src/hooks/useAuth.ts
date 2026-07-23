@@ -94,6 +94,17 @@ export function useAuth() {
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id);
 
+        // CRM access: admin do site vê tudo; senão precisa de vínculo em crm_users.
+        let hasCrm = isAdmin;
+        if (!hasCrm) {
+          const { count: crmCount } = await supabase
+            .from("crm_users")
+            .select("id", { count: "exact", head: true })
+            .eq("auth_user_id", user.id);
+          hasCrm = (crmCount || 0) > 0;
+        }
+
+
         if (!isMounted) return;
         setState({ user, loading: false, isAdmin, clientId, dashboards, accessibleClientIds, squadCount: squadCount || 0, hasCrm });
       } catch (error) {
