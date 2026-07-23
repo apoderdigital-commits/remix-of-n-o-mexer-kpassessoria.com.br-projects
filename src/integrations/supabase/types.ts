@@ -359,6 +359,8 @@ export type Database = {
           criado_em: string
           id: string
           status: string
+          ultima_em: string | null
+          ultima_mensagem: string | null
         }
         Insert: {
           atualizado_em?: string
@@ -367,6 +369,8 @@ export type Database = {
           criado_em?: string
           id?: string
           status?: string
+          ultima_em?: string | null
+          ultima_mensagem?: string | null
         }
         Update: {
           atualizado_em?: string
@@ -375,6 +379,8 @@ export type Database = {
           criado_em?: string
           id?: string
           status?: string
+          ultima_em?: string | null
+          ultima_mensagem?: string | null
         }
         Relationships: [
           {
