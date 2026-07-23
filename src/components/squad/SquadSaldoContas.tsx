@@ -2,19 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Wallet, RefreshCw, AlertTriangle, CircleDollarSign } from "lucide-react";
+import { Wallet, RefreshCw, AlertTriangle, CreditCard, PiggyBank } from "lucide-react";
 
 type Conta = {
   client_id: string;
   name: string;
   account: string | null;
   account_name?: string | null;
-  saldo?: number | null;
+  saldo?: number | null;          // balance (fatura em aberto) — usado pra cartão
+  saldo_disponivel?: number | null; // saldo pré-pago disponível — usado pra pré-pago
   gasto?: number | null;
   limite?: number | null;
   currency?: string | null;
   status?: number | null;
   forma_pagamento?: string | null;
+  tipo?: "prepago" | "cartao";
   error?: string;
 };
 
@@ -42,6 +44,14 @@ function statusInfo(code?: number | null): { label: string; cls: string } | null
     case 101: return { label: "Fechada", cls: "bg-red-500/15 text-red-600 dark:text-red-400" };
     default: return code == null ? null : { label: `Status ${code}`, cls: "bg-muted text-muted-foreground" };
   }
+}
+
+// Cor do saldo pré-pago: vermelho se zerou, âmbar se está baixo.
+function saldoCls(v: number | null | undefined) {
+  if (v == null) return "text-foreground";
+  if (v <= 0) return "text-red-600 dark:text-red-400";
+  if (v < 300) return "text-amber-600 dark:text-amber-400";
+  return "text-foreground";
 }
 
 export function SquadSaldoContas({ open, onClose, squadId }: Props) {
@@ -74,17 +84,23 @@ export function SquadSaldoContas({ open, onClose, squadId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, squadId]);
 
-  // Contas com saldo primeiro (menor saldo no topo = mais urgente); erros/sem-conta por último.
-  const { ok, comErro } = useMemo(() => {
-    const ok = contas.filter((c) => !c.error).sort((a, b) => (a.saldo ?? Infinity) - (b.saldo ?? Infinity));
+  const { prepago, cartao, comErro, totalPrepago } = useMemo(() => {
+    const ok = contas.filter((c) => !c.error);
+    // Pré-pago: menor saldo disponível no topo (mais urgente). Nulos por último.
+    const prepago = ok
+      .filter((c) => c.tipo === "prepago")
+      .sort((a, b) => (a.saldo_disponivel ?? Infinity) - (b.saldo_disponivel ?? Infinity));
+    // Cartão: menor fatura em aberto no topo.
+    const cartao = ok
+      .filter((c) => c.tipo !== "prepago")
+      .sort((a, b) => (a.saldo ?? Infinity) - (b.saldo ?? Infinity));
     const comErro = contas.filter((c) => c.error);
-    return { ok, comErro };
+    const totalPrepago = prepago.reduce(
+      (s, c) => s + (typeof c.saldo_disponivel === "number" ? c.saldo_disponivel : 0),
+      0
+    );
+    return { prepago, cartao, comErro, totalPrepago };
   }, [contas]);
-
-  const totalSaldo = useMemo(
-    () => ok.reduce((s, c) => s + (typeof c.saldo === "number" ? c.saldo : 0), 0),
-    [ok]
-  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -108,7 +124,7 @@ export function SquadSaldoContas({ open, onClose, squadId }: Props) {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2">
+        <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
           {loading && contas.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
@@ -125,40 +141,85 @@ export function SquadSaldoContas({ open, onClose, squadId }: Props) {
             </p>
           ) : (
             <>
-              {ok.map((c) => {
-                const st = statusInfo(c.status);
-                const cur = c.currency || "BRL";
-                const negativoOuBaixo = typeof c.saldo === "number" && c.saldo <= 0;
-                return (
-                  <div
-                    key={c.client_id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-card/40 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{c.name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {(c.gasto != null ? `Gasto ${money(c.gasto, cur)}` : "")}
-                        {c.limite != null ? ` · Limite ${money(c.limite, cur)}` : ""}
-                        {c.forma_pagamento ? ` · ${c.forma_pagamento}` : ""}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className={`font-bold tabular-nums ${negativoOuBaixo ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
-                        {money(c.saldo, cur)}
-                      </p>
-                      {st && (
-                        <span className={`inline-block mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${st.cls}`}>
-                          {st.label}
-                        </span>
-                      )}
-                    </div>
+              {/* PRÉ-PAGO */}
+              {prepago.length > 0 && (
+                <section className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <PiggyBank className="h-4 w-4 text-emerald-500" /> Pré-pago · saldo disponível
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Total <b className="text-foreground">{money(totalPrepago)}</b>
+                    </span>
                   </div>
-                );
-              })}
+                  {prepago.map((c) => {
+                    const st = statusInfo(c.status);
+                    const cur = c.currency || "BRL";
+                    return (
+                      <div
+                        key={c.client_id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-card/40 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{c.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {c.gasto != null ? `Gasto ${money(c.gasto, cur)}` : ""}
+                            {c.limite != null ? ` · Limite ${money(c.limite, cur)}` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={`font-bold tabular-nums ${saldoCls(c.saldo_disponivel)}`}>
+                            {money(c.saldo_disponivel, cur)}
+                          </p>
+                          {st && (
+                            <span className={`inline-block mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${st.cls}`}>
+                              {st.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </section>
+              )}
 
+              {/* CARTÃO */}
+              {cartao.length > 0 && (
+                <section className="space-y-2">
+                  <div className="flex items-center px-1">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <CreditCard className="h-4 w-4 text-primary" /> Cartão · pós-pago
+                    </span>
+                  </div>
+                  {cartao.map((c) => {
+                    const st = statusInfo(c.status);
+                    const cur = c.currency || "BRL";
+                    return (
+                      <div
+                        key={c.client_id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-card/40 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{c.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {c.forma_pagamento || "Cartão"}
+                            {c.gasto != null ? ` · Gasto ${money(c.gasto, cur)}` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold tabular-nums text-foreground">{money(c.saldo, cur)}</p>
+                          <span className="block text-[10px] text-muted-foreground">fatura em aberto</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </section>
+              )}
+
+              {/* SEM LEITURA */}
               {comErro.length > 0 && (
-                <div className="pt-2">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">
+                <section className="space-y-1.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground px-1">
                     Sem leitura de saldo
                   </p>
                   {comErro.map((c) => (
@@ -170,20 +231,11 @@ export function SquadSaldoContas({ open, onClose, squadId }: Props) {
                       <span className="text-[11px] text-muted-foreground shrink-0">{c.error}</span>
                     </div>
                   ))}
-                </div>
+                </section>
               )}
             </>
           )}
         </div>
-
-        {ok.length > 0 && (
-          <div className="mt-2 flex items-center justify-between border-t border-border/40 pt-3">
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <CircleDollarSign className="h-4 w-4" /> Total ({ok.length} contas)
-            </span>
-            <span className="font-bold tabular-nums">{money(totalSaldo)}</span>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
