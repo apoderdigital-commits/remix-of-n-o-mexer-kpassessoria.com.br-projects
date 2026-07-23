@@ -316,6 +316,44 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_connections: {
+        Row: {
+          ativo: boolean
+          cliente_id: string
+          criado_em: string
+          id: string
+          instance_id: string
+          numero: string | null
+          provedor: string
+        }
+        Insert: {
+          ativo?: boolean
+          cliente_id: string
+          criado_em?: string
+          id?: string
+          instance_id: string
+          numero?: string | null
+          provedor?: string
+        }
+        Update: {
+          ativo?: boolean
+          cliente_id?: string
+          criado_em?: string
+          id?: string
+          instance_id?: string
+          numero?: string | null
+          provedor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_connections_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_contacts: {
         Row: {
           cliente_id: string
@@ -2391,6 +2429,16 @@ export type Database = {
     }
     Functions: {
       crm_current_cliente_id: { Args: never; Returns: string }
+      crm_ingest_whatsapp: {
+        Args: {
+          p_instance_id: string
+          p_message_id?: string
+          p_nome?: string
+          p_phone: string
+          p_texto?: string
+        }
+        Returns: string
+      }
       crm_is_admin: { Args: never; Returns: boolean }
       get_accessible_clients: {
         Args: never
