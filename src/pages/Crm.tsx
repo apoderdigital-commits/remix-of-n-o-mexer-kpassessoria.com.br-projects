@@ -35,7 +35,7 @@ const STAGE_DOTS = ["bg-blue-500", "bg-amber-500", "bg-violet-500", "bg-emerald-
 // ---------------------------------------------------------------------------
 // Tipos das linhas do CRM
 // ---------------------------------------------------------------------------
-type Contato = { id: string; nome: string | null; telefone: string | null; email: string | null };
+type Contato = { id: string; nome: string | null; telefone: string | null; email: string | null; foto_url?: string | null; is_group?: boolean | null };
 type Conversa = {
   id: string;
   cliente_id: string;
