@@ -579,7 +579,7 @@ function Conversas() {
               </div>
               {!sel.crm_contacts?.is_group && sel.crm_contacts?.telefone && (
                 <button
-                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "")}
+                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "", sel.crm_contacts?.foto_url)}
                   title="Ligar via WhatsApp"
                   className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
                 >
