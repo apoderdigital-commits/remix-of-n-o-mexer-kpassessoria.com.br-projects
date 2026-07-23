@@ -1553,14 +1553,14 @@ function ConexoesCard() {
   const { subcontaId, isAgencia, papel } = useScope();
   const podeConfig = isAgencia || papel === "admin";
   const [conn, setConn] = useState<any | null>(null);
-  const [form, setForm] = useState({ instance_id: "", zapi_token: "", zapi_client_token: "", numero: "", ativo: true });
+  const [form, setForm] = useState({ instance_id: "", zapi_token: "", zapi_client_token: "", numero: "", n8n_send_url: "", ativo: true });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await (supabase as any).from("crm_connections").select("*").eq("cliente_id", subcontaId).eq("provedor", "z-api").maybeSingle();
     setConn(data || null);
-    if (data) setForm({ instance_id: data.instance_id || "", zapi_token: data.zapi_token || "", zapi_client_token: data.zapi_client_token || "", numero: data.numero || "", ativo: data.ativo ?? true });
+    if (data) setForm({ instance_id: data.instance_id || "", zapi_token: data.zapi_token || "", zapi_client_token: data.zapi_client_token || "", numero: data.numero || "", n8n_send_url: data.n8n_send_url || "", ativo: data.ativo ?? true });
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -1575,6 +1575,7 @@ function ConexoesCard() {
       zapi_token: form.zapi_token.trim() || null,
       zapi_client_token: form.zapi_client_token.trim() || null,
       numero: form.numero.trim() || null,
+      n8n_send_url: form.n8n_send_url.trim() || null,
       ativo: form.ativo,
     };
     const res = conn?.id
@@ -1612,6 +1613,7 @@ function ConexoesCard() {
           <div><label className="text-xs font-semibold text-muted-foreground">Token da instância</label><input value={form.zapi_token} onChange={(e) => setForm({ ...form, zapi_token: e.target.value })} placeholder="ex: 72AC42C49EA75..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
           <div><label className="text-xs font-semibold text-muted-foreground">Client-Token (segurança da conta)</label><input value={form.zapi_client_token} onChange={(e) => setForm({ ...form, zapi_client_token: e.target.value })} placeholder="ex: F12709db3bddd..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
           <div><label className="text-xs font-semibold text-muted-foreground">Número (opcional)</label><input value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} placeholder="ex: 5592..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+          <div><label className="text-xs font-semibold text-muted-foreground">URL do webhook de envio (n8n)</label><input value={form.n8n_send_url} onChange={(e) => setForm({ ...form, n8n_send_url: e.target.value })} placeholder="ex: https://seu-n8n.../webhook/crm-whatsapp-out" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /><p className="text-[11px] text-muted-foreground mt-1">A mesma URL do fluxo "Enviar" do n8n, para todas as subcontas.</p></div>
           <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer pt-1"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} className="h-4 w-4 accent-primary" /> Conexão ativa</label>
         </div>
         <div className="flex justify-end">
