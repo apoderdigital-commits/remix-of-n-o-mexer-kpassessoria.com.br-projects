@@ -1453,33 +1453,102 @@ function UsuariosSection() {
   const { subcontaId } = useScope();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [edit, setEdit] = useState<Partial<CrmUser> | null>(null);
+  const [saving, setSaving] = useState(false);
+  // Estado do modal: inclui campos de login (username, password) usados na CRIAÇÃO
+  // e opcionalmente na TROCA de senha durante edição.
+  type EditState = Partial<CrmUser> & { username?: string; password?: string };
+  const [edit, setEdit] = useState<EditState | null>(null);
+
   const load = useCallback(async () => {
     const { data } = await (supabase as any).from("crm_users").select("id,auth_user_id,nome,email,cliente_id,papel,permissoes").eq("cliente_id", subcontaId).order("nome", { ascending: true });
     setUsers((data as CrmUser[]) || []);
     setLoading(false);
-  }, []);
+  }, [subcontaId]);
   useEffect(() => { void load(); }, [load]);
 
-  const remove = async (id: string) => {
-    const { error } = await (supabase as any).from("crm_users").delete().eq("id", id);
+  const remove = async (u: CrmUser) => {
+    if (!confirm("Remover este usuário do CRM? (o login do site será mantido — remova pela tela de Gestão de Usuários se quiser apagar por completo.)")) return;
+    const { error } = await (supabase as any).from("crm_users").delete().eq("id", u.id);
     if (error) toast.error(error.message); else void load();
   };
+
   const salvar = async () => {
     if (!edit) return;
-    if (!edit.nome?.trim() && !edit.email?.trim()) { toast.error("Preencha nome ou email."); return; }
     if (!subcontaId) { toast.error("Sem subconta ativa."); return; }
-    const payload = {
-      nome: edit.nome?.trim() || null,
-      email: edit.email?.trim() || null,
-      cliente_id: subcontaId,
-      papel: edit.papel || "usuario",
-      permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
-    };
-    const res = edit.id
-      ? await (supabase as any).from("crm_users").update(payload).eq("id", edit.id)
-      : await (supabase as any).from("crm_users").insert(payload);
-    if (res.error) toast.error(res.error.message); else { setEdit(null); void load(); }
+    setSaving(true);
+    try {
+      // ── CRIAR: cria o login do site (edge function) e vincula em crm_users ──
+      if (!edit.id) {
+        const username = (edit.username || "").trim().toLowerCase();
+        const password = (edit.password || "").trim();
+        if (!username || !password) { toast.error("Preencha usuário e senha."); setSaving(false); return; }
+        if (password.length < 6) { toast.error("A senha precisa ter no mínimo 6 caracteres."); setSaving(false); return; }
+        if (!/^[a-z0-9._-]+$/.test(username)) { toast.error("Usuário: só letras, números, . _ -"); setSaving(false); return; }
+
+        const { data: authData } = await supabase.auth.getSession();
+        const token = authData.session?.access_token;
+        const res = await supabase.functions.invoke("create-internal-user", {
+          body: {
+            username,
+            password,
+            full_name: edit.nome?.trim() || "",
+            role: "client",
+            // Fase 1: herda acesso ao dashboard do CRM automaticamente.
+            dashboard_keys: ["crm"],
+            client_ids: [],
+          },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (res.error || (res.data as any)?.error) {
+          toast.error((res.data as any)?.error || res.error?.message || "Falha ao criar login.");
+          setSaving(false);
+          return;
+        }
+        const newAuthId = (res.data as any).user_id as string;
+        const { error: linkErr } = await (supabase as any).from("crm_users").insert({
+          auth_user_id: newAuthId,
+          nome: edit.nome?.trim() || username,
+          email: `${username}@kp.local`,
+          cliente_id: subcontaId,
+          papel: edit.papel || "usuario",
+          permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
+        });
+        if (linkErr) { toast.error(linkErr.message); setSaving(false); return; }
+        toast.success("Usuário criado. Ele já pode entrar com esse usuário e senha.");
+        setEdit(null);
+        setSaving(false);
+        void load();
+        return;
+      }
+
+      // ── EDITAR: atualiza crm_users e, se pediram, troca a senha via edge function ──
+      const { error: upErr } = await (supabase as any).from("crm_users").update({
+        nome: edit.nome?.trim() || null,
+        papel: edit.papel || "usuario",
+        permissoes: edit.papel === "admin" ? {} : (edit.permissoes || {}),
+      }).eq("id", edit.id);
+      if (upErr) { toast.error(upErr.message); setSaving(false); return; }
+
+      if (edit.password && edit.password.trim() && edit.auth_user_id) {
+        if (edit.password.trim().length < 6) { toast.error("Nova senha precisa ter no mínimo 6 caracteres."); setSaving(false); return; }
+        const { data: authData } = await supabase.auth.getSession();
+        const token = authData.session?.access_token;
+        const res = await supabase.functions.invoke("create-internal-user", {
+          body: { action: "update_user", user_id: edit.auth_user_id, password: edit.password.trim(), full_name: edit.nome?.trim() || "" },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (res.error || (res.data as any)?.error) {
+          toast.error((res.data as any)?.error || res.error?.message || "Falha ao trocar senha.");
+          setSaving(false);
+          return;
+        }
+      }
+      toast.success("Usuário atualizado.");
+      setEdit(null);
+      void load();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1487,24 +1556,27 @@ function UsuariosSection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold text-foreground">Usuários do CRM</p>
-          <p className="text-xs text-muted-foreground">Quem tem acesso a esta subconta. O convite por email vem depois — por ora, cria o cadastro (ele se vincula ao login na 1ª vez que a pessoa entrar).</p>
+          <p className="text-xs text-muted-foreground">Ao criar, já geramos o login do site (usuário + senha). Ele entra pela tela normal de login e recebe acesso automático ao Dashboard do CRM desta subconta.</p>
         </div>
         <button onClick={() => setEdit({ papel: "usuario", permissoes: {} })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 shrink-0"><UserPlus className="h-4 w-4" /> Novo usuário</button>
       </div>
       {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
         <div className="rounded-xl border border-border overflow-hidden">
-          {users.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Nenhum usuário cadastrado.</p> : users.map((u) => (
-            <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0">
-              <Avatar nome={u.nome || u.email} />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{u.nome || "Sem nome"}</p>
-                <p className="text-xs text-muted-foreground truncate">{u.email || "—"}{!u.auth_user_id && " · não vinculado"}</p>
+          {users.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Nenhum usuário cadastrado.</p> : users.map((u) => {
+            const login = (u.email || "").replace(/@kp\.local$/i, "");
+            return (
+              <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0">
+                <Avatar nome={u.nome || u.email} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">{u.nome || "Sem nome"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{login || u.email || "—"}{!u.auth_user_id && " · não vinculado"}</p>
+                </div>
+                <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.papel === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{u.papel === "admin" ? "Admin" : "Usuário"}</span>
+                <button onClick={() => setEdit({ ...u, permissoes: u.permissoes || {}, password: "" })} title="Editar" className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => void remove(u)} title="Remover" className="h-8 w-8 rounded-lg flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
               </div>
-              <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.papel === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{u.papel === "admin" ? "Admin" : "Usuário"}</span>
-              <button onClick={() => setEdit({ ...u, permissoes: u.permissoes || {} })} title="Editar" className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"><Pencil className="h-4 w-4" /></button>
-              <button onClick={() => void remove(u.id)} title="Remover" className="h-8 w-8 rounded-lg flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {edit && (
@@ -1515,8 +1587,23 @@ function UsuariosSection() {
               <button onClick={() => setEdit(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
-              <div><label className="text-xs font-semibold text-muted-foreground">Nome</label><input value={edit.nome ?? ""} onChange={(e) => setEdit({ ...edit, nome: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Email</label><input value={edit.email ?? ""} onChange={(e) => setEdit({ ...edit, email: e.target.value })} placeholder="email@exemplo.com" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Nome completo</label><input value={edit.nome ?? ""} onChange={(e) => setEdit({ ...edit, nome: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+              {!edit.id ? (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Usuário (login)</label>
+                    <input value={edit.username ?? ""} onChange={(e) => setEdit({ ...edit, username: e.target.value })} placeholder="ex: joaosilva" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+                    <p className="text-[11px] text-muted-foreground mt-1">Ele usará este nome + senha para entrar na tela de login do site.</p>
+                  </div>
+                  <div><label className="text-xs font-semibold text-muted-foreground">Senha</label><input type="password" value={edit.password ?? ""} onChange={(e) => setEdit({ ...edit, password: e.target.value })} placeholder="mínimo 6 caracteres" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+                </>
+              ) : (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">Nova senha (opcional)</label>
+                  <input type="password" value={edit.password ?? ""} onChange={(e) => setEdit({ ...edit, password: e.target.value })} placeholder="deixe em branco para não alterar" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+                  {!edit.auth_user_id && <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">Este usuário ainda não tem login vinculado — a troca de senha não terá efeito.</p>}
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Papel</label>
                 <select value={edit.papel || "usuario"} onChange={(e) => setEdit({ ...edit, papel: e.target.value as CrmUser["papel"] })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
@@ -1539,8 +1626,8 @@ function UsuariosSection() {
               )}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEdit(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
-              <button onClick={() => void salvar()} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2">Salvar</button>
+              <button onClick={() => setEdit(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2" disabled={saving}>Cancelar</button>
+              <button onClick={() => void salvar()} disabled={saving} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 disabled:opacity-60">{saving ? "Salvando..." : "Salvar"}</button>
             </div>
           </div>
         </div>
