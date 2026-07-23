@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import notificationSound from "@/assets/notification.mp3.asset.json";
 import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
