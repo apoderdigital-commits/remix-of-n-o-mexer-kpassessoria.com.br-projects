@@ -192,6 +192,7 @@ export default function Portal() {
                 </Button>
               </Link>
             )}
+            <div className="relative ml-1">
               <Link
                 to="/perfil"
                 aria-label="Editar perfil"
