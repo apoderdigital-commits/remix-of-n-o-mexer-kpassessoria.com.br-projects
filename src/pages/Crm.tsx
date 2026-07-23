@@ -1550,54 +1550,84 @@ function UsuariosSection() {
 }
 
 function ConexoesCard() {
+  const { subcontaId, isAgencia, papel } = useScope();
+  const podeConfig = isAgencia || papel === "admin";
+  const [conn, setConn] = useState<any | null>(null);
+  const [form, setForm] = useState({ instance_id: "", zapi_token: "", zapi_client_token: "", numero: "", ativo: true });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await (supabase as any).from("crm_connections").select("*").eq("cliente_id", subcontaId).eq("provedor", "z-api").maybeSingle();
+    setConn(data || null);
+    if (data) setForm({ instance_id: data.instance_id || "", zapi_token: data.zapi_token || "", zapi_client_token: data.zapi_client_token || "", numero: data.numero || "", ativo: data.ativo ?? true });
+    setLoading(false);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  const salvar = async () => {
+    if (!subcontaId) return;
+    if (!form.instance_id.trim()) { toast.error("Preencha o Instance ID."); return; }
+    setSaving(true);
+    const payload: any = {
+      cliente_id: subcontaId, provedor: "z-api",
+      instance_id: form.instance_id.trim(),
+      zapi_token: form.zapi_token.trim() || null,
+      zapi_client_token: form.zapi_client_token.trim() || null,
+      numero: form.numero.trim() || null,
+      ativo: form.ativo,
+    };
+    const res = conn?.id
+      ? await (supabase as any).from("crm_connections").update(payload).eq("id", conn.id)
+      : await (supabase as any).from("crm_connections").insert({ ...payload, webhook_secret: (crypto as any).randomUUID().replace(/-/g, "") });
+    setSaving(false);
+    if (res.error) {
+      if (res.error.code === "23505") toast.error("Esse Instance ID já está em uso em outra subconta.");
+      else toast.error(res.error.message);
+      return;
+    }
+    toast.success("Conexão salva!");
+    void load();
+  };
+
+  if (!podeConfig) return <p className="text-sm text-muted-foreground">Só admins da subconta configuram a conexão do WhatsApp.</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Carregando...</p>;
+
+  const conectado = !!(conn?.instance_id && conn?.ativo);
   return (
     <div className="max-w-lg space-y-4">
-      {/* API NÃO OFICIAL (Evolution) — recomendada para testes */}
-      <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
+      <div className="rounded-xl border border-border bg-card/50 p-4 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0"><MessageSquare className="h-5 w-5" /></div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-foreground">WhatsApp — API não oficial</p>
-                <span className="text-[10px] font-semibold rounded-full bg-primary/15 text-primary px-2 py-0.5">Recomendado p/ testes</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Conecta lendo o QR Code do WhatsApp (Evolution API). Sem aprovação da Meta.</p>
+              <p className="font-semibold text-foreground">WhatsApp — Z-API (não oficial)</p>
+              <p className="text-xs text-muted-foreground">Credenciais desta subconta. Cada loja tem a sua.</p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0"><span className="h-2 w-2 rounded-full bg-rose-500" /> Desconectado</span>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 ${conectado ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}><span className={`h-2 w-2 rounded-full ${conectado ? "bg-emerald-500" : "bg-rose-500"}`} /> {conectado ? "Ativo" : "Inativo"}</span>
         </div>
-        <div className="mt-4 space-y-2 opacity-70 pointer-events-none select-none">
-          <input disabled placeholder="URL da Evolution API (ex: https://evo.seudominio.com)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
-          <input disabled placeholder="API Key da Evolution" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
-          <input disabled placeholder="Nome da instância (ex: kp-teste)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
-          <button disabled className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2"><QrCode className="h-4 w-4" /> Gerar QR Code</button>
+        <div className="space-y-2">
+          <div><label className="text-xs font-semibold text-muted-foreground">Instance ID</label><input value={form.instance_id} onChange={(e) => setForm({ ...form, instance_id: e.target.value })} placeholder="ex: 3F4413670AF4D120..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+          <div><label className="text-xs font-semibold text-muted-foreground">Token da instância</label><input value={form.zapi_token} onChange={(e) => setForm({ ...form, zapi_token: e.target.value })} placeholder="ex: 72AC42C49EA75..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+          <div><label className="text-xs font-semibold text-muted-foreground">Client-Token (segurança da conta)</label><input value={form.zapi_client_token} onChange={(e) => setForm({ ...form, zapi_client_token: e.target.value })} placeholder="ex: F12709db3bddd..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+          <div><label className="text-xs font-semibold text-muted-foreground">Número (opcional)</label><input value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} placeholder="ex: 5592..." className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" /></div>
+          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer pt-1"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} className="h-4 w-4 accent-primary" /> Conexão ativa</label>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={() => void salvar()} disabled={saving} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 disabled:opacity-60">{saving ? "Salvando..." : "Salvar conexão"}</button>
         </div>
       </div>
 
-      {/* API OFICIAL — fica para produção/futuro */}
-      <div className="rounded-xl border border-border bg-card/50 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0"><MessageSquare className="h-5 w-5" /></div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-foreground">WhatsApp — API oficial</p>
-                <span className="text-[10px] font-semibold rounded-full bg-muted text-muted-foreground px-2 py-0.5">Produção / futuro</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Requer aprovação da Meta e templates. Entra depois dos testes.</p>
-            </div>
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0"><span className="h-2 w-2 rounded-full bg-rose-500" /> Desconectado</span>
+      {conn?.webhook_secret && (
+        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+          <p className="text-xs font-semibold text-foreground">Segredo do webhook desta subconta</p>
+          <p className="text-xs text-muted-foreground">Usado pelo n8n pra validar as mensagens recebidas desta loja. No Z-API desta instância, aponte o "Ao receber" pro seu webhook do n8n.</p>
+          <code className="block text-xs bg-background border border-border rounded-lg px-3 py-2 break-all">{conn.webhook_secret}</code>
         </div>
-        <div className="mt-4 space-y-2 opacity-60 pointer-events-none select-none">
-          <input disabled placeholder="Número do WhatsApp (ex: +55 92 ...)" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
-          <input disabled placeholder="Token / credencial da API" className="w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground px-3" />
-          <button disabled className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">Conectar</button>
-        </div>
-      </div>
+      )}
 
-      <p className="text-xs text-muted-foreground">Os campos ainda são visuais. A conexão ao vivo (QR Code + receber/enviar mensagens) entra quando ligarmos o webhook da Evolution — é o próximo passo.</p>
+      <p className="text-xs text-muted-foreground">Para o receber/enviar rotear por subconta automaticamente, o n8n lê estes dados (Fase 4b — te passo os fluxos atualizados).</p>
     </div>
   );
 }
