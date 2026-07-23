@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import { AutoPlayVideo } from "@/components/AutoPlayVideo";
 import { PortalVideo } from "@/components/PortalVideo";
-import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks, Fingerprint, UserCog } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, ChevronRight, Users, Rocket, Zap, Target, Briefcase, ListChecks, Fingerprint, UserCog, MessageSquare, Wrench } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -302,6 +302,26 @@ export default function Portal() {
                       </div>
                     </div>
                   </Link>
+                )}
+                {isAdmin && (
+                  <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl border border-sky-500/30 bg-gradient-to-r from-sky-500/15 to-cyan-500/5 p-3.5 sm:p-6 cursor-not-allowed" aria-disabled="true" title="CRM em construção">
+                    <span className="absolute top-2 right-2 sm:top-3 sm:right-3 inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/40 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                      <Wrench className="h-3 w-3" /> Em construção
+                    </span>
+                    <div className="flex items-center sm:items-start gap-3 sm:gap-4">
+                      <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg opacity-90">
+                        <MessageSquare className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-sm sm:text-lg font-bold text-foreground leading-tight">CRM</h2>
+                          <span className="text-[10px] uppercase font-semibold text-sky-900 dark:text-sky-200 bg-sky-500/20 px-1.5 py-0.5 rounded">Interno</span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed line-clamp-2">Conversas, contatos e funil de oportunidades num só lugar. Em desenvolvimento.</p>
+                      </div>
+                      <div className="hidden sm:inline-flex mt-3 items-center gap-1.5 text-xs font-semibold text-muted-foreground">Em breve</div>
+                    </div>
+                  </div>
                 )}
                 {visibleProjects.length === 0 && !showSquadCard ? (
                   <div className="text-center py-12">
