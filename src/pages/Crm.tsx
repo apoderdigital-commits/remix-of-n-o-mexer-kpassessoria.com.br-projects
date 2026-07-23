@@ -366,7 +366,7 @@ function Conversas() {
                     selId === c.id ? "bg-primary/10" : "hover:bg-muted/50"
                   }`}
                 >
-                  <Avatar nome={nome} foto={c.crm_contacts?.foto_url} />
+                  <Avatar nome={nome} foto={c.crm_contacts?.foto_url} isGroup={isGroup} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`text-sm text-foreground truncate ${naoLido ? "font-bold" : "font-semibold"}`}>{nome}</span>
