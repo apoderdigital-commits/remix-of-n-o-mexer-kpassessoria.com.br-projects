@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
-  Search, Plus, Send, User, Link2, Phone, Mail,
+  Search, Plus, Send, User, Link2, Phone, Mail, X,
 } from "lucide-react";
 
 // ============================================================================
@@ -26,13 +26,9 @@ const NAV: { key: Section; label: string; icon: typeof MessageSquare }[] = [
   { key: "config", label: "Config", icon: Settings },
 ];
 
-const KANBAN = [
-  { nome: "Novo lead", dot: "bg-blue-500" },
-  { nome: "Em atendimento", dot: "bg-amber-500" },
-  { nome: "Proposta enviada", dot: "bg-violet-500" },
-  { nome: "Ganho", dot: "bg-emerald-500" },
-  { nome: "Perdido", dot: "bg-rose-500" },
-];
+// Etapas padrão ao criar um funil do zero + cor do marcador por posição.
+const DEFAULT_STAGES = ["Novo lead", "Em atendimento", "Proposta enviada", "Ganho", "Perdido"];
+const STAGE_DOTS = ["bg-blue-500", "bg-amber-500", "bg-violet-500", "bg-emerald-500", "bg-rose-500"];
 
 // ---------------------------------------------------------------------------
 // Tipos das linhas do CRM
@@ -58,6 +54,17 @@ type Mensagem = {
   lida: boolean;
   criado_em: string;
 };
+type Pipeline = { id: string; cliente_id: string; nome: string };
+type Stage = { id: string; nome: string; ordem: number; cliente_id: string; pipeline_id: string };
+type Opp = {
+  id: string;
+  cliente_id: string;
+  contact_id: string;
+  pipeline_stage_id: string | null;
+  valor: number | null;
+  status: "aberto" | "ganho" | "perdido";
+  crm_contacts: { id: string; nome: string | null } | null;
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,6 +78,27 @@ function fmtHora(iso: string | null): string {
   const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1);
   if (d.toDateString() === ontem.toDateString()) return "ontem";
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function formatBRL(v: number | null): string {
+  if (v == null) return "—";
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// erro de "tabela/coluna crm_* não existe" -> CRM ainda não configurado no banco
+function isSchemaMissing(error: any): boolean {
+  const msg = `${error?.message || ""} ${error?.code || ""}`;
+  return /crm_|schema cache|does not exist|PGRST205|PGRST20[0-9]|42P01|42703/i.test(msg);
+}
+
+function StatusBadge({ status }: { status: "aberto" | "ganho" | "perdido" }) {
+  const map = {
+    aberto: "text-muted-foreground bg-muted",
+    ganho: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/15",
+    perdido: "text-rose-700 dark:text-rose-300 bg-rose-500/15",
+  } as const;
+  const label = { aberto: "Aberto", ganho: "Ganho", perdido: "Perdido" }[status];
+  return <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${map[status]}`}>{label}</span>;
 }
 
 function EmptyState({ icon: Icon, title, sub }: { icon: typeof MessageSquare; title: string; sub?: string }) {
@@ -389,26 +417,265 @@ function Conversas() {
   );
 }
 
-// -------------------------- OPORTUNIDADES (casca) --------------------------
+// -------------------------- OPORTUNIDADES (Kanban real) --------------------
 function Oportunidades() {
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [opps, setOpps] = useState<Opp[]>([]);
+  const [contacts, setContacts] = useState<{ id: string; nome: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notReady, setNotReady] = useState(false);
+  const [busyPipe, setBusyPipe] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overStage, setOverStage] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Partial<Opp> | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const pipeline = pipelines.find((p) => p.id === pipelineId) || null;
+  const clienteId = pipeline?.cliente_id || null;
+
+  const loadPipelines = useCallback(async () => {
+    const { data, error } = await (supabase as any)
+      .from("crm_pipelines").select("id,cliente_id,nome").order("criado_em", { ascending: true });
+    if (error) { if (isSchemaMissing(error)) setNotReady(true); setLoading(false); return; }
+    setPipelines((data as Pipeline[]) || []);
+    setPipelineId((prev) => prev || ((data as Pipeline[])?.[0]?.id ?? null));
+    setNotReady(false);
+    setLoading(false);
+  }, []);
+
+  const loadBoard = useCallback(async (pid: string, cid: string) => {
+    const [st, op, ct] = await Promise.all([
+      (supabase as any).from("crm_pipeline_stages").select("id,nome,ordem,cliente_id,pipeline_id").eq("pipeline_id", pid).order("ordem", { ascending: true }),
+      (supabase as any).from("crm_opportunities").select("id,cliente_id,contact_id,pipeline_stage_id,valor,status,crm_contacts(id,nome)").eq("cliente_id", cid),
+      (supabase as any).from("crm_contacts").select("id,nome").eq("cliente_id", cid).order("nome", { ascending: true }),
+    ]);
+    setStages((st.data as Stage[]) || []);
+    setOpps((op.data as Opp[]) || []);
+    setContacts((ct.data as { id: string; nome: string | null }[]) || []);
+  }, []);
+
+  useEffect(() => { void loadPipelines(); }, [loadPipelines]);
+  useEffect(() => { if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId); }, [pipelineId, clienteId, loadBoard]);
+
+  useEffect(() => {
+    if (!pipelineId || !clienteId) return;
+    const ch = supabase.channel("crm-opps-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "crm_opportunities" }, () => { void loadBoard(pipelineId, clienteId); })
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [pipelineId, clienteId, loadBoard]);
+
+  const criarFunilPadrao = async () => {
+    setBusyPipe(true);
+    try {
+      const { data: cli } = await (supabase as any).from("crm_clients").select("id").order("criado_em", { ascending: true }).limit(1).maybeSingle();
+      if (!cli?.id) { toast.error("Nenhuma loja disponível para criar o funil."); return; }
+      const { data: pipe, error } = await (supabase as any).from("crm_pipelines").insert({ cliente_id: cli.id, nome: "Funil de Vendas" }).select("id,cliente_id,nome").single();
+      if (error) throw error;
+      const { error: sErr } = await (supabase as any).from("crm_pipeline_stages").insert(DEFAULT_STAGES.map((n, i) => ({ cliente_id: cli.id, pipeline_id: pipe.id, nome: n, ordem: i })));
+      if (sErr) throw sErr;
+      await loadPipelines();
+      setPipelineId(pipe.id);
+      toast.success("Funil criado!");
+    } catch (e: any) { toast.error(e?.message || "Erro ao criar o funil"); }
+    finally { setBusyPipe(false); }
+  };
+
+  const moveOpp = async (oppId: string, stageId: string) => {
+    setOverStage(null);
+    const opp = opps.find((o) => o.id === oppId);
+    if (!opp || opp.pipeline_stage_id === stageId) return;
+    setOpps((prev) => prev.map((o) => (o.id === oppId ? { ...o, pipeline_stage_id: stageId } : o)));
+    const { error } = await (supabase as any).from("crm_opportunities").update({ pipeline_stage_id: stageId }).eq("id", oppId);
+    if (error) { toast.error("Não foi possível mover: " + (error.message || "")); if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId); }
+  };
+
+  const salvarOpp = async () => {
+    if (!editing || !clienteId) return;
+    if (!editing.contact_id) { toast.error("Escolha um contato."); return; }
+    setSaving(true);
+    const payload = {
+      cliente_id: clienteId,
+      contact_id: editing.contact_id,
+      pipeline_stage_id: editing.pipeline_stage_id ?? stages[0]?.id ?? null,
+      valor: editing.valor ?? null,
+      status: editing.status || "aberto",
+    };
+    const res = editing.id
+      ? await (supabase as any).from("crm_opportunities").update(payload).eq("id", editing.id)
+      : await (supabase as any).from("crm_opportunities").insert(payload);
+    setSaving(false);
+    if (res.error) { toast.error(res.error.message); return; }
+    setEditing(null);
+    if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId);
+  };
+
+  const excluirOpp = async () => {
+    if (!editing?.id) return;
+    const { error } = await (supabase as any).from("crm_opportunities").delete().eq("id", editing.id);
+    if (error) { toast.error(error.message); return; }
+    setEditing(null);
+    if (pipelineId && clienteId) void loadBoard(pipelineId, clienteId);
+  };
+
+  if (notReady) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
+        <div className="h-14 w-14 rounded-2xl bg-amber-500/15 flex items-center justify-center"><Wrench className="h-7 w-7 text-amber-600 dark:text-amber-400" /></div>
+        <div>
+          <p className="font-semibold text-foreground">CRM ainda não configurado no banco</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">Rode os scripts SQL das Fases 1 e 3 no Supabase para o Kanban funcionar.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 min-w-0 flex flex-col min-h-0">
-      <SectionHeader title="Oportunidades" action={<EmBreveBtn><Plus className="h-4 w-4" /> Nova oportunidade</EmBreveBtn>} />
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
-        <div className="flex gap-3 h-full min-w-max">
-          {KANBAN.map((col) => (
-            <div key={col.nome} className="w-64 shrink-0 flex flex-col rounded-xl bg-muted/30 border border-border">
-              <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
-                <span className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${col.dot}`} /> {col.nome}
-                </span>
-                <span className="text-[10px] text-muted-foreground bg-background rounded-full px-1.5 py-0.5">0</span>
-              </div>
-              <div className="flex-1 p-2 flex items-center justify-center min-h-[120px]">
-                <p className="text-xs text-muted-foreground text-center leading-relaxed">Sem oportunidades<br />nesta fase</p>
-              </div>
+      <div className="h-14 shrink-0 border-b border-border px-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="font-bold text-foreground shrink-0">Oportunidades</h2>
+          {pipelines.length > 0 && (
+            <select value={pipelineId || ""} onChange={(e) => setPipelineId(e.target.value)} className="h-8 rounded-lg bg-muted/50 border border-border text-xs text-foreground px-2 outline-none focus:border-primary/50 max-w-[180px]">
+              {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+          )}
+        </div>
+        {pipeline && (
+          <button onClick={() => setEditing({ status: "aberto", pipeline_stage_id: stages[0]?.id })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-3 py-1.5 transition-colors">
+            <Plus className="h-4 w-4" /> Nova oportunidade
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="p-6 text-sm text-muted-foreground">Carregando...</p>
+      ) : !pipeline ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center"><Target className="h-7 w-7 text-muted-foreground" /></div>
+          <div>
+            <p className="font-semibold text-foreground">Nenhum funil ainda</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs">Crie um funil padrão (Novo lead → Ganho/Perdido) para começar.</p>
+          </div>
+          <button onClick={() => void criarFunilPadrao()} disabled={busyPipe} className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 transition-colors disabled:opacity-60">
+            <Plus className="h-4 w-4" /> {busyPipe ? "Criando..." : "Criar funil padrão"}
+          </button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+          <div className="flex gap-3 h-full min-w-max">
+            {stages.map((stage, idx) => {
+              const list = opps.filter((o) => o.pipeline_stage_id === stage.id);
+              const soma = list.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+              const over = overStage === stage.id;
+              return (
+                <div
+                  key={stage.id}
+                  onDragOver={(e) => { e.preventDefault(); setOverStage(stage.id); }}
+                  onDragLeave={() => setOverStage((s) => (s === stage.id ? null : s))}
+                  onDrop={() => { if (dragId) void moveOpp(dragId, stage.id); }}
+                  className={`w-72 shrink-0 flex flex-col rounded-xl border transition-colors ${over ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}
+                >
+                  <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
+                    <span className="font-semibold text-sm text-foreground flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${STAGE_DOTS[idx % STAGE_DOTS.length]}`} /> {stage.nome}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground bg-background rounded-full px-1.5 py-0.5">{list.length}</span>
+                  </div>
+                  {soma > 0 && <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground border-b border-border/50">{formatBRL(soma)}</div>}
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[120px]">
+                    {list.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center pt-6">Arraste um card aqui</p>
+                    ) : (
+                      list.map((o) => (
+                        <div
+                          key={o.id}
+                          draggable
+                          onDragStart={() => setDragId(o.id)}
+                          onDragEnd={() => setDragId(null)}
+                          onClick={() => setEditing({ ...o })}
+                          className="rounded-lg border border-border bg-card p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/40 transition-colors"
+                        >
+                          <p className="font-semibold text-sm text-foreground truncate">{o.crm_contacts?.nome || "Sem contato"}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-sm font-bold text-primary">{formatBRL(o.valor)}</span>
+                            {o.status !== "aberto" && <StatusBadge status={o.status} />}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <OppModal editing={editing} setEditing={setEditing} contacts={contacts} stages={stages} onSave={salvarOpp} onDelete={excluirOpp} saving={saving} />
+      )}
+    </div>
+  );
+}
+
+function OppModal({
+  editing, setEditing, contacts, stages, onSave, onDelete, saving,
+}: {
+  editing: Partial<Opp>;
+  setEditing: (v: Partial<Opp> | null) => void;
+  contacts: { id: string; nome: string | null }[];
+  stages: Stage[];
+  onSave: () => void;
+  onDelete: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+      <div className="w-full max-w-md rounded-2xl bg-background border border-border shadow-xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-foreground">{editing.id ? "Editar oportunidade" : "Nova oportunidade"}</h3>
+          <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Contato</label>
+            <select value={editing.contact_id || ""} onChange={(e) => setEditing({ ...editing, contact_id: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
+              <option value="">Selecione...</option>
+              {contacts.map((c) => <option key={c.id} value={c.id}>{c.nome || "Sem nome"}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Valor (R$)</label>
+            <input type="number" min="0" step="100" value={editing.valor ?? ""} onChange={(e) => setEditing({ ...editing, valor: e.target.value === "" ? null : Number(e.target.value) })} placeholder="0" className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-3 outline-none focus:border-primary/50" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Etapa</label>
+              <select value={editing.pipeline_stage_id || ""} onChange={(e) => setEditing({ ...editing, pipeline_stage_id: e.target.value })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
+                {stages.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
             </div>
-          ))}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Status</label>
+              <select value={editing.status || "aberto"} onChange={(e) => setEditing({ ...editing, status: e.target.value as Opp["status"] })} className="mt-1 w-full h-10 rounded-lg bg-muted/50 border border-border text-sm text-foreground px-2 outline-none focus:border-primary/50">
+                <option value="aberto">Aberto</option>
+                <option value="ganho">Ganho</option>
+                <option value="perdido">Perdido</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-2">
+          {editing.id ? (
+            <button onClick={() => onDelete()} className="text-sm font-semibold text-rose-600 dark:text-rose-400 hover:underline">Excluir</button>
+          ) : <span />}
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(null)} className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3 py-2">Cancelar</button>
+            <button onClick={() => onSave()} disabled={saving} className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 disabled:opacity-60">{saving ? "Salvando..." : "Salvar"}</button>
+          </div>
         </div>
       </div>
     </div>
