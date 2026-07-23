@@ -14,7 +14,7 @@ import {
 //   cronológica, envio gravando no banco, Realtime e painel do contato.
 // Oportunidades/Contatos/Config seguem como casca (Fases 4+).
 // Multi-tenant: a filtragem por cliente_id é feita pela RLS no Supabase.
-// Tokens de tema (light/dark) + acento sky.
+// Tokens de tema (light/dark) + acento roxo (primary — identidade da KP).
 // ============================================================================
 
 type Section = "conversas" | "oportunidades" | "contatos" | "config";
@@ -27,7 +27,7 @@ const NAV: { key: Section; label: string; icon: typeof MessageSquare }[] = [
 ];
 
 const KANBAN = [
-  { nome: "Novo lead", dot: "bg-sky-500" },
+  { nome: "Novo lead", dot: "bg-blue-500" },
   { nome: "Em atendimento", dot: "bg-amber-500" },
   { nome: "Proposta enviada", dot: "bg-violet-500" },
   { nome: "Ganho", dot: "bg-emerald-500" },
@@ -101,7 +101,7 @@ function EmBreveBtn({ children }: { children: ReactNode }) {
     <button
       disabled
       title="Em construção"
-      className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 dark:text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-1.5 opacity-70 cursor-not-allowed"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 opacity-70 cursor-not-allowed"
     >
       {children}
     </button>
@@ -123,7 +123,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
 function Avatar({ nome, size = "md" }: { nome: string | null | undefined; size?: "md" | "lg" }) {
   const cls = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
   return (
-    <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center text-white font-bold`}>
+    <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold`}>
       {(nome || "?").charAt(0).toUpperCase()}
     </div>
   );
@@ -260,7 +260,7 @@ function Conversas() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar conversa..."
-              className="w-full h-9 pl-9 pr-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-sky-500/50"
+              className="w-full h-9 pl-9 pr-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
             />
           </div>
           <div className="flex gap-1">
@@ -269,7 +269,7 @@ function Conversas() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`flex-1 text-xs font-semibold rounded-lg py-1.5 transition-colors ${
-                  filter === f ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "text-muted-foreground hover:bg-muted"
+                  filter === f ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
                 }`}
               >
                 {f === "todos" ? "Todos" : "Não lidos"}
@@ -293,7 +293,7 @@ function Conversas() {
                   key={c.id}
                   onClick={() => abrir(c)}
                   className={`w-full text-left px-3 py-3 border-b border-border/50 flex gap-3 transition-colors ${
-                    selId === c.id ? "bg-sky-500/10" : "hover:bg-muted/50"
+                    selId === c.id ? "bg-primary/10" : "hover:bg-muted/50"
                   }`}
                 >
                   <Avatar nome={nome} />
@@ -304,7 +304,7 @@ function Conversas() {
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-0.5">
                       <span className={`text-xs truncate ${naoLido ? "text-foreground" : "text-muted-foreground"}`}>{c.ultima_mensagem || "Sem mensagens"}</span>
-                      {naoLido && <span className="shrink-0 h-2 w-2 rounded-full bg-sky-500 mt-0.5" />}
+                      {naoLido && <span className="shrink-0 h-2 w-2 rounded-full bg-primary mt-0.5" />}
                     </div>
                   </div>
                 </button>
@@ -335,11 +335,11 @@ function Conversas() {
                   <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
                     <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
                       m.direcao === "enviada"
-                        ? "bg-sky-500 text-white rounded-tr-sm"
+                        ? "bg-primary text-white rounded-tr-sm"
                         : "bg-card border border-border text-foreground rounded-tl-sm"
                     }`}>
                       <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
-                      <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-sky-100" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
+                      <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
                     </div>
                   </div>
                 ))
@@ -352,12 +352,12 @@ function Conversas() {
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-sky-500/50"
+                className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
               />
               <button
                 onClick={() => void enviar()}
                 disabled={sending || !draft.trim()}
-                className="h-10 w-10 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -445,7 +445,7 @@ function Config() {
               disabled
               className="w-full flex items-center gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 text-left opacity-80 cursor-not-allowed"
             >
-              <div className="h-9 w-9 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                 <it.icon className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
@@ -470,12 +470,12 @@ export default function Crm() {
         <Link to="/" className="p-2 -ml-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Voltar ao início">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow">
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
           <MessageSquare className="h-4 w-4 text-white" />
         </div>
         <div className="flex items-center gap-2">
           <h1 className="text-base font-bold text-foreground">CRM</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/40 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/40 px-2 py-0.5 text-[10px] font-semibold text-primary">
             <Wrench className="h-3 w-3" /> Em construção
           </span>
         </div>
@@ -490,7 +490,7 @@ export default function Crm() {
                 key={item.key}
                 onClick={() => setSection(item.key)}
                 className={`w-full flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 transition-colors ${
-                  activeItem ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  activeItem ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <item.icon className="h-5 w-5" />
