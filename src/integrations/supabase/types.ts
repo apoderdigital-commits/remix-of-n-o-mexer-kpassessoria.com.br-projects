@@ -325,6 +325,7 @@ export type Database = {
           instance_id: string
           numero: string | null
           provedor: string
+          webhook_secret: string | null
         }
         Insert: {
           ativo?: boolean
@@ -334,6 +335,7 @@ export type Database = {
           instance_id: string
           numero?: string | null
           provedor?: string
+          webhook_secret?: string | null
         }
         Update: {
           ativo?: boolean
@@ -343,6 +345,7 @@ export type Database = {
           instance_id?: string
           numero?: string | null
           provedor?: string
+          webhook_secret?: string | null
         }
         Relationships: [
           {
@@ -2435,6 +2438,7 @@ export type Database = {
           p_message_id?: string
           p_nome?: string
           p_phone: string
+          p_secret: string
           p_texto?: string
         }
         Returns: string
