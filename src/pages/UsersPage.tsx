@@ -542,6 +542,59 @@ export default function UsersPage() {
               )}
             </div>
 
+            {/* CRM subcontas */}
+            <div className="space-y-3">
+              <Label>Acesso ao CRM (subcontas)</Label>
+              {!crmClients?.length ? (
+                <p className="text-sm text-muted-foreground">Nenhuma subconta de CRM cadastrada</p>
+              ) : (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {crmClients.map((cc) => {
+                    const link = form.crmLinks.find((l) => l.cliente_id === cc.id);
+                    const enabled = !!link;
+                    return (
+                      <div key={cc.id} className="rounded-lg border border-border/30 bg-secondary/10">
+                        <label className="flex items-center gap-3 p-3 cursor-pointer">
+                          <Checkbox checked={enabled} onCheckedChange={() => toggleCrmLink(cc.id)} />
+                          <span className="text-sm font-medium flex-1">{cc.nome}</span>
+                          {enabled && (
+                            <Select
+                              value={link!.papel}
+                              onValueChange={(v) => setCrmLinkPapel(cc.id, v === "admin" ? "admin" : "usuario")}
+                            >
+                              <SelectTrigger className="h-7 w-32 text-xs" onClick={(e) => e.stopPropagation()}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="usuario">Usuário</SelectItem>
+                                <SelectItem value="admin">Admin (subconta)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </label>
+                        {enabled && link!.papel === "usuario" && (
+                          <div className="px-3 pb-3 grid grid-cols-2 gap-1.5">
+                            {CRM_PERMISSOES.map((p) => (
+                              <label key={p.key} className="flex items-center gap-2 text-[11px] text-muted-foreground rounded px-2 py-1 hover:bg-secondary/30 cursor-pointer">
+                                <Checkbox
+                                  checked={!!link!.permissoes?.[p.key]}
+                                  onCheckedChange={() => toggleCrmPerm(cc.id, p.key)}
+                                />
+                                <span>{p.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Ao vincular a uma subconta, o usuário recebe automaticamente acesso ao dashboard "CRM · Conversas".
+              </p>
+            </div>
+
             <Button onClick={handleSave} className="w-full" disabled={saving}>
               {saving ? "Salvando..." : editingUserId ? "Salvar Alterações" : "Enviar código por WhatsApp"}
             </Button>
