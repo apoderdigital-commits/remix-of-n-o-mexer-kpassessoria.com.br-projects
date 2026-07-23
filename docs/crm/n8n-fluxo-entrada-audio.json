@@ -44,6 +44,7 @@
             { "name": "p_is_group", "value": "={{ $json.p_is_group }}" },
             { "name": "p_chat_id", "value": "={{ $json.p_chat_id }}" },
             { "name": "p_photo", "value": "={{ $json.p_photo }}" },
+            { "name": "p_sender_photo", "value": "={{ $json.p_sender_photo }}" },
             { "name": "p_participant_phone", "value": "={{ $json.p_participant_phone }}" },
             { "name": "p_participant_name", "value": "={{ $json.p_participant_name }}" },
             { "name": "p_tipo", "value": "={{ $json.p_tipo }}" },
