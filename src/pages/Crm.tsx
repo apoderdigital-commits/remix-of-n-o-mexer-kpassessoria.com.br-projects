@@ -359,7 +359,7 @@ function Conversas() {
         ) : (
           <>
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
-              <Avatar nome={sel.crm_contacts?.nome} />
+              <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} />
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-foreground truncate">{sel.crm_contacts?.nome || "Sem nome"}</p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
