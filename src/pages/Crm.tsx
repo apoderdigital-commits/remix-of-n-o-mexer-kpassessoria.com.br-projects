@@ -213,7 +213,7 @@ function Conversas() {
   const notifAudioRef = useRef<HTMLAudioElement | null>(null);
   if (typeof window !== "undefined" && !notifAudioRef.current) {
     const a = new Audio(notificationSound.url);
-    a.volume = 0.5;
+    a.volume = 0.2;
     a.preload = "auto";
     notifAudioRef.current = a;
   }
