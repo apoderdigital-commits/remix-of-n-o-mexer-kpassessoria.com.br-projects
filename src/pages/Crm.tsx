@@ -508,7 +508,11 @@ function Conversas() {
                         {showRemetente && (
                           <span className="block text-[10px] font-semibold text-primary mb-0.5 truncate">{m.remetente_nome}</span>
                         )}
-                        <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        {m.tipo === "audio" && m.url_midia ? (
+                          <audio controls src={m.url_midia} className="max-w-[240px] block" />
+                        ) : (
+                          <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        )}
                         <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
                       </div>
                     </div>
