@@ -327,6 +327,8 @@ export type Database = {
           numero: string | null
           provedor: string
           webhook_secret: string | null
+          zapi_client_token: string | null
+          zapi_token: string | null
         }
         Insert: {
           ativo?: boolean
@@ -338,6 +340,8 @@ export type Database = {
           numero?: string | null
           provedor?: string
           webhook_secret?: string | null
+          zapi_client_token?: string | null
+          zapi_token?: string | null
         }
         Update: {
           ativo?: boolean
@@ -349,6 +353,8 @@ export type Database = {
           numero?: string | null
           provedor?: string
           webhook_secret?: string | null
+          zapi_client_token?: string | null
+          zapi_token?: string | null
         }
         Relationships: [
           {
