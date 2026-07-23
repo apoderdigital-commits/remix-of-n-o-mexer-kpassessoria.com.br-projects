@@ -522,20 +522,57 @@ function Conversas() {
               <div ref={bottomRef} />
             </div>
             <div className="shrink-0 border-t border-border p-3 flex items-center gap-2 bg-card/40">
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
-                placeholder="Digite uma mensagem..."
-                className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
-              />
-              <button
-                onClick={() => void enviar()}
-                disabled={sending || !draft.trim()}
-                className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              {recording ? (
+                <>
+                  <div className="flex-1 h-10 px-3 rounded-lg bg-rose-500/10 border border-rose-500/40 text-sm text-rose-600 dark:text-rose-300 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    Gravando... {Math.floor(recSecs / 60).toString().padStart(2, "0")}:{(recSecs % 60).toString().padStart(2, "0")}
+                  </div>
+                  <button
+                    onClick={() => stopRec(true)}
+                    title="Cancelar"
+                    className="h-10 w-10 rounded-lg bg-muted hover:bg-muted/70 text-foreground flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => stopRec(false)}
+                    title="Enviar áudio"
+                    className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
+                    placeholder="Digite uma mensagem..."
+                    className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+                  />
+                  {draft.trim() ? (
+                    <button
+                      onClick={() => void enviar()}
+                      disabled={sending}
+                      title="Enviar"
+                      className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void startRec()}
+                      disabled={sending}
+                      title="Gravar áudio"
+                      className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </>
         )}
