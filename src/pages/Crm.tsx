@@ -7,7 +7,7 @@ import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
   Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
-  Mic, Square as StopIcon,
+  Mic, Square as StopIcon, Paperclip,
 } from "lucide-react";
 
 // ============================================================================
@@ -321,6 +321,44 @@ function Conversas() {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const sendMediaFile = async (file: File) => {
+    if (!sel) return;
+    const isImg = file.type.startsWith("image/");
+    const isVid = file.type.startsWith("video/");
+    if (!isImg && !isVid) { toast.error("Envie apenas imagem ou vídeo."); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error("Arquivo acima de 25MB."); return; }
+    setSending(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${sel.cliente_id}/${sel.id}/${Date.now()}_${safeName}`;
+      const up = await supabase.storage.from("crm-audios").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (up.error) throw up.error;
+      const signed = await supabase.storage.from("crm-audios").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error || new Error("sem URL");
+      const { error } = await (supabase as any).from("crm_messages").insert({
+        cliente_id: sel.cliente_id,
+        conversation_id: sel.id,
+        direcao: "enviada",
+        tipo: isImg ? "imagem" : "video",
+        conteudo: null,
+        url_midia: signed.data.signedUrl,
+        lida: true,
+      });
+      if (error) throw error;
+      await loadMensagens(sel.id);
+      void loadConversas();
+    } catch (e: any) {
+      toast.error("Falha ao enviar arquivo: " + (e?.message || ""));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const startRec = async () => {
     if (recording || sending || !sel) return;
     try {
@@ -510,6 +548,12 @@ function Conversas() {
                         )}
                         {m.tipo === "audio" && m.url_midia ? (
                           <audio controls src={m.url_midia} className="max-w-[240px] block" />
+                        ) : m.tipo === "imagem" && m.url_midia ? (
+                          <a href={m.url_midia} target="_blank" rel="noreferrer">
+                            <img src={m.url_midia} alt="imagem" className="max-w-[240px] max-h-[240px] rounded-md block object-cover" />
+                          </a>
+                        ) : m.tipo === "video" && m.url_midia ? (
+                          <video controls src={m.url_midia} className="max-w-[260px] max-h-[260px] rounded-md block" />
                         ) : (
                           <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
                         )}
@@ -545,6 +589,25 @@ function Conversas() {
                 </>
               ) : (
                 <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void sendMediaFile(f);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending}
+                    title="Anexar imagem ou vídeo"
+                    className="h-10 w-10 rounded-lg bg-muted hover:bg-muted/70 text-foreground flex items-center justify-center transition-colors disabled:opacity-50"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </button>
                   <input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
