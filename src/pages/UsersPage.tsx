@@ -615,7 +615,27 @@ export default function UsersPage() {
           ) : (() => {
             const q = userSearch.trim().toLowerCase();
             const norm = (s: string) => (s || "").toLowerCase();
-            const filteredUsers = (users || []).filter((u) => !q || norm(u.email || "").includes(q) || norm(u.full_name || "").includes(q));
+            const allUsers = (users || []).filter((u) => !q || norm(u.email || "").includes(q) || norm(u.full_name || "").includes(q));
+
+            // Contagens por pasta
+            const admCount = allUsers.filter((u) => u.role === "admin" || u.role === "manager").length;
+            const clienteCount = allUsers.filter((u) => u.role === "client").length;
+            const crmAllCount = allUsers.filter((u) => u.crm_links.length > 0).length;
+            const crmSubCount = (id: string) => allUsers.filter((u) => u.crm_links.some((l) => l.cliente_id === id)).length;
+
+            // Aplica filtro da pasta selecionada
+            const folderFiltered = (() => {
+              if (folder === "todos") return allUsers;
+              if (folder === "adm") return allUsers.filter((u) => u.role === "admin" || u.role === "manager");
+              if (folder === "cliente") return allUsers.filter((u) => u.role === "client");
+              if (folder === "crm-all") return allUsers.filter((u) => u.crm_links.length > 0);
+              if (folder.startsWith("crm:")) {
+                const id = folder.slice(4);
+                return allUsers.filter((u) => u.crm_links.some((l) => l.cliente_id === id));
+              }
+              return allUsers;
+            })();
+
             const renderRow = (u: any) => {
               const isAdmin = u.role === "admin";
               const dashCount = isAdmin ? DASHBOARDS.length : u.dashboards.length;
@@ -648,12 +668,12 @@ export default function UsersPage() {
                           </span>
                           <span className="text-muted-foreground text-xs">
                             {isAdmin ? "Todos" : u.dashboards.length > 0
-                              ? u.dashboards.map((d) => DASHBOARDS.find((db) => db.key === d)?.label || d).join(", ")
+                              ? u.dashboards.map((d: string) => DASHBOARDS.find((db) => db.key === d)?.label || d).join(", ")
                               : "Nenhum"}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="align-top max-w-[280px]">
+                      <TableCell className="align-top max-w-[240px]">
                         <div className="flex items-start gap-2">
                           <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-[10px] font-semibold px-1.5 py-0.5 shrink-0 mt-0.5">
                             {clientCount}
@@ -662,6 +682,30 @@ export default function UsersPage() {
                             {clientNames}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell className="align-top max-w-[220px]">
+                        {u.crm_links.length === 0 ? (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {u.crm_links.map((l: CrmLinkForm) => {
+                              const nome = crmClients?.find((c) => c.id === l.cliente_id)?.nome || "Subconta";
+                              return (
+                                <span
+                                  key={l.cliente_id}
+                                  className={`inline-flex items-center gap-1 rounded-md border text-[10px] px-1.5 py-0.5 ${
+                                    l.papel === "admin"
+                                      ? "border-primary/40 bg-primary/10 text-primary"
+                                      : "border-border/40 bg-secondary/40 text-muted-foreground"
+                                  }`}
+                                  title={l.papel === "admin" ? "Admin da subconta" : "Usuário"}
+                                >
+                                  {nome}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right space-x-1 align-top">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
@@ -682,23 +726,58 @@ export default function UsersPage() {
                     </TableRow>
               );
             };
-            const groups = [
-              { key: "colab", label: "Colaboradores", list: filteredUsers.filter((u) => u.role !== "client") },
-              { key: "cliente", label: "Clientes", list: filteredUsers.filter((u) => u.role === "client") },
-            ];
+
+            const FolderBtn = ({ id, label, count, indent = 0 }: { id: string; label: string; count: number; indent?: number }) => (
+              <button
+                type="button"
+                onClick={() => setFolder(id)}
+                className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                  folder === id ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                }`}
+                style={{ paddingLeft: 8 + indent * 12 }}
+              >
+                <span className="truncate">{label}</span>
+                <span className="ml-2 rounded-full bg-secondary/40 text-[10px] px-1.5 py-0.5">{count}</span>
+              </button>
+            );
+
             return (
-              <div className="space-y-6">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Buscar por usuário ou nome..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 bg-secondary/30 border-border/30" />
-                </div>
-                {filteredUsers.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">Nenhum usuário encontrado</p>
-                ) : groups.map((g) => g.list.length === 0 ? null : (
-                  <div key={g.key} className="space-y-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground/80">
-                      {g.label}<span className="text-[11px] rounded-full bg-secondary/40 text-muted-foreground px-2 py-0.5">{g.list.length}</span>
-                    </h3>
+              <div className="flex gap-4">
+                {/* Sidebar de pastas */}
+                <aside className="w-56 shrink-0 space-y-1 border-r border-border/30 pr-3">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 px-2 pb-1">Pastas</div>
+                  <FolderBtn id="todos" label="Todos" count={allUsers.length} />
+                  <FolderBtn id="adm" label="ADM do site" count={admCount} />
+                  <FolderBtn id="cliente" label="Clientes" count={clienteCount} />
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setCrmFolderOpen((v) => !v)}
+                      className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        folder === "crm-all" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">
+                        <span className="text-[10px]">{crmFolderOpen ? "▾" : "▸"}</span>
+                        <span onClick={(e) => { e.stopPropagation(); setFolder("crm-all"); }}>CRM</span>
+                      </span>
+                      <span className="ml-2 rounded-full bg-secondary/40 text-[10px] px-1.5 py-0.5">{crmAllCount}</span>
+                    </button>
+                    {crmFolderOpen && (crmClients || []).map((cc) => (
+                      <FolderBtn key={cc.id} id={`crm:${cc.id}`} label={cc.nome} count={crmSubCount(cc.id)} indent={1} />
+                    ))}
+                  </div>
+                </aside>
+
+                {/* Conteúdo */}
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="relative max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Buscar por usuário ou nome..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 bg-secondary/30 border-border/30" />
+                  </div>
+                  {folderFiltered.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">Nenhum usuário nesta pasta</p>
+                  ) : (
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border/30">
@@ -707,13 +786,14 @@ export default function UsersPage() {
                           <TableHead className="text-muted-foreground">Tipo</TableHead>
                           <TableHead className="text-muted-foreground">Dashboards</TableHead>
                           <TableHead className="text-muted-foreground">Clientes</TableHead>
+                          <TableHead className="text-muted-foreground">CRM</TableHead>
                           <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{g.list.map(renderRow)}</TableBody>
+                      <TableBody>{folderFiltered.map(renderRow)}</TableBody>
                     </Table>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             );
           })()}
