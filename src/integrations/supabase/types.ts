@@ -2453,41 +2453,24 @@ export type Database = {
     }
     Functions: {
       crm_current_cliente_id: { Args: never; Returns: string }
-      crm_ingest_whatsapp:
-        | {
-            Args: {
-              p_chat_id?: string
-              p_instance_id: string
-              p_is_group?: boolean
-              p_message_id?: string
-              p_nome?: string
-              p_participant_name?: string
-              p_participant_phone?: string
-              p_phone: string
-              p_photo?: string
-              p_secret: string
-              p_texto?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_chat_id?: string
-              p_instance_id: string
-              p_is_group?: boolean
-              p_message_id?: string
-              p_nome?: string
-              p_participant_name?: string
-              p_participant_phone?: string
-              p_phone: string
-              p_photo?: string
-              p_secret: string
-              p_texto?: string
-              p_tipo?: string
-              p_url_midia?: string
-            }
-            Returns: string
-          }
+      crm_ingest_whatsapp: {
+        Args: {
+          p_chat_id?: string
+          p_instance_id: string
+          p_is_group?: boolean
+          p_message_id?: string
+          p_nome?: string
+          p_participant_name?: string
+          p_participant_phone?: string
+          p_phone: string
+          p_photo?: string
+          p_secret: string
+          p_texto?: string
+          p_tipo?: string
+          p_url_midia?: string
+        }
+        Returns: string
+      }
       crm_is_admin: { Args: never; Returns: boolean }
       get_accessible_clients: {
         Args: never
