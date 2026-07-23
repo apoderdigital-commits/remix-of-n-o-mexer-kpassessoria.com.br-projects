@@ -382,7 +382,12 @@ function Conversas() {
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
               <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} />
               <div className="min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{sel.crm_contacts?.nome || "Sem nome"}</p>
+                <p className="font-semibold text-sm text-foreground truncate flex items-center gap-2">
+                  {sel.crm_contacts?.nome || "Sem nome"}
+                  {sel.crm_contacts?.is_group && (
+                    <span className="inline-flex items-center rounded px-1.5 py-[1px] text-[9px] font-semibold bg-primary/15 text-primary">GRUPO</span>
+                  )}
+                </p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
               </div>
             </div>
@@ -390,18 +395,24 @@ function Conversas() {
               {msgs.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground pt-6">Nenhuma mensagem ainda. Envie a primeira 👇</p>
               ) : (
-                msgs.map((m) => (
-                  <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                      m.direcao === "enviada"
-                        ? "bg-primary text-white rounded-tr-sm"
-                        : "bg-card border border-border text-foreground rounded-tl-sm"
-                    }`}>
-                      <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
-                      <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
+                msgs.map((m) => {
+                  const showRemetente = !!sel.crm_contacts?.is_group && m.direcao === "recebida" && !!m.remetente_nome;
+                  return (
+                    <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                        m.direcao === "enviada"
+                          ? "bg-primary text-white rounded-tr-sm"
+                          : "bg-card border border-border text-foreground rounded-tl-sm"
+                      }`}>
+                        {showRemetente && (
+                          <span className="block text-[10px] font-semibold text-primary mb-0.5 truncate">{m.remetente_nome}</span>
+                        )}
+                        <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               <div ref={bottomRef} />
             </div>
