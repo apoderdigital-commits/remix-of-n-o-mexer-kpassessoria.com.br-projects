@@ -1,0 +1,259 @@
+{
+  "name": "CRM WhatsApp - Enviar (dinâmico)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-whatsapp-out",
+        "options": {}
+      },
+      "id": "a31d85eb-3f3a-4292-9395-6c53cbc6eab3",
+      "name": "Webhook Enviar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        192
+      ],
+      "webhookId": "crm-whatsapp-out"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.tipo }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "audio"
+            },
+            {
+              "value2": "imagem",
+              "output": 1
+            },
+            {
+              "value2": "video",
+              "output": 2
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "fae7b779-f998-4b1d-8d97-1d4e71a3b52e",
+      "name": "Tipo da mensagem",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/{{ $json.body.token }}/send-audio",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "={{ $json.body.client_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone }}"
+            },
+            {
+              "name": "audio",
+              "value": "={{ $json.body.url_midia }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e98d2e29-3e7f-41ee-9c6e-754fcf51d0ce",
+      "name": "Z-API Enviar Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        272,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/{{ $json.body.token }}/send-image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "={{ $json.body.client_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone }}"
+            },
+            {
+              "name": "image",
+              "value": "={{ $json.body.url_midia }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.body.message || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "438a568d-5d0c-49a2-ac8a-9d578279d16a",
+      "name": "Z-API Enviar Imagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        384,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/{{ $json.body.token }}/send-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "={{ $json.body.client_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone }}"
+            },
+            {
+              "name": "video",
+              "value": "={{ $json.body.url_midia }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.body.message || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0b435f30-ca3a-4283-a570-350ceb794585",
+      "name": "Z-API Enviar Vídeo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        400,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.body.instance_id }}/token/{{ $json.body.token }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "={{ $json.body.client_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d807061b-7163-47bf-9fbb-c4d9ab4f7f44",
+      "name": "Z-API Enviar Texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        384
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Enviar": {
+      "main": [
+        [
+          {
+            "node": "Tipo da mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo da mensagem": {
+      "main": [
+        [
+          {
+            "node": "Z-API Enviar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Z-API Enviar Imagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Z-API Enviar Vídeo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Z-API Enviar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}
