@@ -7,6 +7,7 @@ import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
   Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
+  Mic, Square as StopIcon,
 } from "lucide-react";
 
 // ============================================================================
