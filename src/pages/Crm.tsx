@@ -55,6 +55,8 @@ type Mensagem = {
   url_midia: string | null;
   lida: boolean;
   criado_em: string;
+  remetente_nome?: string | null;
+  remetente_telefone?: string | null;
 };
 type Pipeline = { id: string; cliente_id: string; nome: string };
 type Stage = { id: string; nome: string; ordem: number; cliente_id: string; pipeline_id: string };
@@ -166,7 +168,7 @@ function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; 
 
 // ---------------------------- CONVERSAS (real) -----------------------------
 function Conversas() {
-  const [filter, setFilter] = useState<"todos" | "nao_lidos">("todos");
+  const [filter, setFilter] = useState<"contatos" | "grupos" | "nao_lidos">("contatos");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState<Conversa[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
@@ -284,8 +286,15 @@ function Conversas() {
   }
 
   const visibleConvs = convs
-    .filter((c) => (filter === "nao_lidos" ? c.status === "nao_lido" : true))
+    .filter((c) => {
+      if (filter === "nao_lidos") return c.status === "nao_lido";
+      const isG = !!c.crm_contacts?.is_group;
+      return filter === "grupos" ? isG : !isG;
+    })
     .filter((c) => !busca.trim() || (c.crm_contacts?.nome || "").toLowerCase().includes(busca.trim().toLowerCase()));
+
+  const countUnread = convs.filter((c) => c.status === "nao_lido").length;
+  const countGroups = convs.filter((c) => c.crm_contacts?.is_group).length;
 
   return (
     <>
@@ -302,15 +311,19 @@ function Conversas() {
             />
           </div>
           <div className="flex gap-1">
-            {(["todos", "nao_lidos"] as const).map((f) => (
+            {([
+              { key: "contatos", label: "Contatos" },
+              { key: "grupos", label: `Grupos${countGroups ? ` (${countGroups})` : ""}` },
+              { key: "nao_lidos", label: `Não lidos${countUnread ? ` (${countUnread})` : ""}` },
+            ] as const).map((f) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
+                key={f.key}
+                onClick={() => setFilter(f.key)}
                 className={`flex-1 text-xs font-semibold rounded-lg py-1.5 transition-colors ${
-                  filter === f ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
+                  filter === f.key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
                 }`}
               >
-                {f === "todos" ? "Todos" : "Não lidos"}
+                {f.label}
               </button>
             ))}
           </div>
@@ -320,12 +333,17 @@ function Conversas() {
             <p className="p-4 text-sm text-muted-foreground">Carregando...</p>
           ) : visibleConvs.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground text-center">
-              {filter === "nao_lidos" ? "Nenhuma conversa não lida." : "Nenhuma conversa ainda."}
+              {filter === "nao_lidos"
+                ? "Nenhuma conversa não lida."
+                : filter === "grupos"
+                ? "Nenhum grupo ainda."
+                : "Nenhum contato ainda."}
             </p>
           ) : (
             visibleConvs.map((c) => {
               const nome = c.crm_contacts?.nome || "Sem nome";
               const naoLido = c.status === "nao_lido";
+              const isGroup = !!c.crm_contacts?.is_group;
               return (
                 <button
                   key={c.id}
@@ -341,7 +359,10 @@ function Conversas() {
                       <span className="text-[10px] text-muted-foreground shrink-0">{fmtHora(c.ultima_em || c.atualizado_em)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <span className={`text-xs truncate ${naoLido ? "text-foreground" : "text-muted-foreground"}`}>{c.ultima_mensagem || "Sem mensagens"}</span>
+                      <span className={`text-xs truncate ${naoLido ? "text-foreground" : "text-muted-foreground"}`}>
+                        {isGroup && <span className="mr-1 inline-flex items-center rounded px-1 py-[1px] text-[9px] font-semibold bg-primary/15 text-primary align-middle">GRUPO</span>}
+                        {c.ultima_mensagem || "Sem mensagens"}
+                      </span>
                       {naoLido && <span className="shrink-0 h-2 w-2 rounded-full bg-primary mt-0.5" />}
                     </div>
                   </div>
@@ -361,7 +382,12 @@ function Conversas() {
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
               <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} />
               <div className="min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{sel.crm_contacts?.nome || "Sem nome"}</p>
+                <p className="font-semibold text-sm text-foreground truncate flex items-center gap-2">
+                  {sel.crm_contacts?.nome || "Sem nome"}
+                  {sel.crm_contacts?.is_group && (
+                    <span className="inline-flex items-center rounded px-1.5 py-[1px] text-[9px] font-semibold bg-primary/15 text-primary">GRUPO</span>
+                  )}
+                </p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
               </div>
             </div>
@@ -369,18 +395,24 @@ function Conversas() {
               {msgs.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground pt-6">Nenhuma mensagem ainda. Envie a primeira 👇</p>
               ) : (
-                msgs.map((m) => (
-                  <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                      m.direcao === "enviada"
-                        ? "bg-primary text-white rounded-tr-sm"
-                        : "bg-card border border-border text-foreground rounded-tl-sm"
-                    }`}>
-                      <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
-                      <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
+                msgs.map((m) => {
+                  const showRemetente = !!sel.crm_contacts?.is_group && m.direcao === "recebida" && !!m.remetente_nome;
+                  return (
+                    <div key={m.id} className={`flex ${m.direcao === "enviada" ? "justify-end" : ""}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                        m.direcao === "enviada"
+                          ? "bg-primary text-white rounded-tr-sm"
+                          : "bg-card border border-border text-foreground rounded-tl-sm"
+                      }`}>
+                        {showRemetente && (
+                          <span className="block text-[10px] font-semibold text-primary mb-0.5 truncate">{m.remetente_nome}</span>
+                        )}
+                        <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               <div ref={bottomRef} />
             </div>
