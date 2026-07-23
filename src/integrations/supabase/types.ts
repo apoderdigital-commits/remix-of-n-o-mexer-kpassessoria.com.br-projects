@@ -461,6 +461,7 @@ export type Database = {
           direcao: string
           id: string
           lida: boolean
+          remetente_foto: string | null
           remetente_nome: string | null
           remetente_telefone: string | null
           tipo: string
@@ -474,6 +475,7 @@ export type Database = {
           direcao: string
           id?: string
           lida?: boolean
+          remetente_foto?: string | null
           remetente_nome?: string | null
           remetente_telefone?: string | null
           tipo?: string
@@ -487,6 +489,7 @@ export type Database = {
           direcao?: string
           id?: string
           lida?: boolean
+          remetente_foto?: string | null
           remetente_nome?: string | null
           remetente_telefone?: string | null
           tipo?: string
