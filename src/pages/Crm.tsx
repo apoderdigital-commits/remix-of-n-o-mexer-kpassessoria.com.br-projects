@@ -7,6 +7,7 @@ import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
   Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
+  Mic, Square as StopIcon,
 } from "lucide-react";
 
 // ============================================================================
@@ -191,6 +192,12 @@ function Conversas() {
   const [notReady, setNotReady] = useState(false);
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recStreamRef = useRef<MediaStream | null>(null);
+  const recTimerRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const selIdRef = useRef<string | null>(null);
   selIdRef.current = selId;
@@ -280,6 +287,81 @@ function Conversas() {
     setDraft("");
     await loadMensagens(sel.id);
     void loadConversas();
+  };
+
+  const sendAudioBlob = async (blob: Blob) => {
+    if (!sel) return;
+    setSending(true);
+    try {
+      const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
+      const path = `${sel.cliente_id}/${sel.id}/${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("crm-audios").upload(path, blob, {
+        contentType: blob.type || "audio/webm",
+        upsert: false,
+      });
+      if (up.error) throw up.error;
+      const signed = await supabase.storage.from("crm-audios").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error || new Error("sem URL");
+      const { error } = await (supabase as any).from("crm_messages").insert({
+        cliente_id: sel.cliente_id,
+        conversation_id: sel.id,
+        direcao: "enviada",
+        tipo: "audio",
+        conteudo: null,
+        url_midia: signed.data.signedUrl,
+        lida: true,
+      });
+      if (error) throw error;
+      await loadMensagens(sel.id);
+      void loadConversas();
+    } catch (e: any) {
+      toast.error("Falha ao enviar áudio: " + (e?.message || ""));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const startRec = async () => {
+    if (recording || sending || !sel) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recStreamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const type = mr.mimeType || "audio/webm";
+        const blob = new Blob(recChunksRef.current, { type });
+        recStreamRef.current?.getTracks().forEach((t) => t.stop());
+        recStreamRef.current = null;
+        if (recTimerRef.current) { window.clearInterval(recTimerRef.current); recTimerRef.current = null; }
+        setRecSecs(0);
+        setRecording(false);
+        if (blob.size > 1024) void sendAudioBlob(blob);
+      };
+      mr.start();
+      recRef.current = mr;
+      setRecording(true);
+      setRecSecs(0);
+      recTimerRef.current = window.setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch (e: any) {
+      toast.error("Permita o acesso ao microfone para gravar áudio.");
+    }
+  };
+
+  const stopRec = (cancel = false) => {
+    const mr = recRef.current;
+    if (!mr) return;
+    if (cancel) {
+      recChunksRef.current = [];
+    }
+    try { mr.stop(); } catch { /* noop */ }
+    recRef.current = null;
   };
 
   if (notReady) {
@@ -426,7 +508,11 @@ function Conversas() {
                         {showRemetente && (
                           <span className="block text-[10px] font-semibold text-primary mb-0.5 truncate">{m.remetente_nome}</span>
                         )}
-                        <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        {m.tipo === "audio" && m.url_midia ? (
+                          <audio controls src={m.url_midia} className="max-w-[240px] block" />
+                        ) : (
+                          <span className="whitespace-pre-wrap break-words">{m.tipo === "texto" ? m.conteudo : `[${m.tipo}]`}</span>
+                        )}
                         <span className={`block text-[9px] mt-0.5 text-right ${m.direcao === "enviada" ? "text-white/70" : "text-muted-foreground"}`}>{fmtHora(m.criado_em)}</span>
                       </div>
                     </div>
@@ -436,20 +522,57 @@ function Conversas() {
               <div ref={bottomRef} />
             </div>
             <div className="shrink-0 border-t border-border p-3 flex items-center gap-2 bg-card/40">
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
-                placeholder="Digite uma mensagem..."
-                className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
-              />
-              <button
-                onClick={() => void enviar()}
-                disabled={sending || !draft.trim()}
-                className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              {recording ? (
+                <>
+                  <div className="flex-1 h-10 px-3 rounded-lg bg-rose-500/10 border border-rose-500/40 text-sm text-rose-600 dark:text-rose-300 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    Gravando... {Math.floor(recSecs / 60).toString().padStart(2, "0")}:{(recSecs % 60).toString().padStart(2, "0")}
+                  </div>
+                  <button
+                    onClick={() => stopRec(true)}
+                    title="Cancelar"
+                    className="h-10 w-10 rounded-lg bg-muted hover:bg-muted/70 text-foreground flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => stopRec(false)}
+                    title="Enviar áudio"
+                    className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }}
+                    placeholder="Digite uma mensagem..."
+                    className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+                  />
+                  {draft.trim() ? (
+                    <button
+                      onClick={() => void enviar()}
+                      disabled={sending}
+                      title="Enviar"
+                      className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void startRec()}
+                      disabled={sending}
+                      title="Gravar áudio"
+                      className="h-10 w-10 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </>
         )}
