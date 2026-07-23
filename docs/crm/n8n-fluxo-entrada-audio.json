@@ -1,0 +1,89 @@
+{
+  "name": "CRM WhatsApp - Entrada (texto + audio)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-entrada",
+      "name": "Webhook Z-API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "crm-zapi-incoming"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mapeia o payload da Z-API para a RPC do Supabase\nconst body = $json.body || {};\n\n// Z-API envia o tipo em 'type' ou 'tipo'. Áudio vem em 'audio', 'audioUrl' ou 'url'.\nconst rawType = String(body.type || body.tipo || '').toLowerCase();\nconst isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';\n\nconst tipo = isAudio ? 'audio' : 'texto';\nconst urlMidia = body.audio || body.audioUrl || body.url || body.mediaUrl || null;\n\n// Grupo: Z-API costuma enviar isGroup=true, chatId=group-id, phone=group-id, participantPhone, participantName\nconst isGroup = !!body.isGroup || String(body.chatId || '').endsWith('-group');\n\nreturn [\n  {\n    json: {\n      p_secret: body.secret || body.webhook_secret,\n      p_instance_id: body.instance_id || body.instanceId,\n      p_phone: body.phone || body.chatId,\n      p_nome: body.name || body.chatName || body.profileName || body.phone,\n      p_texto: isAudio ? null : (body.message || body.text || body.content),\n      p_message_id: body.messageId || body.id,\n      p_is_group: isGroup,\n      p_chat_id: body.chatId || body.phone,\n      p_photo: body.photo || body.profilePicUrl || body.groupPicture || null,\n      p_participant_phone: body.participantPhone || body.author || body.sender,\n      p_participant_name: body.participantName || body.participant || body.senderName,\n      p_tipo: tipo,\n      p_url_midia: urlMidia\n    }\n  }\n];\n"
+      },
+      "id": "map-fields",
+      "name": "Mapear campos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<SUPABASE_URL>/rest/v1/rpc/crm_ingest_whatsapp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "apikey", "value": "<SUPABASE_ANON_KEY>" },
+            { "name": "Authorization", "value": "Bearer <SUPABASE_ANON_KEY>" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "p_secret", "value": "={{ $json.p_secret }}" },
+            { "name": "p_instance_id", "value": "={{ $json.p_instance_id }}" },
+            { "name": "p_phone", "value": "={{ $json.p_phone }}" },
+            { "name": "p_nome", "value": "={{ $json.p_nome }}" },
+            { "name": "p_texto", "value": "={{ $json.p_texto }}" },
+            { "name": "p_message_id", "value": "={{ $json.p_message_id }}" },
+            { "name": "p_is_group", "value": "={{ $json.p_is_group }}" },
+            { "name": "p_chat_id", "value": "={{ $json.p_chat_id }}" },
+            { "name": "p_photo", "value": "={{ $json.p_photo }}" },
+            { "name": "p_participant_phone", "value": "={{ $json.p_participant_phone }}" },
+            { "name": "p_participant_name", "value": "={{ $json.p_participant_name }}" },
+            { "name": "p_tipo", "value": "={{ $json.p_tipo }}" },
+            { "name": "p_url_midia", "value": "={{ $json.p_url_midia }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "supabase-rpc",
+      "name": "Supabase - Ingerir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Z-API": {
+      "main": [
+        [
+          {
+            "node": "Mapear campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear campos": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Ingerir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": []
+}
