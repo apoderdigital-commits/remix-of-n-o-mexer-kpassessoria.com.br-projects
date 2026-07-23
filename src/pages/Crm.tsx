@@ -7,7 +7,7 @@ import {
   ArrowLeft, MessageSquare, Target, Users, Settings, Wrench,
   Search, Plus, Send, User, Link2, Phone, Mail, X,
   Pencil, ChevronUp, ChevronDown, Trash2, UserPlus, Shield, QrCode,
-  Mic, Square as StopIcon, Paperclip,
+  Mic, Square as StopIcon, Paperclip, PhoneCall,
 } from "lucide-react";
 
 // ============================================================================
@@ -323,6 +323,31 @@ function Conversas() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const iniciarLigacao = async (telefone: string, nome: string) => {
+    const phone = telefone.replace(/\D/g, "");
+    if (!phone) { toast.error("Contato sem telefone válido."); return; }
+    if (!confirm(`Iniciar ligação de WhatsApp para ${nome || phone}?`)) return;
+    try {
+      await fetch("https://kpadm-n8n.a6hrr3.easypanel.host/webhook/crm-whatsapp-call", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          contato_nome: nome,
+          cliente_id: sel?.cliente_id,
+          contact_id: sel?.contact_id,
+          callDuration: 30,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      toast.success("Ligação disparada. Verifique o WhatsApp.");
+    } catch (e: any) {
+      toast.error("Falha ao iniciar ligação.");
+    }
+  };
+
+
   const sendMediaFile = async (file: File) => {
     if (!sel) return;
     const isImg = file.type.startsWith("image/");
@@ -515,7 +540,7 @@ function Conversas() {
           <>
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
               <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} isGroup={!!sel.crm_contacts?.is_group} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm text-foreground truncate flex items-center gap-2">
                   {sel.crm_contacts?.nome || "Sem nome"}
                   {sel.crm_contacts?.is_group && (
@@ -524,6 +549,16 @@ function Conversas() {
                 </p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
               </div>
+              {!sel.crm_contacts?.is_group && sel.crm_contacts?.telefone && (
+                <button
+                  onClick={() => iniciarLigacao(sel.crm_contacts!.telefone!, sel.crm_contacts?.nome || "")}
+                  title="Ligar via WhatsApp"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                  Ligar
+                </button>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {msgs.length === 0 ? (
