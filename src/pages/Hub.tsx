@@ -50,7 +50,7 @@ export default function Hub() {
         <div className={`grid gap-6 w-full max-w-4xl ${showCrm && showDashboard ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-md"}`}>
           {showDashboard && (
             <Link
-              to="/portal"
+              to="/"
               className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm hover:shadow-xl hover:border-primary/50 transition-all hover:-translate-y-1"
             >
               <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl group-hover:bg-primary/20 transition" />

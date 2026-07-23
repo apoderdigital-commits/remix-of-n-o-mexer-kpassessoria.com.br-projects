@@ -58,13 +58,14 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/hub" replace />;
   return <>{children}</>;
 }
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+    <Route path="/hub" element={<ProtectedRoute><Hub /></ProtectedRoute>} />
     <Route path="/" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
     <Route path="/criativos" element={<ProtectedRoute dashboardKey="criativos"><Criativos /></ProtectedRoute>} />
     <Route path="/projecao" element={<ProtectedRoute dashboardKey="projecao"><Projecao /></ProtectedRoute>} />
