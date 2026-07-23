@@ -35,7 +35,7 @@ const STAGE_DOTS = ["bg-blue-500", "bg-amber-500", "bg-violet-500", "bg-emerald-
 // ---------------------------------------------------------------------------
 // Tipos das linhas do CRM
 // ---------------------------------------------------------------------------
-type Contato = { id: string; nome: string | null; telefone: string | null; email: string | null };
+type Contato = { id: string; nome: string | null; telefone: string | null; email: string | null; foto_url?: string | null; is_group?: boolean | null };
 type Conversa = {
   id: string;
   cliente_id: string;
@@ -145,8 +145,18 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
   );
 }
 
-function Avatar({ nome, size = "md" }: { nome: string | null | undefined; size?: "md" | "lg" }) {
+function Avatar({ nome, size = "md", foto }: { nome: string | null | undefined; size?: "md" | "lg"; foto?: string | null }) {
   const cls = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
+  if (foto) {
+    return (
+      <img
+        src={foto}
+        alt={nome || "avatar"}
+        className={`${cls} shrink-0 rounded-full object-cover bg-muted`}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   return (
     <div className={`${cls} shrink-0 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold`}>
       {(nome || "?").charAt(0).toUpperCase()}
@@ -174,7 +184,7 @@ function Conversas() {
   const loadConversas = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from("crm_conversations")
-      .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email)")
+      .select("id,cliente_id,contact_id,status,atualizado_em,ultima_mensagem,ultima_em,crm_contacts(id,nome,telefone,email,foto_url,is_group)")
       .neq("status", "arquivado")
       // ordena pela última MENSAGEM (não por atualizado_em, que muda ao só ler/abrir);
       // conversas sem mensagem (ultima_em nulo) vão para o fim.
@@ -324,7 +334,7 @@ function Conversas() {
                     selId === c.id ? "bg-primary/10" : "hover:bg-muted/50"
                   }`}
                 >
-                  <Avatar nome={nome} />
+                  <Avatar nome={nome} foto={c.crm_contacts?.foto_url} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`text-sm text-foreground truncate ${naoLido ? "font-bold" : "font-semibold"}`}>{nome}</span>
@@ -349,7 +359,7 @@ function Conversas() {
         ) : (
           <>
             <div className="h-14 shrink-0 border-b border-border bg-card/50 px-4 flex items-center gap-3">
-              <Avatar nome={sel.crm_contacts?.nome} />
+              <Avatar nome={sel.crm_contacts?.nome} foto={sel.crm_contacts?.foto_url} />
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-foreground truncate">{sel.crm_contacts?.nome || "Sem nome"}</p>
                 {sel.crm_contacts?.telefone && <p className="text-[11px] text-muted-foreground truncate">{sel.crm_contacts.telefone}</p>}
@@ -398,7 +408,7 @@ function Conversas() {
       {sel && (
         <div className="w-64 shrink-0 border-l border-border bg-card/30 p-5 hidden lg:flex flex-col gap-5 overflow-y-auto">
           <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar nome={sel.crm_contacts?.nome} size="lg" />
+            <Avatar nome={sel.crm_contacts?.nome} size="lg" foto={sel.crm_contacts?.foto_url} />
             <p className="font-bold text-foreground">{sel.crm_contacts?.nome || "Sem nome"}</p>
           </div>
           <div className="space-y-3">
