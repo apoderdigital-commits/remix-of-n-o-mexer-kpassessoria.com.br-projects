@@ -161,11 +161,11 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
       title="Alternar entre CRM e Planilha"
     >
       <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
-      <span className={source === "ghl" ? "text-cyan-300" : "text-emerald-300"}>
+      <span className={source === "ghl" ? "text-cyan-700 dark:text-cyan-300" : "text-emerald-700 dark:text-emerald-300"}>
         {source === "ghl" ? "CRM" : "Planilha"}
       </span>
     </button>
