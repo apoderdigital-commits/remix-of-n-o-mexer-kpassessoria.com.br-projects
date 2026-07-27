@@ -155,7 +155,7 @@ export function ExecutiveSummary({
         </div>
 
         {/* vs período anterior */}
-        <div className="p-3 rounded-xl border border-border/50 bg-background/60">
+        <div className="p-3 rounded-xl border border-border bg-background/85 dark:border-border/50 dark:bg-background/60">
           <div className="flex items-center gap-2 mb-2.5">
             <Activity className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
             <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
@@ -185,15 +185,15 @@ export function ExecutiveSummary({
                 className="group flex items-start gap-2.5 text-left p-3 rounded-xl border border-green-500/25 bg-gradient-to-br from-green-500/[0.08] to-transparent hover:border-green-500/50 transition-all"
               >
                 <div className="p-1.5 rounded-lg bg-green-500/15 shrink-0">
-                  <ArrowUpRight className="h-3.5 w-3.5 text-green-300" />
+                  <ArrowUpRight className="h-3.5 w-3.5 text-green-800 dark:text-green-300" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-green-300">
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-green-800 dark:text-green-300">
                     Sugestão · Escalar
                   </p>
                   <p className="text-xs text-foreground/90 mt-0.5 truncate">
                     <span className="font-semibold">{shortenName(movers.rising.name)}</span> subiu{" "}
-                    <span className="text-green-300 font-bold">+{movers.rising.pct.toFixed(0)}%</span>{" "}
+                    <span className="text-green-800 dark:text-green-300 font-bold">+{movers.rising.pct.toFixed(0)}%</span>{" "}
                     nos últimos 7 dias.
                   </p>
                 </div>
@@ -241,8 +241,8 @@ function DeltaRow({
   if (pct === null) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground/60 font-medium text-sm">—</span>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-foreground/70">{label}</span>
+        <span className="text-foreground/60 font-semibold text-sm">—</span>
       </div>
     );
   }
@@ -252,13 +252,14 @@ function DeltaRow({
   const negative = invertColor ? isUp : isDown;
   const Icon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
   const color = positive
-    ? "text-green-300"
+    ? "text-green-800 dark:text-green-300"
     : negative
-    ? "text-red-300"
-    : "text-muted-foreground";
+    ? "text-red-800 dark:text-red-300"
+    : "text-foreground/70";
+
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="text-[10px] uppercase tracking-wider font-semibold text-foreground/70">{label}</span>
       <span className={`inline-flex items-center gap-1 font-semibold text-sm ${color}`}>
         <Icon className="h-3 w-3" />
         {fmtPct(pct)}
