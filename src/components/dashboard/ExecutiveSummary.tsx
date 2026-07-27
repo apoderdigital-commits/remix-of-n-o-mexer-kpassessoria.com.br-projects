@@ -259,7 +259,7 @@ function DeltaRow({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="text-[10px] uppercase tracking-wider font-semibold text-foreground/70">{label}</span>
       <span className={`inline-flex items-center gap-1 font-semibold text-sm ${color}`}>
         <Icon className="h-3 w-3" />
         {fmtPct(pct)}
