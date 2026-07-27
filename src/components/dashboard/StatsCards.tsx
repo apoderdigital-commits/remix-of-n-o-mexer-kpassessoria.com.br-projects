@@ -92,27 +92,27 @@ function CompareLine({ data, format }: { data: DayCompare; format: (n: number) =
   const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
   const arrowColor =
     today > yesterday
-      ? "text-green-400"
+      ? "text-green-700 dark:text-green-400"
       : today < yesterday
-      ? "text-red-400"
+      ? "text-red-700 dark:text-red-400"
       : "text-muted-foreground";
   return (
     <div className="mt-1.5 space-y-0.5 text-[12px] text-muted-foreground leading-snug">
       <div className="flex items-center gap-1">
         <Arrow className={`h-3 w-3 shrink-0 ${arrowColor}`} />
-        <span className="text-foreground/85 font-medium">Hoje</span>
-        {todayDate && <span className="text-muted-foreground/60">({todayDate})</span>}
-        <span className="text-foreground/85">: {format(today)}</span>
+        <span className="text-foreground/95 font-medium">Hoje</span>
+        {todayDate && <span className="text-muted-foreground/70">({todayDate})</span>}
+        <span className="text-foreground/95">: {format(today)}</span>
       </div>
       <div className="pl-4">
-        <span className="text-foreground/70">Ontem</span>
-        {yesterdayDate && <span className="text-muted-foreground/60"> ({yesterdayDate})</span>}
+        <span className="text-foreground/85">Ontem</span>
+        {yesterdayDate && <span className="text-muted-foreground/70"> ({yesterdayDate})</span>}
         <span>: {format(yesterday)}</span>
       </div>
       <div className="pl-4">
-        <span className="text-foreground/70">Média 7d</span>
+        <span className="text-foreground/85">Média 7d</span>
         {rangeStart && rangeEnd && (
-          <span className="text-muted-foreground/60"> ({rangeStart} – {rangeEnd})</span>
+          <span className="text-muted-foreground/70"> ({rangeStart} – {rangeEnd})</span>
         )}
         <span>: {format(avg7d)}</span>
       </div>
