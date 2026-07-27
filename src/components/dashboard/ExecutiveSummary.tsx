@@ -252,7 +252,7 @@ function DeltaRow({
   const negative = invertColor ? isUp : isDown;
   const Icon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
   const color = positive
-    ? "text-green-800 dark:text-green-800 dark:text-green-300"
+    ? "text-green-800 dark:text-green-300"
     : negative
     ? "text-red-800 dark:text-red-300"
     : "text-foreground/70";
