@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
       status: "cpf_approved" | "sale" | "sale_consortium" | "sale_financing";
       lead_date: string;
       seller_name: string | null;
+      source: string;
     }> = [];
 
     // Deduplicate: same person + same event type = count only once
@@ -161,17 +162,21 @@ Deno.serve(async (req) => {
         status,
         lead_date: leadDate,
         seller_name: vendedor || null,
+        source: "sheet",
       });
     }
 
     console.log(`Parsed ${rows.length} qualified leads from sheet`);
 
-    // Delete existing leads for this client in the date range, then insert
+    // Delete existing leads for this client in the date range, then insert.
+    // IMPORTANTE: só apaga o que veio da PLANILHA. As linhas gravadas direto
+    // pelo n8n (source='n8n') não podem ser apagadas por uma re-sincronização.
     if (rows.length > 0) {
       let deleteQuery = supabase
         .from("qualified_leads")
         .delete()
-        .eq("client_id", client_id);
+        .eq("client_id", client_id)
+        .or("source.is.null,source.eq.sheet");
 
       if (since) deleteQuery = deleteQuery.gte("lead_date", since);
       if (until) deleteQuery = deleteQuery.lte("lead_date", until);
