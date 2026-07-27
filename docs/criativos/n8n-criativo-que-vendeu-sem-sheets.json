@@ -187,7 +187,7 @@
             },
             {
               "name": "message",
-              "value": "=*🔥MAIS UM EVENTO IMPORTANTE!🔥*  \n\n👤 Cliente: {{ $('Edit Fields').item.json['Nome do cliente '] }} \n👨‍💼 Vendedor:  {{ $('Edit Fields').item.json['Nome do Vendedor'] }}\n📝 *Tipo de Evento:*  {{ $('Edit Fields').item.json.Evento }}\n💰 Valor da Venda:  {{ $('Edit Fields').item.json.Valor }}\n🎯 *Criativo responsável:* \nURL:   {{ $('Edit Fields').item.json['URL do Criativo'] }}\n\n*📊 Dashboard com os criativos que estão trazendo os leads qualificados!🔥*\nhttps://SEU-DOMINIO/view?lid={{ $('Webhook').item.json.body.location.id }}\n\n🆔 ID do Criativo:   {{ $('Edit Fields').item.json['Id do Criativo'] }}\n\nParabéns ao time pelo atendimento ágil e pela conversão 👏\nVamos pra cima que vem muito mais 💥 Att.: Equipe Operacional KP ASSESSORIA"
+              "value": "=*🔥MAIS UM EVENTO IMPORTANTE!🔥*  \n\n👤 Cliente: {{ $('Edit Fields').item.json['Nome do cliente '] }} \n👨‍💼 Vendedor:  {{ $('Edit Fields').item.json['Nome do Vendedor'] }}\n📝 *Tipo de Evento:*  {{ $('Edit Fields').item.json.Evento }}\n💰 Valor da Venda:  {{ $('Edit Fields').item.json.Valor }}\n🎯 *Criativo responsável:* \nURL:   {{ $('Edit Fields').item.json['URL do Criativo'] }}\n\n*📊 Dashboard com os criativos que estão trazendo os leads qualificados!🔥*\nhttps://dashkp.com.br/view?lid={{ $('Webhook').item.json.body.location.id }}\n\n🆔 ID do Criativo:   {{ $('Edit Fields').item.json['Id do Criativo'] }}\n\nParabéns ao time pelo atendimento ágil e pela conversão 👏\nVamos pra cima que vem muito mais 💥 Att.: Equipe Operacional KP ASSESSORIA"
             }
           ]
         },
