@@ -155,9 +155,9 @@ export function ExecutiveSummary({
         </div>
 
         {/* vs período anterior */}
-        <div className="p-3 rounded-xl border border-border/40 bg-background/40">
+        <div className="p-3 rounded-xl border border-border/50 bg-background/60">
           <div className="flex items-center gap-2 mb-2.5">
-            <Activity className="h-3 w-3 text-cyan-400" />
+            <Activity className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
             <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
               vs período anterior
             </p>
