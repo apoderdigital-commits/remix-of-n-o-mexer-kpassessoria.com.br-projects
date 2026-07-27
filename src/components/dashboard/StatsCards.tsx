@@ -126,14 +126,14 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         met
-          ? "border-green-500/30 bg-green-500/10 text-green-300"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+          ? "border-green-500/40 bg-green-500/15 text-green-800 dark:text-green-300"
+          : "border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300"
       }`}
       title={`Meta: ${target}%`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-400" : "bg-amber-400"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-700 dark:bg-green-400" : "bg-amber-700 dark:bg-amber-400"}`} />
       {label}: {value.toFixed(1)}%
-      <span className="text-muted-foreground/70 font-normal">· meta {target}%</span>
+      <span className="text-muted-foreground/80 font-normal">· meta {target}%</span>
     </div>
   );
 }
@@ -145,14 +145,14 @@ function CostIndicator({ label, value, target, denominatorLabel }: { label: stri
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         ok
-          ? "border-green-500/30 bg-green-500/10 text-green-300"
-          : "border-red-500/30 bg-red-500/10 text-red-300"
+          ? "border-green-500/40 bg-green-500/15 text-green-800 dark:text-green-300"
+          : "border-red-500/40 bg-red-500/15 text-red-800 dark:text-red-300"
       }`}
       title={`Máx ideal: R$ ${target.toLocaleString("pt-BR")}${denominatorLabel ? ` por ${denominatorLabel}` : ""}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-green-400" : "bg-red-400"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-green-700 dark:bg-green-400" : "bg-red-700 dark:bg-red-400"}`} />
       {label}: R$ {value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      <span className="text-muted-foreground/70 font-normal">· máx R$ {target}</span>
+      <span className="text-muted-foreground/80 font-normal">· máx R$ {target}</span>
     </div>
   );
 }
