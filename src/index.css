@@ -148,8 +148,9 @@
 }
 
 .light .glass-card {
-  background: hsl(220 18% 86% / 0.92);
-  border: 1px solid hsl(263 70% 58% / 0.22);
+  background: hsl(220 18% 84% / 0.96);
+  border: 1px solid hsl(263 70% 58% / 0.32);
+  box-shadow: 0 4px 20px -8px hsl(222 47% 11% / 0.12);
 }
 
 @keyframes ranking-highlight {
