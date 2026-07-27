@@ -444,12 +444,12 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 <CostIndicator {...(card as any).costIndicator} />
               )}
               {(card as any).insight && (
-                <p className="mt-2 text-[11px] leading-snug text-muted-foreground/75">
+                <p className="mt-2 text-[11px] leading-snug text-muted-foreground/90">
                   {(card as any).insight}
                 </p>
               )}
               {clickable && (
-                <p className="mt-auto pt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
+                <p className="mt-auto pt-2 text-[10px] font-medium text-primary group-hover:text-primary/90 transition-colors">
                   Clique para ver os criativos →
                 </p>
               )}
