@@ -1,0 +1,230 @@
+{
+  "name": "CRIATIVO QUE VENDEU | VR MADRI (sem Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "4cb979af-9409-4dd8-b494-fb79fb402b10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-336, 0],
+      "id": "f4f0a7a9-08d4-4666-95f7-b165d3bb4cd1",
+      "name": "Webhook",
+      "webhookId": "4cb979af-9409-4dd8-b494-fb79fb402b10"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85ee900d-c609-4717-8338-a49256f980e2",
+              "name": "Nome do cliente ",
+              "value": "={{ $json.body.full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "fcf82738-b330-4930-922b-97ffece854bb",
+              "name": "Nome do Vendedor",
+              "value": "={{ $json.body.owner }}",
+              "type": "string"
+            },
+            {
+              "id": "30a54c25-8bf6-43ad-a750-df48afbc7bce",
+              "name": "Evento",
+              "value": "={{ $json.body.pipleline_stage }}",
+              "type": "string"
+            },
+            {
+              "id": "719bd1dd-daee-418a-bb6f-af18d8175acf",
+              "name": "Valor",
+              "value": "={{ $json.body.lead_value }}",
+              "type": "number"
+            },
+            {
+              "id": "026695a1-462f-4def-a140-ab3457986a1b",
+              "name": "URL do Criativo",
+              "value": "={{ $json.body.contact.attributionSource.url }}",
+              "type": "string"
+            },
+            {
+              "id": "f2a7b1a2-c5d7-4006-8b1f-7e3bb18d797e",
+              "name": "Id do Criativo",
+              "value": "={{ $json.body.contact.attributionSource.adId }}",
+              "type": "string"
+            },
+            {
+              "id": "fbfd638c-4889-40b4-865e-2b28985c76a4",
+              "name": "Data/Hora",
+              "value": "={{ new Date().toLocaleString('pt-BR') }}",
+              "type": "string"
+            },
+            {
+              "id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+              "name": "Location Id",
+              "value": "={{ $json.body.location.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-96, 0],
+      "id": "61969384-d065-43fd-acab-c053bd856c8f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "625a6806-b09d-4c7e-919d-0d89682ea376",
+              "leftValue": "={{ $json['URL do Criativo'] }}",
+              "rightValue": "null",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [176, 0],
+      "id": "74421443-7a01-46a8-8e07-ce6dd8d6ceac",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ymomudnyzgmtlpgdjqib.supabase.co/functions/v1/webhook-qualified-leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "secret",
+              "value": "kpcri_897e0f6a2acc16373b418f8909709538"
+            },
+            {
+              "name": "location_id",
+              "value": "={{ $json['Location Id'] }}"
+            },
+            {
+              "name": "creative_name",
+              "value": "={{ $json['URL do Criativo'] }}"
+            },
+            {
+              "name": "creative_id",
+              "value": "={{ $json['Id do Criativo'] }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ $json.Evento }}"
+            },
+            {
+              "name": "seller_name",
+              "value": "={{ $json['Nome do Vendedor'] }}"
+            },
+            {
+              "name": "lead_name",
+              "value": "={{ $json['Nome do cliente '] }}"
+            },
+            {
+              "name": "lead_date",
+              "value": "={{ $json['Data/Hora'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [496, -16],
+      "id": "01461891-3893-413d-b455-d8e5ce35b9f7",
+      "name": "Supabase - Registrar Criativo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.z-api.io/instances/3F4413670AF4D120C59DE6B1C9468980/token/72AC42C49EA75CF01D1D22FC/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "F12709db3bddd4e1791e5d061a88c738eS"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=120363429030924823-group"
+            },
+            {
+              "name": "message",
+              "value": "=*🔥MAIS UM EVENTO IMPORTANTE!🔥*  \n\n👤 Cliente: {{ $('Edit Fields').item.json['Nome do cliente '] }} \n👨‍💼 Vendedor:  {{ $('Edit Fields').item.json['Nome do Vendedor'] }}\n📝 *Tipo de Evento:*  {{ $('Edit Fields').item.json.Evento }}\n💰 Valor da Venda:  {{ $('Edit Fields').item.json.Valor }}\n🎯 *Criativo responsável:* \nURL:   {{ $('Edit Fields').item.json['URL do Criativo'] }}\n\n🆔 ID do Criativo:   {{ $('Edit Fields').item.json['Id do Criativo'] }}\n\nParabéns ao time pelo atendimento ágil e pela conversão 👏\nVamos pra cima que vem muito mais 💥 Att.: Equipe Operacional KP ASSESSORIA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [752, -16],
+      "id": "1cac4fc5-e1fa-4ce2-8022-fe989f2ed3cf",
+      "name": "HTTP Request"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Edit Fields", "type": "main", "index": 0 }]]
+    },
+    "Edit Fields": {
+      "main": [[{ "node": "If", "type": "main", "index": 0 }]]
+    },
+    "If": {
+      "main": [
+        [{ "node": "Supabase - Registrar Criativo", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Supabase - Registrar Criativo": {
+      "main": [[{ "node": "HTTP Request", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request": {
+      "main": [[]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "566e3db2a7afde26b8a263a6c16f6d44ec22372ed937be3550de17cf605a1706"
+  }
+}
