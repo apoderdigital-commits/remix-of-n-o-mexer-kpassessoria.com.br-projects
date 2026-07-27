@@ -14,3 +14,8 @@ verify_jwt = false
 
 [functions.confirm-password-reset]
 verify_jwt = false
+
+# Chamada pelo n8n (GHL -> n8n -> Supabase), sem sessão de usuário.
+# Protegida pelo segredo compartilhado QUALIFIED_LEADS_SECRET.
+[functions.webhook-qualified-leads]
+verify_jwt = false
