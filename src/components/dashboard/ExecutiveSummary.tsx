@@ -241,8 +241,8 @@ function DeltaRow({
   if (pct === null) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground/60 font-medium text-sm">—</span>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-foreground/70">{label}</span>
+        <span className="text-foreground/60 font-semibold text-sm">—</span>
       </div>
     );
   }
@@ -252,10 +252,11 @@ function DeltaRow({
   const negative = invertColor ? isUp : isDown;
   const Icon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
   const color = positive
-    ? "text-green-300"
+    ? "text-green-800 dark:text-green-300"
     : negative
-    ? "text-red-300"
-    : "text-muted-foreground";
+    ? "text-red-800 dark:text-red-300"
+    : "text-foreground/70";
+
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
