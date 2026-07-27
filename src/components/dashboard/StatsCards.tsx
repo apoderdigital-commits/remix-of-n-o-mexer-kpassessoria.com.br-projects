@@ -161,7 +161,7 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/50 hover:bg-primary/10 transition-colors"
       title="Alternar entre CRM e Planilha"
     >
       <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
