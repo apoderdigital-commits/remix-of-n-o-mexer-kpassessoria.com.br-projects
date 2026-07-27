@@ -33,10 +33,10 @@ function CostBlock({
     <div
       className={`flex-1 rounded-xl px-5 py-4 flex flex-col gap-2.5 border ${
         invalid
-          ? "bg-muted/30 border-border/40"
+          ? "bg-muted/40 border-border/50"
           : ok
-          ? "bg-green-500/10 dark:bg-green-500/5 border-green-500/30 dark:border-green-500/20"
-          : "bg-amber-500/10 dark:bg-amber-500/5 border-amber-500/30 dark:border-amber-500/20"
+          ? "bg-green-500/15 dark:bg-green-500/5 border-green-500/40 dark:border-green-500/20"
+          : "bg-amber-500/15 dark:bg-amber-500/5 border-amber-500/40 dark:border-amber-500/20"
       }`}
     >
       {/* Header */}
