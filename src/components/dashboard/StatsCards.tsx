@@ -126,12 +126,12 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         met
-          ? "border-green-500/40 bg-green-500/15 text-green-800 dark:text-green-300"
-          : "border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300"
+          ? "border-green-600/40 bg-green-500/20 text-green-900 dark:text-green-300"
+          : "border-amber-600/40 bg-amber-500/20 text-amber-900 dark:text-amber-300"
       }`}
       title={`Meta: ${target}%`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-700 dark:bg-green-400" : "bg-amber-700 dark:bg-amber-400"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-800 dark:bg-green-400" : "bg-amber-800 dark:bg-amber-400"}`} />
       {label}: {value.toFixed(1)}%
       <span className="text-muted-foreground/80 font-normal">· meta {target}%</span>
     </div>
