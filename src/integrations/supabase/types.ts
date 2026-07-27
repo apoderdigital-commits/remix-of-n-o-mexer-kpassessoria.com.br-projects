@@ -1092,29 +1092,38 @@ export type Database = {
       qualified_leads: {
         Row: {
           client_id: string
+          creative_id: string | null
           creative_name: string
           id: string
           lead_date: string
+          lead_name: string | null
           received_at: string
           seller_name: string | null
+          source: string | null
           status: Database["public"]["Enums"]["lead_status"]
         }
         Insert: {
           client_id: string
+          creative_id?: string | null
           creative_name: string
           id?: string
           lead_date?: string
+          lead_name?: string | null
           received_at?: string
           seller_name?: string | null
+          source?: string | null
           status: Database["public"]["Enums"]["lead_status"]
         }
         Update: {
           client_id?: string
+          creative_id?: string | null
           creative_name?: string
           id?: string
           lead_date?: string
+          lead_name?: string | null
           received_at?: string
           seller_name?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
         }
         Relationships: [
