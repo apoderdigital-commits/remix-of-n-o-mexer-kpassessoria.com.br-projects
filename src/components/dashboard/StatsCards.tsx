@@ -67,7 +67,11 @@ function PrevDelta({
   const positive = invertColor ? isDown : isUp;
   const negative = invertColor ? isUp : isDown;
   const Icon = isUp ? ArrowUp : isDown ? ArrowDown : Minus;
-  const color = positive ? "text-green-400" : negative ? "text-red-400" : "text-muted-foreground";
+  const color = positive
+    ? "text-green-700 dark:text-green-400"
+    : negative
+    ? "text-red-700 dark:text-red-400"
+    : "text-muted-foreground";
   const sign = pct > 0 ? "+" : "";
   return (
     <p className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold ${color}`}>
@@ -75,7 +79,7 @@ function PrevDelta({
       {sign}
       {pct.toFixed(1)}% vs anterior
       {format && (
-        <span className="text-muted-foreground/70 font-normal ml-0.5">
+        <span className="text-muted-foreground/80 font-normal ml-0.5">
           ({format(previous)})
         </span>
       )}
