@@ -67,7 +67,11 @@ function PrevDelta({
   const positive = invertColor ? isDown : isUp;
   const negative = invertColor ? isUp : isDown;
   const Icon = isUp ? ArrowUp : isDown ? ArrowDown : Minus;
-  const color = positive ? "text-green-400" : negative ? "text-red-400" : "text-muted-foreground";
+  const color = positive
+    ? "text-green-800 dark:text-green-400"
+    : negative
+    ? "text-red-800 dark:text-red-400"
+    : "text-muted-foreground";
   const sign = pct > 0 ? "+" : "";
   return (
     <p className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold ${color}`}>
@@ -75,7 +79,7 @@ function PrevDelta({
       {sign}
       {pct.toFixed(1)}% vs anterior
       {format && (
-        <span className="text-muted-foreground/70 font-normal ml-0.5">
+        <span className="text-muted-foreground/80 font-normal ml-0.5">
           ({format(previous)})
         </span>
       )}
@@ -88,27 +92,27 @@ function CompareLine({ data, format }: { data: DayCompare; format: (n: number) =
   const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
   const arrowColor =
     today > yesterday
-      ? "text-green-400"
+      ? "text-green-800 dark:text-green-400"
       : today < yesterday
-      ? "text-red-400"
+      ? "text-red-800 dark:text-red-400"
       : "text-muted-foreground";
   return (
     <div className="mt-1.5 space-y-0.5 text-[12px] text-muted-foreground leading-snug">
       <div className="flex items-center gap-1">
         <Arrow className={`h-3 w-3 shrink-0 ${arrowColor}`} />
-        <span className="text-foreground/85 font-medium">Hoje</span>
-        {todayDate && <span className="text-muted-foreground/60">({todayDate})</span>}
-        <span className="text-foreground/85">: {format(today)}</span>
+        <span className="text-foreground/95 font-medium">Hoje</span>
+        {todayDate && <span className="text-muted-foreground/70">({todayDate})</span>}
+        <span className="text-foreground/95">: {format(today)}</span>
       </div>
       <div className="pl-4">
-        <span className="text-foreground/70">Ontem</span>
-        {yesterdayDate && <span className="text-muted-foreground/60"> ({yesterdayDate})</span>}
+        <span className="text-foreground/85">Ontem</span>
+        {yesterdayDate && <span className="text-muted-foreground/70"> ({yesterdayDate})</span>}
         <span>: {format(yesterday)}</span>
       </div>
       <div className="pl-4">
-        <span className="text-foreground/70">Média 7d</span>
+        <span className="text-foreground/85">Média 7d</span>
         {rangeStart && rangeEnd && (
-          <span className="text-muted-foreground/60"> ({rangeStart} – {rangeEnd})</span>
+          <span className="text-muted-foreground/70"> ({rangeStart} – {rangeEnd})</span>
         )}
         <span>: {format(avg7d)}</span>
       </div>
@@ -122,14 +126,14 @@ function MetaIndicator({ label, value, target }: { label: string; value: number;
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         met
-          ? "border-green-500/30 bg-green-500/10 text-green-300"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+          ? "border-green-600/40 bg-green-500/20 text-green-900 dark:text-green-300"
+          : "border-amber-600/40 bg-amber-500/20 text-amber-900 dark:text-amber-300"
       }`}
       title={`Meta: ${target}%`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-400" : "bg-amber-400"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-800 dark:bg-green-400" : "bg-amber-800 dark:bg-amber-400"}`} />
       {label}: {value.toFixed(1)}%
-      <span className="text-muted-foreground/70 font-normal">· meta {target}%</span>
+      <span className="text-muted-foreground/80 font-normal">· meta {target}%</span>
     </div>
   );
 }
@@ -141,14 +145,14 @@ function CostIndicator({ label, value, target, denominatorLabel }: { label: stri
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         ok
-          ? "border-green-500/30 bg-green-500/10 text-green-300"
-          : "border-red-500/30 bg-red-500/10 text-red-300"
+          ? "border-green-600/40 bg-green-500/20 text-green-900 dark:text-green-300"
+          : "border-red-600/40 bg-red-500/20 text-red-900 dark:text-red-300"
       }`}
       title={`Máx ideal: R$ ${target.toLocaleString("pt-BR")}${denominatorLabel ? ` por ${denominatorLabel}` : ""}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-green-400" : "bg-red-400"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-green-700 dark:bg-green-400" : "bg-red-700 dark:bg-red-400"}`} />
       {label}: R$ {value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      <span className="text-muted-foreground/70 font-normal">· máx R$ {target}</span>
+      <span className="text-muted-foreground/80 font-normal">· máx R$ {target}</span>
     </div>
   );
 }
@@ -157,11 +161,11 @@ function SourceToggle({ source, onToggle }: { source: "ghl" | "planilha"; onTogg
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium hover:border-primary/50 hover:bg-primary/10 transition-colors"
       title="Alternar entre CRM e Planilha"
     >
       <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
-      <span className={source === "ghl" ? "text-cyan-300" : "text-emerald-300"}>
+      <span className={source === "ghl" ? "text-cyan-700 dark:text-cyan-300" : "text-emerald-700 dark:text-emerald-300"}>
         {source === "ghl" ? "CRM" : "Planilha"}
       </span>
     </button>
@@ -369,7 +373,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               }
             } : undefined}
             style={accent ? { borderLeft: `3px solid hsl(${accent} / 0.7)` } : undefined}
-            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] h-full flex flex-col ${
+            className={`group relative overflow-hidden glass-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] h-full flex flex-col ${
               clickable ? "cursor-pointer" : ""
             }`}
           >
@@ -440,12 +444,12 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
                 <CostIndicator {...(card as any).costIndicator} />
               )}
               {(card as any).insight && (
-                <p className="mt-2 text-[11px] leading-snug text-muted-foreground/75">
+                <p className="mt-2 text-[11px] leading-snug text-muted-foreground/90">
                   {(card as any).insight}
                 </p>
               )}
               {clickable && (
-                <p className="mt-auto pt-2 text-[10px] font-medium text-primary/80 group-hover:text-primary transition-colors">
+                <p className="mt-auto pt-2 text-[10px] font-medium text-primary group-hover:text-primary/90 transition-colors">
                   Clique para ver os criativos →
                 </p>
               )}
