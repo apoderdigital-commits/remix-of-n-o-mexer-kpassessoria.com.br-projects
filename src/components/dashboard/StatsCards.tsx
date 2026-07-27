@@ -373,7 +373,7 @@ export function StatsCards({ totalLeads, totalSpent, salesConsortium, salesFinan
               }
             } : undefined}
             style={accent ? { borderLeft: `3px solid hsl(${accent} / 0.7)` } : undefined}
-            className={`group relative overflow-hidden glass-card border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] h-full flex flex-col ${
+            className={`group relative overflow-hidden glass-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)] h-full flex flex-col ${
               clickable ? "cursor-pointer" : ""
             }`}
           >
