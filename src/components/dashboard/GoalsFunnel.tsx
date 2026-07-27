@@ -181,14 +181,14 @@ export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfAp
       </div>
 
       {/* Filtros do funil: vendedor + base de leads */}
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/50 bg-secondary/40 px-4 py-3">
         {sellers && sellers.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Vendedor:</span>
             <select
               value={selectedSeller ?? "all"}
               onChange={(e) => onSellerChange?.(e.target.value)}
-              className="h-9 rounded-lg border border-border/40 bg-background/60 px-2 text-sm max-w-[220px]"
+              className="h-9 rounded-lg border border-border/50 bg-background/80 px-2 text-sm max-w-[220px]"
             >
               <option value="all">Todos os vendedores</option>
               {sellers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -199,7 +199,7 @@ export function GoalsFunnel({ totalLeads, ghlTotalLeads, ghlSimulacoes, ghlCpfAp
         {!bySeller && (
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Base de leads:</span>
-            <div className="inline-flex rounded-lg border border-border/40 bg-background/40 p-1 text-sm">
+            <div className="inline-flex rounded-lg border border-border/50 bg-background/60 p-1 text-sm">
               {([["trafego", "Só Tráfego"], ["crm", "Todos do CRM"]] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setLeadSource(k)} className={`px-3 py-1.5 rounded-md transition ${leadSource === k ? "bg-primary text-primary-foreground font-semibold shadow" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
               ))}
