@@ -80,13 +80,13 @@ export function AlertBanner({
             role="alert"
             className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${
               isCritical
-                ? "border-red-500/25 bg-red-500/[0.06] text-red-800 dark:text-red-200/90"
-                : "border-amber-500/25 bg-amber-500/[0.06] text-amber-800 dark:text-amber-200/90"
+                ? "border-red-500/40 bg-red-500/[0.12] text-red-900 dark:text-red-200/90"
+                : "border-amber-500/40 bg-amber-500/[0.12] text-amber-900 dark:text-amber-200/90"
             }`}
           >
             <Icon
               className={`h-3.5 w-3.5 shrink-0 ${
-                isCritical ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
+                isCritical ? "text-red-800 dark:text-red-400" : "text-amber-800 dark:text-amber-400"
               }`}
             />
             <span className="font-semibold whitespace-nowrap">{alert.message}</span>
@@ -94,8 +94,8 @@ export function AlertBanner({
               onClick={onScrollToFunnel}
               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
                 isCritical
-                  ? "text-red-700 dark:text-red-300 hover:bg-red-500/15"
-                  : "text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
+                  ? "text-red-800 dark:text-red-300 hover:bg-red-500/20"
+                  : "text-amber-800 dark:text-amber-300 hover:bg-amber-500/20"
               }`}
             >
               <ArrowDown className="h-2.5 w-2.5" />
@@ -108,8 +108,8 @@ export function AlertBanner({
               aria-label="Dispensar"
               className={`flex h-4 w-4 items-center justify-center rounded transition-colors ${
                 isCritical
-                  ? "text-red-700/60 dark:text-red-300/60 hover:bg-red-500/15 hover:text-red-800 dark:hover:text-red-200"
-                  : "text-amber-700/60 dark:text-amber-300/60 hover:bg-amber-500/15 hover:text-amber-800 dark:hover:text-amber-200"
+                  ? "text-red-800/70 dark:text-red-300/60 hover:bg-red-500/20 hover:text-red-900 dark:hover:text-red-200"
+                  : "text-amber-800/70 dark:text-amber-300/60 hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-200"
               }`}
             >
               <X className="h-3 w-3" />
