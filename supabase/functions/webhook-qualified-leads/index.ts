@@ -13,20 +13,50 @@ const VALID_STATUSES = ["cpf_approved", "sale", "sale_consortium", "sale_financi
 type LeadStatus = (typeof VALID_STATUSES)[number];
 
 // Mesma regra da planilha (sync-google-sheet): aceita o texto cru da etapa do
-// pipeline que o n8n já monta hoje (ex.: "Cpf Aprovado/Qualificado"), além do enum.
-function mapStatus(raw: string): LeadStatus | null {
+// pipeline que o n8n já monta hoje, além do enum. Cada subconta do GHL nomeia a
+// etapa do seu jeito ("Cpf Aprovado/Qualificado", "Aprovou", ...), então as
+// palavras-chave por cliente (clients.sheet_cpf_keywords / sheet_sale_keywords)
+// entram aqui igual no sync da planilha.
+// ORDEM IMPORTA: os tipos de VENDA são testados antes do "aprovado" genérico,
+// senão uma etapa como "Venda Aprovada" cairia em cpf_approved.
+function mapStatus(raw: string, extraCpf: string[] = [], extraSale: string[] = []): LeadStatus | null {
   const lower = (raw || "").toLowerCase().trim();
   if (!lower) return null;
+
   if ((VALID_STATUSES as readonly string[]).includes(lower)) return lower as LeadStatus;
-  if (lower.includes("cpf aprovado") || lower.includes("cpf_aprovado")) return "cpf_approved";
+
+  // 1) CPF aprovado explícito + palavras-chave do cliente
+  if (
+    lower.includes("cpf aprovado") || lower.includes("cpf_aprovado") ||
+    extraCpf.some((k) => k && lower.includes(k))
+  ) return "cpf_approved";
+
+  // 2) Tipos de venda (mais específicos primeiro)
   if (lower.includes("consórcio") || lower.includes("consorcio")) return "sale_consortium";
   if (
     lower.includes("financiamento") ||
     lower.includes("cartão") || lower.includes("cartao") ||
     lower.includes("à vista") || lower.includes("a vista")
   ) return "sale_financing";
-  if (lower.includes("venda")) return "sale";
+  if (lower.includes("venda") || lower.includes("vendeu") || extraSale.some((k) => k && lower.includes(k))) {
+    return "sale";
+  }
+
+  // 3) Fallback: etapa de qualificação escrita de outras formas ("Aprovou",
+  //    "Aprovado", "Qualificado"). Fica por último de propósito.
+  if (lower.includes("aprovou") || lower.includes("aprovad") || lower.includes("qualificad")) {
+    return "cpf_approved";
+  }
+
   return null;
+}
+
+// "a, b , c" -> ["a","b","c"] em minúsculas
+function splitKeywords(raw: unknown): string[] {
+  return String(raw || "")
+    .split(",")
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 // Aceita "24/07/2026, 12:50:55" (toLocaleString pt-BR do n8n) ou ISO.
@@ -71,26 +101,33 @@ Deno.serve(async (req) => {
 
     // A loja pode vir pelo UUID direto ou — melhor — pelo location do GHL,
     // assim o mesmo nó do n8n serve para todas as subcontas sem editar nada.
-    let client_id = pick(body, ["client_id", "clientId"]);
-    if (!client_id) {
-      const locationId = pick(body, ["location_id", "ghl_location_id", "locationId"]);
-      if (!locationId) {
-        return json({ error: "Informe client_id ou location_id (GHL)" }, 400);
-      }
-      const { data: cli } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("ghl_location_id", locationId)
-        .is("deleted_at", null)
-        .limit(1);
-      if (!cli || cli.length === 0) {
-        return json(
-          { error: `Nenhum cliente com ghl_location_id = "${locationId}". Cadastre o Location ID na tela de Clientes.` },
-          404
-        );
-      }
-      client_id = cli[0].id as string;
+    // Traz também as palavras-chave do cliente pra classificar a etapa.
+    const COLS = "id, name, sheet_cpf_keywords, sheet_sale_keywords";
+    const explicitId = pick(body, ["client_id", "clientId"]);
+    const locationId = pick(body, ["location_id", "ghl_location_id", "locationId"]);
+
+    let cliQuery = supabase.from("clients").select(COLS).is("deleted_at", null);
+    if (explicitId) {
+      cliQuery = cliQuery.eq("id", explicitId);
+    } else if (locationId) {
+      cliQuery = cliQuery.eq("ghl_location_id", locationId);
+    } else {
+      return json({ error: "Informe client_id ou location_id (GHL)" }, 400);
     }
+
+    const { data: cli } = await cliQuery.limit(1);
+    if (!cli || cli.length === 0) {
+      return json(
+        {
+          error: explicitId
+            ? `Nenhum cliente com id = "${explicitId}".`
+            : `Nenhum cliente com ghl_location_id = "${locationId}". Cadastre o Location ID na tela de Clientes.`,
+        },
+        404
+      );
+    }
+    const client = cli[0] as Record<string, unknown>;
+    const client_id = client.id as string;
 
     const creative_name = pick(body, [
       "creative_name", "url_criativo", "URL_CRIATIVO", "creative_url", "url",
@@ -100,10 +137,16 @@ Deno.serve(async (req) => {
     }
 
     const statusRaw = pick(body, ["status", "tipo_de_evento", "TIPO_DE_EVENTO", "tipo", "evento", "pipeline_stage"]);
-    const status = mapStatus(statusRaw);
+    const status = mapStatus(
+      statusRaw,
+      splitKeywords(client.sheet_cpf_keywords),
+      splitKeywords(client.sheet_sale_keywords)
+    );
     if (!status) {
       return json(
-        { error: `Evento não reconhecido: "${statusRaw}". Esperado algo como "Cpf Aprovado", "Venda Financiamento" ou "Consórcio".` },
+        {
+          error: `Evento não reconhecido: "${statusRaw}" (cliente: ${client.name}). Cadastre essa etapa em Clientes → "Palavras-chave CPF/Venda" para esta loja.`,
+        },
         400
       );
     }
