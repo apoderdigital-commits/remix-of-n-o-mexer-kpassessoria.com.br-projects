@@ -145,8 +145,8 @@ function CostIndicator({ label, value, target, denominatorLabel }: { label: stri
     <div
       className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
         ok
-          ? "border-green-500/40 bg-green-500/15 text-green-800 dark:text-green-300"
-          : "border-red-500/40 bg-red-500/15 text-red-800 dark:text-red-300"
+          ? "border-green-600/40 bg-green-500/20 text-green-900 dark:text-green-300"
+          : "border-red-600/40 bg-red-500/20 text-red-900 dark:text-red-300"
       }`}
       title={`Máx ideal: R$ ${target.toLocaleString("pt-BR")}${denominatorLabel ? ` por ${denominatorLabel}` : ""}`}
     >
