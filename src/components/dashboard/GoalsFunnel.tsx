@@ -50,7 +50,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
 
   return (
     <div className={`flex flex-col gap-4 p-5 rounded-2xl border transition-all ${
-      highlight ? "bg-gradient-to-r from-fuchsia-900/40 to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10" : "bg-card/60 border-border/30"
+      highlight ? "bg-gradient-to-r from-fuchsia-200/70 to-pink-200/70 dark:from-fuchsia-900/40 dark:to-pink-900/40 border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/10" : "bg-card/80 border-border/40"
     }`}>
       <div className="flex items-center gap-3">
         <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}>
@@ -59,7 +59,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
         <div className="flex-1 min-w-0">
           <p className={`text-xs uppercase tracking-wide ${textColor}`}>{label}</p>
           {metaLabel && <p className="text-xs text-muted-foreground">{metaLabel}</p>}
-          {description && <p className="text-[11px] text-muted-foreground/60 italic mt-0.5">{description}</p>}
+          {description && <p className="text-[11px] text-muted-foreground/75 italic mt-0.5">{description}</p>}
         </div>
       </div>
 
@@ -69,13 +69,13 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Realizado */}
             <div className={`p-4 rounded-xl border ${
-              hitGoal ? "bg-green-500/10 border-green-500/30" : "bg-blue-500/10 border-blue-500/30"
+              hitGoal ? "bg-green-500/15 border-green-500/40" : "bg-blue-500/15 border-blue-500/40"
             }`}>
-              <p className={`text-[11px] uppercase tracking-wider font-semibold ${hitGoal ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>
+              <p className={`text-[11px] uppercase tracking-wider font-semibold ${hitGoal ? "text-green-800 dark:text-green-400" : "text-blue-800 dark:text-blue-400"}`}>
                 Realizado
               </p>
               <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(value)}</p>
-              <p className={`text-base font-semibold mt-1 ${hitGoal ? "text-green-700 dark:text-green-300" : "text-blue-700 dark:text-blue-300"}`}>
+              <p className={`text-base font-semibold mt-1 ${hitGoal ? "text-green-800 dark:text-green-300" : "text-blue-800 dark:text-blue-300"}`}>
                 {achievedPct.toFixed(1)}%
               </p>
               {baseValue !== undefined && (
@@ -84,41 +84,41 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
             </div>
 
             {/* Meta */}
-            <div className="p-4 rounded-xl border bg-muted/30 border-border/40">
+            <div className="p-4 rounded-xl border bg-muted/50 border-border/50">
               <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1">
                 <Target className="h-3 w-3" /> Meta
               </p>
               <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(metaQty)}</p>
-              <p className="text-base font-semibold text-foreground/80 mt-1">{metaPct}%</p>
+              <p className="text-base font-semibold text-foreground/90 mt-1">{metaPct}%</p>
               <p className="text-[11px] text-muted-foreground mt-1">esperado</p>
             </div>
 
             {/* Faltou ou Bateu */}
             {hitGoal ? (
-              <div className="p-4 rounded-xl border bg-green-500/15 border-green-500/40">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
+              <div className="p-4 rounded-xl border bg-green-500/20 border-green-500/40">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-green-800 dark:text-green-400 flex items-center gap-1">
                   <CheckCheck className="h-3 w-3" /> Bateu a meta
                 </p>
-                <p className="text-3xl font-bold text-green-700 dark:text-green-300 mt-1 leading-none">
+                <p className="text-3xl font-bold text-green-800 dark:text-green-300 mt-1 leading-none">
                   +{formatNumber(value - metaQty)}
                 </p>
-                <p className="text-base font-semibold text-green-700 dark:text-green-300 mt-1">
+                <p className="text-base font-semibold text-green-800 dark:text-green-300 mt-1">
                   +{(achievedPct - metaPct!).toFixed(1)}%
                 </p>
-                <p className="text-[11px] text-green-700/80 dark:text-green-400/80 mt-1">acima do mínimo</p>
+                <p className="text-[11px] text-green-800/90 dark:text-green-400/80 mt-1">acima do mínimo</p>
               </div>
             ) : (
-              <div className="p-4 rounded-xl border bg-amber-500/10 border-amber-500/40">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+              <div className="p-4 rounded-xl border bg-amber-500/15 border-amber-500/40">
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> Faltou
                 </p>
-                <p className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1 leading-none">
+                <p className="text-3xl font-bold text-amber-800 dark:text-amber-300 mt-1 leading-none">
                   {formatNumber(missing)}
                 </p>
-                <p className="text-base font-semibold text-amber-700 dark:text-amber-300 mt-1">
+                <p className="text-base font-semibold text-amber-800 dark:text-amber-300 mt-1">
                   {missingPct.toFixed(1)}%
                 </p>
-                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-1">para bater a meta</p>
+                <p className="text-[11px] text-amber-800/90 dark:text-amber-400/80 mt-1">para bater a meta</p>
               </div>
             )}
           </div>
@@ -127,14 +127,14 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>Progresso da meta</span>
-              <span className={`font-semibold ${hitGoal ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}>
+              <span className={`font-semibold ${hitGoal ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}`}>
                 {progressPct.toFixed(0)}%
               </span>
             </div>
-            <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
+            <div className="h-2.5 rounded-full bg-muted/50 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
-                  hitGoal ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-amber-500 to-orange-400"
+                  hitGoal ? "bg-gradient-to-r from-green-600 to-emerald-500 dark:from-green-500 dark:to-emerald-400" : "bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-500 dark:to-orange-400"
                 }`}
                 style={{ width: `${progressPct}%` }}
               />
@@ -143,7 +143,7 @@ function FunnelStep({ label, icon: Icon, value, baseValue, metaPct, metaLabel, d
         </>
       ) : (
         // Topo do funil (Leads) — sem meta comparativa
-        <div className="p-4 rounded-xl bg-muted/20 border border-border/30">
+        <div className="p-4 rounded-xl bg-muted/40 border border-border/40">
           <p className="text-3xl font-bold text-foreground leading-none">{formatNumber(value)}</p>
           <p className="text-xs text-muted-foreground mt-1">leads captados</p>
         </div>
