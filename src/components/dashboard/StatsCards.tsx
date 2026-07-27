@@ -92,9 +92,9 @@ function CompareLine({ data, format }: { data: DayCompare; format: (n: number) =
   const Arrow = today > yesterday ? ArrowUp : today < yesterday ? ArrowDown : Minus;
   const arrowColor =
     today > yesterday
-      ? "text-green-700 dark:text-green-400"
+      ? "text-green-800 dark:text-green-400"
       : today < yesterday
-      ? "text-red-700 dark:text-red-400"
+      ? "text-red-800 dark:text-red-400"
       : "text-muted-foreground";
   return (
     <div className="mt-1.5 space-y-0.5 text-[12px] text-muted-foreground leading-snug">
