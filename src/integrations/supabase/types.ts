@@ -1336,6 +1336,7 @@ export type Database = {
           contract_file_url: string | null
           contract_value: number | null
           created_at: string
+          crm_client_id: string | null
           curve_abc: string | null
           due_date: string | null
           entry_date: string | null
@@ -1364,6 +1365,7 @@ export type Database = {
           contract_file_url?: string | null
           contract_value?: number | null
           created_at?: string
+          crm_client_id?: string | null
           curve_abc?: string | null
           due_date?: string | null
           entry_date?: string | null
@@ -1392,6 +1394,7 @@ export type Database = {
           contract_file_url?: string | null
           contract_value?: number | null
           created_at?: string
+          crm_client_id?: string | null
           curve_abc?: string | null
           due_date?: string | null
           entry_date?: string | null
@@ -1415,6 +1418,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "squad_clients_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "squad_clients_squad_id_fkey"
             columns: ["squad_id"]
