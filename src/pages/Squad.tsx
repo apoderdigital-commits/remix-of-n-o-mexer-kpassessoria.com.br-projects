@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle, SlidersHorizontal } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, DollarSign, FileText, Folder, FolderOpen, Gauge, MessageSquare, NotebookPen, Pencil, Play, Plus, Search, Settings, ShoppingCart, Smile, Star, Store, Target, Trash2, TrendingDown, TrendingUp, Users, XCircle, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { SquadDaily } from "@/components/squad/SquadDaily";
 import { SquadDailyReport } from "@/components/squad/SquadDailyReport";
@@ -3451,6 +3451,7 @@ function FechamentoPanel({
 
   // ── sessão do fechamento (timer + anotações) ──
   const [presenting, setPresenting] = useState(false);
+  const [slide, setSlide] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -3471,6 +3472,7 @@ function FechamentoPanel({
   }, [startedAt]);
   const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+
   const startFechamento = async () => {
     try {
       const { data, error } = await supabase
@@ -3486,11 +3488,17 @@ function FechamentoPanel({
     setStartedAt(Date.now());
     setElapsed(0);
     setNotes("");
+    setSlide(0);
     setPresenting(true);
+    // Os slides por cliente mostram CPL/CPMQL; dispara os cálculos agora para
+    // que os números já estejam prontos quando a apresentação chegar neles.
+    if (!cplData && !cplLoading) void calcCplMedio(false);
+    if (!cpmqlData && !cpmqlLoading) void calcCpmqlMedio(false);
   };
 
   const closeFechamento = () => {
     setPresenting(false);
+    setSlide(0);
     setStartedAt(null);
     setElapsed(0);
     setSessionId(null);
@@ -3573,7 +3581,8 @@ function FechamentoPanel({
 
   // CPL médio do squad = Σ investimento ÷ Σ leads de TODOS os clientes do squad
   // (dash de Criativos: clients.squad_id -> meta_campaigns), respeitando o filtro de campanhas.
-  const calcCplMedio = async () => {
+  // abrir=false: usado pela apresentação, que só quer o cálculo (sem popup).
+  const calcCplMedio = async (abrir = true) => {
     setCplLoading(true);
     try {
       const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
@@ -3587,7 +3596,8 @@ function FechamentoPanel({
       const ids = (crmClients || []).map((c: any) => c.id);
       if (ids.length === 0) {
         setCplData({ since, until, cpl: 0, totalSpent: 0, totalLeads: 0, detalhe: [], faltaram: [] });
-        setCplOpen(true); return;
+        if (abrir) setCplOpen(true);
+        return;
       }
 
       const { data: filters } = await (supabase as any)
@@ -3618,7 +3628,7 @@ function FechamentoPanel({
       const faltaram = detalhe.filter((d: any) => d.spent === 0 && d.leads === 0).map((d: any) => ({ name: d.name, account: d.account }));
 
       setCplData({ since, until, cpl: totalLeads > 0 ? totalSpent / totalLeads : 0, totalSpent, totalLeads, detalhe, faltaram });
-      setCplOpen(true);
+      if (abrir) setCplOpen(true);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao calcular o CPL");
     } finally {
@@ -3627,7 +3637,7 @@ function FechamentoPanel({
   };
 
   // CPMQL médio = Σ investimento ÷ Σ leads QUALIFICADOS (CPF aprovado) dos clientes do squad.
-  const calcCpmqlMedio = async () => {
+  const calcCpmqlMedio = async (abrir = true) => {
     setCpmqlLoading(true);
     try {
       const last = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
@@ -3642,7 +3652,8 @@ function FechamentoPanel({
       const ids = (crmClients || []).map((c: any) => c.id);
       if (ids.length === 0) {
         setCpmqlData({ since, until, cpmql: 0, totalSpent: 0, totalMqls: 0, detalhe: [], semMql: [], crmCount: 0, planilhaCount: 0 });
-        setCpmqlOpen(true); return;
+        if (abrir) setCpmqlOpen(true);
+        return;
       }
 
       const { data: filters } = await (supabase as any)
@@ -3702,7 +3713,7 @@ function FechamentoPanel({
       const planilhaCount = detalhe.length - crmCount;
 
       setCpmqlData({ since, until, cpmql: totalMqls > 0 ? totalSpent / totalMqls : 0, totalSpent, totalMqls, detalhe, semMql, crmCount, planilhaCount });
-      setCpmqlOpen(true);
+      if (abrir) setCpmqlOpen(true);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao calcular o CPMQL");
     } finally {
@@ -4115,6 +4126,177 @@ function FechamentoPanel({
       })}
     </div>
   );
+
+  // ── Slides por cliente na apresentação do fechamento ──────────────────────
+  // Slide 0 = visão geral (a que já existia). Slides 1..N = um por cliente
+  // elegível (D+30), na mesma ordem da tabela. CPL/CPMQL vêm dos cálculos que
+  // já existem — por isso a apresentação dispara os dois ao abrir.
+  const slideClients = eligible;
+  const totalSlides = slideClients.length + 1;
+  // Setas do teclado passam os slides. Ignora quando o foco está num campo de
+  // texto, senão mover o cursor dentro das anotações trocaria de cliente.
+  useEffect(() => {
+    if (!presenting) return;
+    const onKey = (e: KeyboardEvent) => {
+      const alvo = e.target as HTMLElement | null;
+      if (alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName)) return;
+      if (e.key === "ArrowRight") setSlide((n) => Math.min(totalSlides - 1, n + 1));
+      else if (e.key === "ArrowLeft") setSlide((n) => Math.max(0, n - 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [presenting, totalSlides]);
+
+  const cplDoCliente = (nome: string) => {
+    const d = cplData?.detalhe.find((x) => norm(x.name) === norm(nome));
+    if (!d || !d.leads) return null;
+    return d.spent / d.leads;
+  };
+  const cpmqlDoCliente = (nome: string) => {
+    const d = cpmqlData?.detalhe.find((x) => norm(x.name) === norm(nome));
+    if (!d || !d.mqls) return null;
+    return d.spent / d.mqls;
+  };
+  const investDoCliente = (nome: string) =>
+    cplData?.detalhe.find((x) => norm(x.name) === norm(nome))?.spent ?? null;
+  const leadsDoCliente = (nome: string) =>
+    cplData?.detalhe.find((x) => norm(x.name) === norm(nome))?.leads ?? null;
+
+  // Cartão pequeno de KPI do slide do cliente.
+  const KpiMini = ({ label, value, hint, tone }: {
+    label: string; value: string; hint?: string; tone?: "ok" | "bad" | "warn" | null;
+  }) => (
+    <div className={`rounded-xl border p-3 ${
+      tone === "ok" ? "border-emerald-500/40 bg-emerald-500/10"
+      : tone === "bad" ? "border-red-500/40 bg-red-500/10"
+      : tone === "warn" ? "border-amber-500/40 bg-amber-500/10"
+      : "border-border/30 bg-card/40"}`}>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-xl font-bold mt-0.5 tabular-nums ${
+        tone === "ok" ? "text-emerald-700 dark:text-emerald-300"
+        : tone === "bad" ? "text-red-700 dark:text-red-300"
+        : tone === "warn" ? "text-amber-700 dark:text-amber-300" : ""}`}>{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground mt-0.5">{hint}</p>}
+    </div>
+  );
+
+  // Meta x realizado, com % atingido.
+  const MetaVsReal = ({ label, meta, real, money }: {
+    label: string; meta: number | null; real: number | null; money?: boolean;
+  }) => {
+    const fmt = (v: number) => (money ? fmtBRL(v) : String(Math.round(v)));
+    const pct = meta && meta > 0 && real != null ? (real / meta) * 100 : null;
+    const tone = pct == null ? null : pct >= 100 ? "ok" : pct >= 80 ? "warn" : "bad";
+    return (
+      <div className="rounded-xl border border-border/30 bg-card/40 p-3">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <span className="text-xl font-bold tabular-nums">{real != null ? fmt(real) : "—"}</span>
+          <span className="text-xs text-muted-foreground">/ meta {meta != null ? fmt(meta) : "—"}</span>
+        </div>
+        {pct != null && (
+          <p className={`text-[11px] font-semibold mt-0.5 ${
+            tone === "ok" ? "text-emerald-600 dark:text-emerald-400"
+            : tone === "warn" ? "text-amber-600 dark:text-amber-400"
+            : "text-red-600 dark:text-red-400"}`}>
+            {pct.toFixed(0)}% da meta{pct >= 100 ? " ✓" : ` · faltou ${fmt(Math.max(0, (meta || 0) - (real || 0)))}`}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const ClientSlide = ({ c }: { c: SquadClient }) => {
+    const r = rowByName.get(norm(c.name));
+    const meta = metaOf(c, r);
+    const vendas = r?.vendas != null ? Number(r.vendas) : null;
+    const cpl = cplDoCliente(c.name);
+    const cpmql = cpmqlDoCliente(c.name);
+    const invest = investDoCliente(c.name);
+    const leads = leadsDoCliente(c.name);
+    const eng = r?.engagement_score != null ? Number(r.engagement_score) : null;
+    const nps = r?.nps_individual != null ? Number(r.nps_individual) : null;
+    const crm = (r as any)?.crm_usage != null ? Number((r as any).crm_usage) : null;
+    const conv = r?.conversao_comercial != null ? Number(r.conversao_comercial) : null;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-bold">{c.name}</h3>
+          {c.curve_abc && <Badge variant="outline">Curva {c.curve_abc}</Badge>}
+          {c.sprint && <Badge variant="outline">{c.sprint}</Badge>}
+          {r?.plano_estrategico
+            ? <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0">Plano documentado</Badge>
+            : <Badge className="bg-red-500/15 text-red-700 dark:text-red-300 border-0">Sem plano</Badge>}
+        </div>
+
+        {!r && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Sem lançamento de engajamento neste mês — os indicadores abaixo ficam vazios.
+          </p>
+        )}
+
+        {/* Relacionamento */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Relacionamento</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <KpiMini label="Engajamento" value={eng != null ? eng.toFixed(1) : "—"}
+              tone={eng == null ? null : eng >= 8 ? "ok" : eng >= 6 ? "warn" : "bad"} />
+            <KpiMini label="NPS" value={nps != null ? nps.toFixed(1) : "—"} hint="meta ≥ 9,0"
+              tone={nps == null ? null : nps >= 9 ? "ok" : nps >= 7 ? "warn" : "bad"} />
+            <KpiMini label="Uso do CRM" value={crm != null ? `${crm}/5` : "—"} hint="usando = 4 ou 5"
+              tone={crm == null ? null : crm >= 4 ? "ok" : "bad"} />
+            <KpiMini label="Conversão comercial" value={conv != null ? `${conv.toFixed(1)}%` : "—"}
+              tone={conv == null ? null : conv >= 20 ? "ok" : conv >= 10 ? "warn" : "bad"} />
+          </div>
+        </div>
+
+        {/* Tráfego */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Tráfego no mês</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <KpiMini label="Investimento" value={invest != null ? fmtBRL(invest) : "—"}
+              hint={cplData ? undefined : "abra o CPL médio para calcular"} />
+            <KpiMini label="Leads" value={leads != null ? String(leads) : "—"} />
+            <KpiMini label="CPL" value={cpl != null ? fmtBRL(cpl) : "—"} />
+            <KpiMini label="CPMQL" value={cpmql != null ? fmtBRL(cpmql) : "—"}
+              hint={cpmqlData ? undefined : "abra o CPMQL médio para calcular"} />
+          </div>
+        </div>
+
+        {/* Vendas e faturamento */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Vendas e faturamento</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
+            <MetaVsReal label="Motos vendidas" meta={meta} real={vendas} />
+            <MetaVsReal label="Faturamento" money
+              meta={r?.meta_faturamento != null ? Number(r.meta_faturamento) : (c.sales_goal != null ? Number(c.sales_goal) : null)}
+              real={r?.faturamento != null ? Number(r.faturamento) : null} />
+            <KpiMini label="Venda secundária"
+              value={r?.venda_secundaria != null ? fmtBRL(Number(r.venda_secundaria)) : "—"}
+              hint="upsell / produto secundário" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-2.5">
+            <MetaVsReal label="Vendas por tráfego"
+              meta={(r as any)?.meta_vendas_trafego ?? (c as any)?.meta_vendas_trafego ?? null}
+              real={r?.vendas_trafego != null ? Number(r.vendas_trafego) : null} />
+            <MetaVsReal label="Vendas na loja"
+              meta={(r as any)?.meta_vendas_loja ?? (c as any)?.meta_vendas_loja ?? null}
+              real={r?.vendas_loja != null ? Number(r.vendas_loja) : null} />
+            <KpiMini label="Contrato" value={c.contract_value != null ? fmtBRL(Number(c.contract_value)) : "—"} />
+            <KpiMini label="Ticket médio" value={c.ticket_medio != null ? fmtBRL(Number(c.ticket_medio)) : "—"} />
+          </div>
+        </div>
+
+        {r?.observation && (
+          <div className="rounded-xl border border-border/30 bg-card/40 p-3">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Observação do mês</p>
+            <p className="text-sm whitespace-pre-wrap">{r.observation}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const ChurnReasons = () => (
     <div className="rounded-2xl border border-border/30 bg-card/40 p-4">
@@ -4879,19 +5061,53 @@ function FechamentoPanel({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="text-center rounded-xl border border-border/30 bg-background/40 p-3">
-            <p className="text-4xl font-black tabular-nums text-primary">{fmtTime(elapsed)}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">tempo de reunião</p>
+          <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-background/40 p-3">
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0"
+              onClick={() => setSlide((n) => Math.max(0, n - 1))} disabled={slide === 0}
+              aria-label="Anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 text-center">
+              <p className="text-3xl font-black tabular-nums text-primary leading-tight">{fmtTime(elapsed)}</p>
+              <p className="text-[11px] text-muted-foreground">
+                tempo de reunião · {slide === 0 ? "visão geral" : `cliente ${slide} de ${slideClients.length}`}
+              </p>
+            </div>
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0"
+              onClick={() => setSlide((n) => Math.min(totalSlides - 1, n + 1))}
+              disabled={slide >= totalSlides - 1} aria-label="Próximo">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
 
-          <MetricsGrid compact />
-          <ChurnReasons />
+          {/* Trilha de progresso — permite pular direto para um cliente */}
+          {slideClients.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: totalSlides }).map((_, i) => (
+                <button
+                  key={i} type="button" onClick={() => setSlide(i)}
+                  title={i === 0 ? "Visão geral" : slideClients[i - 1]?.name}
+                  className={`h-1.5 flex-1 min-w-[10px] rounded-full transition ${
+                    i === slide ? "bg-primary" : i < slide ? "bg-primary/40" : "bg-border"}`}
+                />
+              ))}
+            </div>
+          )}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Pontos discutidos no fechamento</Label>
-            <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder="O que foi discutido, decisões, responsáveis e prazos..." />
-          </div>
+          {slide === 0 ? (
+            <>
+              <MetricsGrid compact />
+              <ChurnReasons />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Pontos discutidos no fechamento</Label>
+                <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
+                  placeholder="O que foi discutido, decisões, responsáveis e prazos..." />
+              </div>
+            </>
+          ) : (
+            slideClients[slide - 1] && <ClientSlide c={slideClients[slide - 1]} />
+          )}
 
           <DialogFooter>
             <Button variant="ghost" disabled={savingSession} onClick={closeFechamento}>Fechar</Button>
