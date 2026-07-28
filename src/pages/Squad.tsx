@@ -4209,7 +4209,18 @@ function FechamentoPanel({
   const ClientSlide = ({ c }: { c: SquadClient }) => {
     const r = rowByName.get(norm(c.name));
     const meta = metaOf(c, r);
-    const vendas = r?.vendas != null ? Number(r.vendas) : null;
+    const vTraf = r?.vendas_trafego != null ? Number(r.vendas_trafego) : null;
+    const vLoja = r?.vendas_loja != null ? Number(r.vendas_loja) : null;
+    const metaTraf = (r as any)?.meta_vendas_trafego ?? (c as any)?.meta_vendas_trafego ?? null;
+    const metaLoja = (r as any)?.meta_vendas_loja ?? (c as any)?.meta_vendas_loja ?? null;
+    const fatTotal = r?.faturamento != null ? Number(r.faturamento) : null;
+    const metaFat = r?.meta_faturamento != null ? Number(r.meta_faturamento)
+      : (c.sales_goal != null ? Number(c.sales_goal) : null);
+    // Mesmo rateio da aba Engajamento: o faturamento é dividido entre os canais
+    // na proporção das vendas de cada um.
+    const ch = computeChannels(r?.vendas_trafego, r?.vendas_loja, r?.faturamento);
+    // `vendas` do lançamento pode estar vazio; nesse caso usa tráfego + loja.
+    const vendasTotal = r?.vendas != null ? Number(r.vendas) : ch.vendasTotal;
     const cpl = cplDoCliente(c.name);
     const cpmql = cpmqlDoCliente(c.name);
     const invest = investDoCliente(c.name);
@@ -4264,28 +4275,53 @@ function FechamentoPanel({
           </div>
         </div>
 
-        {/* Vendas e faturamento */}
+        {/* Vendas — total, meta e quebra por canal */}
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Vendas e faturamento</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Vendas (motos)</p>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
-            <MetaVsReal label="Motos vendidas" meta={meta} real={vendas} />
-            <MetaVsReal label="Faturamento" money
-              meta={r?.meta_faturamento != null ? Number(r.meta_faturamento) : (c.sales_goal != null ? Number(c.sales_goal) : null)}
-              real={r?.faturamento != null ? Number(r.faturamento) : null} />
+            <MetaVsReal label="Vendas totais" meta={meta} real={vendasTotal} />
+            <MetaVsReal label="Por tráfego" meta={metaTraf} real={vTraf} />
+            <MetaVsReal label="Na loja" meta={metaLoja} real={vLoja} />
+          </div>
+          {vendasTotal > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/30 bg-card/40 px-3 py-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Divisão por canal</span>
+              <Badge variant="outline" className="gap-1">
+                Tráfego <span className="font-bold">{vTraf ?? 0}</span>
+                <span className="text-muted-foreground">({((vTraf ?? 0) / vendasTotal * 100).toFixed(0)}%)</span>
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                Loja <span className="font-bold">{vLoja ?? 0}</span>
+                <span className="text-muted-foreground">({((vLoja ?? 0) / vendasTotal * 100).toFixed(0)}%)</span>
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        {/* Faturamento — total, meta e quebra por canal */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Faturamento</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
+            <MetaVsReal label="Faturamento total" money meta={metaFat} real={fatTotal} />
+            <KpiMini label="Faturamento por tráfego"
+              value={vendasTotal > 0 ? fmtBRL(ch.fatTrafego) : "—"}
+              hint={vendasTotal > 0 ? `${((vTraf ?? 0) / vendasTotal * 100).toFixed(0)}% das vendas` : undefined} />
+            <KpiMini label="Faturamento na loja"
+              value={vendasTotal > 0 ? fmtBRL(ch.fatLoja) : "—"}
+              hint={vendasTotal > 0 ? `${((vLoja ?? 0) / vendasTotal * 100).toFixed(0)}% das vendas` : undefined} />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 mt-2.5">
             <KpiMini label="Venda secundária"
               value={r?.venda_secundaria != null ? fmtBRL(Number(r.venda_secundaria)) : "—"}
               hint="upsell / produto secundário" />
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-2.5">
-            <MetaVsReal label="Vendas por tráfego"
-              meta={(r as any)?.meta_vendas_trafego ?? (c as any)?.meta_vendas_trafego ?? null}
-              real={r?.vendas_trafego != null ? Number(r.vendas_trafego) : null} />
-            <MetaVsReal label="Vendas na loja"
-              meta={(r as any)?.meta_vendas_loja ?? (c as any)?.meta_vendas_loja ?? null}
-              real={r?.vendas_loja != null ? Number(r.vendas_loja) : null} />
             <KpiMini label="Contrato" value={c.contract_value != null ? fmtBRL(Number(c.contract_value)) : "—"} />
             <KpiMini label="Ticket médio" value={c.ticket_medio != null ? fmtBRL(Number(c.ticket_medio)) : "—"} />
           </div>
+          {vendasTotal > 0 && fatTotal != null && (
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              O faturamento por canal é rateado pela proporção de vendas de cada canal — mesma regra da aba Engajamento.
+            </p>
+          )}
         </div>
 
         {r?.observation && (
