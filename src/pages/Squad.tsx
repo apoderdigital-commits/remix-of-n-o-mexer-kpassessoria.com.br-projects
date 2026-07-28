@@ -34,8 +34,23 @@ import { SquadSaldoContas } from "@/components/squad/SquadSaldoContas";
 import { ActionVerificationDialog } from "@/components/ActionVerificationDialog";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  LineChart, Line, Legend, Cell,
+  LineChart, Line, Legend, Cell, PieChart, Pie,
 } from "recharts";
+
+// Paletas dos gráficos de pizza (metas / pontos fracos).
+// Validadas por script nos temas claro E escuro: banda de luminosidade, piso de
+// croma, contraste com a superfície e separação sob daltonismo protan/deutan.
+// A ordem das cores é a da paleta documentada — reordenar reprova a checagem de
+// visão normal (laranja × magenta cai para ΔE 11,6, abaixo do piso 15).
+// Não substituir por cores escolhidas "no olho".
+const PIE_CAT = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"];
+const PIE_OUTROS = "#8a8a85";
+// Metas: vermelho = não bateu · âmbar = 80% · verde = 100%.
+// O verde é #199e70 (e não um verde puro) porque verde puro × âmbar tem ΔE 3,0
+// sob daltonismo — indistinguíveis. Este limpa o alvo (8,4).
+const PIE_META_RUIM = "#d03b3b";
+const PIE_META_QUASE = "#c98500";
+const PIE_META_BOM = "#199e70";
 
 type Squad = { id: string; name: string; color: string | null; description: string | null };
 type SquadClient = {
@@ -3893,6 +3908,48 @@ function FechamentoPanel({
     }).sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
   }, [clients, rowByName, month]);
 
+  // ── Dados dos dois gráficos de pizza abaixo da tabela de metas ─────────────
+  // 1) Pontos fracos mais recorrentes. Cada cliente pode marcar vários, então o
+  //    total são MENÇÕES, não clientes. Máx. 6 fatias + "Outros" (acima disso as
+  //    fatias vizinhas ficam indistinguíveis).
+  const weakPointsPie = useMemo(() => {
+    const count = new Map<string, number>();
+    goalRows.forEach((row) => {
+      const wps = goalNotes.get(row.name.trim().toLowerCase())?.weak_points || [];
+      wps.forEach((w) => count.set(w, (count.get(w) || 0) + 1));
+    });
+    const sorted = [...count.entries()]
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+    if (sorted.length <= 7) return sorted.map((d, i) => ({ ...d, fill: PIE_CAT[i % PIE_CAT.length] }));
+    const top = sorted.slice(0, 6).map((d, i) => ({ ...d, fill: PIE_CAT[i] }));
+    const resto = sorted.slice(6).reduce((s, d) => s + d.value, 0);
+    return [...top, { name: "Outros", value: resto, fill: PIE_OUTROS }];
+  }, [goalRows, goalNotes]);
+
+  const weakPointsTotal = useMemo(
+    () => weakPointsPie.reduce((s, d) => s + d.value, 0),
+    [weakPointsPie]
+  );
+
+  // 2) Atingimento da meta. Só entram clientes COM meta cadastrada (pct != null),
+  //    senão "não bateu" ficaria inflado por quem nunca teve meta.
+  const metaPie = useMemo(() => {
+    const comMeta = goalRows.filter((r) => r.pct !== null);
+    const bateu = comMeta.filter((r) => (r.pct as number) >= 100).length;
+    const oitenta = comMeta.filter((r) => (r.pct as number) >= 80 && (r.pct as number) < 100).length;
+    const naoBateu = comMeta.filter((r) => (r.pct as number) < 80).length;
+    return {
+      semMeta: goalRows.length - comMeta.length,
+      total: comMeta.length,
+      data: [
+        { name: "Não bateram (<80%)", value: naoBateu, fill: PIE_META_RUIM },
+        { name: "80% da meta", value: oitenta, fill: PIE_META_QUASE },
+        { name: "Bateram 100%", value: bateu, fill: PIE_META_BOM },
+      ].filter((d) => d.value > 0),
+    };
+  }, [goalRows]);
+
   // Filtro por pontos fracos (múltiplo): mostra projetos que têm QUALQUER um dos marcados.
   const goalRowsView = weakFilters.length === 0
     ? goalRows
@@ -4269,6 +4326,150 @@ function FechamentoPanel({
           )}
         </CardContent>
       </Card>
+
+      {/* Os dois gráficos de pizza — leitura rápida da tabela acima */}
+      {goalSupported && goalRows.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Pizza 1 — pontos fracos mais recorrentes */}
+          <Card className="border-border/40 bg-card/40 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" /> Pontos fracos mais recorrentes
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {weakPointsTotal > 0
+                  ? `${weakPointsTotal} marcação(ões) nos projetos do mês. Um projeto pode ter mais de um.`
+                  : "Nenhum ponto fraco marcado neste mês."}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {weakPointsPie.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-12 text-center">
+                  Marque os pontos fracos na tabela acima para ver o gráfico.
+                </p>
+              ) : (
+                <>
+                  <div className="h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={weakPointsPie}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={92}
+                          paddingAngle={2}
+                          stroke="hsl(var(--card))"
+                          strokeWidth={2}
+                        >
+                          {weakPointsPie.map((d) => (
+                            <Cell key={d.name} fill={d.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                          formatter={(v: any, n: any) => [
+                            `${v} projeto(s) · ${weakPointsTotal > 0 ? ((Number(v) / weakPointsTotal) * 100).toFixed(0) : 0}%`,
+                            n,
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Legenda com rótulo + número: a cor nunca carrega a informação sozinha */}
+                  <div className="mt-3 space-y-1.5">
+                    {weakPointsPie.map((d) => (
+                      <div key={d.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.fill }} />
+                        <span className="flex-1 truncate text-muted-foreground">{d.name}</span>
+                        <span className="font-semibold tabular-nums">{d.value}</span>
+                        <span className="text-muted-foreground tabular-nums w-9 text-right">
+                          {weakPointsTotal > 0 ? ((d.value / weakPointsTotal) * 100).toFixed(0) : 0}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pizza 2 — atingimento da meta */}
+          <Card className="border-border/40 bg-card/40 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" /> Atingimento da meta
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {metaPie.total > 0
+                  ? `${metaPie.total} projeto(s) com meta cadastrada.`
+                  : "Nenhum projeto com meta cadastrada neste mês."}
+                {metaPie.semMeta > 0 && ` ${metaPie.semMeta} sem meta (fora do gráfico).`}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {metaPie.data.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-12 text-center">
+                  Cadastre a meta de vendas dos clientes para ver o gráfico.
+                </p>
+              ) : (
+                <>
+                  <div className="h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={metaPie.data}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={92}
+                          paddingAngle={2}
+                          stroke="hsl(var(--card))"
+                          strokeWidth={2}
+                        >
+                          {metaPie.data.map((d) => (
+                            <Cell key={d.name} fill={d.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                          formatter={(v: any, n: any) => [
+                            `${v} projeto(s) · ${metaPie.total > 0 ? ((Number(v) / metaPie.total) * 100).toFixed(0) : 0}%`,
+                            n,
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-3 space-y-1.5">
+                    {metaPie.data.map((d) => (
+                      <div key={d.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.fill }} />
+                        {d.name.startsWith("Bateram") ? (
+                          <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : d.name.startsWith("80%") ? (
+                          <Gauge className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400 shrink-0" />
+                        )}
+                        <span className="flex-1 truncate text-muted-foreground">{d.name}</span>
+                        <span className="font-semibold tabular-nums">{d.value}</span>
+                        <span className="text-muted-foreground tabular-nums w-9 text-right">
+                          {metaPie.total > 0 ? ((d.value / metaPie.total) * 100).toFixed(0) : 0}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Gerenciar pontos fracos (admin) */}
       <Dialog open={wpDialogOpen} onOpenChange={setWpDialogOpen}>
