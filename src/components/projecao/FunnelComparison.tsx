@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Textarea } from '@/components/ui/textarea';
 import {
   GitCompare, TrendingUp, TrendingDown, ArrowRight, Target as TargetIcon,
-  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download } from 'lucide-react';
+  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download, RefreshCw } from 'lucide-react';
 
 interface FunnelData {
   investimento: string; cpl: string; leads: string; preAtendimento: string; qualificados: string; vendas: string; vendasLoja: string; ticketMedio: string;
@@ -21,7 +21,8 @@ interface ProjetadoData extends FunnelData {
   taxaPre: string; taxaQual: string; taxaVendas: string;
 }
 
-interface Client { id: string; name: string; ticket_medio: number | null; }
+interface Client { id: string; name: string; ticket_medio: number | null; squad_id: string | null; }
+interface Squad { id: string; name: string; color: string | null; }
 
 const MONTHS = [
   { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' }, { value: 3, label: 'Março' },
@@ -301,6 +302,8 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
 export function FunnelComparison() {
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  const [squads, setSquads] = useState<Squad[]>([]);
+  const [selectedSquadId, setSelectedSquadId] = useState<string>('');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
@@ -312,13 +315,32 @@ export function FunnelComparison() {
 
   useEffect(() => {
     if (!user) return;
-    const fetchClients = async () => {
-      // Mesmos clientes da Dash do Squad
-      const { data } = await supabase.from('squad_clients').select('id, name, contract_value').order('name');
-      setClients(((data as any[]) || []).map((c) => ({ id: c.id, name: c.name, ticket_medio: c.contract_value ?? null })));
+    const fetchDados = async () => {
+      // Mesmos squads e clientes da Dash do Squad
+      const [sq, cl] = await Promise.all([
+        supabase.from('squads').select('id, name, color').order('name'),
+        supabase.from('squad_clients').select('id, name, contract_value, squad_id').order('name'),
+      ]);
+      setSquads(((sq.data as any[]) || []).map((s) => ({ id: s.id, name: s.name, color: s.color ?? null })));
+      setClients(((cl.data as any[]) || []).map((c) => ({
+        id: c.id, name: c.name, ticket_medio: c.contract_value ?? null, squad_id: c.squad_id ?? null,
+      })));
     };
-    fetchClients();
+    fetchDados();
   }, [user]);
+
+  // Só os clientes do squad escolhido. Enquanto não escolher, a lista fica vazia
+  // — evita selecionar um cliente "solto" e não saber de qual squad ele é.
+  const clientesDoSquad = selectedSquadId
+    ? clients.filter((c) => c.squad_id === selectedSquadId)
+    : [];
+
+  // Trocou de squad: limpa o cliente se ele não pertencer ao novo squad.
+  useEffect(() => {
+    if (!selectedSquadId || !selectedClientId) return;
+    const atualCliente = clients.find((c) => c.id === selectedClientId);
+    if (atualCliente && atualCliente.squad_id !== selectedSquadId) setSelectedClientId('');
+  }, [selectedSquadId, selectedClientId, clients]);
 
   useEffect(() => {
     if (!selectedClientId || !selectedMonth || !selectedYear) return;
@@ -367,6 +389,104 @@ export function FunnelComparison() {
     loadComparisons();
   }, [selectedClientId, selectedMonth, selectedYear]);
 
+  // ── Puxar o Funil Atual da dash de Criativos ───────────────────────────────
+  // A dash de Criativos vive na tabela `clients`; aqui a lista vem de
+  // `squad_clients`. Não há FK entre as duas, então o casamento é por NOME
+  // normalizado (sem acento/caixa) — mesma regra que a Dash do Squad usa.
+  const normName = (s: string) =>
+    (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ").trim();
+
+  const [puxando, setPuxando] = useState(false);
+
+  const puxarDaDashCriativos = async () => {
+    if (!selectedClientId) return;
+    const squadClient = clients.find((c) => c.id === selectedClientId);
+    if (!squadClient) return;
+
+    setPuxando(true);
+    try {
+      const mes = parseInt(selectedMonth, 10);
+      const ano = parseInt(selectedYear, 10);
+      const ultimoDia = new Date(ano, mes, 0).getDate();
+      const since = `${ano}-${String(mes).padStart(2, '0')}-01`;
+      const until = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+
+      // 1) Acha o cliente correspondente na base da dash de Criativos
+      const { data: crmClients } = await supabase
+        .from('clients').select('id, name, ticket_medio').is('deleted_at', null);
+      const alvo = normName(squadClient.name);
+      const match = (crmClients as any[] | null)?.find((c) => normName(c.name) === alvo)
+        // fallback: nomes como "VR Multimarcas [SANTA RITA]" x "VR Multimarcas"
+        || (crmClients as any[] | null)?.find((c) => alvo.startsWith(normName(c.name)) || normName(c.name).startsWith(alvo));
+
+      if (!match) {
+        toast.error(`"${squadClient.name}" não foi encontrado na dash de Criativos. Confira se o nome bate com o cadastro em Clientes.`);
+        return;
+      }
+
+      // 2) Investimento e leads do Meta, respeitando as campanhas excluídas
+      const { data: filtro } = await supabase
+        .from('client_campaign_filters').select('excluded_campaigns')
+        .eq('client_id', match.id).maybeSingle();
+      const excluidas = new Set<string>(
+        (((filtro as any)?.excluded_campaigns || []) as string[]).map((x) => (x || '').trim())
+      );
+
+      const { data: camps } = await supabase
+        .from('meta_campaigns').select('campaign_name, amount_spent, leads_total')
+        .eq('client_id', match.id).gte('date', since).lte('date', until);
+
+      let investimento = 0, leads = 0;
+      ((camps as any[]) || []).forEach((c) => {
+        if (excluidas.has((c.campaign_name || '').trim())) return;
+        investimento += Number(c.amount_spent) || 0;
+        leads += Number(c.leads_total) || 0;
+      });
+
+      // 3) Etapas comerciais do funil de metas (mesma fonte da dash: GHL)
+      let preAtendimento = 0, qualificados = 0, vendas = 0;
+      let semCrm = false;
+      try {
+        const { data: ghl } = await supabase.functions.invoke('fetch-ghl-pipeline-v2', {
+          body: { client_id: match.id, since, until },
+        });
+        if (ghl) {
+          preAtendimento = Number((ghl as any).simulacoes) || 0;
+          qualificados = Number((ghl as any).cpf_aprovado) || 0;
+          vendas = Number((ghl as any).vendas_financiamento) || 0;
+          if (!(ghl as any).total_pipeline_leads && !preAtendimento && !qualificados) semCrm = true;
+        } else semCrm = true;
+      } catch {
+        semCrm = true;
+      }
+
+      // 4) Preenche o Funil Atual. Ticket médio: o do cadastro em Clientes;
+      //    se não tiver, mantém o que já estava digitado.
+      const ticket = match.ticket_medio != null ? String(match.ticket_medio) : atual.ticketMedio;
+      setAtual({
+        investimento: investimento ? String(Math.round(investimento * 100) / 100) : '',
+        cpl: leads > 0 ? String(Math.round((investimento / leads) * 100) / 100) : '',
+        leads: leads ? String(leads) : '',
+        preAtendimento: preAtendimento ? String(preAtendimento) : '',
+        qualificados: qualificados ? String(qualificados) : '',
+        vendas: vendas ? String(vendas) : '',
+        vendasLoja: atual.vendasLoja, // preenchido à mão, não vem da dash
+        ticketMedio: ticket,
+      });
+
+      if (semCrm) {
+        toast.warning(`Investimento e leads puxados de ${match.name}. As etapas comerciais precisam do CRM (GHL) configurado.`);
+      } else {
+        toast.success(`Funil Atual puxado da dash de Criativos (${match.name}).`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível puxar os dados da dash.');
+    } finally {
+      setPuxando(false);
+    }
+  };
+
   const updateAtual = (field: keyof FunnelData, value: string) => setAtual(prev => ({ ...prev, [field]: value }));
   const updateDesejado = (field: keyof FunnelData, value: string) => setDesejado(prev => ({ ...prev, [field]: value }));
   const updateProjetado = (field: keyof ProjetadoData, value: string) => setProjetado(prev => ({ ...prev, [field]: value }));
@@ -378,7 +498,8 @@ export function FunnelComparison() {
     const periodo = `${monthLabel} / ${selectedYear}`;
     const svg = buildProjecaoSvg(
       clientName, periodo,
-      calcFunnel(atual), calcDesejadoFunnel(desejado), calcProjetadoFunnel(projetado)
+      calcFunnel(atual), calcDesejadoFunnel(desejado), calcProjetadoFunnel(projetado),
+      actionNotes,
     );
     const safe = clientName.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
     await downloadProjecaoPng(`projecao-${safe}-${selectedMonth}-${selectedYear}.png`, svg);
@@ -461,12 +582,32 @@ export function FunnelComparison() {
       <Card className="border-purple-500/20 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[180px] space-y-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Squad</Label>
+              <Select value={selectedSquadId} onValueChange={setSelectedSquadId}>
+                <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Selecione o squad" /></SelectTrigger>
+                <SelectContent className="bg-background border-border">
+                  {squads.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color || '#8B5CF6' }} />
+                        {s.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex-1 min-w-[200px] space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-2"><Building2 className="h-3.5 w-3.5" /> Cliente</Label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+              <Select value={selectedClientId} onValueChange={setSelectedClientId} disabled={!selectedSquadId}>
+                <SelectTrigger className="bg-background border-border text-foreground">
+                  <SelectValue placeholder={selectedSquadId ? 'Selecione o cliente' : 'Escolha o squad primeiro'} />
+                </SelectTrigger>
                 <SelectContent className="bg-background border-border">
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {clientesDoSquad.length === 0 ? (
+                    <div className="px-2 py-3 text-xs text-muted-foreground">Nenhum cliente neste squad.</div>
+                  ) : clientesDoSquad.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -488,6 +629,12 @@ export function FunnelComparison() {
                 </SelectContent>
               </Select>
             </div>
+            <Button onClick={puxarDaDashCriativos} disabled={puxando || !selectedClientId} variant="outline"
+              title="Preenche o Funil Atual com investimento, leads e etapas comerciais da dash de Criativos"
+              className="border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20">
+              <RefreshCw className={`h-4 w-4 mr-2 ${puxando ? 'animate-spin' : ''}`} />
+              {puxando ? 'Puxando...' : 'Puxar da dash'}
+            </Button>
             <Button onClick={handleExport} disabled={!selectedClientId} variant="outline"
               className="border-emerald-500/40 bg-emerald-500/10 text-black font-bold hover:bg-emerald-500/20">
               <Download className="h-4 w-4 mr-2" /> Exportar PNG
