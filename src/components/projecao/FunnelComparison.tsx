@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { buildProjecaoSvg, downloadProjecaoPng } from '@/lib/projecaoExport';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from 'next-themes';
 import { Textarea } from '@/components/ui/textarea';
 import { MapeamentoClientes } from '@/components/projecao/MapeamentoClientes';
 import {
@@ -172,14 +173,27 @@ function GapIndicator({ atual, desejado }: { atual: number; desejado: number }) 
   );
 }
 
-function FunnelCardAtual({ data, onChange }: { data: FunnelData; onChange: (field: keyof FunnelData, value: string) => void }) {
+function FunnelCardAtual({ data, onChange, onPuxar, puxando, podePuxar }: {
+  data: FunnelData; onChange: (field: keyof FunnelData, value: string) => void;
+  onPuxar?: () => void; puxando?: boolean; podePuxar?: boolean;
+}) {
   const calc = calcFunnel(data);
   return (
     <Card className="border-neutral-700/30 bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-neutral-900 dark:to-black shadow-xl overflow-hidden">
       <CardHeader className="pb-3 border-b border-border dark:border-border">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 rounded-xl bg-gradient-to-br from-neutral-600 to-neutral-500 shadow-lg"><ArrowRight className="h-4 w-4 text-white" /></div>
-          <span className="text-foreground">Funil Atual</span>
+          <span className="text-foreground flex-1">Funil Atual</span>
+          {onPuxar && (
+            <Button
+              size="sm" variant="outline" onClick={onPuxar} disabled={puxando || !podePuxar}
+              title="Preenche este funil com os dados reais do mês, vindos da dash de Criativos"
+              className="h-8 gap-1.5 text-xs border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${puxando ? 'animate-spin' : ''}`} />
+              {puxando ? 'Puxando...' : 'Puxar da dash'}
+            </Button>
+          )}
         </CardTitle>
         <p className="text-[11px] text-muted-foreground mt-1">O que realmente aconteceu no mês analisado</p>
       </CardHeader>
@@ -303,6 +317,7 @@ function FunnelCardProjetado({ data, onChange }: { data: ProjetadoData; onChange
 
 export function FunnelComparison() {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const [clients, setClients] = useState<Client[]>([]);
   const [squads, setSquads] = useState<Squad[]>([]);
   const [selectedSquadId, setSelectedSquadId] = useState<string>('');
@@ -517,6 +532,7 @@ export function FunnelComparison() {
       clientName, periodo,
       calcFunnel(atual), calcDesejadoFunnel(desejado), calcProjetadoFunnel(projetado),
       actionNotes,
+      resolvedTheme === 'dark' ? 'dark' : 'light',
     );
     const safe = clientName.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
     await downloadProjecaoPng(`projecao-${safe}-${selectedMonth}-${selectedYear}.png`, svg);
@@ -651,12 +667,6 @@ export function FunnelComparison() {
               className="border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20">
               <Link2 className="h-4 w-4 mr-2" /> Mapear clientes
             </Button>
-            <Button onClick={puxarDaDashCriativos} disabled={puxando || !selectedClientId} variant="outline"
-              title="Preenche o Funil Atual com investimento, leads e etapas comerciais da dash de Criativos"
-              className="border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20">
-              <RefreshCw className={`h-4 w-4 mr-2 ${puxando ? 'animate-spin' : ''}`} />
-              {puxando ? 'Puxando...' : 'Puxar da dash'}
-            </Button>
             <Button onClick={handleExport} disabled={!selectedClientId} variant="outline"
               className="border-emerald-500/40 bg-emerald-500/10 text-black font-bold hover:bg-emerald-500/20">
               <Download className="h-4 w-4 mr-2" /> Exportar PNG
@@ -672,13 +682,17 @@ export function FunnelComparison() {
       <MapeamentoClientes
         open={mapeamentoOpen}
         onClose={() => setMapeamentoOpen(false)}
+        squadId={selectedSquadId}
         squadNome={squads.find((s) => s.id === selectedSquadId)?.name || ''}
         clientes={clientesDoSquad.map((c) => ({ id: c.id, name: c.name, crm_client_id: c.crm_client_id }))}
         onSalvo={carregarSquadsEClientes}
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <FunnelCardAtual data={atual} onChange={updateAtual} />
+        <FunnelCardAtual
+          data={atual} onChange={updateAtual}
+          onPuxar={puxarDaDashCriativos} puxando={puxando} podePuxar={!!selectedClientId}
+        />
         <FunnelCardDesejado data={desejado} onChange={updateDesejado} />
         <FunnelCardProjetado data={projetado} onChange={updateProjetado} />
       </div>
