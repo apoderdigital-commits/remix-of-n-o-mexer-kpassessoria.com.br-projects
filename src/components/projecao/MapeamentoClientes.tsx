@@ -6,9 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Link2, Search, Save, Wand2, CheckCircle2, CircleDashed } from 'lucide-react';
+import { Link2, Search, Save, Wand2, CheckCircle2, CircleDashed, ChevronsUpDown, Check } from 'lucide-react';
 
 export interface SquadClienteLinha {
   id: string;
@@ -16,11 +18,12 @@ export interface SquadClienteLinha {
   crm_client_id: string | null;
 }
 
-interface CrmCliente { id: string; name: string }
+interface CrmCliente { id: string; name: string; squad_id: string | null }
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  squadId: string;
   squadNome: string;
   clientes: SquadClienteLinha[];
   onSalvo: () => void;
@@ -32,14 +35,16 @@ const norm = (s: string) =>
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-const SEM_VINCULO = '__none__';
-
-export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo }: Props) {
+export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes, onSalvo }: Props) {
   const [crmClientes, setCrmClientes] = useState<CrmCliente[]>([]);
   const [mapa, setMapa] = useState<Record<string, string | null>>({});
   const [busca, setBusca] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  // A lista de Criativos também é por squad. Mostrar só a do squad atual encurta
+  // muito a busca — mas dá pra abrir para todos, porque nem todo cadastro de
+  // Criativos tem squad preenchido.
+  const [soDoSquad, setSoDoSquad] = useState(true);
 
   useEffect(() => {
     if (!open) return;
@@ -48,8 +53,10 @@ export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo
     const carregar = async () => {
       setCarregando(true);
       const { data } = await supabase
-        .from('clients').select('id, name').is('deleted_at', null).order('name');
-      setCrmClientes(((data as any[]) || []).map((c) => ({ id: c.id, name: c.name })));
+        .from('clients').select('id, name, squad_id').is('deleted_at', null).order('name');
+      setCrmClientes(((data as any[]) || []).map((c) => ({
+        id: c.id, name: c.name, squad_id: c.squad_id ?? null,
+      })));
       setCarregando(false);
     };
     carregar();
@@ -63,8 +70,9 @@ export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo
     clientes.forEach((sc) => {
       if (novo[sc.id]) return;
       const alvo = norm(sc.name);
-      const exato = crmClientes.find((c) => norm(c.name) === alvo);
-      const parcial = crmClientes.find(
+      const pool = soDoSquad ? crmClientes.filter((c) => c.squad_id === squadId) : crmClientes;
+      const exato = pool.find((c) => norm(c.name) === alvo);
+      const parcial = pool.find(
         (c) => alvo.startsWith(norm(c.name)) || norm(c.name).startsWith(alvo)
       );
       const m = exato || parcial;
@@ -113,6 +121,18 @@ export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo
     [clientes, mapa]
   );
 
+  // Opções do dropdown: só as do squad, salvo quando a pessoa abre para todos.
+  // Um cliente já vinculado continua na lista mesmo fora do filtro, senão o
+  // vínculo existente apareceria como vazio.
+  const opcoes = useMemo(() => {
+    if (!soDoSquad) return crmClientes;
+    const vinculadosIds = new Set(Object.values(mapa).filter(Boolean) as string[]);
+    return crmClientes.filter((c) => c.squad_id === squadId || vinculadosIds.has(c.id));
+  }, [crmClientes, soDoSquad, squadId, mapa]);
+
+  const nomeDe = (id: string | null | undefined) =>
+    crmClientes.find((c) => c.id === id)?.name || '';
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
@@ -146,6 +166,12 @@ export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo
           </span>
         </div>
 
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pb-1">
+          <Checkbox checked={soDoSquad} onCheckedChange={(v) => setSoDoSquad(!!v)} />
+          Mostrar só os clientes de Criativos deste squad
+          <span className="text-muted-foreground/70">({opcoes.length} opções)</span>
+        </label>
+
         <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1.5">
           {carregando ? (
             <p className="py-10 text-center text-sm text-muted-foreground">Carregando clientes de Criativos...</p>
@@ -165,22 +191,46 @@ export function MapeamentoClientes({ open, onClose, squadNome, clientes, onSalvo
                     <CircleDashed className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
                   <span className="flex-1 min-w-0 truncate text-sm" title={sc.name}>{sc.name}</span>
-                  <Select
-                    value={val || SEM_VINCULO}
-                    onValueChange={(v) => setMapa({ ...mapa, [sc.id]: v === SEM_VINCULO ? null : v })}
-                  >
-                    <SelectTrigger className="w-[300px] h-9 text-sm shrink-0">
-                      <SelectValue placeholder="Sem vínculo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SEM_VINCULO}>
-                        <span className="text-muted-foreground">Sem vínculo</span>
-                      </SelectItem>
-                      {crmClientes.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline" role="combobox"
+                        className="w-[300px] h-9 shrink-0 justify-between font-normal text-sm"
+                      >
+                        <span className={`truncate ${val ? '' : 'text-muted-foreground'}`}>
+                          {val ? nomeDe(val) : 'Sem vínculo'}
+                        </span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[320px] p-0" align="end">
+                      <Command>
+                        <CommandInput placeholder="Buscar em Criativos..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="Sem vinculo"
+                              onSelect={() => setMapa({ ...mapa, [sc.id]: null })}
+                            >
+                              <Check className={`mr-2 h-3.5 w-3.5 ${val ? 'opacity-0' : 'opacity-100'}`} />
+                              <span className="text-muted-foreground">Sem vínculo</span>
+                            </CommandItem>
+                            {opcoes.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={c.name}
+                                onSelect={() => setMapa({ ...mapa, [sc.id]: c.id })}
+                              >
+                                <Check className={`mr-2 h-3.5 w-3.5 ${val === c.id ? 'opacity-100' : 'opacity-0'}`} />
+                                {c.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               );
             })
