@@ -10,9 +10,10 @@ import { buildProjecaoSvg, downloadProjecaoPng } from '@/lib/projecaoExport';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Textarea } from '@/components/ui/textarea';
+import { MapeamentoClientes } from '@/components/projecao/MapeamentoClientes';
 import {
   GitCompare, TrendingUp, TrendingDown, ArrowRight, Target as TargetIcon,
-  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download, RefreshCw } from 'lucide-react';
+  DollarSign, Users, Calculator, Award, Rocket, Save, Building2, Calendar, FileText, Download, RefreshCw, Link2 } from 'lucide-react';
 
 interface FunnelData {
   investimento: string; cpl: string; leads: string; preAtendimento: string; qualificados: string; vendas: string; vendasLoja: string; ticketMedio: string;
@@ -22,7 +23,7 @@ interface ProjetadoData extends FunnelData {
   taxaPre: string; taxaQual: string; taxaVendas: string;
 }
 
-interface Client { id: string; name: string; ticket_medio: number | null; squad_id: string | null; }
+interface Client { id: string; name: string; ticket_medio: number | null; squad_id: string | null; crm_client_id: string | null; }
 interface Squad { id: string; name: string; color: string | null; }
 
 const MONTHS = [
@@ -314,20 +315,31 @@ export function FunnelComparison() {
   const [saving, setSaving] = useState(false);
   const [actionNotes, setActionNotes] = useState('');
 
+  // Extraído do useEffect para poder recarregar depois de salvar o mapeamento.
+  // A coluna crm_client_id vem da migração squad_clients_crm_link; se ela ainda
+  // não existir, a query falha inteira — por isso o fallback sem a coluna.
+  const carregarSquadsEClientes = async () => {
+    const [sq, cl] = await Promise.all([
+      supabase.from('squads').select('id, name, color').order('name'),
+      supabase.from('squad_clients').select('id, name, contract_value, squad_id, crm_client_id').order('name'),
+    ]);
+    setSquads(((sq.data as any[]) || []).map((s) => ({ id: s.id, name: s.name, color: s.color ?? null })));
+
+    let linhas = cl.data as any[] | null;
+    if (cl.error) {
+      const retry = await supabase
+        .from('squad_clients').select('id, name, contract_value, squad_id').order('name');
+      linhas = retry.data as any[] | null;
+    }
+    setClients((linhas || []).map((c) => ({
+      id: c.id, name: c.name, ticket_medio: c.contract_value ?? null, squad_id: c.squad_id ?? null,
+      crm_client_id: c.crm_client_id ?? null,
+    })));
+  };
+
   useEffect(() => {
     if (!user) return;
-    const fetchDados = async () => {
-      // Mesmos squads e clientes da Dash do Squad
-      const [sq, cl] = await Promise.all([
-        supabase.from('squads').select('id, name, color').order('name'),
-        supabase.from('squad_clients').select('id, name, contract_value, squad_id').order('name'),
-      ]);
-      setSquads(((sq.data as any[]) || []).map((s) => ({ id: s.id, name: s.name, color: s.color ?? null })));
-      setClients(((cl.data as any[]) || []).map((c) => ({
-        id: c.id, name: c.name, ticket_medio: c.contract_value ?? null, squad_id: c.squad_id ?? null,
-      })));
-    };
-    fetchDados();
+    carregarSquadsEClientes();
   }, [user]);
 
   // Só os clientes do squad escolhido. Enquanto não escolher, a lista fica vazia
@@ -391,19 +403,25 @@ export function FunnelComparison() {
   }, [selectedClientId, selectedMonth, selectedYear]);
 
   // ── Puxar o Funil Atual da dash de Criativos ───────────────────────────────
-  // A dash de Criativos vive na tabela `clients`; aqui a lista vem de
-  // `squad_clients`. Não há FK entre as duas, então o casamento é por NOME
-  // normalizado (sem acento/caixa) — mesma regra que a Dash do Squad usa.
-  const normName = (s: string) =>
-    (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ").trim();
-
+  // O vínculo entre o cliente do Squad e o de Criativos é EXPLÍCITO
+  // (squad_clients.crm_client_id), definido no popup "Mapear clientes".
+  // Casar por nome não serve: nem todo cliente do Squad roda tráfego e os nomes
+  // divergem ("Moto Mil Ariquemes | Porto | Vilhena" x "Moto Mil Ariquemes").
   const [puxando, setPuxando] = useState(false);
+  const [mapeamentoOpen, setMapeamentoOpen] = useState(false);
 
   const puxarDaDashCriativos = async () => {
     if (!selectedClientId) return;
     const squadClient = clients.find((c) => c.id === selectedClientId);
     if (!squadClient) return;
+
+    if (!squadClient.crm_client_id) {
+      toast.error(
+        `"${squadClient.name}" nao esta vinculado a nenhum cliente da dash de Criativos. Use "Mapear clientes" para vincular - ou preencha o Funil Atual a mao, se ele nao roda trafego.`,
+        { duration: 8000 },
+      );
+      return;
+    }
 
     setPuxando(true);
     try {
@@ -413,16 +431,14 @@ export function FunnelComparison() {
       const since = `${ano}-${String(mes).padStart(2, '0')}-01`;
       const until = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
-      // 1) Acha o cliente correspondente na base da dash de Criativos
-      const { data: crmClients } = await supabase
-        .from('clients').select('id, name, ticket_medio').is('deleted_at', null);
-      const alvo = normName(squadClient.name);
-      const match = (crmClients as any[] | null)?.find((c) => normName(c.name) === alvo)
-        // fallback: nomes como "VR Multimarcas [SANTA RITA]" x "VR Multimarcas"
-        || (crmClients as any[] | null)?.find((c) => alvo.startsWith(normName(c.name)) || normName(c.name).startsWith(alvo));
+      // 1) Cliente de Criativos vinculado a este cliente do Squad
+      const { data: crmClient } = await supabase
+        .from('clients').select('id, name, ticket_medio')
+        .eq('id', squadClient.crm_client_id).is('deleted_at', null).maybeSingle();
+      const match = crmClient as any;
 
       if (!match) {
-        toast.error(`"${squadClient.name}" não foi encontrado na dash de Criativos. Confira se o nome bate com o cadastro em Clientes.`);
+        toast.error(`O cliente vinculado a "${squadClient.name}" nao existe mais na dash de Criativos. Refaca o vinculo em "Mapear clientes".`);
         return;
       }
 
@@ -630,6 +646,11 @@ export function FunnelComparison() {
                 </SelectContent>
               </Select>
             </div>
+            <Button onClick={() => setMapeamentoOpen(true)} disabled={!selectedSquadId} variant="outline"
+              title="Vincular os clientes deste squad aos cadastros da dash de Criativos"
+              className="border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20">
+              <Link2 className="h-4 w-4 mr-2" /> Mapear clientes
+            </Button>
             <Button onClick={puxarDaDashCriativos} disabled={puxando || !selectedClientId} variant="outline"
               title="Preenche o Funil Atual com investimento, leads e etapas comerciais da dash de Criativos"
               className="border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20">
@@ -647,6 +668,14 @@ export function FunnelComparison() {
           </div>
         </CardContent>
       </Card>
+
+      <MapeamentoClientes
+        open={mapeamentoOpen}
+        onClose={() => setMapeamentoOpen(false)}
+        squadNome={squads.find((s) => s.id === selectedSquadId)?.name || ''}
+        clientes={clientesDoSquad.map((c) => ({ id: c.id, name: c.name, crm_client_id: c.crm_client_id }))}
+        onSalvo={carregarSquadsEClientes}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <FunnelCardAtual data={atual} onChange={updateAtual} />
