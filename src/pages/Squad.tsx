@@ -3161,7 +3161,33 @@ export default function Squad() {
                 >
                   <SelectTrigger className="h-11"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {clients.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    {(() => {
+                      // D+30: mesma regra do resto da dash — so entra quem
+                      // comecou ANTES do mes de referencia da reuniao. Cliente
+                      // novo nao tem mensal no primeiro mes.
+                      const refMes = (editingAg.reference_month || new Date().toISOString().slice(0, 7)).slice(0, 7);
+                      const elegiveis = clients.filter((c) => c.entry_date && c.entry_date.slice(0, 7) < refMes);
+                      // Ao EDITAR, mantem o cliente ja escolhido mesmo que ele
+                      // nao seja mais elegivel — senao o campo ficaria vazio e o
+                      // registro perderia o vinculo ao salvar.
+                      const atual = editingAg.client_name
+                        ? clients.find((c) => c.name === editingAg.client_name)
+                        : null;
+                      const lista = atual && !elegiveis.some((c) => c.id === atual.id)
+                        ? [atual, ...elegiveis]
+                        : elegiveis;
+                      if (lista.length === 0) {
+                        return (
+                          <div className="px-3 py-4 text-xs text-muted-foreground">
+                            Nenhum cliente com 30+ dias em {refMes.split("-").reverse().join("/")}.
+                            <span className="block mt-1 text-muted-foreground/70">
+                              Clientes sem data de entrada cadastrada tambem nao aparecem aqui.
+                            </span>
+                          </div>
+                        );
+                      }
+                      return lista.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>);
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
