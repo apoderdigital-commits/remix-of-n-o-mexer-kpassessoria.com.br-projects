@@ -1210,6 +1210,7 @@ export type Database = {
           client_name: string
           created_at: string
           done: boolean
+          google_event_id: string | null
           id: string
           meeting_date: string | null
           meeting_time: string | null
@@ -1225,6 +1226,7 @@ export type Database = {
           client_name: string
           created_at?: string
           done?: boolean
+          google_event_id?: string | null
           id?: string
           meeting_date?: string | null
           meeting_time?: string | null
@@ -1240,6 +1242,7 @@ export type Database = {
           client_name?: string
           created_at?: string
           done?: boolean
+          google_event_id?: string | null
           id?: string
           meeting_date?: string | null
           meeting_time?: string | null
@@ -2307,6 +2310,9 @@ export type Database = {
           color: string | null
           created_at: string
           description: string | null
+          google_calendar_id: string | null
+          google_calendar_tz: string
+          google_event_minutos: number
           id: string
           name: string
           updated_at: string
@@ -2315,6 +2321,9 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          google_calendar_id?: string | null
+          google_calendar_tz?: string
+          google_event_minutos?: number
           id?: string
           name: string
           updated_at?: string
@@ -2323,6 +2332,9 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          google_calendar_id?: string | null
+          google_calendar_tz?: string
+          google_event_minutos?: number
           id?: string
           name?: string
           updated_at?: string
@@ -2531,6 +2543,12 @@ export type Database = {
       }
       purge_old_squad_daily_sessions: { Args: never; Returns: undefined }
       purge_old_squad_engagement: { Args: never; Returns: undefined }
+      squad_agenda_n8n_url: { Args: never; Returns: string }
+      squad_agenda_secret: { Args: never; Returns: string }
+      squad_agenda_set_event_id: {
+        Args: { p_agenda_id: string; p_event_id: string; p_secret: string }
+        Returns: undefined
+      }
       update_own_profile: {
         Args: { _avatar_url: string; _full_name: string; _phone: string }
         Returns: undefined
