@@ -9,7 +9,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-460, 200],
+      "position": [
+        -460,
+        200
+      ],
       "id": "a1000000-0000-4000-8000-000000000001",
       "name": "Webhook Agenda",
       "webhookId": "squad-agenda"
@@ -45,7 +48,7 @@
             {
               "id": "f5",
               "name": "titulo",
-              "value": "=Mensal · {{ $json.body.cliente }}",
+              "value": "={{ $json.body.concluida ? 'MENSAL FEITA <> ' + $json.body.cliente : 'Mensal · ' + $json.body.cliente }}",
               "type": "string"
             },
             {
@@ -71,6 +74,12 @@
               "name": "secret",
               "value": "={{ $json.body.secret }}",
               "type": "string"
+            },
+            {
+              "id": "f10",
+              "name": "concluida",
+              "value": "={{ $json.body.concluida }}",
+              "type": "boolean"
             }
           ]
         },
@@ -78,7 +87,10 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-240, 200],
+      "position": [
+        -240,
+        200
+      ],
       "id": "a1000000-0000-4000-8000-000000000002",
       "name": "Montar evento"
     },
@@ -88,22 +100,37 @@
         "value1": "={{ $json.acao }}",
         "rules": {
           "rules": [
-            { "value2": "create" },
-            { "value2": "update", "output": 1 },
-            { "value2": "delete", "output": 2 }
+            {
+              "value2": "create"
+            },
+            {
+              "value2": "update",
+              "output": 1
+            },
+            {
+              "value2": "delete",
+              "output": 2
+            }
           ]
         },
         "fallbackOutput": 3
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [-20, 200],
+      "position": [
+        -20,
+        200
+      ],
       "id": "a1000000-0000-4000-8000-000000000003",
       "name": "Acao"
     },
     {
       "parameters": {
-        "calendar": { "__rl": true, "value": "={{ $json.calendarId }}", "mode": "id" },
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendarId }}",
+          "mode": "id"
+        },
         "start": "={{ $json.inicio }}",
         "end": "={{ $json.fim }}",
         "additionalFields": {
@@ -113,14 +140,21 @@
       },
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
-      "position": [240, 0],
+      "position": [
+        240,
+        0
+      ],
       "id": "a1000000-0000-4000-8000-000000000004",
       "name": "Criar evento"
     },
     {
       "parameters": {
         "operation": "update",
-        "calendar": { "__rl": true, "value": "={{ $json.calendarId }}", "mode": "id" },
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendarId }}",
+          "mode": "id"
+        },
         "eventId": "={{ $json.eventId }}",
         "updateFields": {
           "start": "={{ $json.inicio }}",
@@ -131,20 +165,30 @@
       },
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
-      "position": [240, 200],
+      "position": [
+        240,
+        200
+      ],
       "id": "a1000000-0000-4000-8000-000000000005",
       "name": "Atualizar evento"
     },
     {
       "parameters": {
         "operation": "delete",
-        "calendar": { "__rl": true, "value": "={{ $json.calendarId }}", "mode": "id" },
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendarId }}",
+          "mode": "id"
+        },
         "eventId": "={{ $json.eventId }}",
         "options": {}
       },
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "id": "a1000000-0000-4000-8000-000000000006",
       "name": "Excluir evento"
     },
@@ -155,26 +199,51 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb" },
-            { "name": "Authorization", "value": "Bearer sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "apikey",
+              "value": "sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "p_secret", "value": "kpag_4b3133dc89f98ebab8aa28ad2ec9533f" },
-            { "name": "p_agenda_id", "value": "={{ $('Montar evento').item.json.agendaId }}" },
-            { "name": "p_event_id", "value": "={{ $json.id }}" }
+            {
+              "name": "p_secret",
+              "value": "kpag_4b3133dc89f98ebab8aa28ad2ec9533f"
+            },
+            {
+              "name": "p_agenda_id",
+              "value": "={{ $('Montar evento').item.json.agendaId }}"
+            },
+            {
+              "name": "p_event_id",
+              "value": "={{ $json.id }}"
+            }
           ]
         },
         "options": {
-          "response": { "response": { "responseFormat": "text" } }
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [520, 0],
+      "position": [
+        520,
+        0
+      ],
       "id": "a1000000-0000-4000-8000-000000000007",
       "name": "Guardar event_id"
     },
@@ -185,44 +254,131 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb" },
-            { "name": "Authorization", "value": "Bearer sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "apikey",
+              "value": "sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_72HnBAwEQh7gJ6OEXKbTNg_89IkH7Kb"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "p_secret", "value": "kpag_4b3133dc89f98ebab8aa28ad2ec9533f" },
-            { "name": "p_agenda_id", "value": "={{ $('Montar evento').item.json.agendaId }}" },
-            { "name": "p_event_id", "value": "" }
+            {
+              "name": "p_secret",
+              "value": "kpag_4b3133dc89f98ebab8aa28ad2ec9533f"
+            },
+            {
+              "name": "p_agenda_id",
+              "value": "={{ $('Montar evento').item.json.agendaId }}"
+            },
+            {
+              "name": "p_event_id",
+              "value": ""
+            }
           ]
         },
         "options": {
-          "response": { "response": { "responseFormat": "text" } }
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [520, 400],
+      "position": [
+        520,
+        400
+      ],
       "id": "a1000000-0000-4000-8000-000000000008",
       "name": "Limpar event_id"
     }
   ],
   "connections": {
-    "Webhook Agenda": { "main": [[{ "node": "Montar evento", "type": "main", "index": 0 }]] },
-    "Montar evento": { "main": [[{ "node": "Acao", "type": "main", "index": 0 }]] },
+    "Webhook Agenda": {
+      "main": [
+        [
+          {
+            "node": "Montar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar evento": {
+      "main": [
+        [
+          {
+            "node": "Acao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Acao": {
       "main": [
-        [{ "node": "Criar evento", "type": "main", "index": 0 }],
-        [{ "node": "Atualizar evento", "type": "main", "index": 0 }],
-        [{ "node": "Excluir evento", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Criar evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Excluir evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
-    "Criar evento": { "main": [[{ "node": "Guardar event_id", "type": "main", "index": 0 }]] },
-    "Excluir evento": { "main": [[{ "node": "Limpar event_id", "type": "main", "index": 0 }]] }
+    "Criar evento": {
+      "main": [
+        [
+          {
+            "node": "Guardar event_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluir evento": {
+      "main": [
+        [
+          {
+            "node": "Limpar event_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" },
-  "meta": { "instanceId": "566e3db2a7afde26b8a263a6c16f6d44ec22372ed937be3550de17cf605a1706" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "566e3db2a7afde26b8a263a6c16f6d44ec22372ed937be3550de17cf605a1706"
+  }
 }
