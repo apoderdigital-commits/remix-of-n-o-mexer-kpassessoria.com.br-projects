@@ -40,7 +40,7 @@ const parseNum = (v: string) => parseFloat(v.replace(',', '.')) || 0;
 
 interface CalcResult {
   investimento: number; cpl: number; leads: number; preAtendimento: number;
-  qualificados: number; vendas: number; ticketMedio: number;
+  qualificados: number; vendas: number; vendasLoja: number; vendasTotais: number; ticketMedio: number;
   taxaPre: number; taxaQual: number; taxaVendas: number;
   custoPorPre: number; custoPorQual: number; custoPorVenda: number; faturamento: number;
 }
@@ -49,6 +49,11 @@ function calcFunnel(f: FunnelData): CalcResult {
   const investimento = parseNum(f.investimento); const cpl = parseNum(f.cpl);
   const leads = parseNum(f.leads); const preAtendimento = parseNum(f.preAtendimento);
   const qualificados = parseNum(f.qualificados); const vendas = parseNum(f.vendas);
+  const vendasLoja = parseNum(f.vendasLoja);
+  // Faturamento = TUDO que foi vendido (funil + loja) x ticket medio.
+  // As taxas e os custos continuam olhando so as vendas do funil: quem veio da
+  // loja nao passou pelo investimento em midia.
+  const vendasTotais = vendas + vendasLoja;
   const ticketMedio = parseNum(f.ticketMedio);
   const taxaPre = leads > 0 ? (preAtendimento / leads) * 100 : 0;
   const taxaQual = preAtendimento > 0 ? (qualificados / preAtendimento) * 100 : 0;
@@ -56,8 +61,8 @@ function calcFunnel(f: FunnelData): CalcResult {
   const custoPorPre = preAtendimento > 0 ? investimento / preAtendimento : 0;
   const custoPorQual = qualificados > 0 ? investimento / qualificados : 0;
   const custoPorVenda = vendas > 0 ? investimento / vendas : 0;
-  const faturamento = vendas * ticketMedio;
-  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, ticketMedio, taxaPre, taxaQual, taxaVendas, custoPorPre, custoPorQual, custoPorVenda, faturamento };
+  const faturamento = vendasTotais * ticketMedio;
+  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, vendasLoja, vendasTotais, ticketMedio, taxaPre, taxaQual, taxaVendas, custoPorPre, custoPorQual, custoPorVenda, faturamento };
 }
 
 function calcDesejadoFunnel(data: FunnelData): CalcResult {
@@ -66,12 +71,14 @@ function calcDesejadoFunnel(data: FunnelData): CalcResult {
   const preAtendimento = Math.round(leads * 0.6);
   const qualificados = Math.round(preAtendimento * 0.2);
   const vendas = Math.round(qualificados * 0.2);
+  const vendasLoja = parseNum(data.vendasLoja);
+  const vendasTotais = vendas + vendasLoja;
   const ticketMedio = parseNum(data.ticketMedio);
-  const faturamento = vendas * ticketMedio;
+  const faturamento = vendasTotais * ticketMedio;
   const custoPorVenda = vendas > 0 ? investimento / vendas : 0;
   const custoPorQual = qualificados > 0 ? investimento / qualificados : 0;
   const custoPorPre = preAtendimento > 0 ? investimento / preAtendimento : 0;
-  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, ticketMedio, taxaPre: 60, taxaQual: 20, taxaVendas: 20, custoPorPre, custoPorQual, custoPorVenda, faturamento };
+  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, vendasLoja, vendasTotais, ticketMedio, taxaPre: 60, taxaQual: 20, taxaVendas: 20, custoPorPre, custoPorQual, custoPorVenda, faturamento };
 }
 
 function calcProjetadoFunnel(data: ProjetadoData): CalcResult {
@@ -81,12 +88,14 @@ function calcProjetadoFunnel(data: ProjetadoData): CalcResult {
   const preAtendimento = Math.round(leads * (taxaPre / 100));
   const qualificados = Math.round(preAtendimento * (taxaQual / 100));
   const vendas = Math.round(qualificados * (taxaVendas / 100));
+  const vendasLoja = parseNum(data.vendasLoja);
+  const vendasTotais = vendas + vendasLoja;
   const ticketMedio = parseNum(data.ticketMedio);
-  const faturamento = vendas * ticketMedio;
+  const faturamento = vendasTotais * ticketMedio;
   const custoPorVenda = vendas > 0 ? investimento / vendas : 0;
   const custoPorQual = qualificados > 0 ? investimento / qualificados : 0;
   const custoPorPre = preAtendimento > 0 ? investimento / preAtendimento : 0;
-  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, ticketMedio, taxaPre, taxaQual, taxaVendas, custoPorPre, custoPorQual, custoPorVenda, faturamento };
+  return { investimento, cpl, leads, preAtendimento, qualificados, vendas, vendasLoja, vendasTotais, ticketMedio, taxaPre, taxaQual, taxaVendas, custoPorPre, custoPorQual, custoPorVenda, faturamento };
 }
 
 function FunnelInput({ label, value, onChange, prefix, icon: Icon }: { label: string; value: string; onChange: (v: string) => void; prefix?: string; icon?: React.ElementType }) {
@@ -134,7 +143,14 @@ function FunnelMetrics({ calc }: { calc: CalcResult }) {
   return (
     <div className="pt-3 border-t border-border space-y-2">
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>Faturamento</span>
+        <span>
+          Faturamento
+          {calc.vendasLoja > 0 && (
+            <span className="block text-[10px] text-muted-foreground/70">
+              {calc.vendas} funil + {calc.vendasLoja} loja x ticket
+            </span>
+          )}
+        </span>
         <span className="font-bold text-emerald-400">R$ {calc.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
@@ -574,10 +590,28 @@ export function FunnelComparison() {
         reference_year: year,
       };
 
-      const { error } = await supabase.from('comparisons').upsert(row as any, { onConflict: 'client_id,tipo,reference_month,reference_year' });
+      // Sem upsert/onConflict de proposito: ele exige um indice unico exato
+      // em (client_id, tipo, reference_month, reference_year). Procurar a linha
+      // e decidir entre update e insert funciona com ou sem esse indice.
+      const { data: existente, error: buscaErr } = await supabase
+        .from('comparisons').select('id')
+        .match({ client_id: selectedClientId, tipo, reference_month: month, reference_year: year })
+        .limit(1);
+      if (buscaErr) {
+        console.error(buscaErr);
+        toast.error(`Erro ao salvar ${tipo}: ${buscaErr.message}`);
+        setSaving(false);
+        return;
+      }
+
+      const error = existente && existente.length > 0
+        ? (await supabase.from('comparisons').update(row as any).eq('id', (existente[0] as any).id)).error
+        : (await supabase.from('comparisons').insert(row as any)).error;
+
       if (error) {
         console.error(error);
-        toast.error(`Erro ao salvar ${tipo}`);
+        // Mostra a causa real em vez de "Erro ao salvar" seco.
+        toast.error(`Erro ao salvar ${tipo}: ${error.message}`, { duration: 9000 });
         setSaving(false);
         return;
       }
