@@ -5,6 +5,9 @@
 export interface ProjCalc {
   investimento: number; cpl: number; leads: number; preAtendimento: number;
   qualificados: number; vendas: number; ticketMedio: number;
+  // Vendas feitas na loja (fora do funil de midia). Entram no faturamento,
+  // mas nao nas taxas nem nos custos por venda.
+  vendasLoja?: number; vendasTotais?: number;
   taxaPre: number; taxaQual: number; taxaVendas: number;
   custoPorPre: number; custoPorQual: number; custoPorVenda: number; faturamento: number;
 }
@@ -59,6 +62,7 @@ function column(x: number, title: string, accent: string, c: ProjCalc): string {
     ["Pré-Atendimento", intf(c.preAtendimento), pctf(c.taxaPre)],
     ["Qualificados", intf(c.qualificados), pctf(c.taxaQual)],
     ["Vendas", intf(c.vendas), pctf(c.taxaVendas)],
+    ["Vendas Loja", intf(c.vendasLoja || 0)],
     ["Ticket Médio", brl(c.ticketMedio)],
   ];
   const totals: [string, string][] = [
@@ -157,7 +161,9 @@ function atualVsDesejado(y: number, a: ProjCalc, d: ProjCalc): string {
 }
 
 // ── 3) Comparativo geral — 3 funis ───────────────────────────────────────────
-const CG_H = 372;
+// 9 linhas x 31 a partir de +118 => a ultima cai em +366. Com 372 sobrava 6px
+// e o texto encostava na borda; 410 deixa a folga do resto do layout.
+const CG_H = 410;
 
 function comparativoGeral(y: number, a: ProjCalc, d: ProjCalc, p: ProjCalc): string {
   const rows: [string, (c: ProjCalc) => string][] = [
@@ -167,6 +173,7 @@ function comparativoGeral(y: number, a: ProjCalc, d: ProjCalc, p: ProjCalc): str
     ["Pré-Atendimento", (c) => intf(c.preAtendimento)],
     ["Qualificados", (c) => intf(c.qualificados)],
     ["Vendas", (c) => intf(c.vendas)],
+    ["Vendas Loja", (c) => intf(c.vendasLoja || 0)],
     ["Faturamento", (c) => brl(c.faturamento)],
     ["Custo/Venda", (c) => brl(c.custoPorVenda)],
   ];
