@@ -7,7 +7,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format, subDays } from "date-fns";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import kpLogo from "@/assets/kp-logo.png";
@@ -19,6 +19,8 @@ import { SellerRanking } from "@/components/dashboard/SellerRanking";
 import { GoalsFunnel } from "@/components/dashboard/GoalsFunnel";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { DateFilter } from "@/components/dashboard/DateFilter";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ExecutiveSummary } from "@/components/dashboard/ExecutiveSummary";
 import { MonthlyTrend } from "@/components/dashboard/MonthlyTrend";
 import { CostBanner } from "@/components/dashboard/CostBanner";
@@ -89,7 +91,32 @@ export default function ClientView() {
   const { data: rawCampaigns } = useMetaCampaigns(clientId, since, until);
   const { data: excludedCampaigns } = useClientCampaignFilter(clientId);
   const excludedSet = useMemo(() => new Set(excludedCampaigns || []), [excludedCampaigns]);
-  const campaigns = useMemo(() => (rawCampaigns || []).filter((c) => !excludedSet.has(c.campaign_name)), [rawCampaigns, excludedSet]);
+
+  // Campanhas visiveis no periodo (ja sem as que a KP escondeu no cadastro).
+  const campanhasDisponiveis = useMemo(() => {
+    const nomes = new Set<string>();
+    (rawCampaigns || []).forEach((c) => {
+      const n = (c.campaign_name || "").trim();
+      if (n && !excludedSet.has(c.campaign_name)) nomes.add(n);
+    });
+    return Array.from(nomes).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [rawCampaigns, excludedSet]);
+
+  // Vazio = todas. Guardar so as escolhidas evita que uma campanha nova entre
+  // "desmarcada" sem querer quando o periodo muda.
+  const [campanhasSel, setCampanhasSel] = useState<string[]>([]);
+  const campanhasAtivas = useMemo(
+    () => campanhasSel.filter((n) => campanhasDisponiveis.includes(n)),
+    [campanhasSel, campanhasDisponiveis]
+  );
+  const filtrandoCampanha = campanhasAtivas.length > 0;
+
+  const campaigns = useMemo(() => {
+    const base = (rawCampaigns || []).filter((c) => !excludedSet.has(c.campaign_name));
+    if (!filtrandoCampanha) return base;
+    const sel = new Set(campanhasAtivas);
+    return base.filter((c) => sel.has((c.campaign_name || "").trim()));
+  }, [rawCampaigns, excludedSet, campanhasAtivas, filtrandoCampanha]);
   const { data: leads } = useQualifiedLeads(clientId, since, until);
   const { data: ghlData, isLoading: ghlLoading } = useGhlPipeline(clientId, since, until);
   const { data: previousPeriod } = usePreviousPeriodData(clientId, since, until);
@@ -257,6 +284,65 @@ export default function ClientView() {
         {/* Controles */}
         <div className="flex flex-wrap items-center gap-3">
           <DateFilter onFilterChange={(s, u) => { setSince(s); setUntil(u); }} />
+
+          {campanhasDisponiveis.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {filtrandoCampanha
+                    ? `${campanhasAtivas.length} campanha${campanhasAtivas.length > 1 ? "s" : ""}`
+                    : "Todas as campanhas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[340px] p-0">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+                  <span className="text-xs font-medium">Filtrar campanhas</span>
+                  <button
+                    type="button"
+                    onClick={() => setCampanhasSel([])}
+                    className="text-[11px] text-primary hover:underline disabled:opacity-40"
+                    disabled={!filtrandoCampanha}
+                  >
+                    Limpar
+                  </button>
+                </div>
+                <div className="max-h-72 overflow-y-auto p-1.5 space-y-0.5">
+                  {campanhasDisponiveis.map((nome) => {
+                    const marcada = campanhasAtivas.includes(nome);
+                    return (
+                      <label
+                        key={nome}
+                        className="flex items-start gap-2 rounded-md px-2 py-1.5 text-xs cursor-pointer hover:bg-muted/50"
+                      >
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={marcada}
+                          onCheckedChange={(v) =>
+                            setCampanhasSel((prev) =>
+                              v ? [...prev, nome] : prev.filter((x) => x !== nome)
+                            )
+                          }
+                        />
+                        <span className="leading-snug break-words">{nome}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="border-t border-border/40 px-3 py-2 text-[10px] leading-snug text-muted-foreground">
+                  Afeta investimento, leads e CPL. Qualificacoes e vendas vem do CRM,
+                  que nao separa por campanha.
+                </p>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {filtrandoCampanha && (
+            <span className="text-[11px] text-amber-600 dark:text-amber-400">
+              Investimento e leads filtrados por campanha
+            </span>
+          )}
+
           <Button size="sm" onClick={handleSyncAll} disabled={syncing || syncingSheet || syncingGhl} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${(syncing || syncingSheet || syncingGhl) ? "animate-spin" : ""}`} />
             Sincronizar Tudo
