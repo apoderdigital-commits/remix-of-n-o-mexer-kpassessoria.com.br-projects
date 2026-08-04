@@ -3147,53 +3147,96 @@ export default function Squad() {
           {editingAg && (
             <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="col-span-2">
-                <Label>Cliente *</Label>
-                <Select
-                  value={editingAg.client_name || ""}
-                  onValueChange={(v) => {
-                    const c = clients.find((x) => x.name === v);
+                <Label>Mês de referência *</Label>
+                <Input
+                  className="h-11"
+                  type="month"
+                  value={editingAg.reference_month?.slice(0, 7) || ""}
+                  onChange={(e) => {
+                    const novoMes = e.target.value ? `${e.target.value}-01` : "";
+                    // Trocar o mês pode tirar o cliente escolhido da regra D+30.
+                    // Nesse caso limpamos a escolha em vez de salvar algo inválido.
+                    const ref = novoMes.slice(0, 7);
+                    const aindaVale =
+                      !editingAg.client_name ||
+                      clients.some(
+                        (c) => c.name === editingAg.client_name && c.entry_date && c.entry_date.slice(0, 7) < ref,
+                      );
                     setEditingAg({
                       ...editingAg,
-                      client_name: v,
-                      category: editingAg.category || c?.curve_abc || null,
+                      reference_month: novoMes,
+                      client_name: aindaVale ? editingAg.client_name : "",
                     });
                   }}
-                >
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {(() => {
-                      // D+30: mesma regra do resto da dash — so entra quem
-                      // comecou ANTES do mes de referencia da reuniao. Cliente
-                      // novo nao tem mensal no primeiro mes.
-                      const refMes = (editingAg.reference_month || new Date().toISOString().slice(0, 7)).slice(0, 7);
-                      const elegiveis = clients.filter((c) => c.entry_date && c.entry_date.slice(0, 7) < refMes);
-                      // Ao EDITAR, mantem o cliente ja escolhido mesmo que ele
-                      // nao seja mais elegivel — senao o campo ficaria vazio e o
-                      // registro perderia o vinculo ao salvar.
-                      const atual = editingAg.client_name
-                        ? clients.find((c) => c.name === editingAg.client_name)
-                        : null;
-                      const lista = atual && !elegiveis.some((c) => c.id === atual.id)
-                        ? [atual, ...elegiveis]
-                        : elegiveis;
-                      if (lista.length === 0) {
-                        return (
-                          <div className="px-3 py-4 text-xs text-muted-foreground">
-                            Nenhum cliente com 30+ dias em {refMes.split("-").reverse().join("/")}.
-                            <span className="block mt-1 text-muted-foreground/70">
-                              Clientes sem data de entrada cadastrada tambem nao aparecem aqui.
-                            </span>
-                          </div>
-                        );
-                      }
-                      return lista.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>);
-                    })()}
-                  </SelectContent>
-                </Select>
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Escolha o mês primeiro: a lista de clientes depende dele.
+                </p>
               </div>
-              <div>
-                <Label>Mês de referência *</Label>
-                <Input className="h-11" type="month" value={editingAg.reference_month?.slice(0, 7) || ""} onChange={(e) => setEditingAg({ ...editingAg, reference_month: e.target.value ? `${e.target.value}-01` : "" })} />
+              <div className="col-span-2">
+                {(() => {
+                  // D+30: só entra quem começou ANTES do mês de referência.
+                  // Cliente novo não tem mensal no primeiro mês.
+                  const refMes = (editingAg.reference_month || "").slice(0, 7);
+                  const elegiveis = refMes
+                    ? clients.filter((c) => c.entry_date && c.entry_date.slice(0, 7) < refMes)
+                    : [];
+                  // Ao EDITAR, mantém o cliente já escolhido mesmo fora da regra:
+                  // senão o campo apareceria vazio e o vínculo se perderia.
+                  const atual = editingAg.client_name
+                    ? clients.find((c) => c.name === editingAg.client_name)
+                    : null;
+                  const lista =
+                    atual && !elegiveis.some((c) => c.id === atual.id)
+                      ? [atual, ...elegiveis]
+                      : elegiveis;
+                  const mesBR = refMes ? refMes.split("-").reverse().join("/") : "";
+
+                  return (
+                    <>
+                      <div className="flex items-baseline justify-between">
+                        <Label>Cliente *</Label>
+                        {refMes && (
+                          <span className="text-[11px] text-muted-foreground">
+                            {elegiveis.length} com 30+ dias em {mesBR}
+                          </span>
+                        )}
+                      </div>
+                      <Select
+                        value={editingAg.client_name || ""}
+                        disabled={!refMes}
+                        onValueChange={(v) => {
+                          const c = clients.find((x) => x.name === v);
+                          setEditingAg({
+                            ...editingAg,
+                            client_name: v,
+                            category: editingAg.category || c?.curve_abc || null,
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue
+                            placeholder={refMes ? "Selecione um cliente" : "Escolha o mês de referência primeiro"}
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {lista.length === 0 ? (
+                            <div className="px-3 py-4 text-xs text-muted-foreground">
+                              Nenhum cliente com 30+ dias em {mesBR}.
+                              <span className="mt-1 block text-muted-foreground/70">
+                                Clientes sem data de entrada cadastrada também não aparecem aqui.
+                              </span>
+                            </div>
+                          ) : (
+                            lista.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  );
+                })()}
               </div>
               <div>
                 <Label>Categoria</Label>
