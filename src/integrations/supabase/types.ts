@@ -1373,6 +1373,7 @@ export type Database = {
           contract_value: number | null
           created_at: string
           crm_client_id: string | null
+          crm_client_ids: string[]
           curve_abc: string | null
           due_date: string | null
           entry_date: string | null
@@ -1402,6 +1403,7 @@ export type Database = {
           contract_value?: number | null
           created_at?: string
           crm_client_id?: string | null
+          crm_client_ids?: string[]
           curve_abc?: string | null
           due_date?: string | null
           entry_date?: string | null
@@ -1431,6 +1433,7 @@ export type Database = {
           contract_value?: number | null
           created_at?: string
           crm_client_id?: string | null
+          crm_client_ids?: string[]
           curve_abc?: string | null
           due_date?: string | null
           entry_date?: string | null
