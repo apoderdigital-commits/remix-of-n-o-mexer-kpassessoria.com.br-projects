@@ -24,7 +24,7 @@ interface ProjetadoData extends FunnelData {
   taxaPre: string; taxaQual: string; taxaVendas: string;
 }
 
-interface Client { id: string; name: string; ticket_medio: number | null; squad_id: string | null; crm_client_id: string | null; }
+interface Client { id: string; name: string; ticket_medio: number | null; squad_id: string | null; crm_client_ids: string[]; }
 interface Squad { id: string; name: string; color: string | null; }
 
 const MONTHS = [
@@ -352,19 +352,21 @@ export function FunnelComparison() {
   const carregarSquadsEClientes = async () => {
     const [sq, cl] = await Promise.all([
       supabase.from('squads').select('id, name, color').order('name'),
-      supabase.from('squad_clients').select('id, name, contract_value, squad_id, crm_client_id').order('name'),
+      supabase.from('squad_clients').select('id, name, contract_value, squad_id, crm_client_ids').order('name'),
     ]);
     setSquads(((sq.data as any[]) || []).map((s) => ({ id: s.id, name: s.name, color: s.color ?? null })));
 
     let linhas = cl.data as any[] | null;
     if (cl.error) {
+      // Migração crm_client_ids ainda não rodou: carrega sem ela para a tela
+      // não ficar vazia, mas aí não há vínculos para puxar.
       const retry = await supabase
         .from('squad_clients').select('id, name, contract_value, squad_id').order('name');
       linhas = retry.data as any[] | null;
     }
     setClients((linhas || []).map((c) => ({
       id: c.id, name: c.name, ticket_medio: c.contract_value ?? null, squad_id: c.squad_id ?? null,
-      crm_client_id: c.crm_client_id ?? null,
+      crm_client_ids: (c.crm_client_ids ?? []) as string[],
     })));
   };
 
@@ -446,9 +448,9 @@ export function FunnelComparison() {
     const squadClient = clients.find((c) => c.id === selectedClientId);
     if (!squadClient) return;
 
-    if (!squadClient.crm_client_id) {
+    if (!squadClient.crm_client_ids || squadClient.crm_client_ids.length === 0) {
       toast.error(
-        `"${squadClient.name}" nao esta vinculado a nenhum cliente da dash de Criativos. Use "Mapear clientes" para vincular - ou preencha o Funil Atual a mao, se ele nao roda trafego.`,
+        `"${squadClient.name}" nao esta vinculado a nenhuma conta da dash de Criativos. Use "Mapear clientes" para vincular uma ou mais - ou preencha o Funil Atual a mao, se ele nao roda trafego.`,
         { duration: 8000 },
       );
       return;
@@ -462,56 +464,78 @@ export function FunnelComparison() {
       const since = `${ano}-${String(mes).padStart(2, '0')}-01`;
       const until = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
-      // 1) Cliente de Criativos vinculado a este cliente do Squad
-      const { data: crmClient } = await supabase
+      // 1) Todas as contas de Criativos ligadas a este cliente do Squad.
+      //    Um contrato pode ter várias (ex.: Crato + Barbalha + Brejo Santo).
+      const { data: crmClients } = await supabase
         .from('clients').select('id, name, ticket_medio')
-        .eq('id', squadClient.crm_client_id).is('deleted_at', null).maybeSingle();
-      const match = crmClient as any;
+        .in('id', squadClient.crm_client_ids).is('deleted_at', null);
+      const contas = (crmClients ?? []) as any[];
 
-      if (!match) {
-        toast.error(`O cliente vinculado a "${squadClient.name}" nao existe mais na dash de Criativos. Refaca o vinculo em "Mapear clientes".`);
+      if (contas.length === 0) {
+        toast.error(`Os clientes vinculados a "${squadClient.name}" nao existem mais na dash de Criativos. Refaca o vinculo em "Mapear clientes".`);
         return;
       }
+      const ids = contas.map((c) => c.id);
 
-      // 2) Investimento e leads do Meta, respeitando as campanhas excluídas
-      const { data: filtro } = await supabase
-        .from('client_campaign_filters').select('excluded_campaigns')
-        .eq('client_id', match.id).maybeSingle();
-      const excluidas = new Set<string>(
-        (((filtro as any)?.excluded_campaigns || []) as string[]).map((x) => (x || '').trim())
-      );
+      // 2) Investimento e leads do Meta, somando as contas e respeitando as
+      //    campanhas excluídas de cada uma.
+      const { data: filtros } = await supabase
+        .from('client_campaign_filters').select('client_id, excluded_campaigns')
+        .in('client_id', ids);
+      const excluidasPorConta = new Map<string, Set<string>>();
+      ((filtros as any[]) || []).forEach((f) => {
+        excluidasPorConta.set(
+          f.client_id,
+          new Set(((f.excluded_campaigns || []) as string[]).map((x) => (x || '').trim())),
+        );
+      });
 
       const { data: camps } = await supabase
-        .from('meta_campaigns').select('campaign_name, amount_spent, leads_total')
-        .eq('client_id', match.id).gte('date', since).lte('date', until);
+        .from('meta_campaigns').select('client_id, campaign_name, amount_spent, leads_total')
+        .in('client_id', ids).gte('date', since).lte('date', until);
 
       let investimento = 0, leads = 0;
       ((camps as any[]) || []).forEach((c) => {
-        if (excluidas.has((c.campaign_name || '').trim())) return;
+        const excl = excluidasPorConta.get(c.client_id);
+        if (excl && excl.has((c.campaign_name || '').trim())) return;
         investimento += Number(c.amount_spent) || 0;
         leads += Number(c.leads_total) || 0;
       });
 
-      // 3) Etapas comerciais do funil de metas (mesma fonte da dash: GHL)
+      // 3) Etapas comerciais (GHL). Cada conta tem seu próprio CRM, então
+      //    consulta uma por uma e soma.
       let preAtendimento = 0, qualificados = 0, vendas = 0;
-      let semCrm = false;
-      try {
-        const { data: ghl } = await supabase.functions.invoke('fetch-ghl-pipeline-v2', {
-          body: { client_id: match.id, since, until },
-        });
-        if (ghl) {
-          preAtendimento = Number((ghl as any).simulacoes) || 0;
-          qualificados = Number((ghl as any).cpf_aprovado) || 0;
-          vendas = Number((ghl as any).vendas_financiamento) || 0;
-          if (!(ghl as any).total_pipeline_leads && !preAtendimento && !qualificados) semCrm = true;
-        } else semCrm = true;
-      } catch {
-        semCrm = true;
-      }
+      let contasComCrm = 0;
+      const resultados = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const { data } = await supabase.functions.invoke('fetch-ghl-pipeline-v2', {
+              body: { client_id: id, since, until },
+            });
+            return data as any;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      resultados.forEach((ghl) => {
+        if (!ghl) return;
+        const pre = Number(ghl.simulacoes) || 0;
+        const qual = Number(ghl.cpf_aprovado) || 0;
+        const vnd = Number(ghl.vendas_financiamento) || 0;
+        if (pre || qual || vnd || Number(ghl.total_pipeline_leads)) contasComCrm++;
+        preAtendimento += pre;
+        qualificados += qual;
+        vendas += vnd;
+      });
+      const semCrm = contasComCrm === 0;
 
-      // 4) Preenche o Funil Atual. Ticket médio: o do cadastro em Clientes;
-      //    se não tiver, mantém o que já estava digitado.
-      const ticket = match.ticket_medio != null ? String(match.ticket_medio) : atual.ticketMedio;
+      // 4) Preenche o Funil Atual. Ticket médio: média das contas que têm o
+      //    valor cadastrado; se nenhuma tiver, mantém o que já estava digitado.
+      const tickets = contas.map((c) => Number(c.ticket_medio)).filter((v) => Number.isFinite(v) && v > 0);
+      const ticket = tickets.length
+        ? String(Math.round((tickets.reduce((s, v) => s + v, 0) / tickets.length) * 100) / 100)
+        : atual.ticketMedio;
       setAtual({
         investimento: investimento ? String(Math.round(investimento * 100) / 100) : '',
         cpl: leads > 0 ? String(Math.round((investimento / leads) * 100) / 100) : '',
@@ -523,10 +547,15 @@ export function FunnelComparison() {
         ticketMedio: ticket,
       });
 
+      const nomes = contas.map((c) => c.name).join(' + ');
       if (semCrm) {
-        toast.warning(`Investimento e leads puxados de ${match.name}. As etapas comerciais precisam do CRM (GHL) configurado.`);
+        toast.warning(`Investimento e leads puxados de ${nomes}. As etapas comerciais precisam do CRM (GHL) configurado.`);
       } else {
-        toast.success(`Funil Atual puxado da dash de Criativos (${match.name}).`);
+        toast.success(
+          contas.length > 1
+            ? `Funil Atual puxado somando ${contas.length} contas: ${nomes}.`
+            : `Funil Atual puxado da dash de Criativos (${nomes}).`,
+        );
       }
     } catch (e: any) {
       toast.error(e?.message || 'Não foi possível puxar os dados da dash.');
@@ -718,7 +747,7 @@ export function FunnelComparison() {
         onClose={() => setMapeamentoOpen(false)}
         squadId={selectedSquadId}
         squadNome={squads.find((s) => s.id === selectedSquadId)?.name || ''}
-        clientes={clientesDoSquad.map((c) => ({ id: c.id, name: c.name, crm_client_id: c.crm_client_id }))}
+        clientes={clientesDoSquad.map((c) => ({ id: c.id, name: c.name, crm_client_ids: c.crm_client_ids ?? [] }))}
         onSalvo={carregarSquadsEClientes}
       />
 
