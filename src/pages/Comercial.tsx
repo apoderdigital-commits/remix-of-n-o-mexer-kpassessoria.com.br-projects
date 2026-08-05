@@ -606,17 +606,7 @@ export default function Comercial() {
               {kpis && fase2 ? (
                 <>
                   {/* Ritmo do mes: como deveria estar ate hoje x como esta */}
-                  <RitmoDoMes
-                    competencia={`${since.slice(0, 7)}-01`}
-                    realizado={{
-                      faturamento: kpis.faturamento,
-                      vendas: kpis.vendas,
-                      mqls: kpis.mqls,
-                      reunioes: fase2.mqlSummary.realizados,
-                      leads: kpis.leadsTotais,
-                    }}
-                    podeEditar={isAdmin}
-                  />
+                  <RitmoDoMes competencia={`${since.slice(0, 7)}-01`} podeEditar={isAdmin} />
 
                   {/* Funil Calendário */}
                   <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
