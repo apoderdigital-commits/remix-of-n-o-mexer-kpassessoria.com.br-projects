@@ -236,13 +236,13 @@ export function RitmoDoMes({
 
         <div className="flex items-center gap-2">
           {carregando && <span className="text-xs text-muted-foreground">lendo o GHL…</span>}
-          {erroFonte && <span className="text-xs text-amber-400">{erroFonte}</span>}
+          {erroFonte && <span className="text-xs text-amber-700 dark:text-amber-400">{erroFonte}</span>}
           {temMeta && calculo.iniciou && (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
                 acima
-                  ? "bg-emerald-500/15 text-emerald-300"
-                  : "bg-amber-500/15 text-amber-300"
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
               }`}
             >
               {acima ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
@@ -290,7 +290,7 @@ export function RitmoDoMes({
                 </div>
                 <div
                   className={`text-sm font-semibold tabular-nums mt-0.5 ${
-                    acima ? "text-emerald-400" : "text-amber-400"
+                    acima ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
                   }`}
                 >
                   {acima ? "+" : "−"}
@@ -342,7 +342,7 @@ export function RitmoDoMes({
                       <td className="py-2">{l.rotulo}</td>
                       <td className="py-2 text-right tabular-nums text-muted-foreground">{fmt(l.esperado)}</td>
                       <td className="py-2 text-right tabular-nums font-medium">{fmt(l.real)}</td>
-                      <td className={`py-2 text-right tabular-nums ${ok ? "text-emerald-400" : "text-amber-400"}`}>
+                      <td className={`py-2 text-right tabular-nums ${ok ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
                         {ok ? "+" : "−"}{fmt(Math.abs(l.dif))}
                       </td>
                       <td className="py-2 text-right tabular-nums">
@@ -374,7 +374,7 @@ export function RitmoDoMes({
               </p>
             )}
             {diag && !diag.pipelineEncontrada && diag.pipelinesDisponiveis?.length > 0 && (
-              <p className="text-amber-400">
+              <p className="text-amber-700 dark:text-amber-400">
                 Pipelines disponíveis: {diag.pipelinesDisponiveis.join(", ")}
               </p>
             )}
