@@ -612,6 +612,7 @@ export default function Comercial() {
                       faturamento: kpis.faturamento,
                       vendas: kpis.vendas,
                       mqls: kpis.mqls,
+                      reunioes: fase2.mqlSummary.realizados,
                       leads: kpis.leadsTotais,
                     }}
                     podeEditar={isAdmin}
