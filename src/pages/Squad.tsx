@@ -909,15 +909,32 @@ export default function Squad() {
     toast.success("Restaurado");
     void loadAll(squadId);
   }
+  /**
+   * Clientes elegiveis (D+30) para um mes: entraram ANTES do mes de referencia.
+   * Mesma regra do Fechamento, da Agenda das Mensais e das metas — cliente novo
+   * nao entra no mes em que chegou.
+   */
+  function elegiveisD30(month: string) {
+    const ref = (month || "").slice(0, 7);
+    if (!ref) return [];
+    return clients.filter((c) => c.entry_date && c.entry_date.slice(0, 7) < ref);
+  }
+
   async function createMonthFromClients(month: string) {
     // month = "YYYY-MM"
     const ref = `${month}-01`;
     if (!clients.length) return toast.error("Cadastre clientes primeiro");
+    const elegiveis = elegiveisD30(month);
+    if (!elegiveis.length) {
+      return toast.error(
+        "Nenhum cliente com 30+ dias neste mes. Clientes que entraram no proprio mes (ou sem data de entrada) nao sao carregados.",
+      );
+    }
     // Skip clients already in the month
     const { data: existing } = await (supabase as any).from("squad_engagement")
       .select("client_name").eq("squad_id", squadId).eq("reference_month", ref).is("deleted_at", null);
     const have = new Set((existing || []).map((r: any) => String(r.client_name).trim().toLowerCase()));
-    const rows = clients
+    const rows = elegiveis
       .filter((c) => !have.has(c.name.trim().toLowerCase()))
       .map((c) => ({
         squad_id: squadId,
@@ -3289,22 +3306,39 @@ export default function Squad() {
               <CalendarDays className="h-5 w-5 text-primary" /> Novo mês de engajamento
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Vamos criar um registro para <strong className="text-primary">cada cliente cadastrado</strong> ({clients.length}) neste mês.
-              Você só vai precisar editar ABC, Sprint, engajamento e NPS de cada um.
-            </p>
-            <div>
-              <Label>Mês *</Label>
-              <Input type="month" value={newMonthValue} onChange={(e) => setNewMonthValue(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setNewMonthOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createMonthFromClients(newMonthValue)} className="bg-gradient-to-r from-primary to-fuchsia-600">
-              Carregar {clients.length} clientes
-            </Button>
-          </DialogFooter>
+          {(() => {
+            const elegiveis = elegiveisD30(newMonthValue);
+            const foraCount = clients.length - elegiveis.length;
+            return (
+              <>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Vamos criar um registro para <strong className="text-primary">cada cliente com 30+ dias</strong>{" "}
+                    ({elegiveis.length}) neste mês. Você só vai precisar editar ABC, Sprint, engajamento e NPS de cada um.
+                  </p>
+                  <div>
+                    <Label>Mês *</Label>
+                    <Input type="month" value={newMonthValue} onChange={(e) => setNewMonthValue(e.target.value)} />
+                  </div>
+                  {foraCount > 0 && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                      {foraCount} cliente(s) de fora: entraram no próprio mês ou estão sem data de entrada cadastrada.
+                    </p>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setNewMonthOpen(false)}>Cancelar</Button>
+                  <Button
+                    onClick={() => createMonthFromClients(newMonthValue)}
+                    disabled={elegiveis.length === 0}
+                    className="bg-gradient-to-r from-primary to-fuchsia-600"
+                  >
+                    {elegiveis.length === 0 ? "Nenhum cliente elegível" : `Carregar ${elegiveis.length} clientes`}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
