@@ -42,21 +42,34 @@ interface Realizado {
   faturamento: number;
   vendas: number;
   mqls: number;
-  /** Reunioes que aconteceram de fato (o cliente compareceu). */
+  /** Reunioes comparecidas de MQL (contato com tag lead a/b). */
   reunioes: number;
   leads: number;
 }
 
+interface Diagnostico {
+  contatosCriadosNoMes: number;
+  porClasse: Record<string, number>;
+  comparecimentosTotais: number;
+  pipelineEncontrada: string | null;
+  etapaEncontrada: string | null;
+  pipelinesDisponiveis: string[];
+}
+
+const VAZIO: Realizado = { faturamento: 0, vendas: 0, mqls: 0, reunioes: 0, leads: 0 };
+
 export function RitmoDoMes({
   competencia,
-  realizado,
   podeEditar,
 }: {
   /** Primeiro dia do mês analisado, formato YYYY-MM-DD. */
   competencia: string;
-  realizado: Realizado;
   podeEditar: boolean;
 }) {
+  const [realizado, setRealizado] = useState<Realizado>(VAZIO);
+  const [diag, setDiag] = useState<Diagnostico | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erroFonte, setErroFonte] = useState<string | null>(null);
   const [meta, setMeta] = useState<MetaMes | null>(null);
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -97,6 +110,35 @@ export function RitmoDoMes({
         leads: String(m?.meta_leads ?? 0),
         uteis: m?.considerar_dias_uteis ?? true,
       });
+    })();
+    return () => { vivo = false; };
+  }, [competencia]);
+
+  // Busca do mês inteiro, de propósito: o filtro de datas da tela não influencia.
+  useEffect(() => {
+    let vivo = true;
+    setCarregando(true);
+    setErroFonte(null);
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("kp-comercial-ritmo", {
+        body: { competencia },
+      });
+      if (!vivo) return;
+      setCarregando(false);
+      if (error || (data as any)?.error) {
+        setErroFonte((data as any)?.error || error?.message || "Não foi possível ler o GHL.");
+        setRealizado(VAZIO);
+        return;
+      }
+      const d = data as any;
+      setRealizado({
+        faturamento: Number(d.faturamento) || 0,
+        vendas: Number(d.vendas) || 0,
+        mqls: Number(d.mqls) || 0,
+        reunioes: Number(d.reunioes) || 0,
+        leads: Number(d.leads) || 0,
+      });
+      setDiag(d.diagnostico ?? null);
     })();
     return () => { vivo = false; };
   }, [competencia]);
@@ -193,6 +235,8 @@ export function RitmoDoMes({
         </div>
 
         <div className="flex items-center gap-2">
+          {carregando && <span className="text-xs text-muted-foreground">lendo o GHL…</span>}
+          {erroFonte && <span className="text-xs text-amber-400">{erroFonte}</span>}
           {temMeta && calculo.iniciou && (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
@@ -311,10 +355,30 @@ export function RitmoDoMes({
             </table>
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
-            O esperado é proporcional aos {calculo.usarUteis ? "dias úteis" : "dias"} já decorridos.
-            Se o mês acabou, o esperado é a meta cheia.
-          </p>
+          <div className="space-y-1 text-[11px] text-muted-foreground">
+            <p>
+              O esperado é proporcional aos {calculo.usarUteis ? "dias úteis" : "dias"} já decorridos.
+              Se o mês acabou, o esperado é a meta cheia.
+            </p>
+            <p>
+              Números do mês inteiro, direto do GHL — o filtro de datas acima não afeta este painel.
+              Leads e MQLs vêm de contato + tag (<code>lead a/b/c/d</code>), não de oportunidade.
+            </p>
+            {diag && (
+              <p>
+                {diag.contatosCriadosNoMes} contato(s) criados no mês · A {diag.porClasse?.a ?? 0} ·
+                B {diag.porClasse?.b ?? 0} · C {diag.porClasse?.c ?? 0} · D {diag.porClasse?.d ?? 0}
+                {diag.pipelineEncontrada
+                  ? ` · vendas de "${diag.pipelineEncontrada} › ${diag.etapaEncontrada ?? "?"}"`
+                  : " · pipeline de vendas não encontrada"}
+              </p>
+            )}
+            {diag && !diag.pipelineEncontrada && diag.pipelinesDisponiveis?.length > 0 && (
+              <p className="text-amber-400">
+                Pipelines disponíveis: {diag.pipelinesDisponiveis.join(", ")}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
