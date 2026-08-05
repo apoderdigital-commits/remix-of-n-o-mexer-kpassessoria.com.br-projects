@@ -751,6 +751,39 @@ export type Database = {
         }
         Relationships: []
       }
+      kp_comercial_metas_mes: {
+        Row: {
+          atualizado_em: string
+          competencia: string
+          considerar_dias_uteis: boolean
+          meta_faturamento: number
+          meta_leads: number
+          meta_mqls: number
+          meta_vendas: number
+          observacoes: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          competencia: string
+          considerar_dias_uteis?: boolean
+          meta_faturamento?: number
+          meta_leads?: number
+          meta_mqls?: number
+          meta_vendas?: number
+          observacoes?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          competencia?: string
+          considerar_dias_uteis?: boolean
+          meta_faturamento?: number
+          meta_leads?: number
+          meta_mqls?: number
+          meta_vendas?: number
+          observacoes?: string | null
+        }
+        Relationships: []
+      }
       kp_comercial_pipeline_config: {
         Row: {
           classe: string | null
