@@ -21,6 +21,7 @@ export interface MetaMes {
   meta_faturamento: number;
   meta_vendas: number;
   meta_mqls: number;
+  meta_reunioes: number;
   meta_leads: number;
   considerar_dias_uteis: boolean;
 }
@@ -41,6 +42,8 @@ interface Realizado {
   faturamento: number;
   vendas: number;
   mqls: number;
+  /** Reunioes que aconteceram de fato (o cliente compareceu). */
+  reunioes: number;
   leads: number;
 }
 
@@ -62,6 +65,7 @@ export function RitmoDoMes({
     faturamento: "0",
     vendas: "0",
     mqls: "0",
+    reunioes: "0",
     leads: "0",
     uteis: true,
   });
@@ -89,6 +93,7 @@ export function RitmoDoMes({
         faturamento: String(m?.meta_faturamento ?? 0),
         vendas: String(m?.meta_vendas ?? 0),
         mqls: String(m?.meta_mqls ?? 0),
+        reunioes: String(m?.meta_reunioes ?? 0),
         leads: String(m?.meta_leads ?? 0),
         uteis: m?.considerar_dias_uteis ?? true,
       });
@@ -112,6 +117,7 @@ export function RitmoDoMes({
       { chave: "faturamento", rotulo: "Faturamento", meta: meta?.meta_faturamento ?? 0, real: realizado.faturamento, dinheiro: true },
       { chave: "vendas",      rotulo: "Vendas",      meta: meta?.meta_vendas ?? 0,      real: realizado.vendas,      dinheiro: false },
       { chave: "mqls",        rotulo: "MQLs",        meta: meta?.meta_mqls ?? 0,        real: realizado.mqls,        dinheiro: false },
+      { chave: "reunioes",    rotulo: "Reuniões comparecidas", meta: meta?.meta_reunioes ?? 0, real: realizado.reunioes, dinheiro: false },
       { chave: "leads",       rotulo: "Leads",       meta: meta?.meta_leads ?? 0,       real: realizado.leads,       dinheiro: false },
     ].map((l) => {
       const esperado = l.meta * fracao;
@@ -131,6 +137,7 @@ export function RitmoDoMes({
       meta_faturamento: Number(form.faturamento.replace(",", ".")) || 0,
       meta_vendas: Math.round(Number(form.vendas) || 0),
       meta_mqls: Math.round(Number(form.mqls) || 0),
+      meta_reunioes: Math.round(Number(form.reunioes) || 0),
       meta_leads: Math.round(Number(form.leads) || 0),
       considerar_dias_uteis: form.uteis,
       atualizado_em: new Date().toISOString(),
@@ -341,6 +348,14 @@ export function RitmoDoMes({
                   inputMode="numeric"
                   value={form.mqls}
                   onChange={(e) => setForm({ ...form, mqls: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Reuniões comparecidas</Label>
+                <Input
+                  inputMode="numeric"
+                  value={form.reunioes}
+                  onChange={(e) => setForm({ ...form, reunioes: e.target.value })}
                 />
               </div>
               <div>
