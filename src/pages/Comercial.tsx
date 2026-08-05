@@ -20,6 +20,7 @@ import {
   type FunisData, type SdrFunil, type LeadCat, type TrafegoLists, type TrafegoStageKey,
   type RecuperacaoLists, type RecuperacaoStageKey, type CatCounts, type TrafegoListItem,
 } from "@/components/comercial/FunisView";
+import { RitmoDoMes } from "@/components/comercial/RitmoDoMes";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 const fmtNum = (v: number) => new Intl.NumberFormat("pt-BR").format(v || 0);
@@ -604,6 +605,18 @@ export default function Comercial() {
             <TabsContent value="kpis" className="space-y-5">
               {kpis && fase2 ? (
                 <>
+                  {/* Ritmo do mes: como deveria estar ate hoje x como esta */}
+                  <RitmoDoMes
+                    competencia={`${since.slice(0, 7)}-01`}
+                    realizado={{
+                      faturamento: kpis.faturamento,
+                      vendas: kpis.vendas,
+                      mqls: kpis.mqls,
+                      leads: kpis.leadsTotais,
+                    }}
+                    podeEditar={isAdmin}
+                  />
+
                   {/* Funil Calendário */}
                   <Card className="relative overflow-hidden p-6 bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/20">
                     <div className="pointer-events-none absolute -top-20 right-1/3 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
