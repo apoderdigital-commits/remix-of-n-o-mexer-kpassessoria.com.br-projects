@@ -15,7 +15,8 @@ import { Link2, Search, Save, Wand2, CheckCircle2, CircleDashed, ChevronsUpDown,
 export interface SquadClienteLinha {
   id: string;
   name: string;
-  crm_client_id: string | null;
+  /** Clientes de Criativos ligados a este. Um contrato pode ter varias contas. */
+  crm_client_ids: string[];
 }
 
 interface CrmCliente { id: string; name: string; squad_id: string | null }
@@ -37,7 +38,7 @@ const norm = (s: string) =>
 
 export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes, onSalvo }: Props) {
   const [crmClientes, setCrmClientes] = useState<CrmCliente[]>([]);
-  const [mapa, setMapa] = useState<Record<string, string | null>>({});
+  const [mapa, setMapa] = useState<Record<string, string[]>>({});
   const [busca, setBusca] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -49,7 +50,7 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
   useEffect(() => {
     if (!open) return;
     setBusca('');
-    setMapa(Object.fromEntries(clientes.map((c) => [c.id, c.crm_client_id])));
+    setMapa(Object.fromEntries(clientes.map((c) => [c.id, c.crm_client_ids ?? []])));
     const carregar = async () => {
       setCarregando(true);
       const { data } = await supabase
@@ -68,7 +69,7 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
     let achou = 0;
     const novo = { ...mapa };
     clientes.forEach((sc) => {
-      if (novo[sc.id]) return;
+      if ((novo[sc.id] ?? []).length > 0) return;
       const alvo = norm(sc.name);
       const pool = soDoSquad ? crmClientes.filter((c) => c.squad_id === squadId) : crmClientes;
       const exato = pool.find((c) => norm(c.name) === alvo);
@@ -76,7 +77,7 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
         (c) => alvo.startsWith(norm(c.name)) || norm(c.name).startsWith(alvo)
       );
       const m = exato || parcial;
-      if (m) { novo[sc.id] = m.id; achou++; }
+      if (m) { novo[sc.id] = [m.id]; achou++; }
     });
     setMapa(novo);
     toast[achou ? 'success' : 'info'](
@@ -87,12 +88,14 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
   const salvar = async () => {
     setSalvando(true);
     try {
-      const alterados = clientes.filter((c) => (mapa[c.id] ?? null) !== c.crm_client_id);
+      const mesmaLista = (a: string[], b: string[]) =>
+        a.length === b.length && a.every((x) => b.includes(x));
+      const alterados = clientes.filter((c) => !mesmaLista(mapa[c.id] ?? [], c.crm_client_ids ?? []));
       if (alterados.length === 0) { toast.info('Nada mudou.'); return; }
       for (const c of alterados) {
         const { error } = await supabase
           .from('squad_clients')
-          .update({ crm_client_id: mapa[c.id] ?? null } as any)
+          .update({ crm_client_ids: mapa[c.id] ?? [] } as any)
           .eq('id', c.id);
         if (error) throw error;
       }
@@ -117,7 +120,7 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
   }, [clientes, busca]);
 
   const vinculados = useMemo(
-    () => clientes.filter((c) => mapa[c.id]).length,
+    () => clientes.filter((c) => (mapa[c.id] ?? []).length > 0).length,
     [clientes, mapa]
   );
 
@@ -126,7 +129,7 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
   // vínculo existente apareceria como vazio.
   const opcoes = useMemo(() => {
     if (!soDoSquad) return crmClientes;
-    const vinculadosIds = new Set(Object.values(mapa).filter(Boolean) as string[]);
+    const vinculadosIds = new Set(Object.values(mapa).flat().filter(Boolean) as string[]);
     return crmClientes.filter((c) => c.squad_id === squadId || vinculadosIds.has(c.id));
   }, [crmClientes, soDoSquad, squadId, mapa]);
 
@@ -144,8 +147,9 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
         </DialogHeader>
 
         <p className="text-xs text-muted-foreground">
-          Ligue cada cliente do Squad ao cadastro dele na dash de Criativos. Quem não roda
-          tráfego pode ficar sem vínculo — nesse caso o funil é preenchido à mão.
+          Ligue cada cliente do Squad aos cadastros dele na dash de Criativos. Pode marcar
+          <strong className="text-foreground"> mais de um</strong>: um contrato com várias contas
+          de anúncio soma todas. Quem não roda tráfego fica sem vínculo e tem o funil preenchido à mão.
         </p>
 
         <div className="flex flex-wrap items-center gap-2 py-1">
@@ -179,26 +183,37 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
             <p className="py-10 text-center text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
           ) : (
             visiveis.map((sc) => {
-              const val = mapa[sc.id];
+              const vals = mapa[sc.id] ?? [];
               return (
                 <div
                   key={sc.id}
                   className="flex items-center gap-3 rounded-lg border border-border/40 bg-card/40 px-3 py-2"
                 >
-                  {val ? (
+                  {vals.length > 0 ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                   ) : (
                     <CircleDashed className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
-                  <span className="flex-1 min-w-0 truncate text-sm" title={sc.name}>{sc.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm" title={sc.name}>{sc.name}</span>
+                    {vals.length > 1 && (
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {vals.map((id) => nomeDe(id)).filter(Boolean).join(' + ')}
+                      </span>
+                    )}
+                  </div>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline" role="combobox"
                         className="w-[300px] h-9 shrink-0 justify-between font-normal text-sm"
                       >
-                        <span className={`truncate ${val ? '' : 'text-muted-foreground'}`}>
-                          {val ? nomeDe(val) : 'Sem vínculo'}
+                        <span className={`truncate ${vals.length ? '' : 'text-muted-foreground'}`}>
+                          {vals.length === 0
+                            ? 'Sem vínculo'
+                            : vals.length === 1
+                              ? nomeDe(vals[0])
+                              : `${vals.length} clientes`}
                         </span>
                         <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
                       </Button>
@@ -211,18 +226,25 @@ export function MapeamentoClientes({ open, onClose, squadId, squadNome, clientes
                           <CommandGroup>
                             <CommandItem
                               value="Sem vinculo"
-                              onSelect={() => setMapa({ ...mapa, [sc.id]: null })}
+                              onSelect={() => setMapa({ ...mapa, [sc.id]: [] })}
                             >
-                              <Check className={`mr-2 h-3.5 w-3.5 ${val ? 'opacity-0' : 'opacity-100'}`} />
-                              <span className="text-muted-foreground">Sem vínculo</span>
+                              <Check className={`mr-2 h-3.5 w-3.5 ${vals.length ? 'opacity-0' : 'opacity-100'}`} />
+                              <span className="text-muted-foreground">Limpar vínculos</span>
                             </CommandItem>
                             {opcoes.map((c) => (
                               <CommandItem
                                 key={c.id}
                                 value={c.name}
-                                onSelect={() => setMapa({ ...mapa, [sc.id]: c.id })}
+                                onSelect={() => {
+                                  // Alterna: o popover fica aberto para marcar varios de uma vez.
+                                  const atual = mapa[sc.id] ?? [];
+                                  const proximo = atual.includes(c.id)
+                                    ? atual.filter((x) => x !== c.id)
+                                    : [...atual, c.id];
+                                  setMapa({ ...mapa, [sc.id]: proximo });
+                                }}
                               >
-                                <Check className={`mr-2 h-3.5 w-3.5 ${val === c.id ? 'opacity-100' : 'opacity-0'}`} />
+                                <Check className={`mr-2 h-3.5 w-3.5 ${vals.includes(c.id) ? 'opacity-100' : 'opacity-0'}`} />
                                 {c.name}
                               </CommandItem>
                             ))}
