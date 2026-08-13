@@ -1,1 +1,0 @@
-ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS sheet_cpf_keywords text;

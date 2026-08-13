@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS public.ai_insights_cache CASCADE;

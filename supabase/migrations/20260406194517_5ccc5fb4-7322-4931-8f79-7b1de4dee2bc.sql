@@ -1,1 +1,0 @@
-ALTER TABLE public.clients ADD COLUMN google_sheet_id text;
