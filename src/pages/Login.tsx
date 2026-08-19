@@ -222,10 +222,10 @@ export default function Login() {
             <div className="lg:hidden flex items-center gap-3 mb-3">
               <div className="relative">
                 <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md" />
-                <img src={kpLogo} alt="KP Assessoria" className="relative h-10 w-10 rounded-xl shadow-lg" />
+                <img src={apdLogoAsset.url} alt="Agência Poder Digital" className="relative h-10 w-10 rounded-xl shadow-lg" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-foreground tracking-tight">KP Assessoria</h2>
+                <h2 className="text-sm font-bold text-foreground tracking-tight">Agência Poder Digital</h2>
                 <p className="text-xs text-foreground/60">Aceleradora de vendas</p>
               </div>
             </div>
@@ -251,11 +251,11 @@ export default function Login() {
               <div className="hidden lg:flex items-center gap-4 shrink-0">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-xl bg-primary/25 blur-lg" />
-                  <img src={kpLogo} alt="KP Assessoria" className="relative h-12 w-12 rounded-xl shadow-lg" />
+                  <img src={apdLogoAsset.url} alt="Agência Poder Digital" className="relative h-12 w-12 rounded-xl shadow-lg" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-foreground tracking-tight">KP Assessoria</h2>
-                  <p className="text-xs text-foreground/50">Aceleradora de vendas para lojas automotivas</p>
+                  <h2 className="text-lg font-bold text-foreground tracking-tight">Agência Poder Digital</h2>
+                  <p className="text-xs text-foreground/50">Aceleradora de vendas para imobiliárias</p>
                 </div>
               </div>
 
@@ -335,10 +335,10 @@ export default function Login() {
             <div className="relative inline-block mb-5">
               <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl scale-110" />
               <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
-              <img src={kpLogo} alt="KP Assessoria" className="relative h-20 w-20 rounded-2xl shadow-2xl ring-1 ring-white/10" />
+              <img src={apdLogoAsset.url} alt="Agência Poder Digital" className="relative h-20 w-20 rounded-2xl shadow-2xl ring-1 ring-white/10" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
-            <p className="text-sm text-foreground/50 mt-1.5 font-medium">Aceleradora de vendas para lojas automotivas</p>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Agência Poder Digital</h1>
+            <p className="text-sm text-foreground/50 mt-1.5 font-medium">Aceleradora de vendas para imobiliárias</p>
             <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
               <span className="text-xs text-foreground/60 font-medium">Acessando como</span>
               <span className="text-xs text-primary font-bold">{typeLabel}</span>
@@ -356,9 +356,9 @@ export default function Login() {
             <div className="lg:hidden text-center mb-8">
               <div className="relative inline-block mb-3">
                 <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl scale-110" />
-                <img src={kpLogo} alt="KP Assessoria" className="relative h-14 w-14 rounded-2xl shadow-2xl ring-1 ring-white/10" />
+                <img src={apdLogoAsset.url} alt="Agência Poder Digital" className="relative h-14 w-14 rounded-2xl shadow-2xl ring-1 ring-white/10" />
               </div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight">KP Assessoria</h1>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Agência Poder Digital</h1>
             </div>
 
             <div className={`transition-all duration-200 ${animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
