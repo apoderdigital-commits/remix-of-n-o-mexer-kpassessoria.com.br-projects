@@ -212,7 +212,7 @@ export default function Login() {
             className="w-full h-full object-cover lg:absolute lg:inset-0"
             style={{ aspectRatio: "16/9", transform: "translateY(-13%) scale(1.25)" }}
           />
-          <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#080810] to-transparent" />
+          <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#080810]/60 to-transparent" />
         </div>
 
         {/* Glassmorphism bottom bar */}
