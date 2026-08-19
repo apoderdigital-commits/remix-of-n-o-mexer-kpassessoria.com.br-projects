@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, Lock, User, Shield, Briefcase, AlertTriangle, Fingerprint } from "lucide-react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import kpLogo from "@/assets/kp-logo.png";
+import apdLogoAsset from "@/assets/apd-logo.png.asset.json";
 import brazilFlag from "@/assets/brazil-flag.png";
 import loginBgPartners from "@/assets/login-team.png.asset.json";
 import PasswordResetDialog from "@/components/PasswordResetDialog";
