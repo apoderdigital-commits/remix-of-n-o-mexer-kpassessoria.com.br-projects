@@ -205,11 +205,11 @@ export default function Login() {
         } ${screenTransition && !isCredentialStep ? "opacity-0 scale-105" : ""}`}
         style={{ zIndex: isCredentialStep ? 0 : 10 }}
       >
-        <div className="lg:absolute lg:inset-0 shrink-0">
+        <div className="lg:absolute lg:inset-0 shrink-0 overflow-hidden">
           <img
             src={loginBgPartners.url}
             alt="Agência Poder Digital"
-            className="w-full h-full object-cover object-top lg:absolute lg:inset-0"
+            className="w-full h-full object-cover object-[center_30%] scale-110 lg:absolute lg:inset-0"
             style={{ aspectRatio: "16/9" }}
           />
           <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#080810] to-transparent" />
