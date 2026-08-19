@@ -210,7 +210,7 @@ export default function Login() {
             src={loginBgPartners.url}
             alt="Agência Poder Digital"
             className="w-full h-full object-cover lg:absolute lg:inset-0"
-            style={{ aspectRatio: "16/9", transform: "translateY(12.5%) scale(1.25)" }}
+            style={{ aspectRatio: "16/9", transform: "translateY(-20%) scale(1.25)" }}
           />
           <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#080810] to-transparent" />
         </div>
