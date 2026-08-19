@@ -212,7 +212,7 @@ export default function Login() {
             className="w-full h-full object-cover lg:absolute lg:inset-0"
             style={{ aspectRatio: "16/9", transform: "translateY(-13%) scale(1.25)" }}
           />
-          <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#080810]/80 to-transparent" />
+          <div className="hidden lg:block absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#080810]/90 via-[#080810]/55 to-transparent" />
         </div>
 
         {/* Glassmorphism bottom bar */}
@@ -254,8 +254,8 @@ export default function Login() {
                   <img src={apdLogoAsset.url} alt="Agência Poder Digital" className="relative h-12 w-12 rounded-xl shadow-lg" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-foreground tracking-tight">Agência Poder Digital</h2>
-                  <p className="text-xs text-foreground/50">Aceleradora de vendas para imobiliárias</p>
+                  <h2 className="text-lg font-bold text-foreground tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Agência Poder Digital</h2>
+                  <p className="text-xs text-foreground/80 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">Aceleradora de vendas para imobiliárias</p>
                 </div>
               </div>
 
